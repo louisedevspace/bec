@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+server/public/
+
+# Environment files (contains secrets!)
+.env
+.env.local
+.env.*.local
+
+# Keep the example file
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+server/server.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+vite.config.ts.*
+
+# Archives
+*.tar.gz
+*.zip
+
+# Test coverage
+coverage/
+
+# Drizzle
+drizzle/
