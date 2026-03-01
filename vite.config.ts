@@ -67,7 +67,8 @@ export default defineConfig({
         }
       },
       treeshake: {
-        moduleSideEffects: false,
+        moduleSideEffects: true,
+        propertyReadSideEffects: false,
       },
     },
   },
