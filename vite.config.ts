@@ -52,23 +52,6 @@ export default defineConfig({
         entryFileNames: `assets/[name]-[hash].js`,
         chunkFileNames: `assets/[name]-[hash].js`,
         assetFileNames: `assets/[name]-[hash].[ext]`,
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
-            if (id.includes('@radix-ui')) return 'vendor-ui';
-            if (id.includes('recharts') || id.includes('react-financial-charts')) return 'vendor-charts';
-            if (id.includes('@supabase') || id.includes('@tanstack')) return 'vendor-data';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            return 'vendor-other';
-          }
-          if (id.includes('/pages/admin')) return 'pages-admin';
-          if (id.includes('/pages/')) return 'pages-user';
-          if (id.includes('/components/modals/')) return 'components-modals';
-        }
-      },
-      treeshake: {
-        moduleSideEffects: true,
-        propertyReadSideEffects: false,
       },
     },
   },
