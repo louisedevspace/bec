@@ -2,7 +2,7 @@
 # Fixes sharp and other native module compilation issues
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "npm-9_x", "python3", "pkg-config", "vips", "libjpeg", "libpng", "gcc"]
+nixPkgs = ["nodejs_22", "npm-10_x", "python3", "pkg-config", "vips", "libjpeg", "libpng", "gcc"]
 
 [phases.install]
 cmds = ["npm ci --include=dev"]
@@ -17,3 +17,4 @@ cmd = "npm start"
 NODE_ENV = "production"
 NPM_CONFIG_LOGLEVEL = "warn"
 SHARP_IGNORE_GLOBAL_LIBVIPS = "1"
+NIXPACKS_NODE_VERSION = "22"
