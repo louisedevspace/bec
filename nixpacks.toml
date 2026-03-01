@@ -1,0 +1,19 @@
+# Nixpacks configuration for Coolify deployment
+# Fixes sharp and other native module compilation issues
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm-9_x", "python3", "pkg-config", "vips", "libjpeg", "libpng", "gcc"]
+
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"
+
+[variables]
+NODE_ENV = "production"
+NPM_CONFIG_LOGLEVEL = "warn"
+SHARP_IGNORE_GLOBAL_LIBVIPS = "1"
