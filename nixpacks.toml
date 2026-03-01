@@ -5,7 +5,7 @@
 nixPkgs = ["nodejs_22", "npm-10_x", "python3", "pkg-config", "vips", "libjpeg", "libpng", "gcc"]
 
 [phases.install]
-cmds = ["npm ci --include=dev"]
+cmds = ["npm install"]
 
 [phases.build]
 cmds = ["npm run build"]
