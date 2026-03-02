@@ -59,8 +59,22 @@ function startScheduledTasks(port: number) {
 }
 
 const app = express();
+
+// Trust reverse proxy (Coolify uses Traefik) — required for correct req.protocol, req.ip, and secure cookies behind HTTPS proxy
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Server-side HTTPS redirect in production (when behind a reverse proxy that sets X-Forwarded-Proto)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] === 'http') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
 
 app.use((req, res, next) => {
   const start = Date.now();

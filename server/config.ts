@@ -28,7 +28,8 @@ function parseEnv(): ServerConfig {
   }
   const env = parsed.data;
   const port = Number(env.PORT || 5050);
-  const protocol = "http";
+  const isProduction = env.NODE_ENV === 'production';
+  const protocol = isProduction ? "https" : "http";
   const host = `localhost:${port}`;
   const defaultPublicUrl = `${protocol}://${host}`;
   const publicUrl = env.PUBLIC_URL || defaultPublicUrl;

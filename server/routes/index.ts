@@ -58,9 +58,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   // Security headers
+  const isProduction = process.env.NODE_ENV === 'production';
   app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: false,
+    // Enable HSTS in production — tells browsers to always use HTTPS
+    hsts: isProduction ? {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    } : false,
   }));
 
   // CORS middleware
