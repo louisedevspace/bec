@@ -1,26 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 
 interface SupportConversation {
-  id: string;
+  id: number;
   user_id: string;
   subject: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  category?: string;
   created_at: string;
   updated_at: string;
+  last_message_at: string;
   support_messages: SupportMessage[];
 }
 
 interface SupportMessage {
-  id: string;
-  conversation_id: string;
+  id: number;
+  conversation_id: number;
   message: string;
   sender_type: 'user' | 'admin';
+  message_type?: 'text' | 'system' | 'image' | 'file';
+  is_read?: boolean;
   created_at: string;
+}
+
+// Helper to get auth headers
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    'Content-Type': 'application/json',
+  };
 }
 
 export default function SupportPage() {
@@ -30,71 +43,73 @@ export default function SupportPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [newConversationData, setNewConversationData] = useState({
     subject: '',
-    priority: 'medium' as const,
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
     message: '',
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedIdRef = useRef<number | null>(null);
+
+  // Keep selectedIdRef in sync
+  useEffect(() => {
+    selectedIdRef.current = selectedConversation?.id ?? null;
+  }, [selectedConversation?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedConversation?.support_messages]);
+  }, [selectedConversation?.support_messages?.length]);
 
-  // Fetch support conversations
-  useEffect(() => {
-    const fetchConversations = async () => {
-      setLoading(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not logged in');
+  // Fetch conversations
+  const fetchConversations = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch('/api/support/conversation', { headers });
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+      if (response.ok) {
+        const data = await response.json();
+        const list: SupportConversation[] = Array.isArray(data) ? data : data ? [data] : [];
+        setConversations(list);
 
-        const response = await fetch(`/api/support/conversation`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setConversations(Array.isArray(data) ? data : data ? [data] : []);
-        } else if (response.status === 404) {
-          // Expected: user has no conversations yet
-          setConversations([]);
+        // Keep selectedConversation in sync with fresh data
+        if (selectedIdRef.current) {
+          const updated = list.find(c => c.id === selectedIdRef.current);
+          if (updated) setSelectedConversation(updated);
         }
-      } catch (error) {
-        console.error('Error fetching support conversations:', error);
+      } else if (response.status === 404) {
         setConversations([]);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchConversations();
+    } catch (error) {
+      console.error('Error fetching support conversations:', error);
+      if (!silent) setConversations([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
 
+  // Initial fetch + polling every 8 seconds
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(() => fetchConversations(true), 8000);
+    return () => clearInterval(interval);
+  }, [fetchConversations]);
+
+  // Send message
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedConversation) return;
 
     setSending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      const response = await fetch(`/api/support/messages`, {
+      const headers = await authHeaders();
+      const response = await fetch('/api/support/messages', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           conversationId: selectedConversation.id,
           message,
@@ -102,12 +117,12 @@ export default function SupportPage() {
       });
 
       if (response.ok) {
-        const newMessage = await response.json();
-        setSelectedConversation({
-          ...selectedConversation,
-          support_messages: [...selectedConversation.support_messages, newMessage],
-        });
         setMessage('');
+        // Immediately refetch to get updated conversation (status may change on reopen)
+        await fetchConversations(true);
+      } else {
+        const err = await response.json().catch(() => ({ message: 'Failed to send message' }));
+        alert(err.message || 'Failed to send message');
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -116,42 +131,32 @@ export default function SupportPage() {
     }
   };
 
+  // Create conversation
   const handleCreateConversation = async () => {
     if (!newConversationData.subject || !newConversationData.message) return;
 
     setSending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      const requestBody = {
-        subject: newConversationData.subject,
-        priority: newConversationData.priority,
-        message: newConversationData.message,
-      };
-
-      const response = await fetch(`/api/support/conversation`, {
+      const headers = await authHeaders();
+      const response = await fetch('/api/support/conversation', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+        headers,
+        body: JSON.stringify({
+          subject: newConversationData.subject,
+          priority: newConversationData.priority,
+          message: newConversationData.message,
+        }),
       });
 
       if (response.ok) {
         const createdConversation = await response.json();
-        setConversations([createdConversation, ...conversations]);
-        setSelectedConversation(createdConversation);
         setShowNewConversationForm(false);
-        setNewConversationData({
-          subject: '',
-          priority: 'medium',
-          message: '',
-        });
+        setNewConversationData({ subject: '', priority: 'medium', message: '' });
+        // Refetch to get the full list including the new one
+        await fetchConversations(true);
+        setSelectedConversation(createdConversation);
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Failed to create conversation:', errorData);
         alert(`Failed to create conversation: ${errorData.message || 'Please try again'}`);
       }
     } catch (error) {
@@ -162,6 +167,66 @@ export default function SupportPage() {
     }
   };
 
+  // Confirm resolution
+  const handleConfirmResolution = async () => {
+    if (!selectedConversation) return;
+    setActionLoading(true);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch(`/api/support/conversation/${selectedConversation.id}/confirm-resolution`, {
+        method: 'POST',
+        headers,
+      });
+      if (response.ok) {
+        await fetchConversations(true);
+      } else {
+        const err = await response.json().catch(() => ({ message: 'Failed' }));
+        alert(err.message || 'Failed to confirm resolution');
+      }
+    } catch (error) {
+      console.error('Error confirming resolution:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Reopen ticket
+  const handleReopen = async () => {
+    if (!selectedConversation) return;
+    setActionLoading(true);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch(`/api/support/conversation/${selectedConversation.id}/reopen`, {
+        method: 'POST',
+        headers,
+      });
+      if (response.ok) {
+        await fetchConversations(true);
+      } else {
+        const err = await response.json().catch(() => ({ message: 'Failed' }));
+        alert(err.message || 'Failed to reopen ticket');
+      }
+    } catch (error) {
+      console.error('Error reopening ticket:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Enter key to send
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Count unread admin messages in a conversation
+  const getUnreadCount = (conv: SupportConversation) => {
+    if (!conv.support_messages) return 0;
+    return conv.support_messages.filter(m => m.sender_type === 'admin' && !m.is_read).length;
+  };
+
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = typeof conv.subject === 'string' && conv.subject.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || conv.status === filterStatus;
@@ -170,47 +235,83 @@ export default function SupportPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open':
-        return 'text-blue-400';
-      case 'in_progress':
-        return 'text-yellow-400';
-      case 'resolved':
-        return 'text-green-400';
-      case 'closed':
-        return 'text-gray-500';
-      default:
-        return 'text-gray-400';
+      case 'open': return 'text-blue-400';
+      case 'in_progress': return 'text-yellow-400';
+      case 'resolved': return 'text-green-400';
+      case 'closed': return 'text-gray-500';
+      default: return 'text-gray-400';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open':
-        return <MessageSquare size={14} />;
-      case 'in_progress':
-        return <Clock size={14} />;
-      case 'resolved':
-        return <CheckCircle size={14} />;
-      case 'closed':
-        return <XCircle size={14} />;
-      default:
-        return <AlertCircle size={14} />;
+      case 'open': return <MessageSquare size={14} />;
+      case 'in_progress': return <Clock size={14} />;
+      case 'resolved': return <CheckCircle size={14} />;
+      case 'closed': return <XCircle size={14} />;
+      default: return <AlertCircle size={14} />;
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'low':
-        return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'medium':
-        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'high':
-        return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-      case 'urgent':
-        return 'bg-red-500/10 text-red-400 border-red-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      case 'low': return 'bg-green-500/10 text-green-400 border-green-500/20';
+      case 'medium': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'high': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+      case 'urgent': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
+  };
+
+  const getCategoryLabel = (cat?: string) => {
+    const labels: Record<string, string> = {
+      deposit: 'Deposit', withdrawal: 'Withdrawal', trading: 'Trading',
+      account: 'Account', technical: 'Technical', kyc: 'KYC',
+      security: 'Security', general: 'General',
+    };
+    return labels[cat || 'general'] || 'General';
+  };
+
+  // Render a single message bubble (or system message)
+  const renderMessage = (msg: SupportMessage) => {
+    // System messages rendered as centered pills
+    if (msg.message_type === 'system') {
+      return (
+        <div key={msg.id} className="flex justify-center my-2">
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-4 py-1.5 flex items-center gap-2">
+            <Info size={12} className="text-gray-500 flex-shrink-0" />
+            <span className="text-xs text-gray-500">{msg.message}</span>
+            <span className="text-[10px] text-gray-600 ml-1">
+              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    const isUser = msg.sender_type === 'user';
+    return (
+      <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+        {!isUser && (
+          <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+            <Shield size={12} className="text-blue-400" />
+          </div>
+        )}
+        <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${
+          isUser
+            ? 'bg-blue-500/20 border border-blue-500/30 text-blue-100 rounded-br-md'
+            : 'bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 rounded-bl-md'
+        }`}>
+          {!isUser && (
+            <p className="text-[10px] text-blue-400 font-medium mb-1">Support Agent</p>
+          )}
+          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+          <p className="text-[10px] opacity-60 mt-1.5">
+            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -225,10 +326,17 @@ export default function SupportPage() {
             >
               <ArrowLeft size={20} className="text-gray-400" />
             </button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-white">Customer Support</h1>
               <p className="text-xs text-gray-500">Get help with your account and issues</p>
             </div>
+            <button
+              onClick={() => fetchConversations(true)}
+              className="p-2 hover:bg-[#111] rounded-lg transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw size={16} className="text-gray-400" />
+            </button>
           </div>
 
           {/* Search and Filter */}
@@ -282,32 +390,49 @@ export default function SupportPage() {
               </div>
             ) : (
               <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
-                {filteredConversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
-                    className={`w-full p-4 text-left border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${
-                      selectedConversation?.id === conv.id ? 'bg-[#1a1a1a]' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className={getStatusColor(conv.status)}>
-                        {getStatusIcon(conv.status)}
+                {filteredConversations.map((conv) => {
+                  const unread = getUnreadCount(conv);
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelectedConversation(conv)}
+                      className={`w-full p-4 text-left border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${
+                        selectedConversation?.id === conv.id ? 'bg-[#1a1a1a]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className={getStatusColor(conv.status)}>
+                          {getStatusIcon(conv.status)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-white truncate flex-1">{conv.subject}</h3>
+                            {unread > 0 && (
+                              <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                {unread}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {conv.last_message_at
+                              ? new Date(conv.last_message_at).toLocaleDateString()
+                              : new Date(conv.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-white truncate">{conv.subject}</h3>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(conv.created_at).toLocaleDateString()}
-                        </p>
+                      <div className="flex gap-2 ml-7">
+                        <span className={`text-xs px-2 py-0.5 rounded border ${getPriorityColor(conv.priority)}`}>
+                          {conv.priority}
+                        </span>
+                        {conv.category && conv.category !== 'general' && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]">
+                            {getCategoryLabel(conv.category)}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex gap-2 ml-7">
-                      <span className={`text-xs px-2 py-1 rounded border ${getPriorityColor(conv.priority)}`}>
-                        {conv.priority}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -320,71 +445,91 @@ export default function SupportPage() {
               {/* Conversation Header */}
               <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 mb-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-white">{selectedConversation.subject}</h2>
-                    <p className="text-sm text-gray-500 mt-1">ID: {selectedConversation.id}</p>
+                  <div className="flex-1 min-w-0 mr-3">
+                    <h2 className="text-lg font-bold text-white truncate">{selectedConversation.subject}</h2>
+                    <p className="text-xs text-gray-500 mt-1">Ticket #{selectedConversation.id}</p>
                   </div>
-                  <div className={`flex items-center gap-2 ${getStatusColor(selectedConversation.status)}`}>
+                  <div className={`flex items-center gap-2 flex-shrink-0 ${getStatusColor(selectedConversation.status)}`}>
                     {getStatusIcon(selectedConversation.status)}
                     <span className="text-sm font-medium capitalize">{selectedConversation.status.replace('_', ' ')}</span>
                   </div>
                 </div>
-                <div className="flex gap-3 flex-wrap">
-                  <span className={`text-xs px-3 py-1.5 rounded border ${getPriorityColor(selectedConversation.priority)}`}>
-                    Priority: {selectedConversation.priority}
+                <div className="flex gap-2 flex-wrap">
+                  <span className={`text-xs px-3 py-1 rounded border ${getPriorityColor(selectedConversation.priority)}`}>
+                    {selectedConversation.priority}
                   </span>
-                  <span className="text-xs bg-[#1a1a1a] text-gray-400 px-3 py-1.5 rounded border border-[#2a2a2a]">
-                    Updated: {new Date(selectedConversation.updated_at).toLocaleDateString()}
+                  {selectedConversation.category && (
+                    <span className="text-xs px-3 py-1 rounded bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]">
+                      {getCategoryLabel(selectedConversation.category)}
+                    </span>
+                  )}
+                  <span className="text-xs bg-[#1a1a1a] text-gray-500 px-3 py-1 rounded border border-[#2a2a2a]">
+                    {new Date(selectedConversation.created_at).toLocaleDateString()}
                   </span>
                 </div>
+
+                {/* Resolution action bar */}
+                {selectedConversation.status === 'resolved' && (
+                  <div className="mt-4 bg-green-500/5 border border-green-500/20 rounded-xl p-3">
+                    <p className="text-sm text-green-400 mb-3 flex items-center gap-2">
+                      <CheckCircle size={14} />
+                      This ticket has been marked as resolved by support.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleConfirmResolution}
+                        disabled={actionLoading}
+                        className="flex-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 text-sm font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ThumbsUp size={14} />
+                        {actionLoading ? 'Processing...' : 'Confirm & Close'}
+                      </button>
+                      <button
+                        onClick={handleReopen}
+                        disabled={actionLoading}
+                        className="flex-1 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-yellow-400 text-sm font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw size={14} />
+                        {actionLoading ? 'Processing...' : 'Reopen Ticket'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Messages Area */}
               <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 flex-1 flex flex-col overflow-hidden">
-                {/* Messages */}
                 <div className="flex-1 overflow-y-auto mb-4 space-y-3">
                   {selectedConversation.support_messages && selectedConversation.support_messages.length > 0 ? (
-                    selectedConversation.support_messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-xs px-4 py-3 rounded-lg ${
-                            msg.sender_type === 'user'
-                              ? 'bg-blue-500/20 border border-blue-500/30 text-blue-100'
-                              : 'bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300'
-                          }`}
-                        >
-                          <p className="text-sm">{msg.message}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(msg.created_at).toLocaleTimeString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))
+                    selectedConversation.support_messages.map(renderMessage)
                   ) : (
                     <div className="text-center text-gray-500 text-sm py-8">No messages yet</div>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
-                {selectedConversation.status !== 'closed' && (
+                {/* Message Input or Closed Notice */}
+                {selectedConversation.status === 'closed' ? (
+                  <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 flex items-center gap-2 text-gray-500 text-sm">
+                    <Lock size={14} className="flex-shrink-0" />
+                    This ticket has been closed. Start a new conversation if you need further help.
+                  </div>
+                ) : (
                   <div className="flex gap-2">
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      rows={3}
-                      className="flex-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                      onKeyDown={handleKeyDown}
+                      placeholder={selectedConversation.status === 'resolved' ? 'Reply to reopen this ticket...' : 'Type your message...'}
+                      rows={2}
+                      className="flex-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!message.trim() || sending}
-                      className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                      className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white px-4 py-2 rounded-xl transition-colors flex items-center justify-center"
                     >
-                      <Send size={16} />
+                      {sending ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
                 )}
@@ -394,7 +539,8 @@ export default function SupportPage() {
             <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] flex items-center justify-center flex-1">
               <div className="text-center">
                 <MessageSquare size={32} className="text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500">Select a conversation to view details</p>
+                <p className="text-gray-500 mb-1">Select a conversation to view details</p>
+                <p className="text-gray-600 text-xs">or create a new one to get started</p>
               </div>
             </div>
           )}
@@ -403,9 +549,10 @@ export default function SupportPage() {
 
       {/* New Conversation Modal */}
       {showNewConversationForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] w-full max-w-md p-6">
-            <h2 className="text-lg font-bold text-white mb-4">Start New Support Conversation</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNewConversationForm(false)}>
+          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-white mb-1">Start New Conversation</h2>
+            <p className="text-xs text-gray-500 mb-5">Describe your issue and our support team will respond shortly.</p>
 
             <div className="space-y-4">
               <div>
@@ -415,7 +562,7 @@ export default function SupportPage() {
                   value={newConversationData.subject}
                   onChange={(e) => setNewConversationData({ ...newConversationData, subject: e.target.value })}
                   placeholder="Brief description of your issue..."
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
 
@@ -424,7 +571,7 @@ export default function SupportPage() {
                 <select
                   value={newConversationData.priority}
                   onChange={(e) => setNewConversationData({ ...newConversationData, priority: e.target.value as any })}
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -447,7 +594,7 @@ export default function SupportPage() {
                   onChange={(e) => setNewConversationData({ ...newConversationData, message: e.target.value })}
                   placeholder="Provide details about your issue..."
                   rows={5}
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                 />
               </div>
             </div>
@@ -455,18 +602,16 @@ export default function SupportPage() {
             <div className="flex gap-2 mt-6">
               <button
                 onClick={() => setShowNewConversationForm(false)}
-                className="flex-1 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] text-white font-medium py-2 rounded-lg transition-colors"
+                className="flex-1 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] text-white font-medium py-2.5 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateConversation}
                 disabled={!newConversationData.subject || !newConversationData.message || sending}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-medium py-2.5 rounded-xl transition-colors"
               >
-                {sending ? 'Creating...' : 'Start Conversation'}
-              </button>
-            </div>
+                {sending ? 'Creating...' : 'Submit Ticket'}
           </div>
         </div>
       )}

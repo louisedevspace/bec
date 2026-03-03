@@ -289,6 +289,8 @@ export const supportConversations = pgTable("support_conversations", {
   subject: text("subject").notNull().default(''),
   status: text("status").notNull().default('open'), // open, in_progress, resolved, closed
   priority: text("priority").notNull().default('medium'), // low, medium, high, urgent
+  category: text("category").default('general'), // deposit, withdrawal, trading, account, staking, technical, security, general
+  assignedTo: uuid("assigned_to"), // Admin user assigned to this ticket
   isActive: boolean("is_active").default(true), // Whether conversation is active
   lastMessageAt: timestamp("last_message_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
