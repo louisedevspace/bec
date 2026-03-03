@@ -385,12 +385,12 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
 
               <TabsContent value="approved" className="space-y-4">
                 {approvedRequests.map((kyc) => (
-                  <Card key={kyc.id} className="border-l-4 border-l-green-500">
+                  <Card key={kyc.id} className="border-l-4 border-l-green-500 bg-[#0a0a0a] border-[#1e1e1e]">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-lg">{kyc.full_name}</CardTitle>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <CardTitle className="text-lg text-white">{kyc.full_name}</CardTitle>
+                          <p className="text-sm text-gray-400">
                             Approved: {kyc.reviewed_at ? formatDate(kyc.reviewed_at) : 'N/A'}
                           </p>
                         </div>
@@ -400,25 +400,25 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">User Information</h4>
-                          <div className="space-y-2 text-sm">
-                            <div><strong>Email:</strong> {kyc.user?.email || 'N/A'}</div>
-                            <div><strong>SSN:</strong> {kyc.ssn}</div>
-                            <div><strong>Address:</strong> {kyc.address}</div>
+                          <h4 className="font-semibold text-white">User Information</h4>
+                          <div className="space-y-2 text-sm text-gray-300">
+                            <div><strong className="text-gray-400">Email:</strong> {kyc.user?.email || 'N/A'}</div>
+                            <div><strong className="text-gray-400">SSN:</strong> {kyc.ssn}</div>
+                            <div><strong className="text-gray-400">Address:</strong> {kyc.address}</div>
                           </div>
                         </div>
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Documents</h4>
+                          <h4 className="font-semibold text-white">Documents</h4>
                           <div className="grid grid-cols-3 gap-2">
                             {kyc.front_id_url && (
                               <a 
                                 href={kyc.front_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <FileText className="h-6 w-6 text-blue-600" />
-                                <span className="text-xs mt-1">Front ID</span>
+                                <FileText className="h-6 w-6 text-blue-400" />
+                                <span className="text-xs mt-1 text-gray-400">Front ID</span>
                               </a>
                             )}
                             {kyc.back_id_url && (
@@ -426,10 +426,10 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                                 href={kyc.back_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <FileText className="h-6 w-6 text-blue-600" />
-                                <span className="text-xs mt-1">Back ID</span>
+                                <FileText className="h-6 w-6 text-blue-400" />
+                                <span className="text-xs mt-1 text-gray-400">Back ID</span>
                               </a>
                             )}
                             {kyc.selfie_with_id_url && (
@@ -437,10 +437,10 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                                 href={kyc.selfie_with_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <Camera className="h-6 w-6 text-green-600" />
-                                <span className="text-xs mt-1">Selfie</span>
+                                <Camera className="h-6 w-6 text-green-400" />
+                                <span className="text-xs mt-1 text-gray-400">Selfie</span>
                               </a>
                             )}
                           </div>
@@ -453,12 +453,12 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
 
               <TabsContent value="rejected" className="space-y-4">
                 {rejectedRequests.map((kyc) => (
-                  <Card key={kyc.id} className="border-l-4 border-l-red-500">
+                  <Card key={kyc.id} className="border-l-4 border-l-red-500 bg-[#0a0a0a] border-[#1e1e1e]">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-lg">{kyc.full_name}</CardTitle>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <CardTitle className="text-lg text-white">{kyc.full_name}</CardTitle>
+                          <p className="text-sm text-gray-400">
                             Rejected: {kyc.reviewed_at ? formatDate(kyc.reviewed_at) : 'N/A'}
                           </p>
                         </div>
@@ -468,25 +468,25 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">User Information</h4>
-                          <div className="space-y-2 text-sm">
-                            <div><strong>Email:</strong> {kyc.user?.email || 'N/A'}</div>
-                            <div><strong>SSN:</strong> {kyc.ssn}</div>
-                            <div><strong>Address:</strong> {kyc.address}</div>
+                          <h4 className="font-semibold text-white">User Information</h4>
+                          <div className="space-y-2 text-sm text-gray-300">
+                            <div><strong className="text-gray-400">Email:</strong> {kyc.user?.email || 'N/A'}</div>
+                            <div><strong className="text-gray-400">SSN:</strong> {kyc.ssn}</div>
+                            <div><strong className="text-gray-400">Address:</strong> {kyc.address}</div>
                           </div>
                         </div>
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Documents</h4>
+                          <h4 className="font-semibold text-white">Documents</h4>
                           <div className="grid grid-cols-3 gap-2">
                             {kyc.front_id_url && (
                               <a 
                                 href={kyc.front_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <FileText className="h-6 w-6 text-blue-600" />
-                                <span className="text-xs mt-1">Front ID</span>
+                                <FileText className="h-6 w-6 text-blue-400" />
+                                <span className="text-xs mt-1 text-gray-400">Front ID</span>
                               </a>
                             )}
                             {kyc.back_id_url && (
@@ -494,10 +494,10 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                                 href={kyc.back_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <FileText className="h-6 w-6 text-blue-600" />
-                                <span className="text-xs mt-1">Back ID</span>
+                                <FileText className="h-6 w-6 text-blue-400" />
+                                <span className="text-xs mt-1 text-gray-400">Back ID</span>
                               </a>
                             )}
                             {kyc.selfie_with_id_url && (
@@ -505,19 +505,19 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                                 href={kyc.selfie_with_id_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="flex flex-col items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
-                                <Camera className="h-6 w-6 text-green-600" />
-                                <span className="text-xs mt-1">Selfie</span>
+                                <Camera className="h-6 w-6 text-green-400" />
+                                <span className="text-xs mt-1 text-gray-400">Selfie</span>
                               </a>
                             )}
                           </div>
                         </div>
                       </div>
                       {kyc.rejection_reason && (
-                        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                          <h5 className="font-semibold text-red-800 dark:text-red-200 mb-1">Rejection Reason:</h5>
-                          <p className="text-sm text-red-700 dark:text-red-300">{kyc.rejection_reason}</p>
+                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                          <h5 className="font-semibold text-red-300 mb-1">Rejection Reason:</h5>
+                          <p className="text-sm text-red-400">{kyc.rejection_reason}</p>
                         </div>
                       )}
                     </CardContent>

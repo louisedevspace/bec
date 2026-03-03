@@ -31,9 +31,9 @@ export function ProfilePictureViewerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="admin-dialog max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="admin-dialog max-w-2xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="text-white flex items-center gap-2">
             Profile Picture - {userName}
           </DialogTitle>
         </DialogHeader>
@@ -45,14 +45,14 @@ export function ProfilePictureViewerModal({
               <img 
                 src={profilePictureUrl} 
                 alt={`${userName}'s profile picture`}
-                className="max-w-full max-h-96 object-contain rounded-lg shadow-lg border border-gray-200"
+                className="max-w-full max-h-96 object-contain rounded-xl shadow-lg border border-[#1e1e1e]"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   target.nextElementSibling?.classList.remove('hidden');
                 }}
               />
-              <div className="hidden absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="hidden absolute inset-0 bg-[#0a0a0a] rounded-xl flex items-center justify-center">
                 <p className="text-gray-500">Failed to load image</p>
               </div>
             </div>
@@ -63,7 +63,7 @@ export function ProfilePictureViewerModal({
             <Button
               variant="outline"
               onClick={handleOpenInNewTab}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
             >
               <ExternalLink className="h-4 w-4" />
               <span>Open in New Tab</span>
@@ -71,7 +71,7 @@ export function ProfilePictureViewerModal({
             <Button
               variant="outline"
               onClick={handleDownload}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
             >
               <Download className="h-4 w-4" />
               <span>Download</span>
@@ -79,9 +79,9 @@ export function ProfilePictureViewerModal({
           </div>
 
           {/* Image URL */}
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-xs text-gray-600 mb-1">Image URL:</p>
-            <p className="text-xs font-mono break-all text-gray-800">
+          <div className="bg-[#0a0a0a] border border-[#1e1e1e] p-3 rounded-xl">
+            <p className="text-xs text-gray-500 mb-1">Image URL:</p>
+            <p className="text-xs font-mono break-all text-gray-300">
               {profilePictureUrl}
             </p>
           </div>

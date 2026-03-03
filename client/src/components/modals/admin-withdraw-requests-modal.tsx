@@ -179,12 +179,12 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
           <DialogHeader>
-            <DialogTitle>Withdraw Requests</DialogTitle>
+            <DialogTitle className="text-white">Withdraw Requests</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
-            <div className="text-center">Loading withdraw requests...</div>
+            <div className="text-center text-gray-400">Loading withdraw requests...</div>
           </div>
         </DialogContent>
       </Dialog>
@@ -194,12 +194,12 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   if (error) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
           <DialogHeader>
-            <DialogTitle>Withdraw Requests</DialogTitle>
+            <DialogTitle className="text-white">Withdraw Requests</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
-            <div className="text-center text-red-500">Error loading withdraw requests</div>
+            <div className="text-center text-red-400">Error loading withdraw requests</div>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { X, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle, Shield } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '../../lib/supabaseClient';
 import { buildApiUrl } from '../../lib/config';
 
@@ -88,28 +90,20 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2d3842] rounded-lg max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Change User Password</h2>
-            <p className="text-sm text-gray-300 mt-1">Updating password for: {user.email}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="admin-dialog max-w-md bg-[#111] border-[#1e1e1e] text-white">
+        <DialogHeader>
+          <DialogTitle className="text-white text-xl">Change User Password</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Updating password for: {user.email}
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* New Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-400 mb-2">
               New Password
             </label>
             <div className="relative">
@@ -117,23 +111,23 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-[#3b4652] border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#2a2a2a] transition-colors"
                 placeholder="Enter new password (min 6 characters)"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
               >
-                {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           {/* Confirm New Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-400 mb-2">
               Confirm New Password
             </label>
             <div className="relative">
@@ -141,23 +135,23 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-[#3b4652] border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#2a2a2a] transition-colors"
                 placeholder="Confirm new password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
               >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           {/* Warning */}
-          <div className="flex items-center space-x-2 p-3 bg-yellow-900/20 border border-yellow-500 rounded-md">
-            <Shield size={20} className="text-yellow-400" />
+          <div className="flex items-center space-x-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+            <Shield size={20} className="text-yellow-400 shrink-0" />
             <span className="text-yellow-400 text-sm">
               This will update the password for {user.email}. The user will be able to login with the new password immediately.
             </span>
@@ -165,40 +159,41 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-900/20 border border-red-500 rounded-md">
-              <AlertCircle size={20} className="text-red-400" />
+            <div className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <AlertCircle size={20} className="text-red-400 shrink-0" />
               <span className="text-red-400 text-sm">{error}</span>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-900/20 border border-green-500 rounded-md">
-              <CheckCircle size={20} className="text-green-400" />
+            <div className="flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+              <CheckCircle size={20} className="text-green-400 shrink-0" />
               <span className="text-green-400 text-sm">{success}</span>
             </div>
           )}
 
           {/* Buttons */}
           <div className="flex space-x-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               disabled={loading}
+              className="flex-1 bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {loading ? 'Updating...' : 'Update Password'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 } 
