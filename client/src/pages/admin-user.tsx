@@ -1,89 +1,54 @@
 import AdminLayout from "./admin-layout";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabaseClient";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  RefreshCw,
-  Eye,
-  EyeOff,
-  Shield,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  User,
-  Users,
-  Key,
-  DollarSign,
-  TrendingUp,
-  Coins,
-  Settings,
-  FileText,
-  History,
-  Search,
-  Copy,
-  Check,
+  RefreshCw, Eye, EyeOff, Shield, Mail, Phone, Calendar, User, Users, Key,
+  DollarSign, TrendingUp, Coins, Settings, FileText, History, Search, Copy,
+  Check, Download, ChevronLeft, ChevronRight, ArrowUpDown, Filter, UserCheck,
+  UserX, Clock, Activity, BarChart3, AlertTriangle, Globe, Wallet, ChevronsUpDown,
+  SortAsc, SortDesc, X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const AdminChangePasswordModal = lazy(() =>
-  import("../components/modals/admin-change-password-modal").then((m) => ({
-    default: m.AdminChangePasswordModal,
-  })),
+  import("../components/modals/admin-change-password-modal").then((m) => ({ default: m.AdminChangePasswordModal })),
 );
 const AdminUserManagementModal = lazy(() =>
-  import("../components/modals/admin-user-management-modal").then((m) => ({
-    default: m.AdminUserManagementModal,
-  })),
+  import("../components/modals/admin-user-management-modal").then((m) => ({ default: m.AdminUserManagementModal })),
 );
 const AdminKYCManagementModal = lazy(() =>
-  import("../components/modals/admin-kyc-management-modal").then((m) => ({
-    default: m.AdminKYCManagementModal,
-  })),
+  import("../components/modals/admin-kyc-management-modal").then((m) => ({ default: m.AdminKYCManagementModal })),
 );
 const AdminDepositRequestsModal = lazy(() =>
-  import("../components/modals/admin-deposit-requests-modal").then((m) => ({
-    default: m.AdminDepositRequestsModal,
-  })),
+  import("../components/modals/admin-deposit-requests-modal").then((m) => ({ default: m.AdminDepositRequestsModal })),
 );
 const AdminWithdrawRequestsModal = lazy(() =>
-  import("../components/modals/admin-withdraw-requests-modal").then((m) => ({
-    default: m.AdminWithdrawRequestsModal,
-  })),
+  import("../components/modals/admin-withdraw-requests-modal").then((m) => ({ default: m.AdminWithdrawRequestsModal })),
 );
 const AdminWithdrawHistoryModal = lazy(() =>
-  import("../components/modals/admin-withdraw-history-modal").then((m) => ({
-    default: m.AdminWithdrawHistoryModal,
-  })),
+  import("../components/modals/admin-withdraw-history-modal").then((m) => ({ default: m.AdminWithdrawHistoryModal })),
 );
 const AdminDepositHistoryModal = lazy(() =>
-  import("../components/modals/admin-deposit-history-modal").then((m) => ({
-    default: m.AdminDepositHistoryModal,
-  })),
+  import("../components/modals/admin-deposit-history-modal").then((m) => ({ default: m.AdminDepositHistoryModal })),
 );
 const AdminLoanManagementModal = lazy(() =>
-  import("../components/modals/admin-loan-management-modal").then((m) => ({
-    default: m.AdminLoanManagementModal,
-  })),
+  import("../components/modals/admin-loan-management-modal").then((m) => ({ default: m.AdminLoanManagementModal })),
 );
 const AdminFuturesSettingsModal = lazy(() =>
-  import("../components/modals/admin-futures-settings-modal").then((m) => ({
-    default: m.AdminFuturesSettingsModal,
-  })),
+  import("../components/modals/admin-futures-settings-modal").then((m) => ({ default: m.AdminFuturesSettingsModal })),
 );
 const ProfilePictureViewerModal = lazy(() =>
-  import("../components/modals/profile-picture-viewer-modal").then((m) => ({
-    default: m.ProfilePictureViewerModal,
-  })),
+  import("../components/modals/profile-picture-viewer-modal").then((m) => ({ default: m.ProfilePictureViewerModal })),
 );
 import { formatGenericCryptoBalance } from '../utils/format-utils';
+
+type SortField = 'name' | 'email' | 'date' | 'portfolio' | 'trades' | 'status';
+type SortDir = 'asc' | 'desc';
+type StatusFilter = 'all' | 'active' | 'inactive' | 'verified' | 'pending' | 'kyc_pending';
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
@@ -102,24 +67,105 @@ export default function AdminUsers() {
   const [showLoanManagementModal, setShowLoanManagementModal] = useState(false);
   const [showFuturesSettingsModal, setShowFuturesSettingsModal] = useState(false);
   const [selectedFuturesUser, setSelectedFuturesUser] = useState<any>(null);
-
-
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
   const [selectedProfilePicture, setSelectedProfilePicture] = useState<{ url: string; userName: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const filteredUsers = users.filter(user => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (user.username || '').toLowerCase().includes(q) ||
-      (user.email || '').toLowerCase().includes(q) ||
-      (user.full_name || '').toLowerCase().includes(q) ||
-      (user.display_id || '').toLowerCase().includes(q) ||
-      (user.id || '').toLowerCase().includes(q)
-    );
-  });
+  // New state for enhanced features
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
+
+  // Computed stats
+  const stats = useMemo(() => {
+    const total = users.length;
+    const active = users.filter(u => u.is_active !== false).length;
+    const inactive = total - active;
+    const verified = users.filter(u => u.email_confirmed_at && u.is_verified).length;
+    const kycPending = users.filter(u => u.kyc_status === 'pending').length;
+    const totalPortfolio = users.reduce((sum, u) => sum + (u.total_portfolio_value || 0), 0);
+    const totalTrades = users.reduce((sum, u) => sum + (u.trade_count || 0), 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const newToday = users.filter(u => new Date(u.created_at) >= today).length;
+    return { total, active, inactive, verified, kycPending, totalPortfolio, totalTrades, newToday };
+  }, [users]);
+
+  // Filtering
+  const filteredUsers = useMemo(() => {
+    let result = users;
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(u => {
+        switch (statusFilter) {
+          case 'active': return u.is_active !== false;
+          case 'inactive': return u.is_active === false;
+          case 'verified': return u.email_confirmed_at && u.is_verified;
+          case 'pending': return !u.email_confirmed_at || !u.is_verified;
+          case 'kyc_pending': return u.kyc_status === 'pending';
+          default: return true;
+        }
+      });
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(u =>
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.full_name || '').toLowerCase().includes(q) ||
+        (u.display_id || '').toLowerCase().includes(q) ||
+        (u.id || '').toLowerCase().includes(q) ||
+        (u.phone || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = (a.full_name || a.email || '').localeCompare(b.full_name || b.email || '');
+          break;
+        case 'email':
+          cmp = (a.email || '').localeCompare(b.email || '');
+          break;
+        case 'date':
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'portfolio':
+          cmp = (a.total_portfolio_value || 0) - (b.total_portfolio_value || 0);
+          break;
+        case 'trades':
+          cmp = (a.trade_count || 0) - (b.trade_count || 0);
+          break;
+        case 'status':
+          const statusA = a.email_confirmed_at && a.is_verified ? 1 : 0;
+          const statusB = b.email_confirmed_at && b.is_verified ? 1 : 0;
+          cmp = statusA - statusB;
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return result;
+  }, [users, statusFilter, searchQuery, sortField, sortDir]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, currentPage, pageSize]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, sortField, sortDir, pageSize]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -136,10 +182,7 @@ export default function AdminUsers() {
       if (!token) throw new Error('No authentication token');
 
       const res = await fetch(`/api/admin/users?t=${Date.now()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error('Failed to fetch users');
       const { users } = await res.json();
@@ -155,31 +198,81 @@ export default function AdminUsers() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  const formatShortDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: '2-digit',
     });
   };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2,
     }).format(value);
   };
 
-  const getStatusBadge = (user: any) => {
-    // Only show "Verified" badge when both email is confirmed AND KYC is approved
-    if (user.email_confirmed_at && user.is_verified) {
-      return <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Verified</Badge>;
-    }
-    return <Badge variant="outline" className="text-orange-400 border-orange-500/20 bg-orange-500/10">Pending</Badge>;
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return formatShortDate(dateStr);
   };
 
+  const getStatusBadge = (user: any) => {
+    if (user.email_confirmed_at && user.is_verified) {
+      return <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">Verified</Badge>;
+    }
+    return <Badge variant="outline" className="text-orange-400 border-orange-500/20 bg-orange-500/10 text-[10px]">Pending</Badge>;
+  };
+
+  const getActivityBadge = (user: any) => {
+    if (user.is_active === false) {
+      return <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Inactive" />;
+    }
+    return <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Active" />;
+  };
+
+  const handleToggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const handleExportCSV = () => {
+    const rows = [
+      ['Name', 'Email', 'Username', 'Display ID', 'Status', 'KYC', 'Active', 'Portfolio Value', 'Trades', 'Assets', 'Loans', 'Staking', 'Joined', 'Last Login'],
+      ...filteredUsers.map(u => [
+        u.full_name || '', u.email || '', u.username || '', u.display_id || u.id?.substring(0, 8) || '',
+        u.email_confirmed_at && u.is_verified ? 'Verified' : 'Pending',
+        u.kyc_status || 'none', u.is_active !== false ? 'Yes' : 'No',
+        (u.total_portfolio_value || 0).toFixed(2), u.trade_count || 0, u.assets_count || 0,
+        u.active_loans_count || 0, u.active_staking_count || 0,
+        u.created_at ? new Date(u.created_at).toISOString() : '',
+        u.last_sign_in_at ? new Date(u.last_sign_in_at).toISOString() : '',
+      ])
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Modal handlers (unchanged behavior)
   const handleChangePassword = (user: any) => {
     setSelectedUser({ id: user.id, email: user.email });
     setShowPasswordModal(true);
@@ -188,14 +281,12 @@ export default function AdminUsers() {
   const handlePasswordModalClose = () => {
     setShowPasswordModal(false);
     setSelectedUser(null);
-    // Refresh users to show updated password status
     fetchUsers();
   };
 
   const handleManagementModalClose = () => {
     setShowManagementModal(false);
     setSelectedManagementUser(null);
-    // Refresh users to show updated data
     fetchUsers();
   };
 
@@ -204,171 +295,296 @@ export default function AdminUsers() {
     setShowManagementModal(true);
   };
 
-  const handleOpenKYCManagement = () => {
-    setShowKYCModal(true);
-  };
-
-  const handleOpenDepositRequests = () => {
-    setShowDepositRequestsModal(true);
-  };
-
-  const handleOpenWithdrawRequests = () => {
-    setShowWithdrawRequestsModal(true);
-  };
-
-  const handleOpenWithdrawHistory = () => {
-    setShowWithdrawHistoryModal(true);
-  };
-
-  const handleOpenDepositHistory = () => {
-    setShowDepositHistoryModal(true);
-  };
-
-  const handleOpenLoanManagement = () => {
-    setShowLoanManagementModal(true);
-  };
-
-
-
   const handleViewProfilePicture = (profilePictureUrl: string, userName: string) => {
     setSelectedProfilePicture({ url: profilePictureUrl, userName });
     setShowProfilePictureModal(true);
   };
 
+  // Status filter tabs config
+  const filterTabs: { key: StatusFilter; label: string; icon: React.ReactNode; count: number }[] = [
+    { key: 'all', label: 'All', icon: <Users size={13} />, count: stats.total },
+    { key: 'active', label: 'Active', icon: <Activity size={13} />, count: stats.active },
+    { key: 'inactive', label: 'Inactive', icon: <UserX size={13} />, count: stats.inactive },
+    { key: 'verified', label: 'Verified', icon: <UserCheck size={13} />, count: stats.verified },
+    { key: 'pending', label: 'Pending', icon: <Clock size={13} />, count: stats.total - stats.verified },
+    { key: 'kyc_pending', label: 'KYC Pending', icon: <FileText size={13} />, count: stats.kycPending },
+  ];
+
+  // Sort options
+  const sortOptions: { field: SortField; label: string }[] = [
+    { field: 'date', label: 'Join Date' },
+    { field: 'name', label: 'Name' },
+    { field: 'email', label: 'Email' },
+    { field: 'portfolio', label: 'Portfolio' },
+    { field: 'trades', label: 'Trades' },
+    { field: 'status', label: 'Status' },
+  ];
+
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-white">User Management</h1>
-              <p className="text-sm text-gray-500 mt-1">{users.length} total users registered</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowPasswords(!showPasswords)}
-                className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#2a2a2a] hover:text-white h-9 px-3 transition-colors"
-              >
-                {showPasswords ? <EyeOff className="h-3.5 w-3.5 mr-1.5" /> : <Eye className="h-3.5 w-3.5 mr-1.5" />}
-                {showPasswords ? 'Hide' : 'Show'} Auth
-              </button>
-              <Button
-                onClick={fetchUsers}
-                size="sm"
-                className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700"
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Refresh
-              </Button>
-            </div>
+      <div className="max-w-7xl mx-auto space-y-5">
+        {/* ---- Header ---- */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white">User Management</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {stats.total} total users &middot; {stats.newToday > 0 && <span className="text-green-400">{stats.newToday} new today</span>}
+            </p>
           </div>
-
-          {/* Action Buttons Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={handleOpenDepositRequests}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all duration-200"
+              onClick={() => setViewMode(v => v === 'cards' ? 'compact' : 'cards')}
+              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
+              title={viewMode === 'cards' ? 'Switch to compact view' : 'Switch to card view'}
             >
-              <div className="w-9 h-9 bg-emerald-500/10 rounded-xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                <DollarSign className="h-4 w-4 text-emerald-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-emerald-400 transition-colors text-center leading-tight">Deposit<br className="sm:hidden" /> Requests</span>
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              {viewMode === 'cards' ? 'Compact' : 'Cards'}
             </button>
             <button
-              onClick={handleOpenWithdrawRequests}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all duration-200"
+              onClick={() => setShowPasswords(!showPasswords)}
+              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
             >
-              <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                <DollarSign className="h-4 w-4 text-blue-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-blue-400 transition-colors text-center leading-tight">Withdraw<br className="sm:hidden" /> Requests</span>
+              {showPasswords ? <EyeOff className="h-3.5 w-3.5 mr-1.5" /> : <Eye className="h-3.5 w-3.5 mr-1.5" />}
+              {showPasswords ? 'Hide' : 'Show'} Auth
             </button>
             <button
-              onClick={handleOpenDepositHistory}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-200"
+              onClick={handleExportCSV}
+              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
             >
-              <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
-                <History className="h-4 w-4 text-orange-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-orange-400 transition-colors text-center leading-tight">Deposit<br className="sm:hidden" /> History</span>
+              <Download className="h-3.5 w-3.5 mr-1.5" />Export
             </button>
-            <button
-              onClick={handleOpenWithdrawHistory}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-purple-500/30 hover:bg-purple-500/10 transition-all duration-200"
-            >
-              <div className="w-9 h-9 bg-purple-500/10 rounded-xl flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-                <History className="h-4 w-4 text-purple-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-purple-400 transition-colors text-center leading-tight">Withdraw<br className="sm:hidden" /> History</span>
-            </button>
-            <button
-              onClick={handleOpenKYCManagement}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-all duration-200"
-            >
-              <div className="w-9 h-9 bg-indigo-500/10 rounded-xl flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
-                <FileText className="h-4 w-4 text-indigo-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-indigo-400 transition-colors text-center leading-tight">KYC<br className="sm:hidden" /> Mgmt</span>
-            </button>
-            <button
-              onClick={handleOpenLoanManagement}
-              className="group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-teal-500/30 hover:bg-teal-500/10 transition-all duration-200"
-            >
-              <div className="w-9 h-9 bg-teal-500/10 rounded-xl flex items-center justify-center group-hover:bg-teal-500/20 transition-colors">
-                <DollarSign className="h-4 w-4 text-teal-400" />
-              </div>
-              <span className="text-[11px] font-medium text-gray-400 group-hover:text-teal-400 transition-colors text-center leading-tight">Loan<br className="sm:hidden" /> Mgmt</span>
-            </button>
+            <Button onClick={fetchUsers} size="sm" className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 h-8">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh
+            </Button>
           </div>
         </div>
 
-        {/* Search + Users List */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          {/* Search Header */}
-          <div className="p-4 md:p-5 border-b border-[#1e1e1e]">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                  <Users className="h-4 w-4 text-blue-400" />
-                </div>
-                <span className="font-semibold text-white text-sm">
-                  {searchQuery ? `${filteredUsers.length} of ${users.length} users` : `${users.length} Users`}
-                </span>
+        {/* ---- Stats Overview ---- */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+          {[
+            { label: 'Total Users', value: stats.total, icon: <Users size={16} />, bg: 'bg-blue-500/10', color: 'text-blue-400' },
+            { label: 'Active', value: stats.active, icon: <Activity size={16} />, bg: 'bg-green-500/10', color: 'text-green-400' },
+            { label: 'Inactive', value: stats.inactive, icon: <UserX size={16} />, bg: 'bg-red-500/10', color: 'text-red-400' },
+            { label: 'Verified', value: stats.verified, icon: <UserCheck size={16} />, bg: 'bg-emerald-500/10', color: 'text-emerald-400' },
+            { label: 'KYC Pending', value: stats.kycPending, icon: <FileText size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-400' },
+            { label: 'Portfolio', value: stats.totalPortfolio >= 1e6 ? `$${(stats.totalPortfolio / 1e6).toFixed(1)}M` : stats.totalPortfolio >= 1e3 ? `$${(stats.totalPortfolio / 1e3).toFixed(1)}K` : `$${stats.totalPortfolio.toFixed(0)}`, icon: <Wallet size={16} />, bg: 'bg-purple-500/10', color: 'text-purple-400' },
+            { label: 'Total Trades', value: stats.totalTrades, icon: <TrendingUp size={16} />, bg: 'bg-cyan-500/10', color: 'text-cyan-400' },
+          ].map((s, i) => (
+            <div key={i} className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-3 hover:border-[#2a2a2a] transition-all">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">{s.label}</span>
+                <div className={`w-7 h-7 ${s.bg} rounded-lg flex items-center justify-center ${s.color}`}>{s.icon}</div>
               </div>
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <p className="text-lg font-bold text-white leading-none">{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ---- Action Buttons Grid ---- */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {[
+            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Deposit Requests', color: 'emerald' },
+            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Withdraw Requests', color: 'blue' },
+            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Deposit History', color: 'orange' },
+            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Withdraw History', color: 'purple' },
+            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-4 w-4" />, label: 'KYC Mgmt', color: 'indigo' },
+            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Loan Mgmt', color: 'teal' },
+          ].map((btn, i) => (
+            <button
+              key={i}
+              onClick={btn.onClick}
+              className={`group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
+            >
+              <div className={`w-9 h-9 bg-${btn.color}-500/10 rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
+                {btn.icon}
+              </div>
+              <span className={`text-[11px] font-medium text-gray-400 group-hover:text-${btn.color}-400 transition-colors text-center leading-tight`}>
+                {btn.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* ---- Filter & Search Bar ---- */}
+        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+          {/* Status Filter Tabs */}
+          <div className="border-b border-[#1e1e1e] px-4 pt-3 pb-0 overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
+              {filterTabs.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setStatusFilter(tab.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-t-lg text-xs font-medium px-3 py-2 border-b-2 transition-all
+                    ${statusFilter === tab.key
+                      ? 'border-blue-500 text-blue-400 bg-blue-500/5'
+                      : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0 rounded-full font-semibold
+                    ${statusFilter === tab.key ? 'bg-blue-500/20 text-blue-400' : 'bg-[#1a1a1a] text-gray-500'}`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search + Sort + Page Size */}
+          <div className="p-4 border-b border-[#1e1e1e]">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder="Search by name, email, username, ID, phone..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                  className="pl-9 pr-8 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-sm h-9 text-white placeholder:text-gray-600 focus:border-blue-500"
                 />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Sort selector */}
+                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+                  <span className="text-[10px] text-gray-500 px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
+                  {sortOptions.map(opt => (
+                    <button
+                      key={opt.field}
+                      onClick={() => handleToggleSort(opt.field)}
+                      className={`text-[11px] px-2 py-1.5 transition-colors flex items-center gap-1
+                        ${sortField === opt.field
+                          ? 'bg-blue-500/10 text-blue-400 font-semibold'
+                          : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                    >
+                      {opt.label}
+                      {sortField === opt.field && (
+                        sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {/* Page size */}
+                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+                  <span className="text-[10px] text-gray-500 px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <button
+                      key={size}
+                      onClick={() => setPageSize(size)}
+                      className={`text-[11px] px-2 py-1.5 transition-colors
+                        ${pageSize === size ? 'bg-blue-500/10 text-blue-400 font-semibold' : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                {/* Result count */}
+                <span className="text-[11px] text-gray-500 flex-shrink-0">
+                  {filteredUsers.length} result{filteredUsers.length !== 1 ? 's' : ''}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Users List */}
-          <div className="p-4 md:p-5">
+          {/* ---- Users List ---- */}
+          <div className="p-4">
             {loading ? (
               <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto" />
                 <p className="mt-3 text-sm text-gray-500">Loading users...</p>
               </div>
             ) : error ? (
               <div className="text-center py-8">
-                <div className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl p-4 text-sm inline-block">{error}</div>
+                <div className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl p-4 text-sm inline-flex items-center gap-2">
+                  <AlertTriangle size={16} />{error}
+                </div>
               </div>
             ) : filteredUsers.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <Users className="h-8 w-8 text-gray-500" />
+                  <Users className="h-8 w-8 text-gray-600" />
                 </div>
-                <p className="text-gray-500 text-sm">No users found</p>
+                <p className="text-gray-500 text-sm mb-1">No users found</p>
+                <p className="text-gray-600 text-xs">
+                  {searchQuery ? 'Try adjusting your search or filters' : 'No users match the current filter'}
+                </p>
+              </div>
+            ) : viewMode === 'compact' ? (
+              /* ===== COMPACT TABLE VIEW ===== */
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[#1e1e1e]">
+                      {['User', 'Email', 'Status', 'KYC', 'Portfolio', 'Trades', 'Joined', 'Actions'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 py-2.5">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#141414]">
+                    {paginatedUsers.map(user => (
+                      <tr key={user.id} className="hover:bg-[#0d0d0d] transition-colors group">
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="relative flex-shrink-0">
+                              <div
+                                className={`w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center overflow-hidden ${user.profile_picture ? 'cursor-pointer hover:ring-1 hover:ring-blue-500/50' : ''}`}
+                                onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
+                              >
+                                {user.profile_picture
+                                  ? <img src={user.profile_picture} alt="" className="w-full h-full object-cover" />
+                                  : <User className="h-3.5 w-3.5 text-blue-400" />}
+                              </div>
+                              {getActivityBadge(user)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-white font-medium truncate text-[12px]">{user.full_name || user.email?.split('@')[0]}</p>
+                              <p className="text-gray-600 text-[10px] font-mono">@{user.username || user.email?.split('@')[0]}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-400 truncate max-w-[180px]">{user.email}</td>
+                        <td className="px-3 py-2.5">{getStatusBadge(user)}</td>
+                        <td className="px-3 py-2.5">
+                          <Badge className={`text-[10px] px-1.5 py-0 ${
+                            user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400' :
+                            user.kyc_status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                            user.kyc_status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                            'bg-gray-500/10 text-gray-500'
+                          }`}>
+                            {user.kyc_status || 'None'}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 text-white font-semibold">{formatCurrency(user.total_portfolio_value || 0)}</td>
+                        <td className="px-3 py-2.5 text-gray-400">{user.trade_count || 0}</td>
+                        <td className="px-3 py-2.5 text-gray-500">{timeAgo(user.created_at)}</td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleChangePassword(user)}
+                              className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Change Password">
+                              <Key size={12} />
+                            </button>
+                            <button onClick={() => handleOpenManagement(user)}
+                              className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 flex items-center justify-center transition-colors" title="Manage User">
+                              <Settings size={12} />
+                            </button>
+                            <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
+                              className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 flex items-center justify-center transition-colors" title="Futures Settings">
+                              <TrendingUp size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
-                {filteredUsers.map(user => (
+              /* ===== CARD VIEW ===== */
+              <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+                {paginatedUsers.map(user => (
                   <div key={user.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                       {/* Left Column - User Info */}
@@ -376,15 +592,13 @@ export default function AdminUsers() {
                         {/* User Header */}
                         <div className="flex items-center gap-3 mb-4">
                           <div className="relative flex-shrink-0">
-                            <div 
+                            <div
                               className={`w-11 h-11 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-[#111] ${user.profile_picture ? 'cursor-pointer hover:ring-blue-500/50' : ''}`}
                               onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                             >
-                              {user.profile_picture ? (
-                                <img src={user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
-                              ) : (
-                                <User className="h-5 w-5 text-blue-400" />
-                              )}
+                              {user.profile_picture
+                                ? <img src={user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                                : <User className="h-5 w-5 text-blue-400" />}
                             </div>
                             {user.is_active !== false && (
                               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full ring-2 ring-[#111]" />
@@ -400,6 +614,12 @@ export default function AdminUsers() {
                               <span className="text-[10px] text-gray-500">#{user.display_id || user.id.substring(0, 8)}</span>
                             </div>
                           </div>
+                          {/* Role Badge */}
+                          {user.role === 'admin' && (
+                            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] flex-shrink-0">
+                              <Shield size={10} className="mr-1" />Admin
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Contact Info */}
@@ -411,11 +631,12 @@ export default function AdminUsers() {
                           <div className="flex items-center gap-2 text-gray-400">
                             <Calendar className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
                             <span>Joined {formatDate(user.created_at)}</span>
+                            <span className="text-gray-600 text-[10px]">({timeAgo(user.created_at)})</span>
                           </div>
                           {user.last_sign_in_at && (
                             <div className="flex items-center gap-2 text-gray-400">
-                              <Calendar className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                              <span>Last login {formatDate(user.last_sign_in_at)}</span>
+                              <Activity className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                              <span>Last login {timeAgo(user.last_sign_in_at)}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-gray-400">
@@ -426,29 +647,22 @@ export default function AdminUsers() {
 
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-2 mt-4">
-                          <button
-                            onClick={() => handleChangePassword(user)}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-8 px-3 transition-colors"
-                          >
-                            <Key className="h-3 w-3" />
-                            Password
+                          <button onClick={() => handleChangePassword(user)}
+                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-8 px-3 transition-colors">
+                            <Key className="h-3 w-3" />Password
                           </button>
-                          <button
-                            onClick={() => handleOpenManagement(user)}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-8 px-3 transition-colors"
-                          >
-                            <Settings className="h-3 w-3" />
-                            Manage
+                          <button onClick={() => handleOpenManagement(user)}
+                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-8 px-3 transition-colors">
+                            <Settings className="h-3 w-3" />Manage
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedFuturesUser(user);
-                              setShowFuturesSettingsModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-8 px-3 transition-colors"
-                          >
-                            <TrendingUp className="h-3 w-3" />
-                            Futures
+                          <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
+                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-8 px-3 transition-colors">
+                            <TrendingUp className="h-3 w-3" />Futures
+                          </button>
+                          <button onClick={() => copyToClipboard(user.id)}
+                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-8 px-2.5 transition-colors"
+                            title="Copy User ID">
+                            {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                           </button>
                         </div>
                       </div>
@@ -456,28 +670,29 @@ export default function AdminUsers() {
                       {/* Right Column - Portfolio & Status */}
                       <div className="space-y-3">
                         {/* Portfolio Card */}
-                        <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Coins className="h-3.5 w-3.5 text-blue-400" />
+                        <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-3">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center">
+                              <Coins className="h-3 w-3 text-blue-400" />
+                            </div>
                             <span className="text-xs font-semibold text-gray-300">Portfolio & Trading</span>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-white">{user.assets_count || 0}</p>
+                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
+                              <p className="text-base font-bold text-white">{user.assets_count || 0}</p>
                               <p className="text-[10px] text-gray-500">Assets</p>
                             </div>
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-white">{formatCurrency(user.total_portfolio_value || 0)}</p>
-                              <p className="text-[10px] text-gray-500">Portfolio</p>
+                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
+                              <p className="text-base font-bold text-white">{formatCurrency(user.total_portfolio_value || 0)}</p>
+                              <p className="text-[10px] text-gray-500">Value</p>
                             </div>
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-white">{user.trade_count || 0}</p>
+                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
+                              <p className="text-base font-bold text-white">{user.trade_count || 0}</p>
                               <p className="text-[10px] text-gray-500">Trades</p>
                             </div>
                           </div>
-                          {/* Portfolio Assets */}
                           {user.portfolio && user.portfolio.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-[#1e1e1e]">
+                            <div className="mt-2.5 pt-2.5 border-t border-[#1a1a1a]">
                               <div className="space-y-1">
                                 {user.portfolio.slice(0, 5).map((asset: any, index: number) => (
                                   <div key={index} className="flex justify-between text-[11px]">
@@ -486,7 +701,7 @@ export default function AdminUsers() {
                                   </div>
                                 ))}
                                 {user.portfolio.length > 5 && (
-                                  <p className="text-[10px] text-gray-500 text-center">+{user.portfolio.length - 5} more</p>
+                                  <p className="text-[10px] text-gray-600 text-center pt-1">+{user.portfolio.length - 5} more assets</p>
                                 )}
                               </div>
                             </div>
@@ -495,23 +710,23 @@ export default function AdminUsers() {
 
                         {/* Status Grid */}
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-2.5 text-center">
+                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
                             <p className="text-[10px] text-gray-500 mb-0.5">Email</p>
                             <Badge variant={user.email_confirmed_at ? "default" : "outline"} className={`text-[10px] px-1.5 py-0 ${user.email_confirmed_at ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                               {user.email_confirmed_at ? 'Confirmed' : 'Pending'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-2.5 text-center">
+                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
                             <p className="text-[10px] text-gray-500 mb-0.5">KYC</p>
-                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[10px] px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[10px] px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : user.kyc_status === 'rejected' ? 'text-red-400 bg-red-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                               {user.kyc_status === 'approved' ? 'Approved' : user.kyc_status === 'pending' ? 'Pending' : user.kyc_status === 'rejected' ? 'Rejected' : 'None'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-2.5 text-center">
+                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
                             <p className="text-[10px] text-gray-500 mb-0.5">Loans</p>
                             <span className="text-sm font-semibold text-white">{user.active_loans_count || 0}</span>
                           </div>
-                          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-2.5 text-center">
+                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
                             <p className="text-[10px] text-gray-500 mb-0.5">Staking</p>
                             <span className="text-sm font-semibold text-white">{user.active_staking_count || 0}</span>
                           </div>
@@ -519,46 +734,40 @@ export default function AdminUsers() {
 
                         {/* Auth Details (expandable) */}
                         {showPasswords && (
-                          <div className="bg-amber-500/10 rounded-xl border border-amber-500/20 p-3 space-y-2">
+                          <div className="bg-amber-500/5 rounded-xl border border-amber-500/10 p-3 space-y-2">
                             <div className="flex items-center gap-1.5">
                               <Shield className="h-3.5 w-3.5 text-amber-400" />
                               <span className="text-xs font-semibold text-amber-300">Auth Details</span>
                             </div>
                             <div className="space-y-1.5 text-[11px]">
                               <div className="flex items-center justify-between">
-                                <span className="text-amber-400">Username</span>
+                                <span className="text-amber-400/80">Username</span>
                                 <span className="font-mono text-amber-200 bg-[#111] px-1.5 py-0.5 rounded">@{user.username || 'N/A'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-amber-400">Provider</span>
+                                <span className="text-amber-400/80">Provider</span>
                                 <span className="text-amber-200 bg-[#111] px-1.5 py-0.5 rounded">{user.app_metadata?.provider || 'email'}</span>
                               </div>
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-amber-400 flex-shrink-0">User ID</span>
+                                <span className="text-amber-400/80 flex-shrink-0">User ID</span>
                                 <div className="flex items-center gap-1 min-w-0">
                                   <code className="text-[10px] text-amber-200 bg-[#111] px-1.5 py-0.5 rounded truncate block">{user.id}</code>
-                                  <button
-                                    onClick={() => copyToClipboard(user.id)}
-                                    className="p-0.5 hover:bg-amber-500/20 rounded flex-shrink-0"
-                                  >
+                                  <button onClick={() => copyToClipboard(user.id)} className="p-0.5 hover:bg-amber-500/20 rounded flex-shrink-0 transition-colors">
                                     {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-amber-400" />}
                                   </button>
                                 </div>
                               </div>
-                              {/* Password */}
-                              <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/20 mt-1">
+                              <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/15 mt-1">
                                 <div className="flex items-center justify-between">
                                   <span className="text-red-400 font-medium">Password</span>
                                   <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={user.password || 'Not set'}>
-                                    {user.password 
-                                      ? (user.password.includes(':') && user.password.length > 100 
-                                          ? '***HASHED***' 
-                                          : user.password)
+                                    {user.password
+                                      ? (user.password.includes(':') && user.password.length > 100 ? '***HASHED***' : user.password)
                                       : 'Not set'}
                                   </span>
                                 </div>
                                 {user.password_last_updated && (
-                                  <p className="text-[10px] text-red-400 mt-1">Updated: {formatDate(user.password_last_updated)}</p>
+                                  <p className="text-[10px] text-red-400/60 mt-1">Updated: {formatDate(user.password_last_updated)}</p>
                                 )}
                               </div>
                             </div>
@@ -571,73 +780,102 @@ export default function AdminUsers() {
               </div>
             )}
           </div>
+
+          {/* ---- Pagination ---- */}
+          {filteredUsers.length > 0 && (
+            <div className="p-4 border-t border-[#1e1e1e] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-[11px] text-gray-500">
+                Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage <= 1}
+                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={14} />
+                  <ChevronLeft size={14} className="-ml-2" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-[11px] font-medium transition-colors
+                        ${currentPage === pageNum
+                          ? 'bg-blue-600 text-white border border-blue-500'
+                          : 'bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 hover:text-white hover:border-[#2a2a2a]'}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={14} />
+                  <ChevronRight size={14} className="-ml-2" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* ---- All Modals (unchanged behavior) ---- */}
       {selectedUser && (
         <Suspense fallback={null}>
-          <AdminChangePasswordModal
-            isOpen={showPasswordModal}
-            onClose={handlePasswordModalClose}
-            user={selectedUser}
-          />
+          <AdminChangePasswordModal isOpen={showPasswordModal} onClose={handlePasswordModalClose} user={selectedUser} />
         </Suspense>
       )}
 
       <Suspense fallback={null}>
-        <AdminUserManagementModal
-          isOpen={showManagementModal}
-          onClose={handleManagementModalClose}
-          initialUserId={selectedManagementUser?.id}
-        />
-
-        <AdminKYCManagementModal
-          isOpen={showKYCModal}
-          onClose={() => setShowKYCModal(false)}
-        />
-
-        <AdminDepositRequestsModal
-          isOpen={showDepositRequestsModal}
-          onClose={() => setShowDepositRequestsModal(false)}
-        />
-        <AdminWithdrawRequestsModal
-          isOpen={showWithdrawRequestsModal}
-          onClose={() => setShowWithdrawRequestsModal(false)}
-        />
-        <AdminWithdrawHistoryModal
-          isOpen={showWithdrawHistoryModal}
-          onClose={() => setShowWithdrawHistoryModal(false)}
-        />
-        <AdminDepositHistoryModal
-          isOpen={showDepositHistoryModal}
-          onClose={() => setShowDepositHistoryModal(false)}
-        />
-
-        <AdminLoanManagementModal
-          isOpen={showLoanManagementModal}
-          onClose={() => setShowLoanManagementModal(false)}
-        />
-
+        <AdminUserManagementModal isOpen={showManagementModal} onClose={handleManagementModalClose} initialUserId={selectedManagementUser?.id} />
+        <AdminKYCManagementModal isOpen={showKYCModal} onClose={() => setShowKYCModal(false)} />
+        <AdminDepositRequestsModal isOpen={showDepositRequestsModal} onClose={() => setShowDepositRequestsModal(false)} />
+        <AdminWithdrawRequestsModal isOpen={showWithdrawRequestsModal} onClose={() => setShowWithdrawRequestsModal(false)} />
+        <AdminWithdrawHistoryModal isOpen={showWithdrawHistoryModal} onClose={() => setShowWithdrawHistoryModal(false)} />
+        <AdminDepositHistoryModal isOpen={showDepositHistoryModal} onClose={() => setShowDepositHistoryModal(false)} />
+        <AdminLoanManagementModal isOpen={showLoanManagementModal} onClose={() => setShowLoanManagementModal(false)} />
         {selectedProfilePicture && (
           <ProfilePictureViewerModal
             isOpen={showProfilePictureModal}
-            onClose={() => {
-              setShowProfilePictureModal(false);
-              setSelectedProfilePicture(null);
-            }}
+            onClose={() => { setShowProfilePictureModal(false); setSelectedProfilePicture(null); }}
             profilePictureUrl={selectedProfilePicture.url}
             userName={selectedProfilePicture.userName}
           />
         )}
-
         {selectedFuturesUser && (
           <AdminFuturesSettingsModal
             isOpen={showFuturesSettingsModal}
-            onClose={() => {
-              setShowFuturesSettingsModal(false);
-              setSelectedFuturesUser(null);
-              fetchUsers();
-            }}
+            onClose={() => { setShowFuturesSettingsModal(false); setSelectedFuturesUser(null); fetchUsers(); }}
             userId={selectedFuturesUser.id}
             userEmail={selectedFuturesUser.email}
             userName={selectedFuturesUser.full_name || selectedFuturesUser.email}
@@ -648,4 +886,4 @@ export default function AdminUsers() {
       </Suspense>
     </AdminLayout>
   );
-} 
+}
