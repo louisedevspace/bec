@@ -612,6 +612,8 @@ export default function SupportPage() {
                 className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-medium py-2.5 rounded-xl transition-colors"
               >
                 {sending ? 'Creating...' : 'Submit Ticket'}
+              </button>
+            </div>
           </div>
         </div>
       )}

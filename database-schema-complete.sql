@@ -312,6 +312,8 @@ CREATE TABLE IF NOT EXISTS support_conversations (
   subject TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'open',
   priority TEXT NOT NULL DEFAULT 'medium',
+  category TEXT DEFAULT 'general',          -- deposit, withdrawal, trading, account, staking, technical, security, general
+  assigned_to UUID,                         -- Admin user assigned to this ticket
   is_active BOOLEAN DEFAULT TRUE,
   last_message_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
