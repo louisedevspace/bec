@@ -490,4 +490,253 @@ export default function registerAdminRoutes(app: Express) {
       res.status(500).json({ message: "Server error", error: error.message });
     }
   });
+
+  // GET /api/admin/dashboard-stats — comprehensive dashboard statistics
+  app.get("/api/admin/dashboard-stats", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today.getTime() - 86400000);
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 86400000);
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
+
+      // Parallel fetch all data
+      const [
+        usersRes, depositsRes, withdrawalsRes, tradesRes, futuresRes,
+        stakingRes, loansRes, supportRes, kycRes, portfoliosRes, pricesRes
+      ] = await Promise.all([
+        supabaseAdmin.from("users").select("id, created_at, is_active, is_verified, role"),
+        supabaseAdmin.from("deposit_requests").select("id, amount, status, submitted_at, symbol"),
+        supabaseAdmin.from("withdraw_requests").select("id, amount, status, submitted_at, symbol"),
+        supabaseAdmin.from("trades").select("id, amount, price, status, side, symbol, created_at"),
+        supabaseAdmin.from("futures_trades").select("id, amount, status, side, symbol, created_at, final_result, final_profit"),
+        supabaseAdmin.from("staking_positions").select("id, amount, status, symbol, start_date"),
+        supabaseAdmin.from("loan_applications").select("id, amount, status, created_at"),
+        supabaseAdmin.from("support_conversations").select("id, status, priority, created_at"),
+        supabaseAdmin.from("kyc_verifications").select("id, status, submitted_at"),
+        supabaseAdmin.from("portfolios").select("user_id, symbol, available, frozen"),
+        supabaseAdmin.from("crypto_prices").select("symbol, price"),
+      ]);
+
+      const users = usersRes.data || [];
+      const deposits = depositsRes.data || [];
+      const withdrawals = withdrawalsRes.data || [];
+      const trades = tradesRes.data || [];
+      const futures = futuresRes.data || [];
+      const staking = stakingRes.data || [];
+      const loans = loansRes.data || [];
+      const support = supportRes.data || [];
+      const kyc = kycRes.data || [];
+      const portfolios = portfoliosRes.data || [];
+      const prices = pricesRes.data || [];
+
+      // === USER STATS ===
+      const totalUsers = users.filter(u => u.role !== 'admin').length;
+      const activeUsers = users.filter(u => u.is_active && u.role !== 'admin').length;
+      const inactiveUsers = totalUsers - activeUsers;
+      const verifiedUsers = users.filter(u => u.is_verified && u.role !== 'admin').length;
+      const newUsersToday = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= today).length;
+      const newUsersYesterday = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= yesterday && new Date(u.created_at) < today).length;
+      const newUsersThisWeek = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= sevenDaysAgo).length;
+      const newUsersThisMonth = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= thirtyDaysAgo).length;
+
+      // === FINANCIAL STATS ===
+      const totalDepositAmount = deposits.filter(d => d.status === 'approved').reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+      const pendingDeposits = deposits.filter(d => d.status === 'pending').length;
+      const totalWithdrawalAmount = withdrawals.filter(w => w.status === 'approved').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+      const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').length;
+
+      // === TRADING STATS ===
+      const totalTrades = trades.length;
+      const pendingTrades = trades.filter(t => t.status === 'pending_approval').length;
+      const completedTrades = trades.filter(t => ['executed', 'filled'].includes(t.status)).length;
+      const totalTradeVolume = trades.reduce((s, t) => {
+        const amount = parseFloat(t.amount || '0');
+        const price = parseFloat(t.price || '0');
+        return s + (price > 0 ? amount * price : amount);
+      }, 0);
+
+      // === FUTURES STATS ===
+      const totalFutures = futures.length;
+      const activeFutures = futures.filter(f => f.status === 'active').length;
+      const completedFutures = futures.filter(f => f.status === 'completed').length;
+      const futuresWins = futures.filter(f => f.final_result === 'win').length;
+      const futuresLosses = futures.filter(f => f.final_result === 'loss').length;
+
+      // === STAKING STATS ===
+      const activeStaking = staking.filter(s => s.status === 'active').length;
+      const totalStaked = staking.filter(s => s.status === 'active').reduce((sum, s) => sum + parseFloat(s.amount || '0'), 0);
+
+      // === LOAN STATS ===
+      const pendingLoans = loans.filter(l => l.status === 'pending').length;
+      const approvedLoans = loans.filter(l => l.status === 'approved').length;
+      const totalLoanValue = loans.filter(l => l.status === 'approved').reduce((s, l) => s + parseFloat(l.amount || '0'), 0);
+
+      // === SUPPORT STATS ===
+      const openTickets = support.filter(s => s.status === 'open').length;
+      const inProgressTickets = support.filter(s => s.status === 'in_progress').length;
+      const resolvedTickets = support.filter(s => ['resolved', 'closed'].includes(s.status)).length;
+      const urgentTickets = support.filter(s => s.priority === 'urgent' && ['open', 'in_progress'].includes(s.status)).length;
+
+      // === KYC STATS ===
+      const pendingKyc = kyc.filter(k => k.status === 'pending').length;
+      const approvedKyc = kyc.filter(k => k.status === 'approved').length;
+      const rejectedKyc = kyc.filter(k => k.status === 'rejected').length;
+
+      // === PLATFORM VALUE (total portfolios) ===
+      const priceMap = new Map(prices.map(p => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
+      const uniqueUsers = new Set(portfolios.map(p => p.user_id));
+      let totalPlatformValue = 0;
+      portfolios.forEach(p => {
+        const amount = parseFloat(p.available || '0') + parseFloat(p.frozen || '0');
+        if (p.symbol?.toUpperCase() === 'USDT') {
+          totalPlatformValue += amount;
+        } else {
+          totalPlatformValue += amount * (priceMap.get(p.symbol?.toUpperCase()) || 0);
+        }
+      });
+
+      // === REGISTRATION TREND (last 30 days) ===
+      const registrationTrend: Array<{ date: string; count: number }> = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+        const count = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= d && new Date(u.created_at) < next).length;
+        registrationTrend.push({ date: dateStr, count });
+      }
+
+      // === TRADE VOLUME TREND (last 30 days) ===
+      const volumeTrend: Array<{ date: string; volume: number; count: number }> = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+        const dayTrades = trades.filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next);
+        const vol = dayTrades.reduce((s, t) => s + parseFloat(t.amount || '0'), 0);
+        volumeTrend.push({ date: dateStr, volume: vol, count: dayTrades.length });
+      }
+
+      // === DEPOSIT/WITHDRAWAL TREND (last 30 days) ===
+      const financialTrend: Array<{ date: string; deposits: number; withdrawals: number }> = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+        const dayDeposits = deposits.filter(dep => dep.status === 'approved' && new Date(dep.submitted_at) >= d && new Date(dep.submitted_at) < next).reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const dayWithdrawals = withdrawals.filter(w => w.status === 'approved' && new Date(w.submitted_at) >= d && new Date(w.submitted_at) < next).reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        financialTrend.push({ date: dateStr, deposits: dayDeposits, withdrawals: dayWithdrawals });
+      }
+
+      // === RECENT ACTIVITY (last 20 events) ===
+      type ActivityItem = { type: string; description: string; time: string; status: string };
+      const recentActivity: ActivityItem[] = [];
+      
+      // Recent deposits
+      deposits.slice(0, 5).forEach(d => {
+        recentActivity.push({
+          type: 'deposit',
+          description: `Deposit of ${parseFloat(d.amount || '0').toFixed(2)} ${d.symbol || 'USDT'}`,
+          time: d.submitted_at,
+          status: d.status,
+        });
+      });
+      // Recent withdrawals
+      withdrawals.slice(0, 5).forEach(w => {
+        recentActivity.push({
+          type: 'withdrawal',
+          description: `Withdrawal of ${parseFloat(w.amount || '0').toFixed(2)} ${w.symbol || 'USDT'}`,
+          time: w.submitted_at,
+          status: w.status,
+        });
+      });
+      // Recent trades
+      trades.slice(0, 5).forEach(t => {
+        recentActivity.push({
+          type: 'trade',
+          description: `${t.side?.toUpperCase()} ${parseFloat(t.amount || '0').toFixed(4)} ${t.symbol || ''}`,
+          time: t.created_at,
+          status: t.status,
+        });
+      });
+      // Recent support tickets
+      support.slice(0, 5).forEach(s => {
+        recentActivity.push({
+          type: 'support',
+          description: `Support ticket #${s.id}`,
+          time: s.created_at,
+          status: s.status,
+        });
+      });
+
+      // Sort by time descending
+      recentActivity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+      res.json({
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          inactive: inactiveUsers,
+          verified: verifiedUsers,
+          newToday: newUsersToday,
+          newYesterday: newUsersYesterday,
+          newThisWeek: newUsersThisWeek,
+          newThisMonth: newUsersThisMonth,
+          usersWithPortfolio: uniqueUsers.size,
+        },
+        financial: {
+          totalDeposits: totalDepositAmount,
+          pendingDeposits,
+          totalDepositsCount: deposits.length,
+          totalWithdrawals: totalWithdrawalAmount,
+          pendingWithdrawals,
+          totalWithdrawalsCount: withdrawals.length,
+          totalPlatformValue,
+          netFlow: totalDepositAmount - totalWithdrawalAmount,
+        },
+        trading: {
+          totalTrades,
+          pendingTrades,
+          completedTrades,
+          totalVolume: totalTradeVolume,
+          totalFutures,
+          activeFutures,
+          completedFutures,
+          futuresWins,
+          futuresLosses,
+          futuresWinRate: completedFutures > 0 ? ((futuresWins / completedFutures) * 100).toFixed(1) : '0',
+        },
+        staking: {
+          activePositions: activeStaking,
+          totalStaked,
+        },
+        loans: {
+          pending: pendingLoans,
+          approved: approvedLoans,
+          totalValue: totalLoanValue,
+        },
+        support: {
+          open: openTickets,
+          inProgress: inProgressTickets,
+          resolved: resolvedTickets,
+          urgent: urgentTickets,
+          total: support.length,
+        },
+        kyc: {
+          pending: pendingKyc,
+          approved: approvedKyc,
+          rejected: rejectedKyc,
+        },
+        charts: {
+          registrationTrend,
+          volumeTrend,
+          financialTrend,
+        },
+        recentActivity: recentActivity.slice(0, 20),
+      });
+    } catch (error: any) {
+      console.error('Dashboard stats error:', error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
+    }
+  });
 }
