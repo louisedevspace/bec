@@ -106,11 +106,23 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     );
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
     try {
-      return new Date(dateString).toLocaleString();
-    } catch (error) {
-      return 'Invalid Date';
+      let date: Date;
+      // Normalize timezone-less strings as UTC
+      if (!dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
+        date = new Date(dateString + 'Z');
+      } else {
+        date = new Date(dateString);
+      }
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleString(undefined, {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+      });
+    } catch {
+      return 'N/A';
     }
   };
 
@@ -203,7 +215,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
               <div className="flex items-center gap-2">
                 <div className="text-right mr-1">
-                  <div className="text-[10px] text-gray-600">{formatDate(order.createdAt)}</div>
+                  <div className="text-[10px] text-gray-600">{formatDate((order as any).created_at || order.createdAt)}</div>
                 </div>
                 <div className="flex items-center gap-1">
                   {getStatusIcon(order.status)}

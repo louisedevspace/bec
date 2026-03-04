@@ -74,6 +74,34 @@ interface AnalyticsData {
   };
 }
 
+// Crypto symbol map for display
+const CRYPTO_SYMBOLS: Record<string, string> = {
+  BTC: '₿', ETH: 'Ξ', USDT: '$', BNB: 'BNB', SOL: 'SOL', XRP: 'XRP',
+  ADA: 'ADA', DOGE: 'Ð', DOT: 'DOT', LINK: 'LINK', AVAX: 'AVAX',
+  MATIC: 'MATIC', SHIB: 'SHIB', LTC: 'Ł', TRX: 'TRX', ATOM: 'ATOM',
+  APT: 'APT', SUI: 'SUI', ARB: 'ARB', OP: 'OP', PEPE: 'PEPE', INJ: 'INJ',
+};
+
+function getCryptoSymbol(name: string): string {
+  // name could be "BTC", "USDT", or display name like "Total"
+  const upper = name.toUpperCase();
+  return CRYPTO_SYMBOLS[upper] || upper;
+}
+
+function formatCryptoAmount(value: number, cryptoName: string): string {
+  const sym = getCryptoSymbol(cryptoName);
+  // For USD-like values (USDT, Total, Deposits, Withdrawals, Profit, etc.) use $ prefix
+  const usdNames = ['USDT', 'TOTAL', 'DEPOSITS', 'WITHDRAWALS', 'PROFIT', 'NET FLOW',
+    'DAILY NET FLOW', 'CUMULATIVE PROFIT', 'FUTURES REVENUE'];
+  if (usdNames.includes(cryptoName.toUpperCase()) || sym === '$') {
+    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+    if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  // For crypto values, show symbol after number
+  return `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${sym}`;
+}
+
 function formatCurrency(value: number): string {
   if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
@@ -311,8 +339,23 @@ export default function AdminDashboard() {
     return num >= 1000 ? `${num.toLocaleString()} ${base}` : num >= 1 ? `${num.toFixed(4)} ${base}` : `${num.toFixed(8)} ${base}`;
   };
 
-  const formatDate = (dateString: string) => {
-    try { return new Date(dateString).toLocaleString(); } catch { return 'Invalid Date'; }
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      let date: Date;
+      if (!dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
+        date = new Date(dateString + 'Z');
+      } else {
+        date = new Date(dateString);
+      }
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleString(undefined, {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const handleExportCSV = () => {
@@ -388,7 +431,7 @@ export default function AdminDashboard() {
                   <span><strong>Amount:</strong> {formatAmount(order.amount, order.symbol)}</span>
                   <span><strong>Price:</strong> {formatPrice(order.price)}</span>
                   <span><strong>ID:</strong> #{order.id}</span>
-                  <span><strong>Time:</strong> {formatDate(order.createdAt)}</span>
+                  <span><strong>Time:</strong> {formatDate((order as any).created_at || order.createdAt)}</span>
                 </div>
                 {order.userDetails && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-1">
@@ -971,7 +1014,7 @@ export default function AdminDashboard() {
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
                                   <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                                   {payload.map((p: any, i: number) => (
-                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
                                   ))}
                                 </div>
                               );
@@ -1019,7 +1062,7 @@ export default function AdminDashboard() {
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
                                   <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                                   {payload.map((p: any, i: number) => (
-                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
                                   ))}
                                 </div>
                               );
@@ -1069,7 +1112,7 @@ export default function AdminDashboard() {
                                   <p className="text-[10px] text-gray-400 mb-1.5">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                                   {payload.map((p: any, i: number) => (
                                     <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                      {p.name}: {p.value < 0 ? '-' : ''}${Math.abs(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      {p.name}: {formatCryptoAmount(Math.abs(p.value), p.name)}{p.value < 0 ? ' (loss)' : ''}
                                     </p>
                                   ))}
                                 </div>
@@ -1120,7 +1163,7 @@ export default function AdminDashboard() {
                                       <p className="text-[10px] text-gray-400 mb-1">{label}</p>
                                       {payload.sort((a: any, b: any) => (b.value || 0) - (a.value || 0)).map((p: any, i: number) => (
                                         <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                          {p.name}: ${parseFloat(p.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          {p.name}: {formatCryptoAmount(parseFloat(p.value || 0), p.name)}
                                         </p>
                                       ))}
                                     </div>
@@ -1167,7 +1210,7 @@ export default function AdminDashboard() {
                                     <p className="text-[10px] text-gray-400 mb-1">{label}</p>
                                     {payload.map((p: any, i: number) => (
                                       <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                        {p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}
                                       </p>
                                     ))}
                                   </div>
@@ -1198,7 +1241,7 @@ export default function AdminDashboard() {
                                 <div key={symbol} className="mb-2">
                                   <div className="flex items-center justify-between text-xs mb-1">
                                     <span className="text-gray-300 font-medium">{symbol}</span>
-                                    <span className="text-white font-semibold">{formatCurrency(amount)}</span>
+                                    <span className="text-white font-semibold">{formatCryptoAmount(amount, symbol)}</span>
                                   </div>
                                   <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
                                     <div className="h-full bg-green-500 rounded-full transition-all duration-700"
@@ -1217,7 +1260,7 @@ export default function AdminDashboard() {
                                 <div key={symbol} className="mb-2">
                                   <div className="flex items-center justify-between text-xs mb-1">
                                     <span className="text-gray-300 font-medium">{symbol}</span>
-                                    <span className="text-white font-semibold">{formatCurrency(amount)}</span>
+                                    <span className="text-white font-semibold">{formatCryptoAmount(amount, symbol)}</span>
                                   </div>
                                   <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
                                     <div className="h-full bg-red-500 rounded-full transition-all duration-700"

@@ -19,6 +19,7 @@ interface TradingFormProps {
 export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [amountMode, setAmountMode] = useState<"crypto" | "usdt">("crypto"); // crypto = units, usdt = total spend/receive
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
 
@@ -131,10 +132,27 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       return;
     }
 
-    const amountNum = parseFloat(amount);
+    let amountNum = parseFloat(amount);
     const priceNum = price ? parseFloat(price) : 0;
 
-    // Check trading limits
+    // If user entered amount in USDT, convert to crypto units
+    let cryptoAmount = amountNum;
+    if (amountMode === "usdt") {
+      const currentPrice = orderType === "limit" && priceNum > 0
+        ? priceNum
+        : parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
+      if (!currentPrice || currentPrice <= 0) {
+        toast({
+          title: "Price Unavailable",
+          description: `Cannot determine current price of ${baseSymbol}. Please try again or use limit order.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      cryptoAmount = amountNum / currentPrice;
+    }
+
+    // Check trading limits (using crypto amount)
     if (!tradeLimits.is_enabled) {
       toast({
         title: "Trading Restricted",
@@ -144,19 +162,19 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       return;
     }
 
-    if (amountNum < tradeLimits.min_amount) {
+    if (cryptoAmount < tradeLimits.min_amount) {
       toast({
         title: "Below Minimum",
-        description: `Minimum trade amount is ${tradeLimits.min_amount} for ${pair}.`,
+        description: `Minimum trade amount is ${tradeLimits.min_amount} ${baseSymbol} for ${pair}.`,
         variant: "destructive",
       });
       return;
     }
 
-    if (amountNum > tradeLimits.max_amount) {
+    if (cryptoAmount > tradeLimits.max_amount) {
       toast({
         title: "Above Maximum",
-        description: `Maximum trade amount is ${tradeLimits.max_amount.toLocaleString()} for ${pair}.`,
+        description: `Maximum trade amount is ${tradeLimits.max_amount.toLocaleString()} ${baseSymbol} for ${pair}.`,
         variant: "destructive",
       });
       return;
@@ -164,32 +182,31 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
     
     // Check if user has sufficient balance
     if (side === "buy") {
-      // For buy orders, user needs USDT to buy BTC
+      // For buy orders, user needs USDT
       let requiredUSDT: number;
-      
-      if (orderType === "market") {
-        // For market orders, use current price
+      if (amountMode === "usdt") {
+        requiredUSDT = amountNum; // already in USDT
+      } else if (orderType === "market") {
         const currentPrice = parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
-        requiredUSDT = amountNum * currentPrice;
+        requiredUSDT = cryptoAmount * currentPrice;
       } else {
-        // For limit orders, use the specified price
-        requiredUSDT = amountNum * priceNum;
+        requiredUSDT = cryptoAmount * priceNum;
       }
       
       if (requiredUSDT > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To buy ${amountNum} ${baseSymbol}, you need ${formatCryptoNumber(requiredUSDT)} ${quoteSymbol} but have ${formatCryptoNumber(availableBalance)} ${quoteSymbol} available.`,
+          description: `You need ${formatCryptoNumber(requiredUSDT)} ${quoteSymbol} but have ${formatCryptoNumber(availableBalance)} ${quoteSymbol} available.`,
           variant: "destructive",
         });
         return;
       }
     } else {
-      // For sell orders, user needs BTC to sell
-      if (amountNum > availableBalance) {
+      // For sell orders, user needs crypto to sell
+      if (cryptoAmount > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To sell ${amountNum} ${baseSymbol}, you need ${formatCryptoNumber(amountNum)} ${baseSymbol} but have ${formatCryptoNumber(availableBalance)} ${baseSymbol} available.`,
+          description: `You need ${formatCryptoNumber(cryptoAmount)} ${baseSymbol} but have ${formatCryptoNumber(availableBalance)} ${baseSymbol} available.`,
           variant: "destructive",
         });
         return;
@@ -209,13 +226,26 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       userId: userId,
       symbol: pair,
       side,
-      amount,
+      amount: cryptoAmount.toString(),
       price: orderType === "limit" ? price : undefined,
-      status: "pending_approval", // Orders now require admin approval
+      status: "pending_approval",
     };
 
     tradeMutation.mutate(tradeData);
   };
+
+  // Compute estimated value for display
+  const estimatedValue = (() => {
+    const amountNum = parseFloat(amount);
+    if (!amount || isNaN(amountNum) || amountNum <= 0) return null;
+    const currentPrice = parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
+    if (!currentPrice || currentPrice <= 0) return null;
+    if (amountMode === "crypto") {
+      return { crypto: amountNum, usdt: amountNum * currentPrice };
+    } else {
+      return { crypto: amountNum / currentPrice, usdt: amountNum };
+    }
+  })();
 
   return (
     <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 ${className}`}>
@@ -247,6 +277,16 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
           </button>
         </div>
 
+        {/* Trade Description */}
+        <div className="bg-[#0a0a0a] rounded-xl px-3 py-2 border border-[#1e1e1e]">
+          <p className="text-[11px] text-gray-400">
+            {side === "buy"
+              ? `Buy ${baseSymbol} with ${quoteSymbol} at ${orderType === "limit" ? "your specified price" : "market price"}`
+              : `Sell ${baseSymbol} for ${quoteSymbol} at ${orderType === "limit" ? "your specified price" : "market price"}`
+            }
+          </p>
+        </div>
+
         {/* Order Type */}
         <div>
           <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Order Type</label>
@@ -264,7 +304,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
         {/* Price (for limit orders) */}
         {orderType === "limit" && (
           <div>
-            <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Price (USDT)</label>
+            <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Price ({quoteSymbol})</label>
             <Input
               type="number"
               step="0.01"
@@ -276,24 +316,61 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
           </div>
         )}
 
-        {/* Amount */}
+        {/* Amount Mode Toggle */}
         <div>
-          <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Amount ({baseSymbol})</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[11px] text-gray-500 uppercase tracking-wider">
+              Amount ({amountMode === "crypto" ? baseSymbol : quoteSymbol})
+            </label>
+            <div className="flex gap-1 bg-[#0a0a0a] rounded-lg p-0.5 border border-[#1e1e1e]">
+              <button
+                type="button"
+                onClick={() => { setAmountMode("crypto"); setAmount(""); }}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${
+                  amountMode === "crypto"
+                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {baseSymbol}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAmountMode("usdt"); setAmount(""); }}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${
+                  amountMode === "usdt"
+                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {quoteSymbol}
+              </button>
+            </div>
+          </div>
           <Input
             type="number"
-            step="0.00000001"
+            step={amountMode === "crypto" ? "0.00000001" : "0.01"}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
+            placeholder={amountMode === "crypto" ? `0.00 ${baseSymbol}` : `0.00 ${quoteSymbol}`}
             className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-gray-600 focus:ring-1 focus:ring-gray-600"
           />
+          {/* Estimated conversion */}
+          {estimatedValue && (
+            <p className="text-[10px] text-gray-500 mt-1">
+              {amountMode === "crypto"
+                ? `≈ ${formatCryptoNumber(estimatedValue.usdt)} ${quoteSymbol}`
+                : `≈ ${formatCryptoNumber(estimatedValue.crypto)} ${baseSymbol}`
+              }
+            </p>
+          )}
         </div>
 
         {/* Available Balance */}
         <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
           <span className="text-gray-500 text-xs">Available</span>
           <span className="text-white text-xs font-medium tabular-nums">
-            {formatCryptoNumber(availableBalance)} {side === "buy" ? pair.split("/")[1] : pair.split("/")[0]}
+            {formatCryptoNumber(availableBalance)} {side === "buy" ? quoteSymbol : baseSymbol}
           </span>
         </div>
 
@@ -309,7 +386,10 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
         >
           {tradeMutation.isPending
             ? "Placing Order..."
-            : `${side.toUpperCase()} ${pair.split("/")[0]}`}
+            : side === "buy"
+              ? `BUY ${baseSymbol} with ${quoteSymbol}`
+              : `SELL ${baseSymbol} for ${quoteSymbol}`
+          }
         </button>
       </form>
     </div>
