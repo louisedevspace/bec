@@ -41,6 +41,7 @@ const AdminNotifications = lazy(() => import('./pages/admin-notifications'));
 const AdminSimpleNotifications = lazy(() => import('./pages/admin-simple-notifications'));
 const AdminStreamlinedNotifications = lazy(() => import('./pages/admin-streamlined-notifications'));
 const AdminNotificationsRedirect = lazy(() => import('./pages/admin-notifications-redirect'));
+const AdminTradingPairs = lazy(() => import('./pages/admin-trading-pairs'));
 
 function Router() {
   const [loading, setLoading] = useState(true);
@@ -182,6 +183,7 @@ function Router() {
           <Route path="/admin/notifications" component={isAuthenticated && isAdmin ? AdminNotificationsRedirect : adminRedirect} />
           <Route path="/admin/notifications/simple" component={isAuthenticated && isAdmin ? AdminStreamlinedNotifications : adminRedirect} />
           <Route path="/admin/settings" component={isAuthenticated && isAdmin ? AdminSettings : adminRedirect} />
+          <Route path="/admin/trading-pairs" component={isAuthenticated && isAdmin ? AdminTradingPairs : adminRedirect} />
           <Route path="/admin/support" component={isAuthenticated && isAdmin ? AdminSupport : adminRedirect} />
           {/* User routes */}
           <Route path="/" component={isAuthenticated ? HomePage : LoginPage} />

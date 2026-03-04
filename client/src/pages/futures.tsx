@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { Settings, TrendingUp, TrendingDown, BarChart3, User, Home, PieChart, RefreshCw, Info } from 'lucide-react';
+import { Settings, TrendingUp, TrendingDown, BarChart3, User, Home, PieChart, RefreshCw, Info, ChevronDown } from 'lucide-react';
 import { OrderBook } from '@/components/trading/order-book';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { FutureTradeTimerModal } from '@/components/modals/future-trade-timer-modal';
@@ -30,6 +30,13 @@ interface FuturesTrade {
   profit_loss?: number;
   created_at: string;
   expires_at?: string;
+}
+
+interface FuturesPairOption {
+  id: number;
+  symbol: string;
+  base_asset: string;
+  quote_asset: string;
 }
 
 const durationOptions = [
@@ -59,14 +66,23 @@ export default function FuturesPage() {
   const [duration, setDuration] = useState<number>(60);
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [minTradeAmount, setMinTradeAmount] = useState<number>(50);
+  const [tradeLimits, setTradeLimits] = useState<{ is_enabled: boolean; min_amount: number; max_amount: number } | null>(null);
 
   // Trade details modal state
   const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<FuturesTrade | null>(null);
 
-  // Get live current price for BTC
-  const btcPrice = getPriceBySymbol('BTC');
-  const currentPrice = btcPrice ? parseFloat(btcPrice.price) : 106055.09;
+  // Dynamic pair state
+  const [futuresPairs, setFuturesPairs] = useState<FuturesPairOption[]>([]);
+  const [currentPair, setCurrentPair] = useState('BTC/USDT');
+  const [showPairMenu, setShowPairMenu] = useState(false);
+
+  const baseAsset = currentPair.split('/')[0];
+  const quoteAsset = currentPair.split('/')[1];
+
+  // Get live current price for selected pair
+  const livePrice = getPriceBySymbol(baseAsset);
+  const currentPrice = livePrice ? parseFloat(livePrice.price) : 0;
 
   const selectedDuration = durationOptions.find(d => d.value === duration);
   const profitRatio = selectedDuration?.profitRatio || 30;
@@ -93,8 +109,6 @@ export default function FuturesPage() {
         throw new Error('Failed to fetch trades');
       }
       const data = await response.json();
-      console.log('📊 Received futures trades:', data?.length || 0, 'trades');
-      console.log('📋 Trades data:', data);
       setTrades(data || []);
     } catch (error) {
       console.error('Error fetching trades:', error);
@@ -161,11 +175,52 @@ export default function FuturesPage() {
     }
   };
 
+  // Fetch trading limits for current pair
+  const fetchTradingLimits = async () => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`/api/trading-limits/me?symbol=${encodeURIComponent(currentPair)}&type=futures`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTradeLimits(data);
+        // Use the higher of old min setting and new limits min
+        if (data?.min_amount) {
+          setMinTradeAmount(prev => Math.max(prev, data.min_amount));
+        }
+      }
+    } catch { /* keep defaults */ }
+  };
+
+  // Fetch available futures pairs
+  useEffect(() => {
+    fetch('/api/trading-pairs/futures')
+      .then(res => res.ok ? res.json() : [])
+      .then((data: FuturesPairOption[]) => {
+        if (data.length > 0) {
+          setFuturesPairs(data);
+          if (!data.find(p => p.symbol === currentPair)) {
+            setCurrentPair(data[0].symbol);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchTrades();
     fetchBalance();
     fetchFuturesSettings();
   }, [user]);
+
+  // Fetch trading limits when user or pair changes
+  useEffect(() => {
+    fetchTradingLimits();
+  }, [user, currentPair]);
 
   // Auto-refresh trades every 10 seconds to show real-time updates
   useEffect(() => {
@@ -196,12 +251,6 @@ export default function FuturesPage() {
   };
 
   const handleShowTradeDetails = (trade: FuturesTrade) => {
-    console.log('🔍 Trade data for debugging:', {
-      created_at: trade.created_at,
-      expires_at: trade.expires_at,
-      created_at_type: typeof trade.created_at,
-      expires_at_type: typeof trade.expires_at
-    });
     setSelectedTrade(trade);
     setShowTradeDetailsModal(true);
   };
@@ -211,25 +260,19 @@ export default function FuturesPage() {
     if (!dateString) return 'N/A';
     
     try {
-      console.log('🔍 formatDateTime input:', dateString);
-      
-      // FORCE ALL DATES TO BE TREATED AS UTC FIRST
       let date;
       
-      // Always append 'Z' to force UTC interpretation, regardless of existing timezone info
+      // Normalize to UTC interpretation
       if (!dateString.includes('Z')) {
-        // Remove any existing timezone info and append 'Z' for UTC
         const cleanDateString = dateString.replace(/[+-]\d{2}:\d{2}$/, '');
         date = new Date(cleanDateString + 'Z');
-        console.log('✅ FORCED UTC:', cleanDateString + 'Z', '->', date);
       } else {
-        // Already has Z, parse as-is
         date = new Date(dateString);
-        console.log('✅ Already UTC:', dateString, '->', date);
       }
       
-      // Convert to user's local timezone
-      const result = date.toLocaleString(undefined, {
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      return date.toLocaleString(undefined, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -237,13 +280,8 @@ export default function FuturesPage() {
         minute: '2-digit',
         second: '2-digit',
         hour12: true,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
-      
-      console.log('🎯 Final result:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error formatting date:', error, 'Input:', dateString);
+    } catch {
       return 'Invalid Date';
     }
   };
@@ -259,10 +297,31 @@ export default function FuturesPage() {
     }
 
     const tradeAmount = parseFloat(amount);
-    if (!amount || isNaN(tradeAmount) || tradeAmount < minTradeAmount) {
+
+    // Check trading limits from admin settings
+    if (tradeLimits && !tradeLimits.is_enabled) {
+      toast({
+        title: 'Trading Restricted',
+        description: `Futures trading is currently disabled for ${currentPair}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const effectiveMin = tradeLimits?.min_amount ? Math.max(minTradeAmount, tradeLimits.min_amount) : minTradeAmount;
+    if (!amount || isNaN(tradeAmount) || tradeAmount < effectiveMin) {
       toast({
         title: 'Error',
-        description: `Minimum trade amount is ${minTradeAmount} USDT.`,
+        description: `Minimum trade amount is ${effectiveMin} USDT.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (tradeLimits?.max_amount && tradeAmount > tradeLimits.max_amount) {
+      toast({
+        title: 'Error',
+        description: `Maximum trade amount is ${tradeLimits.max_amount} USDT.`,
         variant: 'destructive',
       });
       return;
@@ -285,15 +344,6 @@ export default function FuturesPage() {
         throw new Error('No authentication token available');
       }
 
-      console.log('🔍 Frontend sending trade data:', {
-        symbol: 'BTC/USDT',
-        amount: tradeAmount,
-        duration,
-        side,
-        profitRatio,
-        profitRatio_type: typeof profitRatio
-      });
-
       // Optimistically update UI immediately
       setAmount('');
       
@@ -304,7 +354,7 @@ export default function FuturesPage() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          symbol: 'BTC/USDT',
+          symbol: currentPair,
           amount: tradeAmount,
           duration,
           side,
@@ -321,8 +371,8 @@ export default function FuturesPage() {
       
       // Show timer modal with trade data
       setTimerTradeData({
-        id: responseData.trade?.id || Date.now(), // Use trade ID from response or generate one
-        symbol: 'BTC/USDT',
+        id: responseData.trade?.id || Date.now(),
+        symbol: currentPair,
         side,
         amount: tradeAmount.toString(),
         price: currentPrice.toString(),
@@ -351,24 +401,56 @@ export default function FuturesPage() {
 
 
 
-  // Trading pair for order book
-  const currentPair = "BTC/USDT";
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
       {/* Top Header */}
       <div className="bg-[#111] border-b border-[#222] px-4 md:px-6 py-2.5 flex-shrink-0">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3 md:space-x-4">
+          <div className="flex items-center space-x-3 md:space-x-4 relative">
             <span className="text-sm font-semibold text-gray-300">Futures</span>
-            <div className="flex items-center space-x-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a]">
+            <button
+              onClick={() => setShowPairMenu(!showPairMenu)}
+              className="flex items-center space-x-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors"
+            >
               <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-sm font-medium text-white">BTC/USDT</span>
-            </div>
+              <span className="text-sm font-medium text-white">{currentPair}</span>
+              <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Pair Dropdown */}
+            {showPairMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
+                <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-xl overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto">
+                    {futuresPairs.length > 0 ? futuresPairs.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setCurrentPair(p.symbol); setShowPairMenu(false); }}
+                        className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[#222] transition-colors ${
+                          p.symbol === currentPair ? 'bg-[#222] text-white' : 'text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{p.base_asset}</span>
+                          <span className="text-gray-600">/</span>
+                          <span className="text-gray-400 text-sm">{p.quote_asset}</span>
+                        </div>
+                        {p.symbol === currentPair && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        )}
+                      </button>
+                    )) : (
+                      <div className="px-4 py-3 text-gray-500 text-xs">No futures pairs available</div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className="text-center">
             <div className="text-base md:text-lg font-bold text-green-400 tabular-nums">
-              {getFormattedPrice("BTC")} <span className="text-xs text-gray-500 font-normal">USDT</span>
+              {getFormattedPrice(baseAsset)} <span className="text-xs text-gray-500 font-normal">{quoteAsset}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">

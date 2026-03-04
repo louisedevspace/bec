@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { 
   Menu, X, LayoutDashboard, Users, MessageSquare, Settings, 
-  ChevronRight, LogOut, Shield, BarChart3, Megaphone
+  ChevronRight, LogOut, Shield, BarChart3, Megaphone, TrendingUp
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users' },
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
+  { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },
   { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support' },
   { label: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform Config' },
 ];

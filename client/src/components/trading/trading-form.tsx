@@ -74,6 +74,28 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
   const availableBalance = getAvailableBalance();
   const { getFormattedPrice } = useCryptoPrices();
 
+  const baseSymbol = pair.split("/")[0];
+  const quoteSymbol = pair.split("/")[1];
+
+  // Fetch effective trading limits for this pair + user
+  const [tradeLimits, setTradeLimits] = useState<{ min_amount: number; max_amount: number; is_enabled: boolean }>({ min_amount: 0, max_amount: 1000000, is_enabled: true });
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchLimits = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch(`/api/trading-limits/me?symbol=${encodeURIComponent(pair)}&type=spot`, {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        });
+        if (response.ok) {
+          setTradeLimits(await response.json());
+        }
+      } catch { /* keep defaults */ }
+    };
+    fetchLimits();
+  }, [userId, pair]);
+
   const tradeMutation = useMutation({
     mutationFn: (tradeData: Omit<Trade, "id" | "createdAt">) => 
       cryptoApi.createTrade(tradeData),
@@ -111,6 +133,34 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
 
     const amountNum = parseFloat(amount);
     const priceNum = price ? parseFloat(price) : 0;
+
+    // Check trading limits
+    if (!tradeLimits.is_enabled) {
+      toast({
+        title: "Trading Restricted",
+        description: `You are not allowed to trade ${pair}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (amountNum < tradeLimits.min_amount) {
+      toast({
+        title: "Below Minimum",
+        description: `Minimum trade amount is ${tradeLimits.min_amount} for ${pair}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (amountNum > tradeLimits.max_amount) {
+      toast({
+        title: "Above Maximum",
+        description: `Maximum trade amount is ${tradeLimits.max_amount.toLocaleString()} for ${pair}.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Check if user has sufficient balance
     if (side === "buy") {
@@ -118,9 +168,9 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       let requiredUSDT: number;
       
       if (orderType === "market") {
-        // For market orders, use current BTC price
-        const currentPrice = parseFloat(getFormattedPrice("BTC").replace(/[$,]/g, ''));
-        requiredUSDT = amountNum * currentPrice; // BTC amount * current price = USDT needed
+        // For market orders, use current price
+        const currentPrice = parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
+        requiredUSDT = amountNum * currentPrice;
       } else {
         // For limit orders, use the specified price
         requiredUSDT = amountNum * priceNum;
@@ -129,7 +179,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       if (requiredUSDT > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To buy ${amountNum} BTC, you need ${formatCryptoNumber(requiredUSDT)} USDT but have ${formatCryptoNumber(availableBalance)} USDT available.`,
+          description: `To buy ${amountNum} ${baseSymbol}, you need ${formatCryptoNumber(requiredUSDT)} ${quoteSymbol} but have ${formatCryptoNumber(availableBalance)} ${quoteSymbol} available.`,
           variant: "destructive",
         });
         return;
@@ -139,7 +189,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       if (amountNum > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To sell ${amountNum} BTC, you need ${formatCryptoNumber(amountNum)} BTC but have ${formatCryptoNumber(availableBalance)} BTC available.`,
+          description: `To sell ${amountNum} ${baseSymbol}, you need ${formatCryptoNumber(amountNum)} ${baseSymbol} but have ${formatCryptoNumber(availableBalance)} ${baseSymbol} available.`,
           variant: "destructive",
         });
         return;
@@ -228,7 +278,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
 
         {/* Amount */}
         <div>
-          <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Amount (BTC)</label>
+          <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Amount ({baseSymbol})</label>
           <Input
             type="number"
             step="0.00000001"

@@ -1,38 +1,123 @@
+import { useState, useEffect } from "react";
 import { TradingForm } from "@/components/trading/trading-form";
 import { OrderBook } from "@/components/trading/order-book";
 import { OrderManagement } from "@/components/trading/order-management";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, ChevronDown } from "lucide-react";
+
+interface SpotPair {
+  id: number;
+  symbol: string;
+  base_asset: string;
+  quote_asset: string;
+  is_enabled: boolean;
+}
+
+const CRYPTO_NAMES: Record<string, string> = {
+  BTC: "Bitcoin", ETH: "Ethereum", BNB: "BNB", SOL: "Solana", XRP: "Ripple",
+  ADA: "Cardano", DOT: "Polkadot", DOGE: "Dogecoin", AVAX: "Avalanche", LINK: "Chainlink",
+  LTC: "Litecoin", MATIC: "Polygon", ATOM: "Cosmos", TRX: "TRON", SHIB: "Shiba Inu",
+  BCH: "Bitcoin Cash", DASH: "Dash", XMR: "Monero", XLM: "Stellar", FIL: "Filecoin",
+  APT: "Aptos", SUI: "Sui", ARB: "Arbitrum", OP: "Optimism", PEPE: "Pepe", INJ: "Injective",
+};
+
+const CRYPTO_COLORS: Record<string, { from: string; to: string; shadow: string; symbol: string }> = {
+  BTC: { from: "from-orange-400", to: "to-orange-600", shadow: "shadow-orange-500/20", symbol: "₿" },
+  ETH: { from: "from-blue-400", to: "to-indigo-600", shadow: "shadow-blue-500/20", symbol: "Ξ" },
+  BNB: { from: "from-yellow-400", to: "to-yellow-600", shadow: "shadow-yellow-500/20", symbol: "B" },
+  SOL: { from: "from-purple-400", to: "to-purple-600", shadow: "shadow-purple-500/20", symbol: "S" },
+  XRP: { from: "from-gray-300", to: "to-gray-500", shadow: "shadow-gray-400/20", symbol: "X" },
+  DEFAULT: { from: "from-cyan-400", to: "to-cyan-600", shadow: "shadow-cyan-500/20", symbol: "●" },
+};
 
 export default function ExchangePage() {
   const { getFormattedPrice } = useCryptoPrices();
-  const currentPair = "BTC/USDT";
+  const [pairs, setPairs] = useState<SpotPair[]>([]);
+  const [currentPair, setCurrentPair] = useState("BTC/USDT");
+  const [showPairMenu, setShowPairMenu] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/trading-pairs/spot")
+      .then(res => res.ok ? res.json() : [])
+      .then((data: SpotPair[]) => {
+        if (data.length > 0) {
+          setPairs(data);
+          // Keep current pair if it's available, otherwise default to first
+          if (!data.find(p => p.symbol === currentPair)) {
+            setCurrentPair(data[0].symbol);
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback - keep default BTC/USDT
+      });
+  }, []);
+
+  const baseAsset = currentPair.split("/")[0];
+  const quoteAsset = currentPair.split("/")[1];
+  const cryptoName = CRYPTO_NAMES[baseAsset] || baseAsset;
+  const colors = CRYPTO_COLORS[baseAsset] || CRYPTO_COLORS.DEFAULT;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       {/* Trading Pair Header */}
       <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e] px-4 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <span className="text-white font-bold text-sm">₿</span>
+          <div className="flex items-center gap-3 relative">
+            <div className={`w-9 h-9 bg-gradient-to-br ${colors.from} ${colors.to} rounded-xl flex items-center justify-center shadow-lg ${colors.shadow}`}>
+              <span className="text-white font-bold text-sm">{colors.symbol}</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-[#1a1a1a] text-white text-sm font-semibold px-3 py-1 rounded-lg border border-[#2a2a2a]">
+                <button
+                  onClick={() => setShowPairMenu(!showPairMenu)}
+                  className="bg-[#1a1a1a] text-white text-sm font-semibold px-3 py-1 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors flex items-center gap-1.5"
+                >
                   {currentPair}
-                </span>
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
+                </button>
                 <span className="text-gray-500 text-xs hidden sm:inline">Spot Trading</span>
               </div>
-              <p className="text-gray-500 text-[11px] mt-0.5">Bitcoin / Tether</p>
+              <p className="text-gray-500 text-[11px] mt-0.5">{cryptoName} / Tether</p>
             </div>
+
+            {/* Pair Dropdown */}
+            {showPairMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
+                <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-xl overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto">
+                    {pairs.length > 0 ? pairs.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setCurrentPair(p.symbol); setShowPairMenu(false); }}
+                        className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[#222] transition-colors ${
+                          p.symbol === currentPair ? 'bg-[#222] text-white' : 'text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{p.base_asset}</span>
+                          <span className="text-gray-600">/</span>
+                          <span className="text-gray-400 text-sm">{p.quote_asset}</span>
+                        </div>
+                        {p.symbol === currentPair && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        )}
+                      </button>
+                    )) : (
+                      <div className="px-4 py-3 text-gray-500 text-xs">No pairs available</div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="text-green-400" />
             <span className="text-green-400 font-bold text-lg md:text-xl tabular-nums">
-              {getFormattedPrice("BTC")}
+              {getFormattedPrice(baseAsset)}
             </span>
-            <span className="text-gray-500 text-xs">USDT</span>
+            <span className="text-gray-500 text-xs">{quoteAsset}</span>
           </div>
         </div>
       </div>

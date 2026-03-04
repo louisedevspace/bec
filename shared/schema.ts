@@ -107,6 +107,35 @@ export const loanApplications = pgTable("loan_applications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Trading Pairs — admin-configurable trading pair list
+export const tradingPairs = pgTable("trading_pairs", {
+  id: serial("id").primaryKey(),
+  symbol: text("symbol").notNull().unique(), // e.g. "BTC/USDT"
+  baseAsset: text("base_asset").notNull(), // e.g. "BTC"
+  quoteAsset: text("quote_asset").notNull(), // e.g. "USDT"
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  minTradeAmount: decimal("min_trade_amount", { precision: 20, scale: 8 }).default("0.0001"),
+  maxTradeAmount: decimal("max_trade_amount", { precision: 20, scale: 8 }).default("100"),
+  tradingFee: decimal("trading_fee", { precision: 5, scale: 4 }).default("0.001"), // 0.1%
+  sortOrder: integer("sort_order").default(0),
+  pairType: text("pair_type").notNull().default("spot"), // spot, futures, both
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Trading Limits — per-user or per-pair overrides for min/max trade amounts
+export const userTradingLimits = pgTable("user_trading_limits", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),        // '*' = global default for all users
+  symbol: text("symbol").notNull(),          // '*' = all pairs, or specific pair like 'BTC/USDT'
+  tradeType: text("trade_type").notNull().default("both"), // spot, futures, both
+  minAmount: decimal("min_amount", { precision: 20, scale: 8 }).default("0"),
+  maxAmount: decimal("max_amount", { precision: 20, scale: 8 }).default("1000000"),
+  isEnabled: boolean("is_enabled").notNull().default(true), // allow/block this user from trading this pair
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const cryptoPrices = pgTable("crypto_prices", {
   id: serial("id").primaryKey(),
   symbol: text("symbol").notNull(),
@@ -197,6 +226,18 @@ export const insertStakingPositionSchema = z.object({
   userId: undefined, // Add this so the server can override it
 }));
 
+export const insertTradingPairSchema = createInsertSchema(tradingPairs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserTradingLimitSchema = createInsertSchema(userTradingLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLoanApplicationSchema = createInsertSchema(loanApplications).omit({
   id: true,
   createdAt: true,
@@ -249,6 +290,12 @@ export type InsertCryptoPrice = z.infer<typeof insertCryptoPriceSchema>;
 
 export type KycVerification = typeof kycVerifications.$inferSelect;
 export type InsertKycVerification = z.infer<typeof insertKycVerificationSchema>;
+
+export type TradingPair = typeof tradingPairs.$inferSelect;
+export type InsertTradingPair = z.infer<typeof insertTradingPairSchema>;
+
+export type UserTradingLimit = typeof userTradingLimits.$inferSelect;
+export type InsertUserTradingLimit = z.infer<typeof insertUserTradingLimitSchema>;
 
 export const withdrawRequests = pgTable("withdraw_requests", {
   id: serial("id").primaryKey(),

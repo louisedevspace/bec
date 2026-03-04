@@ -8,8 +8,8 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.0.0
--- Last Updated: 2026-02-28
+-- Version: 2.1.0
+-- Last Updated: 2026-03-05
 -- Compatible with: Supabase PostgreSQL 15+
 -- ============================================================
 
@@ -372,6 +372,59 @@ COMMENT ON COLUMN audit_logs.details IS 'Additional details about the action (se
 COMMENT ON COLUMN audit_logs.ip_address IS 'Client IP address for security tracking';
 COMMENT ON COLUMN audit_logs.user_agent IS 'Client user agent for device identification';
 COMMENT ON COLUMN audit_logs.status IS 'Outcome of the action: success, failure, or pending';
+
+-- ----------------------------------------------------------
+-- 1.18 Trading Pairs (admin-configurable pair list)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS trading_pairs (
+  id SERIAL PRIMARY KEY,
+  symbol TEXT NOT NULL UNIQUE,                                  -- e.g. 'BTC/USDT'
+  base_asset TEXT NOT NULL,                                     -- e.g. 'BTC'
+  quote_asset TEXT NOT NULL,                                    -- e.g. 'USDT'
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  min_trade_amount DECIMAL(20,8) DEFAULT 0.0001,               -- Global minimum per trade
+  max_trade_amount DECIMAL(20,8) DEFAULT 100,                  -- Global maximum per trade
+  trading_fee DECIMAL(5,4) DEFAULT 0.001,                      -- 0.1%
+  sort_order INTEGER DEFAULT 0,
+  pair_type TEXT NOT NULL DEFAULT 'spot'                        -- 'spot', 'futures', 'both'
+    CHECK (pair_type IN ('spot', 'futures', 'both')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_trading_pairs_enabled ON trading_pairs(is_enabled, sort_order);
+CREATE INDEX IF NOT EXISTS idx_trading_pairs_type ON trading_pairs(pair_type);
+
+COMMENT ON TABLE trading_pairs IS 'Admin-managed list of available trading pairs';
+
+-- ----------------------------------------------------------
+-- 1.19 User Trading Limits (per-user / per-pair overrides)
+-- ----------------------------------------------------------
+-- Allows admin to set per-user or global min/max trade amounts
+-- and to block specific users from trading specific pairs.
+-- userId = '*' means global default for ALL users.
+-- symbol = '*' means the limit applies to ALL pairs.
+-- Priority: per-user + per-pair > per-user + wildcard > global + per-pair > global + wildcard
+CREATE TABLE IF NOT EXISTS user_trading_limits (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,                                        -- user id or '*' for global
+  symbol TEXT NOT NULL DEFAULT '*',                             -- pair symbol or '*' for all
+  trade_type TEXT NOT NULL DEFAULT 'both'                       -- 'spot', 'futures', 'both'
+    CHECK (trade_type IN ('spot', 'futures', 'both')),
+  min_amount DECIMAL(20,8) DEFAULT 0,
+  max_amount DECIMAL(20,8) DEFAULT 1000000,
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,                    -- FALSE = user blocked from this pair
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, symbol, trade_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_trading_limits_user ON user_trading_limits(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_trading_limits_symbol ON user_trading_limits(symbol);
+
+COMMENT ON TABLE user_trading_limits IS 'Per-user or global trading amount limits and access controls';
+COMMENT ON COLUMN user_trading_limits.user_id IS 'User ID or * for global default';
+COMMENT ON COLUMN user_trading_limits.symbol IS 'Trading pair symbol or * for all pairs';
 
 
 -- ************************************************************
@@ -1273,6 +1326,33 @@ INSERT INTO broadcast_notifications (title, body, target_role, total_users, sent
 ('New Features Available', 'Check out our latest trading tools and features!', 'user', 0, 0, 0, 'completed', NOW() - INTERVAL '3 days')
 ON CONFLICT DO NOTHING;
 
+-- Default trading pairs (spot + futures)
+INSERT INTO trading_pairs (symbol, base_asset, quote_asset, is_enabled, min_trade_amount, max_trade_amount, trading_fee, sort_order, pair_type)
+VALUES
+  ('BTC/USDT',   'BTC',   'USDT', TRUE, 0.0001,   100,    0.001, 1,  'both'),
+  ('ETH/USDT',   'ETH',   'USDT', TRUE, 0.001,    500,    0.001, 2,  'both'),
+  ('BNB/USDT',   'BNB',   'USDT', TRUE, 0.01,     1000,   0.001, 3,  'both'),
+  ('SOL/USDT',   'SOL',   'USDT', TRUE, 0.1,      5000,   0.001, 4,  'both'),
+  ('XRP/USDT',   'XRP',   'USDT', TRUE, 1,        50000,  0.001, 5,  'both'),
+  ('ADA/USDT',   'ADA',   'USDT', TRUE, 1,        100000, 0.001, 6,  'both'),
+  ('DOT/USDT',   'DOT',   'USDT', TRUE, 0.1,      10000,  0.001, 7,  'both'),
+  ('DOGE/USDT',  'DOGE',  'USDT', TRUE, 10,       500000, 0.001, 8,  'both'),
+  ('AVAX/USDT',  'AVAX',  'USDT', TRUE, 0.1,      5000,   0.001, 9,  'both'),
+  ('LINK/USDT',  'LINK',  'USDT', TRUE, 0.1,      10000,  0.001, 10, 'both'),
+  ('LTC/USDT',   'LTC',   'USDT', TRUE, 0.01,     1000,   0.001, 11, 'spot'),
+  ('MATIC/USDT', 'MATIC', 'USDT', TRUE, 1,        100000, 0.001, 12, 'spot'),
+  ('ATOM/USDT',  'ATOM',  'USDT', TRUE, 0.1,      10000,  0.001, 13, 'spot'),
+  ('TRX/USDT',   'TRX',   'USDT', TRUE, 10,       500000, 0.001, 14, 'spot'),
+  ('SHIB/USDT',  'SHIB',  'USDT', TRUE, 100000,   99999999, 0.001, 15, 'spot')
+ON CONFLICT (symbol) DO NOTHING;
+
+-- Default global trading limits (wildcard user + wildcard pair)
+INSERT INTO user_trading_limits (user_id, symbol, trade_type, min_amount, max_amount, is_enabled)
+VALUES
+  ('*', '*', 'spot',    0.0001,  1000000, TRUE),
+  ('*', '*', 'futures', 50,      1000000, TRUE)
+ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
+
 
 -- ************************************************************
 -- END OF COMPLETE SCHEMA
@@ -1283,7 +1363,7 @@ ON CONFLICT DO NOTHING;
 -- 
 -- Summary:
 -- ========
--- Tables: 25+
+-- Tables: 27+
 --   - users, user_passwords
 --   - portfolios, transactions, trades, futures_trades
 --   - staking_positions, loan_applications
@@ -1293,6 +1373,7 @@ ON CONFLICT DO NOTHING;
 --   - deposit_addresses, deposit_address_audit_logs
 --   - support_conversations, support_messages
 --   - audit_logs
+--   - trading_pairs, user_trading_limits
 --   - news, user_news_seen
 --   - notification_templates, notification_campaigns, notification_logs
 --   - push_subscriptions
