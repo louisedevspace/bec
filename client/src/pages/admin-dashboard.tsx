@@ -17,8 +17,9 @@ import type { Trade } from "@/types/crypto";
 import AdminLayout from './admin-layout';
 import { supabase } from "@/lib/supabaseClient";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell
+  AreaChart, Area, BarChart, Bar, LineChart, Line, ComposedChart,
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend
 } from 'recharts';
 
 interface DashboardStats {
@@ -48,6 +49,29 @@ interface DashboardStats {
     financialTrend: Array<{ date: string; deposits: number; withdrawals: number }>;
   };
   recentActivity: Array<{ type: string; description: string; time: string; status: string }>;
+}
+
+interface AnalyticsData {
+  depositDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
+  withdrawalDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
+  profitDaily: Array<{ date: string; netFlow: number; cumulativeProfit: number; deposits: number; withdrawals: number; futuresRevenue: number }>;
+  monthlyData: Array<{
+    month: string; monthLabel: string; deposits: number; withdrawals: number;
+    netFlow: number; profit: number; depositCount: number; withdrawalCount: number;
+    dailyBreakdown: Array<{ day: number; deposits: number; withdrawals: number; net: number }>;
+  }>;
+  dayComparison: {
+    today: { label: string; deposits: number; withdrawals: number; netFlow: number; depositCount: number; withdrawalCount: number };
+    yesterday: { label: string; deposits: number; withdrawals: number; netFlow: number; depositCount: number; withdrawalCount: number };
+    weekAgo: { label: string; deposits: number; withdrawals: number; netFlow: number; depositCount: number; withdrawalCount: number };
+  };
+  summary: {
+    totalDeposits: number; totalWithdrawals: number; totalNetFlow: number;
+    totalFuturesRevenue: number; totalProfit: number;
+    depositsBySymbol: Record<string, number>; withdrawalsBySymbol: Record<string, number>;
+    totalDepositCount: number; totalWithdrawalCount: number;
+    allTimeDepositCount: number; allTimeWithdrawalCount: number;
+  };
 }
 
 function formatCurrency(value: number): string {
@@ -154,6 +178,9 @@ function QuickActionLink({ href, icon, label, count, colorClasses }: {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'30' | '60' | '90'>('30');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,11 +210,38 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/admin/analytics', {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalytics(data);
+      }
+    } catch (err) {
+      console.error('Analytics fetch error:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDashboardStats();
     const interval = setInterval(fetchDashboardStats, 30000);
     return () => clearInterval(interval);
   }, [fetchDashboardStats]);
+
+  // Fetch analytics when the analytics tab is selected
+  useEffect(() => {
+    if (activeTab === 'analytics' && !analytics) {
+      fetchAnalytics();
+    }
+  }, [activeTab, analytics, fetchAnalytics]);
 
   // Pending orders
   const { data: pendingOrders, isLoading: ordersLoading } = useQuery({
@@ -518,10 +572,10 @@ export default function AdminDashboard() {
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-[#111] border border-[#1e1e1e] rounded-xl p-1 h-auto flex flex-wrap gap-1">
-                {['overview', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => (
+                {['overview', 'analytics', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => (
                   <TabsTrigger key={tab} value={tab}
                     className="rounded-lg data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400 text-xs px-3 py-1.5 capitalize">
-                    {tab === 'pending-orders' ? 'Pending Orders' : tab}
+                    {tab === 'pending-orders' ? 'Pending Orders' : tab === 'analytics' ? '📊 Analytics' : tab}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -807,6 +861,387 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* ===== ANALYTICS TAB ===== */}
+              <TabsContent value="analytics" className="space-y-5 mt-4">
+                {analyticsLoading || !analytics ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400 mb-4" />
+                    <p className="text-sm text-gray-500">Loading analytics data...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Period Selector + Summary Cards */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-white">Financial Analytics</h3>
+                        <span className="text-[10px] text-gray-500 bg-[#1a1a1a] px-2 py-0.5 rounded-full">Last {analyticsPeriod} days</span>
+                      </div>
+                      <div className="flex gap-1 bg-[#111] border border-[#1e1e1e] rounded-lg p-0.5">
+                        {(['30', '60', '90'] as const).map(p => (
+                          <button key={p} onClick={() => setAnalyticsPeriod(p)}
+                            className={`px-3 py-1 text-xs rounded-md transition-colors ${analyticsPeriod === p ? 'bg-blue-500/20 text-blue-400 font-medium' : 'text-gray-500 hover:text-gray-300'}`}>
+                            {p}D
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Summary Cards Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <StatCard icon={<ArrowDownRight size={18} />} iconBg="bg-green-500/10" iconColor="text-green-400"
+                        label="Total Deposits" value={formatCurrency(analytics.summary.totalDeposits)}
+                        sub={`${analytics.summary.totalDepositCount} approved`} trend="up" />
+                      <StatCard icon={<ArrowUpRight size={18} />} iconBg="bg-red-500/10" iconColor="text-red-400"
+                        label="Total Withdrawals" value={formatCurrency(analytics.summary.totalWithdrawals)}
+                        sub={`${analytics.summary.totalWithdrawalCount} processed`} trend="down" />
+                      <StatCard icon={<TrendingUp size={18} />} iconBg="bg-emerald-500/10" iconColor="text-emerald-400"
+                        label="Net Flow" value={formatCurrency(Math.abs(analytics.summary.totalNetFlow))}
+                        sub={analytics.summary.totalNetFlow >= 0 ? 'Positive inflow' : 'Net outflow'}
+                        trend={analytics.summary.totalNetFlow >= 0 ? 'up' : 'down'} />
+                      <StatCard icon={<Zap size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
+                        label="Futures Revenue" value={formatCurrency(analytics.summary.totalFuturesRevenue)}
+                        sub="From user losses" />
+                      <StatCard icon={<DollarSign size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
+                        label="Total Profit" value={formatCurrency(analytics.summary.totalProfit)}
+                        sub="Net flow + futures" trend="up" />
+                      <StatCard icon={<Wallet size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
+                        label="All-Time Txns" value={formatNumber(analytics.summary.allTimeDepositCount + analytics.summary.allTimeWithdrawalCount)}
+                        sub={`${analytics.summary.allTimeDepositCount}D / ${analytics.summary.allTimeWithdrawalCount}W`} />
+                    </div>
+
+                    {/* Day-Over-Day Comparison Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {Object.entries(analytics.dayComparison).map(([key, day]) => (
+                        <div key={key} className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-semibold text-white">{day.label}</p>
+                            <div className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${day.netFlow >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                              {day.netFlow >= 0 ? '+' : ''}{formatCurrency(day.netFlow)}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Deposits</p>
+                              <p className="text-sm font-bold text-green-400">{formatCurrency(day.deposits)}</p>
+                              <p className="text-[10px] text-gray-600">{day.depositCount} txns</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Withdrawals</p>
+                              <p className="text-sm font-bold text-red-400">{formatCurrency(day.withdrawals)}</p>
+                              <p className="text-[10px] text-gray-600">{day.withdrawalCount} txns</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart 1: Deposit Tracking */}
+                    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white">Deposit Tracking</h3>
+                          <p className="text-[11px] text-gray-500">All deposits by amount, date & currency breakdown</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> USDT</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> BTC</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> ETH</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Other</span>
+                        </div>
+                      </div>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={analytics.depositDaily.slice(90 - parseInt(analyticsPeriod))}>
+                            <defs>
+                              <linearGradient id="depUsdtGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
+                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
+                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <Tooltip content={({ active, payload, label }) => {
+                              if (!active || !payload?.length) return null;
+                              return (
+                                <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
+                                  <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  {payload.map((p: any, i: number) => (
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                  ))}
+                                </div>
+                              );
+                            }} />
+                            <Bar dataKey="usdt" name="USDT" fill="#10b981" stackId="dep" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="btc" name="BTC" fill="#f97316" stackId="dep" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="eth" name="ETH" fill="#3b82f6" stackId="dep" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="other" name="Other" fill="#6b7280" stackId="dep" radius={[3, 3, 0, 0]} />
+                            <Line type="monotone" dataKey="amount" name="Total" stroke="#a78bfa" strokeWidth={2} dot={false} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Chart 2: Withdrawal Tracking */}
+                    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white">Withdrawal Tracking</h3>
+                          <p className="text-[11px] text-gray-500">Withdrawal amounts processed by currency</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> USDT</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> BTC</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> ETH</span>
+                        </div>
+                      </div>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={analytics.withdrawalDaily.slice(90 - parseInt(analyticsPeriod))}>
+                            <defs>
+                              <linearGradient id="wdUsdtGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
+                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
+                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <Tooltip content={({ active, payload, label }) => {
+                              if (!active || !payload?.length) return null;
+                              return (
+                                <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
+                                  <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  {payload.map((p: any, i: number) => (
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                  ))}
+                                </div>
+                              );
+                            }} />
+                            <Bar dataKey="usdt" name="USDT" fill="#ef4444" stackId="wd" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="btc" name="BTC" fill="#f97316" stackId="wd" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="eth" name="ETH" fill="#3b82f6" stackId="wd" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="other" name="Other" fill="#6b7280" stackId="wd" radius={[3, 3, 0, 0]} />
+                            <Line type="monotone" dataKey="amount" name="Total" stroke="#fb923c" strokeWidth={2} dot={false} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Chart 3: Profit Analysis */}
+                    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white">Profit Analysis</h3>
+                          <p className="text-[11px] text-gray-500">Net flow, cumulative profit & futures revenue over time</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Net Flow</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" /> Cumulative</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" /> Futures Rev</span>
+                        </div>
+                      </div>
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={analytics.profitDaily.slice(90 - parseInt(analyticsPeriod))}>
+                            <defs>
+                              <linearGradient id="cumProfGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
+                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
+                            <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <Tooltip content={({ active, payload, label }) => {
+                              if (!active || !payload?.length) return null;
+                              return (
+                                <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 shadow-xl">
+                                  <p className="text-[10px] text-gray-400 mb-1.5">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  {payload.map((p: any, i: number) => (
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
+                                      {p.name}: {p.value < 0 ? '-' : ''}${Math.abs(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            }} />
+                            <Bar yAxisId="left" dataKey="netFlow" name="Daily Net Flow" fill="#10b981" radius={[3, 3, 0, 0]} opacity={0.6} />
+                            <Bar yAxisId="left" dataKey="futuresRevenue" name="Futures Revenue" fill="#a78bfa" radius={[3, 3, 0, 0]} opacity={0.7} />
+                            <Line yAxisId="right" type="monotone" dataKey="cumulativeProfit" name="Cumulative Profit" stroke="#22d3ee" fill="url(#cumProfGrad)" strokeWidth={2.5} dot={false} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Chart 4: Monthly Comparison — Multi-line overlay */}
+                    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white">Month-over-Month Comparison</h3>
+                          <p className="text-[11px] text-gray-500">Daily cumulative deposits per month — overlaid for easy comparison</p>
+                        </div>
+                      </div>
+                      <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          {(() => {
+                            // Build overlay data: each row = day 1..31, columns = month running totals
+                            const maxDays = 31;
+                            const overlayData: Array<Record<string, any>> = [];
+                            for (let day = 1; day <= maxDays; day++) {
+                              const row: Record<string, any> = { day: `Day ${day}` };
+                              analytics.monthlyData.forEach(m => {
+                                const cumulative = m.dailyBreakdown
+                                  .filter(d => d.day <= day)
+                                  .reduce((s, d) => s + d.deposits, 0);
+                                row[m.monthLabel] = cumulative;
+                              });
+                              overlayData.push(row);
+                            }
+                            const monthColors = ['#4b5563', '#6b7280', '#9ca3af', '#f59e0b', '#3b82f6', '#10b981'];
+                            return (
+                              <LineChart data={overlayData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                                <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#555' }} interval={4} />
+                                <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                                <Tooltip content={({ active, payload, label }) => {
+                                  if (!active || !payload?.length) return null;
+                                  return (
+                                    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
+                                      <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+                                      {payload.sort((a: any, b: any) => (b.value || 0) - (a.value || 0)).map((p: any, i: number) => (
+                                        <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
+                                          {p.name}: ${parseFloat(p.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  );
+                                }} />
+                                <Legend iconType="line" wrapperStyle={{ fontSize: '10px', color: '#888' }} />
+                                {analytics.monthlyData.map((m, i) => (
+                                  <Line key={m.month} type="monotone" dataKey={m.monthLabel}
+                                    stroke={monthColors[i % monthColors.length]}
+                                    strokeWidth={i === analytics.monthlyData.length - 1 ? 3 : 1.5}
+                                    strokeDasharray={i < analytics.monthlyData.length - 2 ? '4 4' : undefined}
+                                    dot={false} opacity={i === analytics.monthlyData.length - 1 ? 1 : 0.6} />
+                                ))}
+                              </LineChart>
+                            );
+                          })()}
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Chart 5: Monthly Summary Bar Chart + Symbol Breakdown */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Monthly totals bar chart */}
+                      <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                        <div className="mb-4">
+                          <h3 className="text-sm font-semibold text-white">Monthly Totals</h3>
+                          <p className="text-[11px] text-gray-500">Deposit & withdrawal totals per month</p>
+                        </div>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={analytics.monthlyData.map(m => ({
+                              month: m.monthLabel,
+                              Deposits: m.deposits,
+                              Withdrawals: m.withdrawals,
+                              Profit: m.profit,
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                              <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#555' }} />
+                              <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                              <Tooltip content={({ active, payload, label }) => {
+                                if (!active || !payload?.length) return null;
+                                return (
+                                  <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
+                                    <p className="text-[10px] text-gray-400 mb-1">{label}</p>
+                                    {payload.map((p: any, i: number) => (
+                                      <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
+                                        {p.name}: ${parseFloat(p.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </p>
+                                    ))}
+                                  </div>
+                                );
+                              }} />
+                              <Bar dataKey="Deposits" fill="#10b981" radius={[3, 3, 0, 0]} />
+                              <Bar dataKey="Withdrawals" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                              <Bar dataKey="Profit" fill="#22d3ee" radius={[3, 3, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Symbol Breakdown */}
+                      <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                        <div className="mb-4">
+                          <h3 className="text-sm font-semibold text-white">Currency Breakdown</h3>
+                          <p className="text-[11px] text-gray-500">All-time deposit & withdrawal amounts by asset</p>
+                        </div>
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[10px] font-medium text-gray-400 mb-2 flex items-center gap-1.5">
+                              <ArrowDownRight size={10} className="text-green-400" /> DEPOSIT BREAKDOWN
+                            </p>
+                            {Object.entries(analytics.summary.depositsBySymbol)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([symbol, amount]) => (
+                                <div key={symbol} className="mb-2">
+                                  <div className="flex items-center justify-between text-xs mb-1">
+                                    <span className="text-gray-300 font-medium">{symbol}</span>
+                                    <span className="text-white font-semibold">{formatCurrency(amount)}</span>
+                                  </div>
+                                  <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                                    <div className="h-full bg-green-500 rounded-full transition-all duration-700"
+                                      style={{ width: `${Math.min(100, (amount / analytics.summary.totalDeposits) * 100)}%` }} />
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                          <div className="border-t border-[#1e1e1e] pt-4">
+                            <p className="text-[10px] font-medium text-gray-400 mb-2 flex items-center gap-1.5">
+                              <ArrowUpRight size={10} className="text-red-400" /> WITHDRAWAL BREAKDOWN
+                            </p>
+                            {Object.entries(analytics.summary.withdrawalsBySymbol)
+                              .sort(([, a], [, b]) => b - a)
+                              .map(([symbol, amount]) => (
+                                <div key={symbol} className="mb-2">
+                                  <div className="flex items-center justify-between text-xs mb-1">
+                                    <span className="text-gray-300 font-medium">{symbol}</span>
+                                    <span className="text-white font-semibold">{formatCurrency(amount)}</span>
+                                  </div>
+                                  <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                                    <div className="h-full bg-red-500 rounded-full transition-all duration-700"
+                                      style={{ width: `${Math.min(100, (amount / analytics.summary.totalWithdrawals) * 100)}%` }} />
+                                  </div>
+                                </div>
+                              ))}
+                            {Object.keys(analytics.summary.withdrawalsBySymbol).length === 0 && (
+                              <p className="text-xs text-gray-600 italic">No withdrawals recorded</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Refresh button */}
+                    <div className="flex justify-center pt-2">
+                      <button onClick={fetchAnalytics}
+                        className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors bg-[#111] border border-[#1e1e1e] rounded-xl px-4 py-2">
+                        <RefreshCw size={12} /> Refresh Analytics
+                      </button>
+                    </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* ===== FINANCIAL TAB ===== */}

@@ -739,4 +739,245 @@ export default function registerAdminRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
     }
   });
+
+  // =============================================
+  // GET /api/admin/analytics — advanced financial analytics
+  // =============================================
+  app.get("/api/admin/analytics", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      // Fetch all approved deposits & withdrawals, plus futures results
+      const [depositsRes, withdrawalsRes, futuresRes] = await Promise.all([
+        supabaseAdmin.from("deposit_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
+        supabaseAdmin.from("withdraw_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
+        supabaseAdmin.from("futures_trades").select("id, amount, status, final_result, final_profit, created_at, completed_at"),
+      ]);
+
+      const allDeposits = depositsRes.data || [];
+      const allWithdrawals = withdrawalsRes.data || [];
+      const allFutures = futuresRes.data || [];
+
+      const approvedDeposits = allDeposits.filter(d => d.status === 'approved');
+      const approvedWithdrawals = allWithdrawals.filter(w => w.status === 'approved');
+      const completedFutures = allFutures.filter(f => f.status === 'completed');
+
+      // Helper: get date string from timestamp
+      const toDateStr = (ts: string) => new Date(ts).toISOString().split('T')[0];
+      const daysBetween = (start: Date, end: Date) => Math.ceil((end.getTime() - start.getTime()) / 86400000);
+
+      // ==================
+      // 1) DEPOSIT TRACKING — daily breakdown (last 90 days)
+      // ==================
+      const depositDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }> = [];
+      for (let i = 89; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+        const dayDeps = approvedDeposits.filter(dep => {
+          const t = new Date(dep.submitted_at || dep.reviewed_at);
+          return t >= d && t < next;
+        });
+        const amount = dayDeps.reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const usdt = dayDeps.filter(dep => (dep.symbol || 'USDT').toUpperCase() === 'USDT').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const btc = dayDeps.filter(dep => (dep.symbol || '').toUpperCase() === 'BTC').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const eth = dayDeps.filter(dep => (dep.symbol || '').toUpperCase() === 'ETH').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const other = amount - usdt - btc - eth;
+        depositDaily.push({ date: dateStr, amount, count: dayDeps.length, usdt, btc, eth, other: Math.max(0, other) });
+      }
+
+      // ==================
+      // 2) WITHDRAWAL TRACKING — daily breakdown (last 90 days)
+      // ==================
+      const withdrawalDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }> = [];
+      for (let i = 89; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+        const dayWds = approvedWithdrawals.filter(w => {
+          const t = new Date(w.submitted_at || w.reviewed_at);
+          return t >= d && t < next;
+        });
+        const amount = dayWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const usdt = dayWds.filter(w => (w.symbol || 'USDT').toUpperCase() === 'USDT').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const btc = dayWds.filter(w => (w.symbol || '').toUpperCase() === 'BTC').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const eth = dayWds.filter(w => (w.symbol || '').toUpperCase() === 'ETH').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const other = amount - usdt - btc - eth;
+        withdrawalDaily.push({ date: dateStr, amount, count: dayWds.length, usdt, btc, eth, other: Math.max(0, other) });
+      }
+
+      // ==================
+      // 3) PROFIT (NET FLOW) — daily deposits minus withdrawals + futures losses (platform keeps losses)
+      // ==================
+      const profitDaily: Array<{ date: string; netFlow: number; cumulativeProfit: number; deposits: number; withdrawals: number; futuresRevenue: number }> = [];
+      let cumulativeProfit = 0;
+      for (let i = 89; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+
+        const dayDepAmt = approvedDeposits
+          .filter(dep => { const t = new Date(dep.submitted_at || dep.reviewed_at); return t >= d && t < next; })
+          .reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+        const dayWdAmt = approvedWithdrawals
+          .filter(w => { const t = new Date(w.submitted_at || w.reviewed_at); return t >= d && t < next; })
+          .reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+
+        // Futures revenue: platform earns from user losses
+        const dayFuturesRevenue = completedFutures
+          .filter(f => {
+            const t = new Date(f.completed_at || f.created_at);
+            return t >= d && t < next && f.final_result === 'loss';
+          })
+          .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+
+        const netFlow = dayDepAmt - dayWdAmt;
+        const dayProfit = netFlow + dayFuturesRevenue;
+        cumulativeProfit += dayProfit;
+        profitDaily.push({
+          date: dateStr,
+          netFlow,
+          cumulativeProfit,
+          deposits: dayDepAmt,
+          withdrawals: dayWdAmt,
+          futuresRevenue: dayFuturesRevenue
+        });
+      }
+
+      // ==================
+      // 4) MONTHLY COMPARISON — current month vs previous months (up to 6 months)
+      // ==================
+      const monthlyData: Array<{
+        month: string; monthLabel: string;
+        deposits: number; withdrawals: number; netFlow: number; profit: number;
+        depositCount: number; withdrawalCount: number;
+        dailyBreakdown: Array<{ day: number; deposits: number; withdrawals: number; net: number }>;
+      }> = [];
+
+      for (let m = 5; m >= 0; m--) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth() - m, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - m + 1, 0, 23, 59, 59, 999);
+        const monthLabel = monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const monthKey = monthStart.toISOString().split('T')[0].substring(0, 7); // YYYY-MM
+
+        const mDeps = approvedDeposits.filter(dep => {
+          const t = new Date(dep.submitted_at || dep.reviewed_at);
+          return t >= monthStart && t <= monthEnd;
+        });
+        const mWds = approvedWithdrawals.filter(w => {
+          const t = new Date(w.submitted_at || w.reviewed_at);
+          return t >= monthStart && t <= monthEnd;
+        });
+        const mFutRev = completedFutures
+          .filter(f => {
+            const t = new Date(f.completed_at || f.created_at);
+            return t >= monthStart && t <= monthEnd && f.final_result === 'loss';
+          })
+          .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+
+        const mDepTotal = mDeps.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+        const mWdTotal = mWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+
+        // Daily breakdown within the month (for overlay comparison)
+        const daysInMonth = monthEnd.getDate();
+        const dailyBreakdown: Array<{ day: number; deposits: number; withdrawals: number; net: number }> = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayStart = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+          const dayEnd = new Date(monthStart.getFullYear(), monthStart.getMonth(), day + 1);
+          const dDep = mDeps.filter(dep => {
+            const t = new Date(dep.submitted_at || dep.reviewed_at);
+            return t >= dayStart && t < dayEnd;
+          }).reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+          const dWd = mWds.filter(w => {
+            const t = new Date(w.submitted_at || w.reviewed_at);
+            return t >= dayStart && t < dayEnd;
+          }).reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+          dailyBreakdown.push({ day, deposits: dDep, withdrawals: dWd, net: dDep - dWd });
+        }
+
+        monthlyData.push({
+          month: monthKey,
+          monthLabel,
+          deposits: mDepTotal,
+          withdrawals: mWdTotal,
+          netFlow: mDepTotal - mWdTotal,
+          profit: mDepTotal - mWdTotal + mFutRev,
+          depositCount: mDeps.length,
+          withdrawalCount: mWds.length,
+          dailyBreakdown,
+        });
+      }
+
+      // ==================
+      // 5) DAY-OVER-DAY COMPARISON — today vs yesterday vs 7d ago
+      // ==================
+      const getDayStats = (targetDate: Date) => {
+        const dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const dayEnd = new Date(dayStart.getTime() + 86400000);
+        const dDeps = approvedDeposits.filter(dep => {
+          const t = new Date(dep.submitted_at || dep.reviewed_at);
+          return t >= dayStart && t < dayEnd;
+        });
+        const dWds = approvedWithdrawals.filter(w => {
+          const t = new Date(w.submitted_at || w.reviewed_at);
+          return t >= dayStart && t < dayEnd;
+        });
+        const depTotal = dDeps.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+        const wdTotal = dWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        return { deposits: depTotal, withdrawals: wdTotal, netFlow: depTotal - wdTotal, depositCount: dDeps.length, withdrawalCount: dWds.length };
+      };
+
+      const dayComparison = {
+        today: { label: 'Today', ...getDayStats(today) },
+        yesterday: { label: 'Yesterday', ...getDayStats(new Date(today.getTime() - 86400000)) },
+        weekAgo: { label: '7 Days Ago', ...getDayStats(new Date(today.getTime() - 7 * 86400000)) },
+      };
+
+      // ==================
+      // 6) SUMMARY TOTALS
+      // ==================
+      const totalDeposits = approvedDeposits.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+      const totalWithdrawals = approvedWithdrawals.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+      const totalFuturesRevenue = completedFutures
+        .filter(f => f.final_result === 'loss')
+        .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+
+      // Symbol breakdown
+      const depositsBySymbol: Record<string, number> = {};
+      approvedDeposits.forEach(d => {
+        const sym = (d.symbol || 'USDT').toUpperCase();
+        depositsBySymbol[sym] = (depositsBySymbol[sym] || 0) + parseFloat(d.amount || '0');
+      });
+      const withdrawalsBySymbol: Record<string, number> = {};
+      approvedWithdrawals.forEach(w => {
+        const sym = (w.symbol || 'USDT').toUpperCase();
+        withdrawalsBySymbol[sym] = (withdrawalsBySymbol[sym] || 0) + parseFloat(w.amount || '0');
+      });
+
+      res.json({
+        depositDaily,
+        withdrawalDaily,
+        profitDaily,
+        monthlyData,
+        dayComparison,
+        summary: {
+          totalDeposits,
+          totalWithdrawals,
+          totalNetFlow: totalDeposits - totalWithdrawals,
+          totalFuturesRevenue,
+          totalProfit: totalDeposits - totalWithdrawals + totalFuturesRevenue,
+          depositsBySymbol,
+          withdrawalsBySymbol,
+          totalDepositCount: approvedDeposits.length,
+          totalWithdrawalCount: approvedWithdrawals.length,
+          allTimeDepositCount: allDeposits.length,
+          allTimeWithdrawalCount: allWithdrawals.length,
+        },
+      });
+    } catch (error: any) {
+      console.error('Analytics error:', error);
+      res.status(500).json({ message: "Failed to fetch analytics", error: error.message });
+    }
+  });
 }
