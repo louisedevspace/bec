@@ -208,7 +208,17 @@ class LiveCryptoService {
       'vechain': 'VET',
       'theta-token': 'THETA',
       'aave': 'AAVE',
-      'algorand': 'ALGO'
+      'algorand': 'ALGO',
+      'avalanche-2': 'AVAX',
+      'solana': 'SOL',
+      'shiba-inu': 'SHIB',
+      'aptos': 'APT',
+      'sui': 'SUI',
+      'arbitrum': 'ARB',
+      'optimism': 'OP',
+      'pepe': 'PEPE',
+      'injective-protocol': 'INJ',
+      'dash': 'DASH'
     };
 
     return reverseMap[coinId] || null;
@@ -285,7 +295,17 @@ class LiveCryptoService {
       'VETUSDT': 'VET',
       'THETAUSDT': 'THETA',
       'AAVEUSDT': 'AAVE',
-      'ALGOUSDT': 'ALGO'
+      'ALGOUSDT': 'ALGO',
+      'AVAXUSDT': 'AVAX',
+      'SOLUSDT': 'SOL',
+      'SHIBUSDT': 'SHIB',
+      'APTUSDT': 'APT',
+      'SUIUSDT': 'SUI',
+      'ARBUSDT': 'ARB',
+      'OPUSDT': 'OP',
+      'PEPEUSDT': 'PEPE',
+      'INJUSDT': 'INJ',
+      'DASHUSDT': 'DASH'
     };
 
     return reverseMap[tickerSymbol] || null;
