@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cryptoApi } from "@/services/crypto-api";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
+import { formatBalance, formatUsdNumber, formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useState, useEffect } from "react";
 import type { Portfolio } from "@/types/crypto";
@@ -73,12 +74,12 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
   });
 
   const calculateTotalValue = () => {
-    if (!portfolio || !prices.length) return { available: "0.0000", staked: "0.0000" };
+    if (!portfolio || !prices.length) return { available: "$0.00", staked: "$0.00" };
     
     let totalAvailable = 0;
     let totalStaked = 0;
     
-    // Calculate available portfolio value
+    // Calculate available portfolio value (converted to USD)
     portfolio.forEach((asset: Portfolio) => {
       const price = prices.find(p => p.symbol === asset.symbol);
       if (price) {
@@ -88,7 +89,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
       }
     });
     
-    // Calculate total staked value
+    // Calculate total staked value (converted to USD)
     if (stakingPositions && stakingPositions.length > 0) {
       stakingPositions.forEach((position: any) => {
         const price = prices.find(p => p.symbol === position.symbol);
@@ -101,20 +102,22 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
     }
     
     return {
-      available: totalAvailable.toFixed(8),
-      staked: totalStaked.toFixed(8),
+      available: '$' + formatUsdNumber(totalAvailable),
+      staked: '$' + formatUsdNumber(totalStaked),
     };
   };
 
   const calculateAssetValue = (asset: Portfolio) => {
     const price = prices.find(p => p.symbol === asset.symbol);
-    if (!price) return "0.0000";
+    if (!price) return "$0.00";
     
     const available = parseFloat(asset.available) || 0;
     const frozen = parseFloat(asset.frozen) || 0;
     const total = available + frozen;
-    const value = total * parseFloat(price.price);
-    return value.toFixed(8);
+    const priceValue = parseFloat(price.price);
+    const usdValue = total * priceValue;
+    // Show USD value with $ symbol
+    return '$' + formatUsdNumber(usdValue);
   };
 
   const totals = calculateTotalValue();
@@ -170,13 +173,13 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
         <div className="space-y-3 mb-6 p-4">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-sm text-gray-500 mb-2">Available ($)</div>
+              <div className="text-sm text-gray-500 mb-2">Available (USD)</div>
               <div className="text-lg font-semibold text-red-500 break-all">{totals.available}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-sm text-gray-500 mb-2">Staked ($)</div>
+              <div className="text-sm text-gray-500 mb-2">Staked (USD)</div>
               <div className="text-lg font-semibold text-blue-500 break-all">{totals.staked}</div>
             </CardContent>
           </Card>
@@ -228,19 +231,19 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-xs">{asset.symbol}</div>
                               <div className="text-xs text-gray-500 truncate">
-                                Available: {(parseFloat(asset.available) || 0).toFixed(8)}
+                                Available: {formatCryptoNumber(parseFloat(asset.available) || 0)} {asset.symbol}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="text-center py-2 px-2 hidden md:table-cell">
                           <div className="font-semibold text-xs">
-                            {(parseFloat(asset.frozen) || 0).toFixed(8)}
+                            {(parseFloat(asset.frozen) || 0).toFixed(8)} {asset.symbol}
                           </div>
                         </td>
                         <td className="text-right py-2 px-2">
                           <div className="font-semibold text-xs">
-                            ${calculateAssetValue(asset)}
+                            {calculateAssetValue(asset)}
                           </div>
                         </td>
                       </tr>

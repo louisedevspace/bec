@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
+import { formatUsdNumber } from '@/utils/format-utils';
 
 interface StickyTradeNotificationProps {
   tradeId: number;
@@ -136,7 +137,7 @@ export function StickyTradeNotification({
           
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-600">Current Price</span>
-            <span className="text-sm font-medium text-gray-800">${parseFloat(currentPrice).toFixed(2)}</span>
+            <span className="text-sm font-medium text-gray-800">${formatUsdNumber(parseFloat(currentPrice))}</span>
           </div>
           
           <div className="flex items-center justify-between">

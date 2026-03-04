@@ -8,6 +8,7 @@ import {
   Check, X, RefreshCw, History
 } from "lucide-react";
 import { supabase } from '../../lib/supabaseClient';
+import { formatCryptoNumber } from '@/utils/format-utils';
 
 interface UnifiedTransactionHistoryModalProps {
   isOpen: boolean;
@@ -365,7 +366,7 @@ export function UnifiedTransactionHistoryModal({
                               {transaction.type === 'deposit' ? 'Deposit' : 'Withdraw'} - {transaction.symbol}
                             </div>
                             <div className="text-sm text-gray-300">
-                              {transaction.amount.toFixed(8)} {transaction.symbol}
+                              {formatCryptoNumber(transaction.amount)} {transaction.symbol}
                             </div>
                           </div>
                         </div>

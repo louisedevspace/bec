@@ -12,6 +12,7 @@ import { Settings, TrendingUp, TrendingDown, BarChart3, User, Home, PieChart, Re
 import { OrderBook } from '@/components/trading/order-book';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { FutureTradeTimerModal } from '@/components/modals/future-trade-timer-modal';
+import { formatUsdNumber } from '@/utils/format-utils';
 
 interface FuturesTrade {
   id: number;
@@ -470,11 +471,11 @@ export default function FuturesPage() {
               <div className="bg-[#111] p-3 rounded-xl border border-[#2a2a2a] space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Minimum limit</span>
-                  <span className="text-gray-300 tabular-nums">{minTradeAmount.toFixed(2)} USDT</span>
+                  <span className="text-gray-300 tabular-nums">{formatUsdNumber(minTradeAmount)} USDT</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Available</span>
-                  <span className="text-white font-medium tabular-nums">{availableBalance.toFixed(2)} USDT</span>
+                  <span className="text-white font-medium tabular-nums">{formatUsdNumber(availableBalance)} USDT</span>
                 </div>
               </div>
 
@@ -555,7 +556,7 @@ export default function FuturesPage() {
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
-                              {trade.amount.toFixed(2)} USDT
+                              {formatUsdNumber(trade.amount)} USDT
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -602,12 +603,12 @@ export default function FuturesPage() {
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
-                              {trade.amount.toFixed(2)} USDT
+                              {formatUsdNumber(trade.amount)} USDT
                               {trade.profit_loss !== undefined && (
                                 <span className={`ml-2 font-medium ${
                                   trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
                                 }`}>
-                                  {trade.profit_loss >= 0 ? '+' : ''}{trade.profit_loss.toFixed(2)}
+                                  {trade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(trade.profit_loss))}
                                 </span>
                               )}
                             </div>
@@ -689,7 +690,7 @@ export default function FuturesPage() {
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
                   <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.amount ? selectedTrade.amount.toFixed(2) : '0.00'} USDT
+                    {selectedTrade.amount ? formatUsdNumber(selectedTrade.amount) : '0.00'} USDT
                   </div>
                 </div>
               </div>
@@ -709,13 +710,13 @@ export default function FuturesPage() {
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Price</label>
                   <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.entry_price ? selectedTrade.entry_price.toFixed(2) : 'N/A'}
+                    {selectedTrade.entry_price ? formatUsdNumber(selectedTrade.entry_price) : 'N/A'}
                   </div>
                 </div>
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Exit Price</label>
                   <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.exit_price ? selectedTrade.exit_price.toFixed(2) : 'N/A'}
+                    {selectedTrade.exit_price ? formatUsdNumber(selectedTrade.exit_price) : 'N/A'}
                   </div>
                 </div>
               </div>
@@ -749,7 +750,7 @@ export default function FuturesPage() {
               {selectedTrade.final_amount !== undefined && selectedTrade.final_amount !== null && (
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Final Amount</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">{selectedTrade.final_amount.toFixed(2)} USDT</div>
+                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">{formatUsdNumber(selectedTrade.final_amount)} USDT</div>
                 </div>
               )}
 
@@ -763,7 +764,7 @@ export default function FuturesPage() {
                   <div className={`font-semibold text-base mt-0.5 tabular-nums ${
                     selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
                   }`}>
-                    {selectedTrade.profit_loss >= 0 ? '+' : ''}{selectedTrade.profit_loss.toFixed(2)} USDT
+                    {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
                   </div>
                 </div>
               )}

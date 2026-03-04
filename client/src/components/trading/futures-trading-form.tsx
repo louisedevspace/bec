@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { formatUsdNumber } from '@/utils/format-utils';
 
 import { useUser } from '@/hooks/use-user';
 
@@ -183,7 +184,7 @@ export function FuturesTradingForm({ onTradeSubmitted }: FuturesTradingFormProps
 
         {currentPrice && (
           <div className="text-sm text-muted-foreground">
-            Current Price: ${currentPrice.toFixed(2)}
+            Current Price: ${formatUsdNumber(currentPrice)}
           </div>
         )}
 

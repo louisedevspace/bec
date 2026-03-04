@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCryptoNumber } from "@/utils/format-utils";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
 
@@ -139,7 +140,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     if (amountNum > availableBalance) {
       toast({
         title: "Insufficient Balance",
-        description: `You have ${availableBalance.toFixed(8)} ${selectedCrypto} available but trying to withdraw ${amountNum.toFixed(8)} ${selectedCrypto}.`,
+        description: `You have ${formatCryptoNumber(availableBalance)} ${selectedCrypto} available but trying to withdraw ${formatCryptoNumber(amountNum)} ${selectedCrypto}.`,
         variant: "destructive",
       });
       return;
@@ -183,7 +184,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
     if (amountNum > availableBalance) {
       toast({
         title: "Insufficient Balance",
-        description: `You have ${availableBalance.toFixed(8)} ${selectedCrypto} available but trying to withdraw ${amountNum.toFixed(8)} ${selectedCrypto}.`,
+        description: `You have ${formatCryptoNumber(availableBalance)} ${selectedCrypto} available but trying to withdraw ${formatCryptoNumber(amountNum)} ${selectedCrypto}.`,
         variant: "destructive",
       });
       return;
@@ -238,7 +239,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                 className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
               />
               <div className="text-sm text-gray-500 mt-1">
-                Available: {getAvailableBalance().toFixed(8)} {selectedCrypto}
+                Available: {formatCryptoNumber(getAvailableBalance())} {selectedCrypto}
               </div>
             </div>
 

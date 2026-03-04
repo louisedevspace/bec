@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { cryptoApi } from "@/services/crypto-api";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
+import { formatCryptoNumber } from "@/utils/format-utils";
 import type { Trade, Portfolio } from "@/types/crypto";
 
 interface TradingFormProps {
@@ -128,7 +129,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       if (requiredUSDT > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To buy ${amountNum} BTC, you need ${requiredUSDT.toFixed(8)} USDT but have ${availableBalance.toFixed(8)} USDT available.`,
+          description: `To buy ${amountNum} BTC, you need ${formatCryptoNumber(requiredUSDT)} USDT but have ${formatCryptoNumber(availableBalance)} USDT available.`,
           variant: "destructive",
         });
         return;
@@ -138,7 +139,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       if (amountNum > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `To sell ${amountNum} BTC, you need ${amountNum.toFixed(8)} BTC but have ${availableBalance.toFixed(8)} BTC available.`,
+          description: `To sell ${amountNum} BTC, you need ${formatCryptoNumber(amountNum)} BTC but have ${formatCryptoNumber(availableBalance)} BTC available.`,
           variant: "destructive",
         });
         return;
@@ -242,7 +243,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
         <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
           <span className="text-gray-500 text-xs">Available</span>
           <span className="text-white text-xs font-medium tabular-nums">
-            {availableBalance.toFixed(8)} {side === "buy" ? pair.split("/")[1] : pair.split("/")[0]}
+            {formatCryptoNumber(availableBalance)} {side === "buy" ? pair.split("/")[1] : pair.split("/")[0]}
           </span>
         </div>
 

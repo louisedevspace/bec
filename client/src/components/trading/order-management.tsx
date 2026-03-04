@@ -5,6 +5,7 @@ import { useUserDataSync } from "@/hooks/use-data-sync";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { cryptoApi } from "@/services/crypto-api";
+import { formatCryptoNumber, formatPrice as formatPriceUtil } from "@/utils/format-utils";
 import type { Trade } from "@/types/crypto";
 
 interface OrderManagementProps {
@@ -116,20 +117,12 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   const formatAmount = (amount: string, symbol: string) => {
     const num = parseFloat(amount);
     const baseSymbol = symbol.split("/")[0];
-    
-    if (num >= 1000) {
-      return `${num.toLocaleString()} ${baseSymbol}`;
-    } else if (num >= 1) {
-      return `${num.toFixed(4)} ${baseSymbol}`;
-    } else {
-      return `${num.toFixed(8)} ${baseSymbol}`;
-    }
+    return `${formatCryptoNumber(num)} ${baseSymbol}`;
   };
 
   const formatPrice = (price: string | undefined) => {
     if (!price) return "Market";
-    const num = parseFloat(price);
-    return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+    return formatPriceUtil(price);
   };
 
   const handleCancelOrder = async (orderId: number) => {

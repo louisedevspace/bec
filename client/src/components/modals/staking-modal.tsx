@@ -8,6 +8,7 @@ import { cryptoApi } from "@/services/crypto-api";
 import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles } from "lucide-react";
 import type { StakingPosition } from "@/types/crypto";
 import { StakingDetailsModal } from "./staking-details-modal";
+import { formatUsdNumber } from "@/utils/format-utils";
 
 interface StakingModalProps {
   isOpen: boolean;
@@ -84,11 +85,11 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
     const availableBalance = parseFloat(usdtBalance);
 
     if (amount < minAmount || amount > maxAmount) {
-      toast({ title: "Invalid Amount", description: `Amount must be between $${minAmount} and $${maxAmount}.`, variant: "destructive" });
+      toast({ title: "Invalid Amount", description: `Amount must be between $${formatUsdNumber(minAmount)} and $${formatUsdNumber(maxAmount)}.`, variant: "destructive" });
       return;
     }
     if (amount > availableBalance) {
-      toast({ title: "Insufficient Balance", description: `You only have ${availableBalance.toLocaleString()} USDT available.`, variant: "destructive" });
+      toast({ title: "Insufficient Balance", description: `You only have ${formatUsdNumber(availableBalance)} USDT available.`, variant: "destructive" });
       return;
     }
 
@@ -140,7 +141,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
                       <p className="text-2xl font-bold text-white">
-                        {userId ? `${parseFloat(usdtBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT` : '---'}
+                        {userId ? `${formatUsdNumber(parseFloat(usdtBalance))} USDT` : '---'}
                       </p>
                     </div>
                   </div>
@@ -182,7 +183,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-gray-500 flex items-center gap-1"><DollarSign size={10} /> Min</span>
-                          <span className="text-white font-medium">${parseFloat(product.minAmount).toLocaleString()}</span>
+                          <span className="text-white font-medium">${formatUsdNumber(parseFloat(product.minAmount))}</span>
                         </div>
                       </div>
                       <button className="w-full mt-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors">
@@ -211,7 +212,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                         <div className="p-4 text-center border-r border-[#252525]">
                           <div className="text-xs text-gray-500">Total Staked</div>
                           <div className="text-lg font-bold text-white">
-                            {positions.filter(p => p.status === 'active').reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()} USDT
+                            {formatUsdNumber(positions.filter(p => p.status === 'active').reduce((sum, p) => sum + parseFloat(p.amount), 0))} USDT
                           </div>
                         </div>
                         <div className="p-4 text-center">
@@ -237,7 +238,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                               {positions.map((position: StakingPosition) => (
                                 <tr key={position.id} className="border-t border-[#252525]">
                                   <td className="py-3 px-4 font-medium text-sm">{position.symbol}</td>
-                                  <td className="py-3 px-4 text-center text-sm">{parseFloat(position.amount).toLocaleString()}</td>
+                                  <td className="py-3 px-4 text-center text-sm">{formatUsdNumber(parseFloat(position.amount))}</td>
                                   <td className="py-3 px-4 text-center text-sm text-green-400">{position.apy}%</td>
                                   <td className="py-3 px-4 text-center text-sm">{position.duration}d</td>
                                   <td className="py-3 px-4 text-center">
@@ -264,7 +265,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                               <div className="min-w-0">
                                 <div className="text-sm font-medium text-white">{position.symbol}</div>
                                 <div className="text-xs text-gray-500 mt-0.5">
-                                  {parseFloat(position.amount).toLocaleString()} USDT • {position.apy}% APY • {position.duration}d
+                                  {formatUsdNumber(parseFloat(position.amount))} USDT • {position.apy}% APY • {position.duration}d
                                 </div>
                                 <div className="mt-1">
                                   <span className={`px-2 py-1 rounded-full text-xs ${position.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
@@ -317,7 +318,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                   </div>
                   <div className="bg-[#0a0a0a] rounded-xl p-4 text-center">
                     <DollarSign size={20} className="mx-auto mb-2 text-green-400" />
-                    <div className="text-lg font-bold text-white">${parseFloat(selectedProduct.minAmount).toLocaleString()}</div>
+                    <div className="text-lg font-bold text-white">${formatUsdNumber(parseFloat(selectedProduct.minAmount))}</div>
                     <div className="text-xs text-gray-500">Minimum</div>
                   </div>
                 </div>
@@ -328,13 +329,13 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder={`Min: ${parseFloat(selectedProduct.minAmount).toLocaleString()}`}
+                      placeholder={`Min: ${formatUsdNumber(parseFloat(selectedProduct.minAmount))}`}
                       value={stakeAmount}
                       onChange={(e) => setStakeAmount(e.target.value)}
                       className="bg-[#0a0a0a] border-[#2a2a2a] text-white text-lg h-12 rounded-xl"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                      Balance: {parseFloat(usdtBalance).toLocaleString()}
+                      Balance: {formatUsdNumber(parseFloat(usdtBalance))}
                     </div>
                   </div>
                 </div>
@@ -343,15 +344,15 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                   <div className="bg-[#0a0a0a] rounded-xl p-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Daily Earnings</span>
-                      <span className="text-white">{(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 / 365).toFixed(4)} USDT</span>
+                      <span className="text-white">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 / 365)} USDT</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Total Interest</span>
-                      <span className="text-green-400">{(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365).toFixed(4)} USDT</span>
+                      <span className="text-green-400">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-[#252525]">
                       <span className="text-gray-400 font-medium">Total Return</span>
-                      <span className="text-white font-bold">{(parseFloat(stakeAmount) + parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365).toFixed(4)} USDT</span>
+                      <span className="text-white font-bold">{formatUsdNumber(parseFloat(stakeAmount) + parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>
                   </div>
                 )}

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { AlertTriangle, Clock, CheckCircle, XCircle, DollarSign, Calendar, CreditCard } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../hooks/use-toast';
+import { formatUsdNumber } from '../utils/format-utils';
 
 interface LoanStatus {
   id: number;
@@ -122,10 +123,7 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `$${formatUsdNumber(amount)}`;
   };
 
   const formatDate = (dateString: string) => {

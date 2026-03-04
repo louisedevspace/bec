@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { formatUsdNumber } from '@/utils/format-utils';
 
 interface TradeTimer {
   id: number;
@@ -144,8 +145,8 @@ export function useBackgroundTimer() {
           toast({
             title: 'Trade Complete',
             description: isWin 
-              ? `Profit: +${finalProfitLoss.toFixed(4)} USDT`
-              : `Loss: -${Math.abs(finalProfitLoss).toFixed(4)} USDT`,
+              ? `Profit: +${formatUsdNumber(finalProfitLoss)} USDT`
+              : `Loss: -${formatUsdNumber(Math.abs(finalProfitLoss))} USDT`,
             variant: isWin ? 'default' : 'destructive',
             duration: 5000,
           });
@@ -177,8 +178,8 @@ export function useBackgroundTimer() {
         toast({
           title: 'Trade Complete',
           description: isWin 
-            ? `Profit: +${finalProfitLoss.toFixed(4)} USDT`
-            : `Loss: -${Math.abs(finalProfitLoss).toFixed(4)} USDT`,
+            ? `Profit: +${formatUsdNumber(finalProfitLoss)} USDT`
+            : `Loss: -${formatUsdNumber(Math.abs(finalProfitLoss))} USDT`,
           variant: isWin ? 'default' : 'destructive',
           duration: 5000,
         });

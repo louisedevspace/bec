@@ -16,6 +16,7 @@ import { DeleteAccountModal } from '@/components/modals/delete-account-modal';
 import { CreditScoreBadge } from '@/components/ui/credit-score-badge';
 import { useLocation } from 'wouter';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
+import { formatBalance, formatUsdNumber } from '@/utils/format-utils';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -114,6 +115,7 @@ export default function ProfilePage() {
     let totalValue = 0;
     
     // Calculate available portfolio value (ETH, BTC, USDT, etc.) - EXCLUDE staked amounts
+    // All values are converted to USD for the total
     portfolio.forEach((asset: any) => {
       const price = prices.find((p: any) => p.symbol === asset.symbol);
       if (price) {
@@ -124,9 +126,6 @@ export default function ProfilePage() {
         totalValue += total * priceValue;
       }
     });
-    
-    // Note: Staked amounts are now excluded from total portfolio calculation
-    // They are shown separately in the "Staked" section
     
     return totalValue;
   };
@@ -376,13 +375,13 @@ export default function ProfilePage() {
             <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
               <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Portfolio</div>
               <div className="text-sm font-bold text-green-400 tabular-nums">
-                {portfolioLoading ? '...' : `$${calculateTotalBalance().toFixed(2)}`}
+                {portfolioLoading ? '...' : `$${formatUsdNumber(calculateTotalBalance())}`}
               </div>
             </div>
             <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
               <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Staked</div>
               <div className="text-sm font-bold text-blue-400 tabular-nums">
-                {stakingLoading ? '...' : `$${calculateTotalStaked().toFixed(2)}`}
+                {stakingLoading ? '...' : `$${formatUsdNumber(calculateTotalStaked())}`}
               </div>
             </div>
           </div>

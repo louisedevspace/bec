@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../../hooks/use-toast';
+import { formatUsdNumber } from '../../utils/format-utils';
 
 interface LoanApplication {
   id: number;
@@ -89,10 +90,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `$${formatUsdNumber(amount)}`;
   };
 
   const formatDate = (dateString: string) => {

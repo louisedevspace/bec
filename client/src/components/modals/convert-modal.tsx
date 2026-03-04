@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown, RefreshCw } from "lucide-react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
+import { formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cryptoApi } from "@/services/crypto-api";
@@ -207,7 +208,7 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
               </div>
               {userId && (
                 <div className="text-xs mt-1 text-green-500 font-medium">
-                  Available: {parseFloat(getAvailableBalance(fromCurrency)).toFixed(6)} {fromCurrency}
+                  Available: {formatCryptoNumber(parseFloat(getAvailableBalance(fromCurrency)))} {fromCurrency}
                 </div>
               )}
             </div>
@@ -240,7 +241,7 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
               </div>
               {userId && (
                 <div className="text-xs mt-1 text-green-500 font-medium">
-                  Available: {parseFloat(getAvailableBalance(toCurrency)).toFixed(6)} {toCurrency}
+                  Available: {formatCryptoNumber(parseFloat(getAvailableBalance(toCurrency)))} {toCurrency}
                 </div>
               )}
             </div>

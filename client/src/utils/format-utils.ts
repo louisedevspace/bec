@@ -1,4 +1,128 @@
 /**
+ * Currency symbol mapping for supported assets
+ */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BTC: '₿',
+  ETH: 'Ξ',
+  USDT: '$',
+  USDC: '$',
+  DAI: '$',
+  LTC: 'Ł',
+  XRP: 'XRP',
+  DOGE: 'DOGE',
+  TRX: 'TRX',
+  BNB: 'BNB',
+  DOT: 'DOT',
+  BCH: 'BCH',
+  ETC: 'ETC',
+  EOS: 'EOS',
+  XAU: 'XAU',
+  XAG: 'XAG',
+};
+
+const STABLECOIN_SYMBOLS = new Set(['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD']);
+
+/**
+ * Returns the proper currency symbol for a given asset.
+ * For stablecoins (USDT, USDC, etc.) returns '$'.
+ * For BTC returns '₿'. For ETH returns 'Ξ'. Etc.
+ */
+export function getCurrencySymbol(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  return CURRENCY_SYMBOLS[upper] || upper;
+}
+
+/**
+ * Returns true if the symbol represents a stablecoin pegged ~1:1 to USD.
+ */
+export function isStablecoin(symbol: string): boolean {
+  return STABLECOIN_SYMBOLS.has(symbol.toUpperCase());
+}
+
+/**
+ * Primary balance formatter — always pairs the correct symbol with the value.
+ *
+ * @param value     Numeric amount (in the asset's native unit)
+ * @param symbol    Asset ticker, e.g. 'BTC', 'USDT', 'ETH'
+ * @param mode      'usd' = show the USD-converted value with $,
+ *                  'crypto' = show original amount with native symbol
+ * @param usdRate   Current price of (symbol → USD). Required when mode='usd' for non-stablecoins.
+ *
+ * Examples:
+ *   formatBalance(0.5, 'BTC', 'usd', 98000)   → "$49,000.00"
+ *   formatBalance(0.5, 'BTC', 'crypto')         → "₿0.50000000"
+ *   formatBalance(1500, 'USDT', 'usd')          → "$1,500.00"
+ *   formatBalance(1500, 'USDT', 'crypto')        → "$1,500.00"  (USDT ≈ USD)
+ *   formatBalance(2.35, 'ETH', 'usd', 3800)    → "$8,930.00"
+ *   formatBalance(2.35, 'ETH', 'crypto')         → "Ξ2.35000000"
+ */
+export function formatBalance(
+  value: number | string,
+  symbol: string,
+  mode: 'usd' | 'crypto' = 'usd',
+  usdRate?: number,
+): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return mode === 'usd' ? '$0.00' : `${getCurrencySymbol(symbol)}0.00`;
+
+  const upper = symbol.toUpperCase();
+  const stable = isStablecoin(upper);
+
+  // USD display mode
+  if (mode === 'usd') {
+    // Stablecoins: value is already ~USD
+    if (stable) {
+      return '$' + formatUsdNumber(num);
+    }
+    // Non-stablecoins: convert using rate
+    const rate = usdRate ?? 0;
+    const usdValue = num * rate;
+    return '$' + formatUsdNumber(usdValue);
+  }
+
+  // Crypto display mode — show native symbol + raw amount
+  const sym = getCurrencySymbol(upper);
+  if (stable) {
+    // Stablecoins still show $ even in "crypto" mode since they ARE dollars
+    return '$' + formatUsdNumber(num);
+  }
+
+  return sym + formatCryptoNumber(num);
+}
+
+/**
+ * Format a USD-denominated number for display (always 2dp, thousands separators).
+ */
+export function formatUsdNumber(value: number): string {
+  if (Math.abs(value) < 0.01 && value !== 0) return value.toFixed(4);
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Format a crypto amount for display (adaptive decimal places).
+ */
+export function formatCryptoNumber(value: number): string {
+  if (value === 0) return '0.00000000';
+  if (Math.abs(value) < 0.000001) return value.toFixed(8);
+  if (Math.abs(value) < 0.01) return value.toFixed(6);
+  if (Math.abs(value) < 1) return value.toFixed(4);
+  if (Math.abs(value) < 1000) return value.toFixed(2);
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Format a market price with $ symbol. For display next to asset names.
+ * e.g. "$98,234.56" for BTC, "$0.9998" for USDT
+ */
+export function formatPrice(price: number | string): string {
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(num)) return '$0.00';
+  if (num >= 1000) return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (num >= 1) return '$' + num.toFixed(4);
+  return '$' + num.toFixed(6);
+}
+
+/**
  * Flexible decimal formatting utility for crypto balances
  * Automatically adjusts decimal places based on value size for better readability
  */

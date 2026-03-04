@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
 import { useStickyNotifications } from '@/contexts/sticky-notifications-context';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
+import { formatUsdNumber } from '@/utils/format-utils';
 
 interface FutureTradeTimerModalProps {
   isOpen: boolean;
@@ -388,11 +389,11 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
                     </div>
                     <div className="text-sm text-gray-400 mb-1">Current price</div>
                     <div className="text-lg font-semibold text-white">
-                      {parseFloat(liveCurrentPrice).toFixed(2)}
+                      {formatUsdNumber(parseFloat(liveCurrentPrice))}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">Potential P&L</div>
                     <div className={`text-sm font-semibold ${pnlDisplay.color}`}>
-                      {pnlDisplay.sign}{pnlDisplay.value.toFixed(2)} USDT
+                      {pnlDisplay.sign}{formatUsdNumber(pnlDisplay.value)} USDT
                     </div>
                   </>
                 )}
@@ -422,7 +423,7 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Potential P&L</span>
               <span className={`font-semibold ${pnlDisplay.color}`}>
-                {pnlDisplay.sign}{pnlDisplay.value.toFixed(2)} USDT
+                {pnlDisplay.sign}{formatUsdNumber(pnlDisplay.value)} USDT
               </span>
             </div>
           </div>

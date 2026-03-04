@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cryptoApi } from "@/services/crypto-api";
 import { FileText, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import type { Transaction } from "@/types/crypto";
+import { formatCryptoNumber } from "@/utils/format-utils";
 
 interface TransactionHistoryModalProps {
   isOpen: boolean;
@@ -69,13 +70,7 @@ export function TransactionHistoryModal({ isOpen, onClose }: TransactionHistoryM
 
   const formatAmount = (amount: string, symbol: string) => {
     const num = parseFloat(amount);
-    if (num >= 1000) {
-      return `${num.toLocaleString()} ${symbol}`;
-    } else if (num >= 1) {
-      return `${num.toFixed(4)} ${symbol}`;
-    } else {
-      return `${num.toFixed(8)} ${symbol}`;
-    }
+    return `${formatCryptoNumber(num)} ${symbol}`;
   };
 
   return (

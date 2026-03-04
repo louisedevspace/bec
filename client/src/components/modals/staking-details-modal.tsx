@@ -2,6 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Info, X, TrendingUp, Clock, DollarSign, Coins } from "lucide-react";
 import type { StakingPosition } from "@/types/crypto";
+import { formatUsdNumber } from "@/utils/format-utils";
 
 interface StakingDetailsModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
                 <span className="text-xs text-gray-500">Amount</span>
               </div>
               <div className="text-base font-bold text-white">
-                {parseFloat(position.amount).toLocaleString()}
+                {formatUsdNumber(parseFloat(position.amount))}
               </div>
             </div>
             <div className="bg-[#111] rounded-xl border border-[#252525] p-3">
@@ -112,11 +113,11 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#0a0a0a] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-1">Earned So Far</div>
-                <div className="text-sm font-bold text-green-400">{interestEarned.toFixed(6)} USDT</div>
+                <div className="text-sm font-bold text-green-400">{formatUsdNumber(interestEarned)} USDT</div>
               </div>
               <div className="bg-[#0a0a0a] rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-1">Total Expected</div>
-                <div className="text-sm font-bold text-green-400">{totalInterest.toFixed(6)} USDT</div>
+                <div className="text-sm font-bold text-green-400">{formatUsdNumber(totalInterest)} USDT</div>
               </div>
             </div>
           </div>
