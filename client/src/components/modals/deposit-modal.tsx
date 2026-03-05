@@ -528,7 +528,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
               <div>
                 <Label htmlFor="screenshot" className="text-gray-300">Transaction Screenshot</Label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 mt-2">
+                <div className="border-2 border-dashed border-[#2a2a2a] rounded-xl p-4 mt-2">
                   {screenshotPreview ? (
                     <div className="space-y-2">
                       <img 

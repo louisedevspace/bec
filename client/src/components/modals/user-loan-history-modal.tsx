@@ -159,7 +159,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#2d3842] border border-[#4b5c6b] max-w-4xl max-h-[90vh] overflow-y-auto" hideCloseButton>
+      <DialogContent className="bg-[#111] border border-[#1e1e1e] text-white max-w-4xl max-h-[90vh] overflow-y-auto" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-white flex items-center gap-2">
@@ -180,7 +180,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-900/20 border border-red-500 text-red-400 p-3 rounded">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl">
             {error}
           </div>
         )}
@@ -203,7 +203,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
               const isNearDue = isApproved && !isPaid && daysRemaining <= 7 && daysRemaining >= 0;
 
               return (
-                <Card key={application.id} className="bg-[#1a2026] border-[#4b5c6b]">
+                <Card key={application.id} className="bg-[#0a0a0a] border-[#1e1e1e]">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -272,18 +272,18 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
                     </div>
 
                     {application.rejection_reason && (
-                      <div className="mt-3 p-3 bg-red-900/20 border border-red-500 rounded">
+                      <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
                         <div className="text-sm text-red-400 font-medium mb-1">Rejection Reason:</div>
-                        <div className="text-sm text-red-300">{application.rejection_reason}</div>
+                        <div className="text-sm text-red-400/80">{application.rejection_reason}</div>
                       </div>
                     )}
 
                     {isApproved && !isPaid && (isOverdue || isNearDue) && (
-                      <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500 rounded">
+                      <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
                         <div className="text-sm text-yellow-400 font-medium mb-1">
                           {isOverdue ? '⚠️ Payment Overdue' : '⏰ Payment Due Soon'}
                         </div>
-                        <div className="text-sm text-yellow-300">
+                        <div className="text-sm text-yellow-400/80">
                           {isOverdue 
                             ? `Your loan payment is ${Math.abs(daysRemaining)} days overdue. Please make your payment as soon as possible.`
                             : `Your loan payment is due in ${daysRemaining} days. Please ensure you have sufficient funds.`
@@ -311,11 +311,11 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
                     )}
 
                     {isPaid && (
-                      <div className="mt-3 p-3 bg-green-900/20 border border-green-500 rounded">
+                      <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
                         <div className="text-sm text-green-400 font-medium mb-1">
                           ✅ Loan Paid
                         </div>
-                        <div className="text-sm text-green-300">
+                        <div className="text-sm text-green-400/80">
                           This loan has been successfully paid. Thank you!
                         </div>
                       </div>

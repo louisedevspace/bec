@@ -347,7 +347,7 @@ export function UnifiedTransactionHistoryModal({
                   return (
                     <div 
                       key={`${transaction.type}-${transaction.id}`}
-                      className="border border-gray-600 rounded-lg p-4"
+                      className="border border-[#1e1e1e] rounded-xl p-4"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">

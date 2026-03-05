@@ -31,9 +31,9 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#0a0a0a] border border-[#252525] text-white" hideCloseButton>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
         {/* Custom Header - Fixed Position */}
-        <div className="fixed top-0 left-0 right-0 bg-[#0a0a0a] border-b border-[#252525] px-5 py-4 flex items-center justify-between z-50">
+        <div className="fixed top-0 left-0 right-0 bg-[#111] border-b border-[#1e1e1e] px-5 py-4 flex items-center justify-between z-50">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
               <Info size={16} className="text-blue-400" />
@@ -72,7 +72,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
 
           {/* Staking Details */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#111] rounded-xl border border-[#252525] p-3">
+            <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign size={12} className="text-gray-500" />
                 <span className="text-xs text-gray-500">Amount</span>
@@ -81,21 +81,21 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
                 {formatUsdNumber(parseFloat(position.amount))}
               </div>
             </div>
-            <div className="bg-[#111] rounded-xl border border-[#252525] p-3">
+            <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp size={12} className="text-gray-500" />
                 <span className="text-xs text-gray-500">APY</span>
               </div>
               <div className="text-base font-bold text-green-400">{position.apy}%</div>
             </div>
-            <div className="bg-[#111] rounded-xl border border-[#252525] p-3">
+            <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Clock size={12} className="text-gray-500" />
                 <span className="text-xs text-gray-500">Duration</span>
               </div>
               <div className="text-base font-bold text-white">{position.duration} days</div>
             </div>
-            <div className="bg-[#111] rounded-xl border border-[#252525] p-3">
+            <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Clock size={12} className="text-gray-500" />
                 <span className="text-xs text-gray-500">Progress</span>
@@ -105,7 +105,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
           </div>
 
           {/* Interest Information */}
-          <div className="bg-[#111] rounded-xl border border-[#252525] p-4">
+          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4">
             <h4 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
               <Coins size={14} />
               Interest Earnings
@@ -123,7 +123,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
           </div>
 
           {/* Timeline */}
-          <div className="bg-[#111] rounded-xl border border-[#252525] p-4">
+          <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4">
             <h4 className="text-sm font-semibold text-gray-400 mb-3">Timeline</h4>
             <div className="space-y-3">
               <div className="flex justify-between items-center">

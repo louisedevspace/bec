@@ -111,9 +111,9 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-[#0a0a0a] border border-[#252525] text-white" hideCloseButton>
+      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
         {/* Custom Header - Fixed Position */}
-        <div className="fixed top-0 left-0 right-0 bg-[#0a0a0a] border-b border-[#252525] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-50">
+        <div className="fixed top-0 left-0 right-0 bg-[#111] border-b border-[#1e1e1e] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
               <TrendingUp size={20} className="text-white" />
@@ -133,7 +133,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
           {!selectedProduct ? (
             <>
               {/* Balance Card */}
-              <div className="bg-gradient-to-r from-[#111] to-[#0f0f0f] rounded-2xl border border-[#252525] p-5">
+              <div className="bg-gradient-to-r from-[#0a0a0a] to-[#0f0f0f] rounded-2xl border border-[#1e1e1e] p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
@@ -165,7 +165,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                   {stakingProducts.map((product, index) => (
                     <div 
                       key={index}
-                      className={`relative bg-[#111] rounded-xl border border-[#252525] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${!userId ? 'opacity-50 pointer-events-none' : ''}`}
+                      className={`relative bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${!userId ? 'opacity-50 pointer-events-none' : ''}`}
                       onClick={() => userId && handleStake(product)}
                     >
                       {product.apy === "4.0" && (
@@ -201,7 +201,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                   <Coins size={14} />
                   Your Active Stakes
                 </h3>
-                <div className="bg-[#111] rounded-xl border border-[#252525] overflow-hidden">
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
                   {positionsLoading ? (
                     <div className="text-center py-12">
                       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
@@ -209,8 +209,8 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     </div>
                   ) : positions && positions.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-[#252525]">
-                        <div className="p-4 text-center border-r border-[#252525]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-[#1e1e1e]">
+                        <div className="p-4 text-center border-r border-[#1e1e1e]">
                           <div className="text-xs text-gray-500">Total Staked</div>
                           <div className="text-lg font-bold text-white">
                             {formatUsdNumber(positions.filter(p => p.status === 'active').reduce((sum, p) => sum + parseFloat(p.amount), 0))} USDT
@@ -237,7 +237,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                             </thead>
                             <tbody>
                               {positions.map((position: StakingPosition) => (
-                                <tr key={position.id} className="border-t border-[#252525]">
+                                <tr key={position.id} className="border-t border-[#1e1e1e]">
                                   <td className="py-3 px-4 font-medium text-sm">
                                     <div className="flex items-center gap-2">
                                       <CryptoIcon symbol={position.symbol} size="xs" />
@@ -265,7 +265,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                       </div>
                       {/* Mobile stacked list */}
                       <div className="block sm:hidden">
-                        <div className="divide-y divide-[#252525]">
+                        <div className="divide-y divide-[#1e1e1e]">
                           {positions.map((position: StakingPosition) => (
                             <div key={position.id} className="p-4 flex items-center justify-between">
                               <div className="min-w-0">
@@ -304,8 +304,8 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
             </>
           ) : (
             /* Stake Confirmation */
-            <div className="bg-[#111] rounded-2xl border border-[#252525] overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-5 border-b border-[#252525]">
+            <div className="bg-[#0a0a0a] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-5 border-b border-[#1e1e1e]">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-bold text-white">Stake USDT</h3>
@@ -359,7 +359,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                       <span className="text-gray-500">Total Interest</span>
                       <span className="text-green-400">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-[#252525]">
+                    <div className="flex justify-between text-sm pt-2 border-t border-[#1e1e1e]">
                       <span className="text-gray-400 font-medium">Total Return</span>
                       <span className="text-white font-bold">{formatUsdNumber(parseFloat(stakeAmount) + parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>

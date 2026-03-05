@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, Upload, Camera, User, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -272,27 +273,29 @@ export function ProfilePictureModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2d3842] rounded-lg max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Profile Picture</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-white text-lg font-semibold">Profile Picture</DialogTitle>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
+            >
+              <X size={14} className="text-gray-400" />
+            </button>
+          </div>
+        </DialogHeader>
 
         {/* Current Profile Picture */}
         {currentProfilePicture && (
-          <div className="mb-6 text-center">
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Current Picture</h3>
+          <div className="mb-4 text-center">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">Current Picture</h3>
             <div className="relative inline-block">
               <img
                 src={currentProfilePicture}
                 alt="Current profile"
-                className="w-24 h-24 rounded-full object-cover border-2 border-gray-600"
+                className="w-24 h-24 rounded-full object-cover border-2 border-[#2a2a2a]"
               />
               <button
                 onClick={handleRemovePicture}
@@ -321,7 +324,7 @@ export function ProfilePictureModal({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-3 bg-[#3b4652] border border-gray-600 rounded-md text-white hover:bg-[#4b5c6b] transition-colors flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white hover:bg-[#1a1a1a] transition-colors flex items-center justify-center space-x-2"
             >
               <Upload size={20} />
               <span>Choose File</span>
@@ -343,7 +346,7 @@ export function ProfilePictureModal({
             />
             <button
               onClick={startCamera}
-              className="w-full px-4 py-3 bg-[#3b4652] border border-gray-600 rounded-md text-white hover:bg-[#4b5c6b] transition-colors flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white hover:bg-[#1a1a1a] transition-colors flex items-center justify-center space-x-2"
             >
               <Camera size={20} />
               <span>Take Photo</span>
@@ -353,7 +356,7 @@ export function ProfilePictureModal({
           {/* Preview */}
           {previewUrl && (
             <div className="text-center">
-              <h3 className="text-sm font-medium text-gray-300 mb-3">Preview</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Preview</h3>
               <img
                 src={previewUrl}
                 alt="Preview"
@@ -364,16 +367,16 @@ export function ProfilePictureModal({
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-900/20 border border-red-500 rounded-md">
-              <AlertCircle size={20} className="text-red-400" />
+            <div className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
               <span className="text-red-400 text-sm">{error}</span>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-900/20 border border-green-500 rounded-md">
-              <CheckCircle size={20} className="text-green-400" />
+            <div className="flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+              <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
               <span className="text-green-400 text-sm">{success}</span>
             </div>
           )}
@@ -383,7 +386,7 @@ export function ProfilePictureModal({
             <button
               onClick={handleUpload}
               disabled={loading}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {loading ? (
                 <>
@@ -401,12 +404,12 @@ export function ProfilePictureModal({
         </div>
 
         {/* Instructions */}
-        <div className="mt-6 p-3 bg-blue-900/20 border border-blue-500 rounded-md">
+        <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
           <div className="flex items-start space-x-2">
             <User size={16} className="text-blue-400 mt-0.5" />
             <div className="text-blue-400 text-sm">
               <p className="font-medium mb-1">Upload Guidelines:</p>
-              <ul className="text-xs space-y-1">
+              <ul className="text-xs space-y-1 text-blue-400/80">
                 <li>• Supported formats: JPG, PNG, GIF</li>
                 <li>• Maximum file size: 5MB</li>
                 <li>• Recommended size: 400x400 pixels</li>
@@ -415,19 +418,19 @@ export function ProfilePictureModal({
             </div>
           </div>
         </div>
-      </div>
+      </DialogContent>
 
       {/* Camera Interface */}
       {showCamera && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#2d3842] rounded-lg max-w-md w-full p-4">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4">
+          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl max-w-md w-full p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Take Photo</h3>
               <button
                 onClick={stopCamera}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
               >
-                <X size={24} />
+                <X size={14} className="text-gray-400" />
               </button>
             </div>
 
@@ -460,12 +463,12 @@ export function ProfilePictureModal({
               </div>
             </div>
 
-            <div className="text-center text-sm text-gray-300">
+            <div className="text-center text-sm text-gray-400">
               <p>Position your face in the center and tap the camera button to capture</p>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </Dialog>
   );
 } 

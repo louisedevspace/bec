@@ -555,7 +555,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl max-h-[95vh] overflow-y-auto bg-[#111111] border border-[#1e1e1e] text-gray-100 rounded-2xl shadow-2xl" hideCloseButton>
+      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white rounded-2xl shadow-2xl" hideCloseButton>
         <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
           <DialogTitle className="text-base md:text-xl font-bold text-center text-white">
             Becxus Legal Agreements
@@ -596,7 +596,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                   onClick={() => toggleSection(section.id)}
                   className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
                 >
-                  <span className="font-semibold text-gray-100">{section.title}</span>
+                  <span className="font-semibold text-white">{section.title}</span>
                   {expandedSections.has(section.id) ? (
                     <ChevronDown className="h-5 w-5 text-gray-400" />
                   ) : (
@@ -624,7 +624,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                   onClick={() => toggleTermsSection(section.id)}
                   className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
                 >
-                  <span className="font-semibold text-gray-100">{section.title}</span>
+                  <span className="font-semibold text-white">{section.title}</span>
                   {expandedTermsSections.has(section.id) ? (
                     <ChevronDown className="h-5 w-5 text-gray-400" />
                   ) : (
@@ -655,7 +655,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                   onClick={() => toggleLoanSection(section.id)}
                   className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
                 >
-                  <span className="font-semibold text-gray-100">{section.title}</span>
+                  <span className="font-semibold text-white">{section.title}</span>
                   {expandedLoanSections.has(section.id) ? (
                     <ChevronDown className="h-5 w-5 text-gray-400" />
                   ) : (

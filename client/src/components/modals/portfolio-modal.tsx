@@ -152,7 +152,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-xs text-gray-500 border-b border-border">
+                  <tr className="text-xs text-gray-500 border-b border-[#1e1e1e]">
                     <th className="text-left py-2 px-2">Asset</th>
                     <th className="text-center py-2 px-2 hidden md:table-cell">Frozen</th>
                     <th className="text-right py-2 px-2">Current worth</th>
@@ -161,7 +161,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                 <tbody>
                   {isLoading ? (
                     Array.from({ length: 8 }).map((_, i) => (
-                      <tr key={i} className="border-b border-border">
+                      <tr key={i} className="border-b border-[#1e1e1e]">
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
                             <Skeleton className="w-8 h-8 rounded-full" />
@@ -181,7 +181,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                     ))
                   ) : portfolio && portfolio.length > 0 ? (
                     portfolio.map((asset: Portfolio, index: number) => (
-                      <tr key={`${asset.symbol}-${asset.user_id || 'unknown'}-${index}`} className="border-b border-border hover:bg-[#1a1a1a]">
+                      <tr key={`${asset.symbol}-${asset.user_id || 'unknown'}-${index}`} className="border-b border-[#1e1e1e] hover:bg-[#1a1a1a]">
                         <td className="py-2 px-2">
                           <div className="flex items-center space-x-2">
                             <CryptoIcon symbol={asset.symbol} size="sm" />
