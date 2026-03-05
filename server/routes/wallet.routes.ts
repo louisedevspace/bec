@@ -367,15 +367,60 @@ export default function registerWalletRoutes(app: Express) {
         };
       });
 
+      const totalValue = portfolio.reduce((s: number, a: any) => s + a.usdValue, 0);
+
+      const deposits = depositsRes.data || [];
+      const withdrawals = withdrawalsRes.data || [];
+      const trades = tradesRes.data || [];
+      const futures = futuresRes.data || [];
+      const staking = stakingRes.data || [];
+
+      // Compute financials matching what client expects
+      const totalDeposited = deposits
+        .filter((d: any) => d.status === "approved")
+        .reduce((sum: number, d: any) => {
+          const sym = (d.symbol || "USDT").toUpperCase();
+          const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+          return sum + parseFloat(d.amount || "0") * price;
+        }, 0);
+
+      const totalWithdrawn = withdrawals
+        .filter((w: any) => w.status === "approved")
+        .reduce((sum: number, w: any) => {
+          const sym = (w.symbol || "USDT").toUpperCase();
+          const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+          return sum + parseFloat(w.amount || "0") * price;
+        }, 0);
+
+      const tradePnl = trades
+        .filter((t: any) => t.status === "completed" || t.status === "approved")
+        .reduce((sum: number, t: any) => {
+          const amt = parseFloat(t.amount || "0");
+          const price = parseFloat(t.price || "0");
+          return sum + (t.side === "sell" ? amt * price : -(amt * price));
+        }, 0);
+
+      const futuresPnl = futures
+        .filter((f: any) => f.status === "completed" || f.status === "closed")
+        .reduce((sum: number, f: any) => sum + parseFloat(f.final_result || "0"), 0);
+
+      const estimatedPnl = totalValue - totalDeposited + totalWithdrawn;
+
       res.json({
         user: userRes.data,
-        portfolio,
-        totalValue: portfolio.reduce((s: number, a: any) => s + a.usdValue, 0),
-        deposits: depositsRes.data || [],
-        withdrawals: withdrawalsRes.data || [],
-        trades: tradesRes.data || [],
-        futures: futuresRes.data || [],
-        staking: stakingRes.data || [],
+        assets: portfolio,
+        totalValue,
+        totalDeposited,
+        totalWithdrawn,
+        tradePnl,
+        futuresPnl,
+        estimatedPnl,
+        walletLocked: userRes.data?.wallet_locked || false,
+        deposits,
+        withdrawals,
+        trades,
+        futures,
+        staking,
       });
     } catch (err) {
       console.error("Admin wallet detail error:", err);
