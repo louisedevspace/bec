@@ -348,7 +348,7 @@ export default function AdminSupportPage() {
         <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-3 h-[68vh]">
             {/* ─── Left Sidebar: Ticket list ────────────────────── */}
-            <div className={`lg:border-r border-[#1e1e1e] flex flex-col ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
+            <div className={`lg:border-r border-[#1e1e1e] flex flex-col min-h-0 ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
               {/* Search & Filters */}
               <div className="p-3 border-b border-[#1e1e1e] space-y-2">
                 <div className="flex gap-2">
@@ -486,7 +486,7 @@ export default function AdminSupportPage() {
             </div>
 
             {/* ─── Right: Chat area ─────────────────────────────── */}
-            <div className={`lg:col-span-2 flex flex-col ${selectedConversation ? "flex" : "hidden lg:flex"}`}>
+            <div className={`lg:col-span-2 flex flex-col min-h-0 overflow-hidden ${selectedConversation ? "flex" : "hidden lg:flex"}`}>
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
@@ -560,7 +560,7 @@ export default function AdminSupportPage() {
                   </div>
 
                   {/* Messages */}
-                  <ScrollArea className="flex-1 px-4 py-3">
+                  <ScrollArea className="flex-1 min-h-0 px-4 py-3">
                     <div className="space-y-3">
                       {selectedConversation.support_messages?.length > 0 ? (
                         selectedConversation.support_messages.map((msg: SupportMessage) => {

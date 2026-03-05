@@ -233,16 +233,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : ''}`}>
-                        {item.label}
-                      </p>
-                      {badgeCount > 0 && (
-                        <span className="min-w-[20px] h-[18px] px-1.5 bg-red-500/15 text-red-400 text-[10px] font-bold rounded-md flex items-center justify-center flex-shrink-0">
-                          {badgeCount}
-                        </span>
-                      )}
-                    </div>
+                    <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : ''}`}>
+                      {item.label}
+                    </p>
                     <p className="text-[11px] text-gray-500 truncate">{item.description}</p>
                   </div>
                 )}
