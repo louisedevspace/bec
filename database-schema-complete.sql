@@ -8,7 +8,7 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.1.0
+-- Version: 2.2.0
 -- Last Updated: 2026-03-05
 -- Compatible with: Supabase PostgreSQL 15+
 -- ============================================================
@@ -199,6 +199,8 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   duration INTEGER NOT NULL,          -- days
   monthly_income DECIMAL(20,2),
   status TEXT NOT NULL,               -- pending, approved, rejected
+  loan_status TEXT DEFAULT 'pending', -- pending, active, paid, defaulted
+  is_reminder_sent BOOLEAN DEFAULT FALSE, -- Whether payment reminder has been sent
   documents JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   approved_at TIMESTAMPTZ,
@@ -450,6 +452,31 @@ CREATE INDEX IF NOT EXISTS idx_platform_fees_type ON platform_fees(trade_type);
 CREATE INDEX IF NOT EXISTS idx_platform_fees_created ON platform_fees(created_at);
 
 COMMENT ON TABLE platform_fees IS 'Tracks all exchange revenue from trading fees, withdrawal fees, etc.';
+
+-- ----------------------------------------------------------
+-- 1.21 Admin Notifications (internal admin alerts)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_notifications (
+  id SERIAL PRIMARY KEY,
+  type TEXT NOT NULL,                    -- 'deposit_request' | 'withdraw_request' | 'support_ticket' | 'support_message' | 'kyc_submission' | 'trade' | 'loan_application'
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  category TEXT NOT NULL,                -- sidebar section: 'dashboard' | 'users' | 'wallets' | 'support' | 'trading_pairs'
+  link TEXT,                             -- admin route to navigate to, e.g. '/admin/users'
+  reference_id TEXT,                     -- ID of the related entity (deposit id, ticket id, etc.)
+  user_id TEXT,                          -- user who triggered the action
+  user_email TEXT,                       -- cached for display
+  is_read BOOLEAN DEFAULT FALSE,
+  read_at TIMESTAMPTZ,
+  read_by TEXT,                          -- admin who marked it read
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_notifications_unread ON admin_notifications(is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_notifications_category ON admin_notifications(category, is_read);
+CREATE INDEX IF NOT EXISTS idx_admin_notifications_type ON admin_notifications(type, created_at DESC);
+
+COMMENT ON TABLE admin_notifications IS 'Internal notifications for admin users triggered by user actions (deposits, withdrawals, support tickets, etc.)';
 
 
 -- ************************************************************
@@ -1123,6 +1150,42 @@ CREATE POLICY "Admins can read all delivery logs" ON broadcast_delivery_logs
 CREATE POLICY "System can create delivery logs" ON broadcast_delivery_logs
   FOR INSERT WITH CHECK (true);
 
+-- ----------------------------------------------------------
+-- 4.20 Admin Notifications
+-- ----------------------------------------------------------
+ALTER TABLE admin_notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "admin_notifications_select_policy" ON admin_notifications;
+DROP POLICY IF EXISTS "admin_notifications_insert_policy" ON admin_notifications;
+DROP POLICY IF EXISTS "admin_notifications_update_policy" ON admin_notifications;
+DROP POLICY IF EXISTS "admin_notifications_delete_policy" ON admin_notifications;
+
+CREATE POLICY "admin_notifications_select_policy" ON admin_notifications
+  FOR SELECT USING (public.is_admin());
+
+CREATE POLICY "admin_notifications_insert_policy" ON admin_notifications
+  FOR INSERT WITH CHECK (true);   -- Service role inserts via server
+
+CREATE POLICY "admin_notifications_update_policy" ON admin_notifications
+  FOR UPDATE USING (public.is_admin());
+
+CREATE POLICY "admin_notifications_delete_policy" ON admin_notifications
+  FOR DELETE USING (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.21 Platform Fees
+-- ----------------------------------------------------------
+ALTER TABLE platform_fees ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "platform_fees_select_policy" ON platform_fees;
+DROP POLICY IF EXISTS "platform_fees_insert_policy" ON platform_fees;
+
+CREATE POLICY "platform_fees_select_policy" ON platform_fees
+  FOR SELECT USING (public.is_admin());
+
+CREATE POLICY "platform_fees_insert_policy" ON platform_fees
+  FOR INSERT WITH CHECK (true);   -- Service role inserts via server
+
 
 -- ************************************************************
 -- SECTION 5: STORAGE BUCKETS & POLICIES
@@ -1388,7 +1451,7 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 -- 
 -- Summary:
 -- ========
--- Tables: 27+
+-- Tables: 31
 --   - users, user_passwords
 --   - portfolios, transactions, trades, futures_trades
 --   - staking_positions, loan_applications
@@ -1397,15 +1460,15 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - deposit_requests, withdraw_requests
 --   - deposit_addresses, deposit_address_audit_logs
 --   - support_conversations, support_messages
---   - audit_logs
+--   - audit_logs, platform_fees, admin_notifications
 --   - trading_pairs, user_trading_limits
 --   - news, user_news_seen
 --   - notification_templates, notification_campaigns, notification_logs
 --   - push_subscriptions
 --   - broadcast_notifications, broadcast_delivery_logs
 --
--- Indexes: 25+
--- RLS Policies: 50+
+-- Indexes: 30+
+-- RLS Policies: 60+
 -- Storage Buckets: 6
 --   - avatars (public)
 --   - kyc-documents (private)
@@ -1414,8 +1477,8 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - withdraw-screenshots (private)
 --   - news-images (public)
 --
--- Version: 2.0.0
--- Last Updated: 2026-02-28
+-- Version: 2.2.0
+-- Last Updated: 2026-03-05
 -- Compatible with: Supabase PostgreSQL 15+
 -- 
 -- ************************************************************
