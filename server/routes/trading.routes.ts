@@ -413,4 +413,135 @@ export default function registerTradingRoutes(app: Express) {
       res.status(500).json({ message: "Failed to reject order" });
     }
   });
+
+  // POST /api/convert — convert one cryptocurrency to another
+  app.post("/api/convert", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
+    try {
+      const { fromSymbol, toSymbol, amount, fromPrice, toPrice } = req.body;
+      const userId = req.user.id;
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
+
+      // --- Validation ---
+      if (!fromSymbol || !toSymbol || !amount || fromPrice == null || toPrice == null) {
+        return res.status(400).json({ message: "Missing required fields: fromSymbol, toSymbol, amount, fromPrice, toPrice" });
+      }
+
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: "Amount must be a positive number" });
+      }
+
+      const parsedFromPrice = parseFloat(fromPrice);
+      const parsedToPrice = parseFloat(toPrice);
+      if (isNaN(parsedFromPrice) || parsedFromPrice <= 0 || isNaN(parsedToPrice) || parsedToPrice <= 0) {
+        return res.status(400).json({ message: "Prices must be positive numbers" });
+      }
+
+      if (fromSymbol.toUpperCase() === toSymbol.toUpperCase()) {
+        return res.status(400).json({ message: "Cannot convert a currency to itself" });
+      }
+
+      // --- Check source balance ---
+      const { data: fromPortfolio } = await supabaseAdmin
+        .from("portfolios")
+        .select("available")
+        .eq("user_id", userId)
+        .eq("symbol", fromSymbol.toUpperCase())
+        .maybeSingle();
+
+      const availableBalance = fromPortfolio ? parseFloat(fromPortfolio.available) : 0;
+      if (availableBalance < parsedAmount) {
+        return res.status(400).json({
+          message: `Insufficient ${fromSymbol} balance. Available: ${availableBalance.toFixed(8)}, Required: ${parsedAmount.toFixed(8)}`,
+        });
+      }
+
+      // --- Calculate conversion ---
+      const usdValue = parsedAmount * parsedFromPrice;
+      const receivedAmount = usdValue / parsedToPrice;
+
+      if (isNaN(receivedAmount) || receivedAmount <= 0) {
+        return res.status(400).json({ message: "Invalid conversion result. Please refresh prices and try again." });
+      }
+
+      // --- Deduct from source portfolio ---
+      const newFromBalance = availableBalance - parsedAmount;
+      await updatePortfolioBalance(userId, fromSymbol.toUpperCase(), newFromBalance.toFixed(8));
+
+      // --- Add to destination portfolio (upsert) ---
+      const { data: toPortfolio } = await supabaseAdmin
+        .from("portfolios")
+        .select("available")
+        .eq("user_id", userId)
+        .eq("symbol", toSymbol.toUpperCase())
+        .maybeSingle();
+
+      const currentToBalance = toPortfolio ? parseFloat(toPortfolio.available) : 0;
+      const newToBalance = currentToBalance + receivedAmount;
+      await updatePortfolioBalance(userId, toSymbol.toUpperCase(), newToBalance.toFixed(8));
+
+      // --- Create transaction record ---
+      const { error: txError } = await supabaseAdmin
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          type: "convert",
+          symbol: `${fromSymbol.toUpperCase()}/${toSymbol.toUpperCase()}`,
+          amount: parsedAmount.toString(),
+          status: "completed",
+          metadata: JSON.stringify({
+            fromSymbol: fromSymbol.toUpperCase(),
+            toSymbol: toSymbol.toUpperCase(),
+            fromAmount: parsedAmount.toFixed(8),
+            toAmount: receivedAmount.toFixed(8),
+            fromPrice: parsedFromPrice,
+            toPrice: parsedToPrice,
+            usdValue: usdValue.toFixed(2),
+          }),
+        });
+
+      if (txError) {
+        console.error("Failed to create conversion transaction record:", txError);
+        // Non-critical — balances already updated, so don't fail the conversion
+      }
+
+      // --- Audit log ---
+      await logFinancialOperation({
+        userId,
+        operation: "TRADE",
+        action: "CREATE",
+        amount: parsedAmount.toString(),
+        symbol: `${fromSymbol.toUpperCase()}/${toSymbol.toUpperCase()}`,
+        details: {
+          fromSymbol: fromSymbol.toUpperCase(),
+          toSymbol: toSymbol.toUpperCase(),
+          fromAmount: parsedAmount.toFixed(8),
+          receivedAmount: receivedAmount.toFixed(8),
+          fromPrice: parsedFromPrice,
+          toPrice: parsedToPrice,
+          usdValue: usdValue.toFixed(2),
+        },
+        ipAddress,
+        userAgent,
+        status: "success",
+      });
+
+      // --- Sync portfolio updates ---
+      const updatedPortfolio = await storage.getPortfolio(userId);
+      syncManager.syncPortfolioUpdated(userId, updatedPortfolio);
+
+      res.json({
+        success: true,
+        fromSymbol: fromSymbol.toUpperCase(),
+        toSymbol: toSymbol.toUpperCase(),
+        fromAmount: parsedAmount.toFixed(8),
+        receivedAmount: receivedAmount.toFixed(8),
+        usdValue: usdValue.toFixed(2),
+      });
+    } catch (error: any) {
+      console.error("Conversion error:", error);
+      res.status(500).json({ message: error.message || "Failed to execute conversion" });
+    }
+  });
 }

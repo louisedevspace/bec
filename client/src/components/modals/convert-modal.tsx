@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpDown, RefreshCw } from "lucide-react";
+import { ArrowUpDown, RefreshCw, Loader2, CheckCircle2 } from "lucide-react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
 import { useEffect } from "react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cryptoApi } from "@/services/crypto-api";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConvertModalProps {
   isOpen: boolean;
@@ -134,7 +136,10 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
   const [fromCurrency, setFromCurrency] = useState("BTC");
   const [toCurrency, setToCurrency] = useState("USDT");
   const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { prices } = useCryptoPrices();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Get user's portfolio
   const { data: portfolio } = useQuery({
@@ -156,24 +161,80 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
   // Calculate converted amount between any two currencies
   let convertedAmount = "";
   if (amount && fromCurrency && toCurrency && fromLive.price && toLive.price) {
-    // Convert from source currency to USD, then to target currency
     const usdValue = parseFloat(amount) * fromLive.price;
     const targetValue = usdValue / toLive.price;
     convertedAmount = targetValue.toFixed(6);
   }
+
+  // Validation helpers
+  const parsedAmount = parseFloat(amount);
+  const availableBalance = parseFloat(getAvailableBalance(fromCurrency));
+  const isSameCurrency = fromCurrency === toCurrency;
+  const isInvalidAmount = !amount || isNaN(parsedAmount) || parsedAmount <= 0;
+  const isInsufficientBalance = !!userId && !isNaN(parsedAmount) && parsedAmount > availableBalance;
+  const isPricesReady = !!fromLive.price && !!toLive.price;
+
+  const canContinue = !isInvalidAmount && !isSameCurrency && !isInsufficientBalance && isPricesReady;
+  const canConvert = canContinue && !isSubmitting;
 
   const handleNext = () => setStep(2);
   const handleBack = () => setStep(1);
   const handleClose = () => {
     setStep(1);
     setAmount("");
+    setIsSubmitting(false);
     onClose();
   };
+
   const handleSubmit = async () => {
-    // Placeholder function - does nothing
-    console.log("Convert button clicked - placeholder function");
-    handleClose();
+    if (!canConvert || !fromLive.price || !toLive.price) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await apiRequest("POST", "/api/convert", {
+        fromSymbol: fromCurrency,
+        toSymbol: toCurrency,
+        amount: parsedAmount.toString(),
+        fromPrice: fromLive.price.toString(),
+        toPrice: toLive.price.toString(),
+      });
+
+      const result = await response.json();
+
+      // Invalidate portfolio cache so balances update
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+
+      toast({
+        title: "Conversion Successful",
+        description: `Converted ${result.fromAmount} ${result.fromSymbol} to ${result.receivedAmount} ${result.toSymbol}`,
+      });
+
+      handleClose();
+    } catch (error: any) {
+      const msg = error?.message || "Conversion failed. Please try again.";
+      // Strip HTTP status prefix if present (e.g. "400: {...}")
+      let displayMsg = msg;
+      try {
+        const jsonMatch = msg.match(/^\d+:\s*(.+)/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[1]);
+          displayMsg = parsed.message || msg;
+        }
+      } catch {
+        displayMsg = msg;
+      }
+      toast({
+        title: "Conversion Failed",
+        description: displayMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
   const availableCurrencies = prices.map(p => p.symbol);
 
   return (
@@ -212,7 +273,7 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
               </div>
               {userId && (
                 <div className="text-xs mt-1 text-green-500 font-medium">
-                  Available: {formatCryptoNumber(parseFloat(getAvailableBalance(fromCurrency)))} {fromCurrency}
+                  Available: {formatCryptoNumber(availableBalance)} {fromCurrency}
                 </div>
               )}
             </div>
@@ -262,7 +323,7 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  max={userId ? parseFloat(getAvailableBalance(fromCurrency)) : undefined}
+                  max={userId ? availableBalance : undefined}
                   className="flex-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
                 />
                 {userId && (
@@ -277,27 +338,27 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
                   </Button>
                 )}
               </div>
-              {amount && fromLive.price && toLive.price && (
+              {amount && isPricesReady && !isSameCurrency && (
                 <div className="text-xs mt-1 text-gray-500">
                   Preview: {amount} {fromCurrency} = {convertedAmount} {toCurrency}
                 </div>
               )}
-              {userId && amount && parseFloat(amount) > parseFloat(getAvailableBalance(fromCurrency)) && (
+              {isSameCurrency && (
                 <div className="text-xs mt-1 text-red-500">
-                  Insufficient balance. Available: {parseFloat(getAvailableBalance(fromCurrency)).toFixed(6)} {fromCurrency}
+                  Cannot convert a currency to itself. Please select a different target currency.
+                </div>
+              )}
+              {isInsufficientBalance && (
+                <div className="text-xs mt-1 text-red-500">
+                  Insufficient balance. Available: {availableBalance.toFixed(6)} {fromCurrency}
                 </div>
               )}
             </div>
 
-              <Button 
+            <Button 
               onClick={handleNext} 
               className="w-full" 
-                disabled={
-                  !amount || (
-                    !!userId && !!amount && 
-                    parseFloat(amount) > parseFloat(getAvailableBalance(fromCurrency))
-                  )
-                }
+              disabled={!canContinue}
             >
               Continue
             </Button>
@@ -307,93 +368,68 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
         {step === 2 && (
           <div className="space-y-6">
             <div className="flex items-center space-x-2 mb-4">
-              <Button variant="ghost" size="sm" onClick={handleBack}>
+              <Button variant="ghost" size="sm" onClick={handleBack} disabled={isSubmitting}>
                 ← Back
               </Button>
             </div>
 
-            <div>
-              <Label>Select currency</Label>
-              <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg p-4 max-h-60 overflow-y-auto">
-                <div className="space-y-2">
-                  {availableCurrencies.map(currency => (
-                    <div
-                      key={currency}
-                      className={`flex items-center justify-between p-2 hover:bg-[#1a1a1a] rounded cursor-pointer ${
-                        currency === fromCurrency ? "bg-primary text-primary-foreground" : ""
-                      }`}
-                      onClick={() => setFromCurrency(currency)}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{currency}</span>
-                        {userId && (
-                          <span className={`text-xs ${
-                            currency === fromCurrency ? "text-primary-foreground/80" : "text-green-500"
-                          }`}>
-                            Available: {portfolio ? parseFloat(getAvailableBalance(currency)).toFixed(6) : "Loading..."}
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-sm ${
-                        currency === fromCurrency ? "text-primary-foreground/80" : "text-gray-500"
-                      }`}>
-                        {currency === "BTC" ? "Bitcoin" : 
-                         currency === "ETH" ? "Ethereum" : 
-                         currency === "USDT" ? "Tether" : 
-                         currency}
-                      </span>
-                    </div>
-                  ))}
+            {/* Conversion Summary */}
+            <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-gray-300 mb-3">Conversion Summary</h3>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CryptoIcon symbol={fromCurrency} size="sm" />
+                  <div>
+                    <div className="font-medium">{fromCurrency}</div>
+                    <div className="text-xs text-gray-500">You send</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-red-400">-{parsedAmount.toFixed(6)}</div>
+                  <div className="text-xs text-gray-500">≈ ${fromLive.price ? (parsedAmount * fromLive.price).toFixed(2) : "..."}</div>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <Label className="text-gray-300">Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="amount-step2"
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="flex-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
-                />
-                {userId && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAmount(getAvailableBalance(fromCurrency))}
-                    className="px-3 bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]"
-                  >
-                    Max
-                  </Button>
-                )}
+              <div className="flex justify-center">
+                <ArrowUpDown className="text-gray-600" size={14} />
               </div>
-            </div>
 
-            <div>
-              <Label className="text-gray-300">Get quantity ({toCurrency})</Label>
-              <Input 
-                value={convertedAmount ? `${convertedAmount} ${toCurrency}` : `0.00 ${toCurrency}`} 
-                readOnly 
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-gray-500"
-              />
-              <div className="text-xs mt-1 text-gray-500">
-                Live conversion: {amount} {fromCurrency} = {convertedAmount || "0.00"} {toCurrency}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CryptoIcon symbol={toCurrency} size="sm" />
+                  <div>
+                    <div className="font-medium">{toCurrency}</div>
+                    <div className="text-xs text-gray-500">You receive</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium text-green-400">+{convertedAmount || "0.000000"}</div>
+                  <div className="text-xs text-gray-500">≈ ${toLive.price && convertedAmount ? (parseFloat(convertedAmount) * toLive.price).toFixed(2) : "..."}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-[#2a2a2a] pt-3 mt-3">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Rate</span>
+                  <span>1 {fromCurrency} = {fromLive.price && toLive.price ? (fromLive.price / toLive.price).toFixed(6) : "..."} {toCurrency}</span>
+                </div>
               </div>
             </div>
 
             <Button 
               onClick={handleSubmit} 
               className="w-full" 
-              disabled={
-                !!userId && !!amount && 
-                parseFloat(amount) > parseFloat(getAvailableBalance(fromCurrency))
-              }
+              disabled={!canConvert}
             >
-              Convert
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="animate-spin" size={16} />
+                  Converting...
+                </span>
+              ) : (
+                "Confirm Conversion"
+              )}
             </Button>
           </div>
         )}
