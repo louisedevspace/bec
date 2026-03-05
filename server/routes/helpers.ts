@@ -70,6 +70,7 @@ export async function ensurePortfolioExists(userId: string, symbol: string) {
 
 /**
  * Execute an approved trade — adjusts USDT and crypto balances.
+ * Applies trading fees from trading_pairs table (deducted from the receiving side).
  */
 export async function executeTradeAndUpdatePortfolio(trade: any) {
   const userId = trade.user_id;
@@ -96,6 +97,17 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
   const totalValue = amount * price;
   if (isNaN(totalValue) || totalValue <= 0) throw new Error(`Invalid total value: ${totalValue}`);
 
+  // Fetch trading fee for this pair
+  let feeRate = 0.001; // Default 0.1%
+  const { data: pairData } = await supabaseAdmin
+    .from('trading_pairs')
+    .select('trading_fee')
+    .eq('symbol', trade.symbol)
+    .maybeSingle();
+  if (pairData?.trading_fee) {
+    feeRate = parseFloat(pairData.trading_fee);
+  }
+
   const { data: existingPortfolio } = await supabaseAdmin
     .from('portfolios')
     .select('*')
@@ -103,7 +115,16 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
     .eq('symbol', cryptoSymbol)
     .maybeSingle();
 
+  let feeAmount = 0;
+  let feeSymbol = '';
+
   if (side === 'buy') {
+    // Buying crypto: deduct USDT, receive crypto (fee taken from USDT cost)
+    const fee = totalValue * feeRate;
+    feeAmount = fee;
+    feeSymbol = 'USDT';
+    const totalCost = totalValue + fee;
+
     const { data: usdtPortfolio } = await supabaseAdmin
       .from('portfolios')
       .select('available')
@@ -112,13 +133,19 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
       .maybeSingle();
 
     const currentUsdt = usdtPortfolio ? parseFloat(usdtPortfolio.available) : 0;
-    if (currentUsdt < totalValue) throw new Error('Insufficient USDT balance');
-    await updatePortfolioBalance(userId, 'USDT', (currentUsdt - totalValue).toString());
+    if (currentUsdt < totalCost) throw new Error('Insufficient USDT balance (including fee)');
+    await updatePortfolioBalance(userId, 'USDT', (currentUsdt - totalCost).toString());
 
     const currentCrypto = existingPortfolio ? parseFloat(existingPortfolio.available) : 0;
     await updatePortfolioBalance(userId, cryptoSymbol, (currentCrypto + amount).toString());
 
   } else if (side === 'sell') {
+    // Selling crypto: deduct crypto, receive USDT (fee taken from USDT proceeds)
+    const fee = totalValue * feeRate;
+    feeAmount = fee;
+    feeSymbol = 'USDT';
+    const netProceeds = totalValue - fee;
+
     const currentCrypto = existingPortfolio ? parseFloat(existingPortfolio.available) : 0;
     if (currentCrypto < amount) throw new Error(`Insufficient ${cryptoSymbol} balance`);
     await updatePortfolioBalance(userId, cryptoSymbol, (currentCrypto - amount).toString());
@@ -131,7 +158,23 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
       .maybeSingle();
 
     const currentUsdt = usdtPortfolio ? parseFloat(usdtPortfolio.available) : 0;
-    await updatePortfolioBalance(userId, 'USDT', (currentUsdt + totalValue).toString());
+    await updatePortfolioBalance(userId, 'USDT', (currentUsdt + netProceeds).toString());
+  }
+
+  // Record fee as platform revenue (if fee > 0)
+  if (feeAmount > 0) {
+    await supabaseAdmin.from('platform_fees').insert({
+      user_id: userId,
+      trade_id: trade.id,
+      trade_type: 'spot',
+      symbol: trade.symbol,
+      fee_amount: feeAmount.toFixed(8),
+      fee_symbol: feeSymbol,
+      fee_rate: feeRate.toString(),
+    }).then(() => {}).catch((err: any) => {
+      // Non-critical: don't fail the trade if fee logging fails
+      console.error('Failed to log platform fee:', err);
+    });
   }
 }
 

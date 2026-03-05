@@ -430,6 +430,27 @@ COMMENT ON TABLE user_trading_limits IS 'Per-user or global trading amount limit
 COMMENT ON COLUMN user_trading_limits.user_id IS 'User ID or * for global default';
 COMMENT ON COLUMN user_trading_limits.symbol IS 'Trading pair symbol or * for all pairs';
 
+-- ----------------------------------------------------------
+-- 1.13 Platform Fees (Exchange Revenue Tracking)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS platform_fees (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  trade_id INTEGER,
+  trade_type TEXT NOT NULL DEFAULT 'spot' CHECK (trade_type IN ('spot', 'futures', 'staking', 'withdrawal')),
+  symbol TEXT NOT NULL,
+  fee_amount DECIMAL(20,8) NOT NULL DEFAULT 0,
+  fee_symbol TEXT NOT NULL DEFAULT 'USDT',
+  fee_rate TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_platform_fees_user ON platform_fees(user_id);
+CREATE INDEX IF NOT EXISTS idx_platform_fees_type ON platform_fees(trade_type);
+CREATE INDEX IF NOT EXISTS idx_platform_fees_created ON platform_fees(created_at);
+
+COMMENT ON TABLE platform_fees IS 'Tracks all exchange revenue from trading fees, withdrawal fees, etc.';
+
 
 -- ************************************************************
 -- SECTION 2: NEWS/ANNOUNCEMENTS SYSTEM

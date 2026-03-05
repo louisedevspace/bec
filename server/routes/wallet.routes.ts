@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
 
 export default function registerWalletRoutes(app: Express) {
 
@@ -437,10 +438,16 @@ export default function registerWalletRoutes(app: Express) {
       const { userId } = req.params;
       const { locked, lock } = req.body;
       const isLocked = typeof locked === "boolean" ? locked : lock;
+      const adminId = req.user.id;
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
 
       if (typeof isLocked !== "boolean") {
         return res.status(400).json({ message: "'locked' (or 'lock') must be a boolean" });
       }
+
+      // Get user info for audit
+      const { data: targetUser } = await supabaseAdmin.from("users").select("username, email").eq("id", userId).maybeSingle();
 
       const { error } = await supabaseAdmin
         .from("users")
@@ -448,6 +455,23 @@ export default function registerWalletRoutes(app: Express) {
         .eq("id", userId);
 
       if (error) throw error;
+
+      // Audit log
+      await logAuditEvent({
+        userId: adminId,
+        action: isLocked ? 'WALLET_LOCKED' : 'WALLET_UNLOCKED',
+        resourceType: 'wallet',
+        resourceId: userId,
+        details: {
+          targetUserId: userId,
+          targetUsername: targetUser?.username,
+          targetEmail: targetUser?.email,
+          locked: isLocked,
+        },
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
 
       res.json({ message: isLocked ? "Wallet locked" : "Wallet unlocked", walletLocked: isLocked });
     } catch (err) {
@@ -463,11 +487,17 @@ export default function registerWalletRoutes(app: Express) {
   app.post("/api/admin/wallets/:userId/freeze-asset", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const { symbol, freeze } = req.body;
+      const { symbol, freeze, amount: freezeAmount } = req.body;
+      const adminId = req.user.id;
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
 
       if (!symbol || typeof freeze !== "boolean") {
         return res.status(400).json({ message: "'symbol' and 'freeze' are required" });
       }
+
+      // Get user info for audit
+      const { data: targetUser } = await supabaseAdmin.from("users").select("username, email").eq("id", userId).maybeSingle();
 
       // Get current portfolio entry
       const { data: portfolio, error: fetchError } = await supabaseAdmin
@@ -486,28 +516,60 @@ export default function registerWalletRoutes(app: Express) {
       const frozen = parseFloat(portfolio.frozen || "0");
       const total = available + frozen;
 
+      let newAvailable: string;
+      let newFrozen: string;
+
       if (freeze) {
-        // Move all available to frozen
-        const { error } = await supabaseAdmin
-          .from("portfolios")
-          .update({ available: "0", frozen: total.toFixed(8) })
-          .eq("user_id", userId)
-          .eq("symbol", symbol.toUpperCase());
-        if (error) throw error;
+        // If a specific amount is provided, freeze only that amount
+        if (freezeAmount && parseFloat(freezeAmount) > 0) {
+          const amountToFreeze = Math.min(parseFloat(freezeAmount), available);
+          newAvailable = (available - amountToFreeze).toFixed(8);
+          newFrozen = (frozen + amountToFreeze).toFixed(8);
+        } else {
+          // Move all available to frozen
+          newAvailable = "0";
+          newFrozen = total.toFixed(8);
+        }
       } else {
         // Move all frozen back to available
-        const { error } = await supabaseAdmin
-          .from("portfolios")
-          .update({ available: total.toFixed(8), frozen: "0" })
-          .eq("user_id", userId)
-          .eq("symbol", symbol.toUpperCase());
-        if (error) throw error;
+        newAvailable = total.toFixed(8);
+        newFrozen = "0";
       }
+
+      const { error } = await supabaseAdmin
+        .from("portfolios")
+        .update({ available: newAvailable, frozen: newFrozen })
+        .eq("user_id", userId)
+        .eq("symbol", symbol.toUpperCase());
+      if (error) throw error;
+
+      // Audit log
+      await logAuditEvent({
+        userId: adminId,
+        action: freeze ? 'ASSET_FROZEN' : 'ASSET_UNFROZEN',
+        resourceType: 'portfolio',
+        resourceId: `${userId}:${symbol}`,
+        details: {
+          targetUserId: userId,
+          targetUsername: targetUser?.username,
+          symbol: symbol.toUpperCase(),
+          previousAvailable: available,
+          previousFrozen: frozen,
+          newAvailable: parseFloat(newAvailable),
+          newFrozen: parseFloat(newFrozen),
+          freezeAmount: freezeAmount ? parseFloat(freezeAmount) : 'all',
+        },
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
 
       res.json({
         message: freeze ? `${symbol} funds frozen` : `${symbol} funds unfrozen`,
         symbol,
         frozen: freeze,
+        available: parseFloat(newAvailable),
+        frozenAmount: parseFloat(newFrozen),
       });
     } catch (err) {
       console.error("Freeze asset error:", err);

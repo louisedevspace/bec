@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, supabaseAdmin, requireUnlockedWallet } from "./middleware";
 import { syncManager } from "../sync-manager";
 import multer from "multer";
 import supabase from "../supabaseClient";
@@ -9,7 +9,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 export default function registerWithdrawalsRoutes(app: Express) {
   // POST /api/withdraw-requests
-  app.post("/api/withdraw-requests", requireAuth, async (req, res) => {
+  app.post("/api/withdraw-requests", requireAuth, requireUnlockedWallet, async (req, res) => {
     try {
       const { userId, symbol, amount, walletAddress } = req.body;
       const ipAddress = getClientIP(req);

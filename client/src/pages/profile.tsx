@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Wallet, CreditCard, ArrowRightLeft, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp } from 'lucide-react';
+import { Wallet, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PwaControls } from '@/components/pwa/pwa-controls';
 import { supabase } from '../lib/supabaseClient';
-import { ConvertModal } from '@/components/modals/convert-modal';
-import { DepositModal } from '@/components/modals/deposit-modal';
-import { WithdrawModal } from '@/components/modals/withdraw-modal';
-import { PortfolioModal } from '@/components/modals/portfolio-modal';
 import { StakingModal } from '@/components/modals/staking-modal';
-import { UnifiedTransactionHistoryModal } from '@/components/modals/unified-transaction-history-modal';
 import { ChangePasswordModal } from '@/components/modals/change-password-modal';
 import { ProfilePictureModal } from '@/components/modals/profile-picture-modal';
 import { PrivacyPolicyModal } from '@/components/modals/privacy-policy-modal';
@@ -225,6 +220,8 @@ export default function ProfilePage() {
   function handleMenuAction(action: string) {
     switch (action) {
       case 'transaction-history':
+        setLocation('/wallet?tab=history');
+        break;
       case 'staking':
       case 'privacy-policy':
         setActiveModal(action);
@@ -254,10 +251,9 @@ export default function ProfilePage() {
 
   function handleQuickAction(action: string) {
     switch (action) {
-      case 'deposit':
-      case 'withdraw':
-      case 'convert':
-      case 'portfolio':
+      case 'wallet':
+        setLocation('/wallet');
+        break;
       case 'staking':
         setActiveModal(action);
         break;
@@ -478,11 +474,9 @@ export default function ProfilePage() {
 
         {/* Quick Actions */}
         <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-          <div className="grid grid-cols-4 gap-2">
-            <ActionButton icon={Wallet} label="Deposit" onClick={() => handleQuickAction('deposit')} />
-            <ActionButton icon={CreditCard} label="Withdraw" onClick={() => handleQuickAction('withdraw')} />
-            <ActionButton icon={ArrowRightLeft} label="Convert" onClick={() => handleQuickAction('convert')} />
-            <ActionButton icon={PieChart} label="Portfolio" onClick={() => handleQuickAction('portfolio')} />
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton icon={Wallet} label="My Wallet" onClick={() => handleQuickAction('wallet')} />
+            <ActionButton icon={TrendingUp} label="Staking" onClick={() => handleQuickAction('staking')} />
           </div>
         </div>
 
@@ -519,12 +513,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Modals */}
-      <DepositModal isOpen={activeModal === 'deposit'} onClose={() => setActiveModal(null)} />
-      <WithdrawModal isOpen={activeModal === 'withdraw'} onClose={() => setActiveModal(null)} />
-      <ConvertModal isOpen={activeModal === 'convert'} onClose={() => setActiveModal(null)} userId={profile?.id} />
-      <PortfolioModal isOpen={activeModal === 'portfolio'} onClose={() => setActiveModal(null)} />
       <StakingModal isOpen={activeModal === 'staking'} onClose={() => setActiveModal(null)} userId={profile?.id} />
-      <UnifiedTransactionHistoryModal isOpen={activeModal === 'transaction-history'} onClose={() => setActiveModal(null)} userId={profile.id} />
       <ChangePasswordModal isOpen={activeModal === 'change-password'} onClose={() => setActiveModal(null)} />
       <PrivacyPolicyModal isOpen={activeModal === 'privacy-policy'} onClose={() => setActiveModal(null)} />
       <ProfilePictureModal 

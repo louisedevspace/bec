@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireUnlockedWallet, supabaseAdmin } from "./middleware";
 import { updatePortfolioBalance } from "./helpers";
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
@@ -211,7 +211,7 @@ export default function registerFuturesRoutes(app: Express) {
   });
 
   // POST /api/future-trade/submit
-  app.post("/api/future-trade/submit", requireAuth, async (req, res) => {
+  app.post("/api/future-trade/submit", requireAuth, requireUnlockedWallet, async (req, res) => {
     try {
       const {
         symbol, side, amount, duration, profitRatio,

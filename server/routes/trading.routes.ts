@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, requireVerifiedUser, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, supabaseAdmin } from "./middleware";
 import { validateTradeBalance, executeTradeAndUpdatePortfolio, ensurePortfolioExists, updatePortfolioBalance } from "./helpers";
 import { insertTradeSchema } from "@shared/schema";
 import { z } from "zod";
@@ -98,7 +98,7 @@ export default function registerTradingRoutes(app: Express) {
   });
 
   // POST /api/transactions — create deposit/withdraw transaction
-  app.post("/api/transactions", requireAuth, requireVerifiedUser, async (req, res) => {
+  app.post("/api/transactions", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
     try {
       const { insertTransactionSchema } = await import("@shared/schema");
       const validatedData = insertTransactionSchema.parse(req.body);
@@ -128,7 +128,7 @@ export default function registerTradingRoutes(app: Express) {
   });
 
   // POST /api/trades — create trade order
-  app.post("/api/trades", requireAuth, requireVerifiedUser, async (req, res) => {
+  app.post("/api/trades", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
     try {
       const validatedData = insertTradeSchema.parse(req.body);
       const ipAddress = getClientIP(req);

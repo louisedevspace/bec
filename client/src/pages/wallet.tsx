@@ -3,10 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { formatUsdNumber, formatCryptoNumber } from "@/utils/format-utils";
+import { DepositModal } from "@/components/modals/deposit-modal";
+import { WithdrawModal } from "@/components/modals/withdraw-modal";
+import { ConvertModal } from "@/components/modals/convert-modal";
+import { PortfolioModal } from "@/components/modals/portfolio-modal";
 import {
   Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
   RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
-  BarChart3, History, Zap, ArrowRightLeft, ChevronDown, ChevronUp
+  BarChart3, History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
+  Plus, Send, CreditCard, Snowflake
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -60,6 +65,24 @@ export default function WalletPage() {
   const [txFilter, setTxFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+
+  // Parse URL params for deep-linking (e.g. /wallet?action=deposit&tab=history)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    const tab = params.get("tab");
+    if (action && ["deposit", "withdraw", "convert", "portfolio"].includes(action)) {
+      setActiveModal(action);
+    }
+    if (tab && ["overview", "assets", "history"].includes(tab)) {
+      setActiveTab(tab as "overview" | "assets" | "history");
+    }
+    // Clean URL params after reading
+    if (action || tab) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -169,6 +192,53 @@ export default function WalletPage() {
               <StatBox icon={ArrowUpRight} label="Withdrawn" value={bal(wallet.totalWithdrawn)} color="text-red-400" />
               <StatBox icon={BarChart3} label="Trade P&L" value={bal(wallet.tradePnl)} color={wallet.tradePnl >= 0 ? "text-green-400" : "text-red-400"} />
               <StatBox icon={Zap} label="Futures P&L" value={bal(wallet.futuresPnl)} color={wallet.futuresPnl >= 0 ? "text-green-400" : "text-red-400"} />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-4 gap-3 mt-4">
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("deposit")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
+                }`}
+              >
+                <Plus size={18} className={wallet.walletLocked ? "text-gray-500" : "text-green-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-green-400"}`}>Deposit</span>
+              </button>
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("withdraw")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
+                }`}
+              >
+                <Send size={18} className={wallet.walletLocked ? "text-gray-500" : "text-red-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-red-400"}`}>Withdraw</span>
+              </button>
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("convert")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20'
+                }`}
+              >
+                <ArrowRightLeft size={18} className={wallet.walletLocked ? "text-gray-500" : "text-blue-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-blue-400"}`}>Convert</span>
+              </button>
+              <button
+                onClick={() => setActiveModal("portfolio")}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl border bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+              >
+                <PieChart size={18} className="text-purple-400" />
+                <span className="text-xs font-medium text-purple-400">Portfolio</span>
+              </button>
             </div>
           </div>
         </div>
@@ -327,7 +397,14 @@ export default function WalletPage() {
                         <div className="flex items-center gap-3">
                           <CryptoIcon symbol={asset.symbol} size="md" />
                           <div className="text-left">
-                            <p className="text-sm font-semibold text-white">{asset.symbol}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-white">{asset.symbol}</p>
+                              {asset.frozen > 0 && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded">
+                                  <Snowflake size={10} /> Frozen
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-500">{cryptoBal(asset.total)} {asset.symbol}</p>
                           </div>
                         </div>
@@ -402,6 +479,25 @@ export default function WalletPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <DepositModal
+        isOpen={activeModal === "deposit"}
+        onClose={() => setActiveModal(null)}
+      />
+      <WithdrawModal
+        isOpen={activeModal === "withdraw"}
+        onClose={() => setActiveModal(null)}
+      />
+      <ConvertModal
+        isOpen={activeModal === "convert"}
+        onClose={() => setActiveModal(null)}
+        userId={userId}
+      />
+      <PortfolioModal
+        isOpen={activeModal === "portfolio"}
+        onClose={() => setActiveModal(null)}
+      />
     </div>
   );
 }

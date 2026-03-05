@@ -2,6 +2,7 @@ import { PriceTicker } from "@/components/crypto/price-ticker";
 import { CryptoList } from "@/components/crypto/crypto-list";
 import { lazy, Suspense, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useLocation } from "wouter";
 import { 
   Wallet, 
   ArrowRightLeft, 
@@ -16,37 +17,10 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
-const ConvertModal = lazy(() =>
-  import("@/components/modals/convert-modal").then((m) => ({
-    default: m.ConvertModal,
-  })),
-);
-const DepositModal = lazy(() =>
-  import("@/components/modals/deposit-modal").then((m) => ({
-    default: m.DepositModal,
-  })),
-);
-const WithdrawModal = lazy(() =>
-  import("@/components/modals/withdraw-modal").then((m) => ({
-    default: m.WithdrawModal,
-  })),
-);
-const PortfolioModal = lazy(() =>
-  import("@/components/modals/portfolio-modal").then((m) => ({
-    default: m.PortfolioModal,
-  })),
-);
 const StakingModal = lazy(() =>
   import("@/components/modals/staking-modal").then((m) => ({
     default: m.StakingModal,
   })),
-);
-const UnifiedTransactionHistoryModal = lazy(() =>
-  import("@/components/modals/unified-transaction-history-modal").then(
-    (m) => ({
-      default: m.UnifiedTransactionHistoryModal,
-    }),
-  ),
 );
 const VerificationModal = lazy(() =>
   import("@/components/modals/verification-modal").then((m) => ({
@@ -67,8 +41,23 @@ const UserLoanHistoryModal = lazy(() =>
 export default function HomePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
-  const openModal = (modalId: string) => setActiveModal(modalId);
+  const openModal = (modalId: string) => {
+    // Financial modals now live on the wallet page — navigate with deep-link params
+    const walletActions: Record<string, string> = {
+      deposit: "/wallet?action=deposit",
+      withdraw: "/wallet?action=withdraw",
+      convert: "/wallet?action=convert",
+      portfolio: "/wallet?action=portfolio",
+      "transaction-history": "/wallet?tab=history",
+    };
+    if (walletActions[modalId]) {
+      setLocation(walletActions[modalId]);
+      return;
+    }
+    setActiveModal(modalId);
+  };
   const closeModal = () => setActiveModal(null);
 
   // Get current user ID
@@ -241,32 +230,10 @@ export default function HomePage() {
       </div>
 
       <Suspense fallback={null}>
-        <ConvertModal
-          isOpen={activeModal === "convert"}
-          onClose={closeModal}
-          userId={userId}
-        />
-        <DepositModal
-          isOpen={activeModal === "deposit"}
-          onClose={closeModal}
-        />
-        <WithdrawModal
-          isOpen={activeModal === "withdraw"}
-          onClose={closeModal}
-        />
-        <PortfolioModal
-          isOpen={activeModal === "portfolio"}
-          onClose={closeModal}
-        />
         <StakingModal
           isOpen={activeModal === "staking"}
           onClose={closeModal}
           userId={userId}
-        />
-        <UnifiedTransactionHistoryModal
-          isOpen={activeModal === "transaction-history"}
-          onClose={closeModal}
-          userId={userId || ""}
         />
         <VerificationModal
           isOpen={activeModal === "verification"}

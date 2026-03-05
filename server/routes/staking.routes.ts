@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, requireVerifiedUser, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, supabaseAdmin } from "./middleware";
 import { insertStakingPositionSchema } from "@shared/schema";
 import { z } from "zod";
 import { syncManager } from "../sync-manager";
@@ -7,7 +7,7 @@ import { logFinancialOperation, getClientIP, getUserAgent, logAuditEvent } from 
 
 export default function registerStakingRoutes(app: Express) {
   // POST /api/staking — create staking position
-  app.post("/api/staking", requireAuth, requireVerifiedUser, async (req, res) => {
+  app.post("/api/staking", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {

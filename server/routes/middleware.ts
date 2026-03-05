@@ -134,6 +134,76 @@ export async function hasAdminAccess(userId: string): Promise<boolean> {
 }
 
 /**
+ * Wallet lock middleware — blocks financial operations when wallet is locked.
+ * Must run after requireAuth. Admins bypass this check.
+ */
+export async function requireUnlockedWallet(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('wallet_locked, role')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) {
+      return next(); // If user not found in custom table, let through (fail-open for schema issues)
+    }
+
+    // Admins bypass wallet lock
+    if (user.role === 'admin') {
+      return next();
+    }
+
+    if (user.wallet_locked) {
+      return res.status(403).json({
+        message: 'Your wallet is currently locked. All financial operations are restricted. Please contact support for assistance.',
+        code: 'WALLET_LOCKED',
+      });
+    }
+
+    next();
+  } catch (error) {
+    // Fail-open: don't block user if the check itself fails
+    next();
+  }
+}
+
+/**
+ * Check if a specific asset is frozen for a user.
+ * Returns { frozen: boolean, available: number, frozenAmount: number }
+ */
+export async function checkAssetFrozen(userId: string, symbol: string): Promise<{ frozen: boolean; available: number; frozenAmount: number }> {
+  try {
+    const { data: portfolio } = await supabaseAdmin
+      .from('portfolios')
+      .select('available, frozen')
+      .eq('user_id', userId)
+      .eq('symbol', symbol.toUpperCase())
+      .maybeSingle();
+
+    if (!portfolio) {
+      return { frozen: false, available: 0, frozenAmount: 0 };
+    }
+
+    const available = parseFloat(portfolio.available || '0');
+    const frozenAmount = parseFloat(portfolio.frozen || '0');
+
+    return {
+      frozen: frozenAmount > 0 && available === 0, // Fully frozen
+      available,
+      frozenAmount,
+    };
+  } catch {
+    return { frozen: false, available: 0, frozenAmount: 0 };
+  }
+}
+
+/**
  * Export session invalidation for logout endpoints
  */
 export { invalidateSession };

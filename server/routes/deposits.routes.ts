@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireUnlockedWallet, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
 import multer from "multer";
 import supabase from "../supabaseClient";
@@ -9,7 +9,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 export default function registerDepositsRoutes(app: Express) {
   // POST /api/deposit-requests — submit deposit request
-  app.post("/api/deposit-requests", requireAuth, upload.single("screenshot"), async (req, res) => {
+  app.post("/api/deposit-requests", requireAuth, requireUnlockedWallet, upload.single("screenshot"), async (req, res) => {
     try {
       const { symbol, amount } = req.body;
       const userId = req.user.id;
