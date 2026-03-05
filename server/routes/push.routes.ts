@@ -22,6 +22,40 @@ if (vapidPublicKey && vapidPrivateKey) {
   console.warn('   Generate keys with: npx web-push generate-vapid-keys');
 }
 
+/** Check if VAPID/web-push is ready (used by other route files) */
+export function isPushConfigured() {
+  return pushConfigured;
+}
+
+/**
+ * Send a push notification to a single subscription and return success/failure.
+ * Handles 410/404 (expired) subscriptions and cleans them up.
+ */
+export async function sendPushToSubscription(
+  sub: { endpoint: string; keys: any },
+  payload: string
+): Promise<{ success: boolean; expired: boolean }> {
+  try {
+    await webpush.sendNotification(sub, payload);
+    return { success: true, expired: false };
+  } catch (err: any) {
+    const expired = err.statusCode === 410 || err.statusCode === 404;
+    return { success: false, expired };
+  }
+}
+
+/**
+ * Clean up expired/invalid push subscriptions by endpoint.
+ */
+export async function cleanupExpiredSubscriptions(endpoints: string[]) {
+  if (endpoints.length === 0) return;
+  await supabaseAdmin
+    .from("push_subscriptions")
+    .delete()
+    .in("endpoint", endpoints);
+  console.log(`🧹 Cleaned up ${endpoints.length} expired push subscriptions`);
+}
+
 export default function registerPushRoutes(app: Express) {
   // Get VAPID public key for client subscription
   app.get("/api/push/public-key", (_req, res) => {
@@ -33,7 +67,7 @@ export default function registerPushRoutes(app: Express) {
     res.json({ publicKey: vapidPublicKey });
   });
 
-  // Subscribe to push notifications
+  // Subscribe to push notifications (multi-device: upsert by user_id + endpoint)
   app.post("/api/push/subscribe", requireAuth, async (req, res) => {
     try {
       const userId = req.user.id;
@@ -43,39 +77,55 @@ export default function registerPushRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid subscription data" });
       }
 
-      // Save to database
+      // Detect platform from User-Agent
+      const ua = (req.headers['user-agent'] || '').toLowerCase();
+      let platform = 'unknown';
+      if (/iphone|ipad|ipod/.test(ua)) platform = 'ios';
+      else if (/android/.test(ua)) platform = 'android';
+      else if (/windows|macintosh|linux/.test(ua)) platform = 'desktop';
+
+      // Upsert: if same user + endpoint exists, update keys/timestamps
       const { error } = await supabaseAdmin.from("push_subscriptions").upsert({
         user_id: userId,
         endpoint: subscription.endpoint,
         keys: subscription.keys,
+        platform,
+        user_agent: (req.headers['user-agent'] || '').substring(0, 500),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+      }, { onConflict: 'user_id,endpoint' });
 
       if (error) {
         console.error('Failed to save push subscription:', error);
         return res.status(500).json({ message: "Failed to save subscription" });
       }
 
-      console.log(`✅ Push subscription saved for user ${userId}`);
-      res.json({ success: true });
+      console.log(`✅ Push subscription saved for user ${userId} (${platform})`);
+      res.json({ success: true, platform });
     } catch (error) {
       console.error('Push subscribe error:', error);
       res.status(500).json({ message: "Failed to subscribe" });
     }
   });
 
-  // Unsubscribe from push notifications
+  // Unsubscribe from push notifications (remove specific endpoint, not all devices)
   app.post("/api/push/unsubscribe", requireAuth, async (req, res) => {
     try {
       const userId = req.user.id;
-      
-      const { error } = await supabaseAdmin
-        .from("push_subscriptions")
-        .delete()
-        .eq("user_id", userId);
+      const { endpoint } = req.body || {};
 
-      if (error) {
-        console.error('Failed to delete push subscription:', error);
+      if (endpoint) {
+        // Remove specific subscription (single device)
+        await supabaseAdmin
+          .from("push_subscriptions")
+          .delete()
+          .eq("user_id", userId)
+          .eq("endpoint", endpoint);
+      } else {
+        // Fallback: remove ALL subscriptions for this user
+        await supabaseAdmin
+          .from("push_subscriptions")
+          .delete()
+          .eq("user_id", userId);
       }
 
       console.log(`✅ Push subscription removed for user ${userId}`);
@@ -86,14 +136,13 @@ export default function registerPushRoutes(app: Express) {
     }
   });
 
-  // Test push notification (admin only)
+  // Test push notification (admin only) — sends to ALL subscriptions across ALL devices
   app.post("/api/push/test", requireAuth, requireAdmin, async (req, res) => {
     if (!pushConfigured) {
       return res.status(503).json({ message: "Push notifications not configured" });
     }
 
     try {
-      // Get all subscriptions from database
       const { data: subscriptions, error } = await supabaseAdmin
         .from("push_subscriptions")
         .select("*");
@@ -107,45 +156,39 @@ export default function registerPushRoutes(app: Express) {
       }
 
       const payload = JSON.stringify({
-        title: "Becxus",
+        title: "Becxus Exchange",
         body: "Test notification - Push is working!",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
         data: { url: "/" },
       });
 
       let sent = 0;
       let failed = 0;
-      const expiredSubscriptions: string[] = [];
+      const expiredEndpoints: string[] = [];
 
       for (const sub of subscriptions) {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: sub.keys },
-            payload
-          );
+        const result = await sendPushToSubscription(
+          { endpoint: sub.endpoint, keys: sub.keys },
+          payload
+        );
+        if (result.success) {
           sent++;
-        } catch (err: any) {
+        } else {
           failed++;
-          // 410 Gone means subscription is expired/invalid - mark for deletion
-          if (err.statusCode === 410 || err.statusCode === 404) {
-            expiredSubscriptions.push(sub.user_id);
+          if (result.expired) {
+            expiredEndpoints.push(sub.endpoint);
           }
         }
       }
 
-      // Clean up expired subscriptions
-      if (expiredSubscriptions.length > 0) {
-        await supabaseAdmin
-          .from("push_subscriptions")
-          .delete()
-          .in("user_id", expiredSubscriptions);
-        console.log(`🧹 Cleaned up ${expiredSubscriptions.length} expired subscriptions`);
-      }
+      await cleanupExpiredSubscriptions(expiredEndpoints);
 
       res.json({ 
         success: true, 
         sent, 
         failed,
-        cleaned: expiredSubscriptions.length,
+        cleaned: expiredEndpoints.length,
         total: subscriptions.length 
       });
     } catch (error) {
@@ -154,21 +197,26 @@ export default function registerPushRoutes(app: Express) {
     }
   });
 
-  // Check push subscription status
+  // Check push subscription status (multi-device aware)
   app.get("/api/push/status", requireAuth, async (req, res) => {
     try {
       const userId = req.user.id;
       
       const { data, error } = await supabaseAdmin
         .from("push_subscriptions")
-        .select("endpoint, updated_at")
-        .eq("user_id", userId)
-        .single();
+        .select("endpoint, platform, updated_at")
+        .eq("user_id", userId);
+
+      const subscriptions = (!error && data) ? data : [];
 
       res.json({
         configured: pushConfigured,
-        subscribed: !error && !!data,
-        lastUpdated: data?.updated_at || null
+        subscribed: subscriptions.length > 0,
+        deviceCount: subscriptions.length,
+        devices: subscriptions.map(s => ({
+          platform: s.platform || 'unknown',
+          lastUpdated: s.updated_at,
+        })),
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to check status" });

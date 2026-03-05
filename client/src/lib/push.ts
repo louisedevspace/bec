@@ -89,6 +89,7 @@ export async function unsubscribePush(): Promise<boolean> {
     }
     
     const sub = await reg.pushManager.getSubscription();
+    const endpoint = sub?.endpoint;
     
     if (sub) {
       await sub.unsubscribe();
@@ -101,8 +102,10 @@ export async function unsubscribePush(): Promise<boolean> {
       await fetch('/api/push/unsubscribe', { 
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ endpoint: endpoint || undefined }),
       });
     }
 

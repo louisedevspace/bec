@@ -90,21 +90,27 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Push notifications
+// Push notifications - cross-platform (iOS, Android, Desktop)
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'Notification';
   const body = data.body || '';
-  const icon = data.icon || undefined;
-  const actions = data.actions || [];
+  const tag = data.tag || 'becxus-notification';
+
+  const options = {
+    body,
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/icons/icon-192.png',
+    tag,
+    renotify: true,
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+    data: data.data || {},
+    actions: data.actions || [],
+  };
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      tag: data.tag || 'becxus-notification',
-      data: data.data,
-      actions,
-    })
+    self.registration.showNotification(title, options)
   );
 });
 

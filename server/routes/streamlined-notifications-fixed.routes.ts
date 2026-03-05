@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
-import webpush from "web-push";
+import { sendPushToSubscription, cleanupExpiredSubscriptions } from "./push.routes";
 
 // Batch size for processing large user bases
 const BATCH_SIZE = 100;
@@ -35,70 +35,98 @@ async function getUsersByRole(role?: string) {
   return allUsers;
 }
 
-async function getPushSubscriptionMap(userIds: string[]) {
-  const { data, error } = await supabaseAdmin
-    .from("push_subscriptions")
-    .select("*")
-    .in("user_id", userIds);
+/**
+ * Get ALL push subscriptions for the given user IDs.
+ * Returns a Map of userId → array of subscriptions (multi-device).
+ */
+async function getMultiDeviceSubscriptionMap(userIds: string[]) {
+  const map = new Map<string, Array<{ endpoint: string; keys: any }>>();
 
-  if (error) return new Map<string, any>();
-  
-  const map = new Map<string, any>();
-  (data || []).forEach((row: any) => map.set(row.user_id, { endpoint: row.endpoint, keys: row.keys }));
+  for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+    const batch = userIds.slice(i, i + BATCH_SIZE);
+    const { data, error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .select("user_id, endpoint, keys")
+      .in("user_id", batch);
+
+    if (error || !data) continue;
+
+    for (const row of data) {
+      const existing = map.get(row.user_id) || [];
+      existing.push({ endpoint: row.endpoint, keys: row.keys });
+      map.set(row.user_id, existing);
+    }
+  }
+
   return map;
 }
 
 async function sendNotificationToUsers(users: any[], title: string, body: string, channel: string = "push") {
   const userIds = users.map(u => u.id);
-  const subs = await getPushSubscriptionMap(userIds);
+  const subs = await getMultiDeviceSubscriptionMap(userIds);
   
   let sentCount = 0;
   let failedCount = 0;
+  let skippedCount = 0;
   const errors: string[] = [];
+  const expiredEndpoints: string[] = [];
 
-  // Process users in batches for better performance
+  if (channel !== "push") {
+    return { sentCount: 0, failedCount: users.length, skippedCount: 0, errors: ["Only push channel is supported"] };
+  }
+
+  const payload = JSON.stringify({ 
+    title, 
+    body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { sentAt: new Date().toISOString() },
+    tag: `becxus-broadcast-${Date.now()}`,
+  });
+
+  // Process users in batches
   for (let i = 0; i < users.length; i += BATCH_SIZE) {
     const batch = users.slice(i, i + BATCH_SIZE);
     
-    // Process each user in the batch
-    for (const user of batch) {
-      try {
-        const uid = user.id;
-        
-        if (channel === "push") {
-          const sub = subs.get(uid);
-          if (sub) {
-            try {
-              const payload = JSON.stringify({ 
-                title, 
-                body, 
-                data: { sentAt: new Date().toISOString() } 
-              });
-              await webpush.sendNotification(sub, payload);
-              sentCount++;
-            } catch (err: any) {
-              failedCount++;
-              const errorMsg = err?.message || "Push send error";
-              errors.push(`User ${uid}: ${errorMsg}`);
-            }
-          } else {
-            // User doesn't have push subscription, count as failed but don't log error
-            failedCount++;
-          }
-        }
-      } catch (userError: any) {
-        failedCount++;
-        errors.push(`User ${user.id}: ${userError.message}`);
+    const promises = batch.map(async (user) => {
+      const userSubs = subs.get(user.id);
+      
+      if (!userSubs || userSubs.length === 0) {
+        skippedCount++;
+        return;
       }
-    }
 
-    // Small delay between batches to prevent overwhelming the system
+      // Send to ALL devices for this user
+      for (const sub of userSubs) {
+        try {
+          const result = await sendPushToSubscription(sub, payload);
+          if (result.success) {
+            sentCount++;
+          } else {
+            failedCount++;
+            if (result.expired) {
+              expiredEndpoints.push(sub.endpoint);
+            }
+          }
+        } catch (err: any) {
+          failedCount++;
+          errors.push(`User ${user.id}: ${err?.message || "Push send error"}`);
+        }
+      }
+    });
+
+    await Promise.all(promises);
+
+    // Small delay between batches
     if (i + BATCH_SIZE < users.length) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 
-  return { sentCount, failedCount, errors };
+  // Clean up expired subscriptions
+  await cleanupExpiredSubscriptions(expiredEndpoints);
+
+  return { sentCount, failedCount, skippedCount, errors };
 }
 
 export default function registerStreamlinedNotificationsRoutes(app: Express) {
@@ -183,8 +211,9 @@ export default function registerStreamlinedNotificationsRoutes(app: Express) {
         totalUsers: users.length,
         sentCount: result.sentCount,
         failedCount: result.failedCount,
-        errors: result.errors.slice(0, 10), // Limit errors returned
-        message: `Notification sent to ${result.sentCount} users successfully`
+        skippedCount: result.skippedCount,
+        errors: result.errors.slice(0, 10),
+        message: `Notification sent to ${result.sentCount} device(s) across ${users.length} users (${result.skippedCount} without push enabled)`
       });
 
     } catch (error: any) {

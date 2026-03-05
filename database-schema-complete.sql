@@ -602,15 +602,22 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 );
 
 -- ----------------------------------------------------------
--- 3.4 Push Subscriptions (Web Push)
+-- 3.4 Push Subscriptions (Web Push) - Multi-device support
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS push_subscriptions (
-  user_id UUID PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL,
   endpoint TEXT NOT NULL,
   keys JSONB NOT NULL,
+  platform TEXT DEFAULT 'unknown',
+  user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, endpoint)
 );
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
 
 -- ----------------------------------------------------------
 -- 3.5 Broadcast Notifications (Streamlined System)
