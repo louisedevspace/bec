@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Trade } from "@/types/crypto";
 import AdminLayout from './admin-layout';
 import { supabase } from "@/lib/supabaseClient";
+import { useAdminPendingCounts } from "@/hooks/use-admin-pending-counts";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, ComposedChart,
   XAxis, YAxis, CartesianGrid,
@@ -144,14 +145,21 @@ function ChartTooltipContent({ active, payload, label }: any) {
 
 // === Sub-components ===
 
-function StatCard({ icon, iconBg, iconColor, label, value, sub, trend }: {
+function StatCard({ icon, iconBg, iconColor, label, value, sub, trend, pendingBadge }: {
   icon: React.ReactNode; iconBg: string; iconColor: string;
-  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral';
+  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral'; pendingBadge?: number;
 }) {
   return (
     <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 hover:border-[#2a2a2a] transition-all">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[11px] font-medium text-gray-400 truncate">{label}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[11px] font-medium text-gray-400 truncate">{label}</p>
+          {pendingBadge !== undefined && pendingBadge > 0 && (
+            <span className="min-w-[18px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
+              {pendingBadge > 99 ? '99+' : pendingBadge}
+            </span>
+          )}
+        </div>
         <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor}`}>
           {icon}
         </div>
@@ -215,6 +223,18 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { counts: pendingCounts } = useAdminPendingCounts(15000);
+
+  // Badge counts for each dashboard tab
+  const tabBadges: Record<string, number> = {
+    'overview': 0,
+    'analytics': 0,
+    'financial': pendingCounts.deposits + pendingCounts.withdrawals,
+    'trading': pendingCounts.trades + pendingCounts.futures,
+    'orders': 0,
+    'pending-orders': pendingCounts.trades,
+    'activity': 0,
+  };
 
   const fetchDashboardStats = useCallback(async () => {
     try {
@@ -605,24 +625,33 @@ export default function AdminDashboard() {
                 sub={`${stats.users.usersWithPortfolio} portfolios`} />
               <StatCard icon={<BarChart3 size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
                 label="Trade Volume" value={formatCurrency(stats.trading.totalVolume)}
-                sub={`${stats.trading.totalTrades} trades`} />
+                sub={`${stats.trading.totalTrades} trades`} pendingBadge={pendingCounts.trades + pendingCounts.futures} />
               <StatCard icon={<MessageSquare size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
                 label="Support" value={String(stats.support.open + stats.support.inProgress)}
-                sub={`${stats.support.open} open, ${stats.support.inProgress} active`} />
+                sub={`${stats.support.open} open, ${stats.support.inProgress} active`} pendingBadge={pendingCounts.support} />
               <StatCard icon={<FileCheck size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
                 label="KYC Pending" value={String(stats.kyc.pending)}
-                sub={`${stats.kyc.approved} approved`} />
+                sub={`${stats.kyc.approved} approved`} pendingBadge={pendingCounts.kyc} />
             </div>
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-[#111] border border-[#1e1e1e] rounded-xl p-1 h-auto flex flex-wrap gap-1">
-                {['overview', 'analytics', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => (
-                  <TabsTrigger key={tab} value={tab}
-                    className="rounded-lg data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400 text-xs px-3 py-1.5 capitalize">
-                    {tab === 'pending-orders' ? 'Pending Orders' : tab === 'analytics' ? '📊 Analytics' : tab}
-                  </TabsTrigger>
-                ))}
+                {['overview', 'analytics', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => {
+                  const badge = tabBadges[tab] || 0;
+                  const label = tab === 'pending-orders' ? 'Pending Orders' : tab === 'analytics' ? '📊 Analytics' : tab;
+                  return (
+                    <TabsTrigger key={tab} value={tab}
+                      className="relative rounded-lg data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400 text-xs px-3 py-1.5 capitalize">
+                      {label}
+                      {badge > 0 && (
+                        <span className="ml-1.5 min-w-[18px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full inline-flex items-center justify-center">
+                          {badge > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
 
               {/* ===== OVERVIEW TAB ===== */}
@@ -775,16 +804,16 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <QuickActionLink href="/admin/users" icon={<Users size={16} />} label="Manage Users" count={stats.users.total}
                         colorClasses={{ bg: 'bg-blue-500/10', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400' }} />
-                      <QuickActionLink href="/admin/support" icon={<MessageSquare size={16} />} label="Support Tickets" count={stats.support.open}
-                        colorClasses={{ bg: 'bg-amber-500/10', text: 'text-amber-400', badge: 'bg-amber-500/20 text-amber-400' }} />
+                      <QuickActionLink href="/admin/support" icon={<MessageSquare size={16} />} label="Support Tickets" count={pendingCounts.support}
+                        colorClasses={{ bg: 'bg-amber-500/10', text: 'text-amber-400', badge: 'bg-red-500/20 text-red-400' }} />
                       <QuickActionLink href="/admin/analytics" icon={<BarChart3 size={16} />} label="Full Analytics"
                         colorClasses={{ bg: 'bg-purple-500/10', text: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-400' }} />
                       <QuickActionLink href="/admin/news" icon={<Globe size={16} />} label="News & Broadcasts"
                         colorClasses={{ bg: 'bg-green-500/10', text: 'text-green-400', badge: 'bg-green-500/20 text-green-400' }} />
                       <QuickActionLink href="/admin/notifications/simple" icon={<Bell size={16} />} label="Notifications"
                         colorClasses={{ bg: 'bg-cyan-500/10', text: 'text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-400' }} />
-                      <QuickActionLink href="/admin/settings" icon={<Shield size={16} />} label="Settings"
-                        colorClasses={{ bg: 'bg-gray-500/10', text: 'text-gray-400', badge: 'bg-gray-500/20 text-gray-400' }} />
+                      <QuickActionLink href="/admin/wallets" icon={<Wallet size={16} />} label="Wallets" count={pendingCounts.deposits + pendingCounts.withdrawals}
+                        colorClasses={{ bg: 'bg-emerald-500/10', text: 'text-emerald-400', badge: 'bg-red-500/20 text-red-400' }} />
                       <button onClick={() => setActiveTab('pending-orders')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-amber-500/30 transition-all text-left group">
                         <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">

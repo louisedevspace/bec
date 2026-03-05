@@ -491,6 +491,37 @@ export default function registerAdminRoutes(app: Express) {
     }
   });
 
+  // GET /api/admin/pending-counts — lightweight pending item counts for badges
+  app.get("/api/admin/pending-counts", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const [
+        depositsRes, withdrawalsRes, tradesRes, futuresRes,
+        loansRes, kycRes, supportRes
+      ] = await Promise.all([
+        supabaseAdmin.from("deposit_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabaseAdmin.from("withdraw_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabaseAdmin.from("trades").select("id", { count: "exact", head: true }).eq("status", "pending_approval"),
+        supabaseAdmin.from("futures_trades").select("id", { count: "exact", head: true }).eq("status", "pending_approval"),
+        supabaseAdmin.from("loan_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabaseAdmin.from("kyc_verifications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabaseAdmin.from("support_conversations").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+      ]);
+
+      res.json({
+        deposits: depositsRes.count ?? 0,
+        withdrawals: withdrawalsRes.count ?? 0,
+        trades: tradesRes.count ?? 0,
+        futures: futuresRes.count ?? 0,
+        loans: loansRes.count ?? 0,
+        kyc: kycRes.count ?? 0,
+        support: supportRes.count ?? 0,
+      });
+    } catch (error: any) {
+      console.error("Pending counts error:", error);
+      res.status(500).json({ message: "Failed to fetch pending counts" });
+    }
+  });
+
   // GET /api/admin/dashboard-stats — comprehensive dashboard statistics
   app.get("/api/admin/dashboard-stats", requireAuth, requireAdmin, async (req, res) => {
     try {

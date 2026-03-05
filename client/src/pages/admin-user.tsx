@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Input } from "@/components/ui/input";
+import { useAdminPendingCounts } from "@/hooks/use-admin-pending-counts";
 
 const AdminChangePasswordModal = lazy(() =>
   import("../components/modals/admin-change-password-modal").then((m) => ({ default: m.AdminChangePasswordModal })),
@@ -80,6 +81,8 @@ export default function AdminUsers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
+
+  const { counts: pendingCounts } = useAdminPendingCounts(15000);
 
   // Computed stats
   const stats = useMemo(() => {
@@ -384,20 +387,25 @@ export default function AdminUsers() {
         {/* ---- Action Buttons Grid ---- */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {[
-            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Deposit Requests', color: 'emerald' },
-            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Withdraw Requests', color: 'blue' },
-            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Deposit History', color: 'orange' },
-            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Withdraw History', color: 'purple' },
-            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-4 w-4" />, label: 'KYC Mgmt', color: 'indigo' },
-            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Loan Mgmt', color: 'teal' },
+            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
+            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
+            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Deposit History', color: 'orange', badge: 0 },
+            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Withdraw History', color: 'purple', badge: 0 },
+            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-4 w-4" />, label: 'KYC Mgmt', color: 'indigo', badge: pendingCounts.kyc },
+            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Loan Mgmt', color: 'teal', badge: pendingCounts.loans },
           ].map((btn, i) => (
             <button
               key={i}
               onClick={btn.onClick}
-              className={`group flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
+              className={`group relative flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
             >
-              <div className={`w-9 h-9 bg-${btn.color}-500/10 rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
+              <div className={`relative w-9 h-9 bg-${btn.color}-500/10 rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
                 {btn.icon}
+                {btn.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                    {btn.badge > 99 ? '99+' : btn.badge}
+                  </span>
+                )}
               </div>
               <span className={`text-[11px] font-medium text-gray-400 group-hover:text-${btn.color}-400 transition-colors text-center leading-tight`}>
                 {btn.label}

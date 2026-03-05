@@ -8,8 +8,9 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
 import { useAdminNotifications, type AdminNotification } from '@/hooks/use-admin-notifications';
+import { useAdminPendingCounts, type PendingCounts } from '@/hooks/use-admin-pending-counts';
 
-// Map sidebar hrefs to notification categories
+// Map sidebar hrefs to notification categories (for admin notification events)
 const CATEGORY_MAP: Record<string, string> = {
   '/admin/users': 'users',
   '/admin/wallets': 'wallets',
@@ -18,15 +19,27 @@ const CATEGORY_MAP: Record<string, string> = {
   '/admin/trading-pairs': 'trading_pairs',
 };
 
+// Compute pending badge count for each nav item from real DB counts
+function getPendingBadge(key: string | undefined, counts: PendingCounts): number {
+  if (!key) return 0;
+  switch (key) {
+    case 'dashboard': return counts.trades + counts.futures;
+    case 'wallets': return counts.deposits + counts.withdrawals;
+    case 'users': return counts.kyc + counts.loans;
+    case 'support': return counts.support;
+    default: return 0;
+  }
+}
+
 const navItems = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeCategory: 'dashboard' },
+  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeKey: 'dashboard' },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Platform Analytics' },
-  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeCategory: 'users' },
+  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeKey: 'users' },
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
-  { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs', badgeCategory: 'trading_pairs' },
-  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeCategory: 'wallets' },
-  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeCategory: 'support' },
+  { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },
+  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeKey: 'wallets' },
+  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeKey: 'support' },
   { label: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform Config' },
 ];
 
@@ -46,6 +59,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     markAllAsRead,
     markCategoryRead,
   } = useAdminNotifications(30000);
+
+  const { counts: pendingCounts, totalPending } = useAdminPendingCounts(15000);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -189,7 +204,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {navItems.map(item => {
             const isActive = location.startsWith(item.href);
             const Icon = item.icon;
-            const badgeCount = item.badgeCategory ? (categoryBadges[item.badgeCategory] || 0) : 0;
+            const badgeCount = getPendingBadge(item.badgeKey, pendingCounts);
             return (
               <Link
                 href={item.href}
@@ -211,16 +226,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 `}>
                   <Icon size={20} />
                   {badgeCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {badgeCount > 9 ? '9+' : badgeCount}
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                      {badgeCount > 99 ? '99+' : badgeCount}
                     </span>
                   )}
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : ''}`}>
-                      {item.label}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : ''}`}>
+                        {item.label}
+                      </p>
+                      {badgeCount > 0 && (
+                        <span className="min-w-[20px] h-[18px] px-1.5 bg-red-500/15 text-red-400 text-[10px] font-bold rounded-md flex items-center justify-center flex-shrink-0">
+                          {badgeCount}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-gray-500 truncate">{item.description}</p>
                   </div>
                 )}
