@@ -154,7 +154,7 @@ export default function registerWalletRoutes(app: Express) {
       // Wallet lock status
       const { data: userData } = await supabaseAdmin
         .from("users")
-        .select("is_active, wallet_locked")
+        .select("*")
         .eq("id", userId)
         .maybeSingle();
 
@@ -197,7 +197,7 @@ export default function registerWalletRoutes(app: Express) {
     try {
       // Fetch all data in parallel
       const [usersRes, portfoliosRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, pricesRes] = await Promise.all([
-        supabaseAdmin.from("users").select("id, username, email, full_name, is_active, is_verified, wallet_locked, created_at").neq("role", "admin").order("created_at", { ascending: false }),
+        supabaseAdmin.from("users").select("*").neq("role", "admin").order("created_at", { ascending: false }),
         supabaseAdmin.from("portfolios").select("user_id, symbol, available, frozen"),
         supabaseAdmin.from("deposit_requests").select("user_id, symbol, amount, status"),
         supabaseAdmin.from("withdraw_requests").select("user_id, symbol, amount, status"),
@@ -205,6 +205,11 @@ export default function registerWalletRoutes(app: Express) {
         supabaseAdmin.from("futures_trades").select("user_id, symbol, amount, status, final_result"),
         supabaseAdmin.from("crypto_prices").select("symbol, price"),
       ]);
+
+      if (usersRes.error) {
+        console.error("Admin wallets - users query error:", usersRes.error);
+        return res.status(500).json({ message: "Failed to fetch users", error: usersRes.error.message });
+      }
 
       const users = usersRes.data || [];
       const portfolios = portfoliosRes.data || [];
@@ -324,7 +329,7 @@ export default function registerWalletRoutes(app: Express) {
       const { userId } = req.params;
 
       const [userRes, portfolioRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, stakingRes, pricesRes] = await Promise.all([
-        supabaseAdmin.from("users").select("id, username, email, full_name, is_active, is_verified, wallet_locked, created_at").eq("id", userId).maybeSingle(),
+        supabaseAdmin.from("users").select("*").eq("id", userId).maybeSingle(),
         supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
         supabaseAdmin.from("deposit_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
         supabaseAdmin.from("withdraw_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
