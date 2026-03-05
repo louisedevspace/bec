@@ -158,6 +158,18 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
     return asset ? asset.available : '0';
   };
 
+  // Helper function to check if an asset is frozen
+  const isAssetFrozen = (symbol: string): boolean => {
+    if (!portfolio) return false;
+    const asset = portfolio.find(p => p.symbol === symbol);
+    if (!asset) return false;
+    return parseFloat(asset.frozen || '0') > 0;
+  };
+
+  const fromFrozen = isAssetFrozen(fromCurrency);
+  const toFrozen = isAssetFrozen(toCurrency);
+  const anyFrozen = fromFrozen || toFrozen;
+
   // Calculate converted amount between any two currencies
   let convertedAmount = "";
   if (amount && fromCurrency && toCurrency && fromLive.price && toLive.price) {
@@ -174,7 +186,7 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
   const isInsufficientBalance = !!userId && !isNaN(parsedAmount) && parsedAmount > availableBalance;
   const isPricesReady = !!fromLive.price && !!toLive.price;
 
-  const canContinue = !isInvalidAmount && !isSameCurrency && !isInsufficientBalance && isPricesReady;
+  const canContinue = !isInvalidAmount && !isSameCurrency && !isInsufficientBalance && isPricesReady && !anyFrozen;
   const canConvert = canContinue && !isSubmitting;
 
   const handleNext = () => setStep(2);
@@ -354,6 +366,15 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
                 </div>
               )}
             </div>
+
+            {anyFrozen && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-xs text-red-400 space-y-1">
+                <p className="font-semibold">Assets Frozen</p>
+                {fromFrozen && <p>{fromCurrency} assets are currently frozen. Conversions from this asset are not allowed.</p>}
+                {toFrozen && <p>{toCurrency} assets are currently frozen. Conversions into this asset are not allowed.</p>}
+                <p className="text-gray-500">Please contact support for assistance.</p>
+              </div>
+            )}
 
             <Button 
               onClick={handleNext} 

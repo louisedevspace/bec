@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, checkAssetFrozen, supabaseAdmin } from "./middleware";
 import { validateTradeBalance, executeTradeAndUpdatePortfolio, ensurePortfolioExists, updatePortfolioBalance } from "./helpers";
 import { insertTradeSchema } from "@shared/schema";
 import { z } from "zod";
@@ -440,6 +440,26 @@ export default function registerTradingRoutes(app: Express) {
 
       if (fromSymbol.toUpperCase() === toSymbol.toUpperCase()) {
         return res.status(400).json({ message: "Cannot convert a currency to itself" });
+      }
+
+      // --- Check if assets are frozen ---
+      const [fromAssetStatus, toAssetStatus] = await Promise.all([
+        checkAssetFrozen(userId, fromSymbol),
+        checkAssetFrozen(userId, toSymbol),
+      ]);
+
+      if (fromAssetStatus.frozenAmount > 0) {
+        return res.status(403).json({
+          message: `Your ${fromSymbol.toUpperCase()} assets are currently frozen. Conversions are not allowed for frozen assets. Please contact support for assistance.`,
+          code: 'ASSET_FROZEN',
+        });
+      }
+
+      if (toAssetStatus.frozenAmount > 0) {
+        return res.status(403).json({
+          message: `Your ${toSymbol.toUpperCase()} assets are currently frozen. Conversions into frozen assets are not allowed. Please contact support for assistance.`,
+          code: 'ASSET_FROZEN',
+        });
       }
 
       // --- Check source balance ---
