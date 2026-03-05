@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserDataSync } from "@/hooks/use-data-sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cryptoApi } from "@/services/crypto-api";
@@ -126,7 +127,7 @@ export function TransactionHistoryModal({ isOpen, onClose }: TransactionHistoryM
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                      {getStatusIcon(transaction.type)}
+                      <CryptoIcon symbol={transaction.symbol} size="md" />
                     </div>
                     <div>
                       <div className="font-medium flex items-center space-x-2">

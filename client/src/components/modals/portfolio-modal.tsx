@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cryptoApi } from "@/services/crypto-api";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { formatBalance, formatUsdNumber, formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
 import { supabase } from "@/lib/supabaseClient";
@@ -122,46 +123,6 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
 
   const totals = calculateTotalValue();
 
-  const getCryptoIcon = (symbol: string) => {
-    const iconMap: { [key: string]: string } = {
-      'BTC': '₿',
-      'ETH': 'Ξ',
-      'TRX': 'T',
-      'USDT': '₮',
-      'XAU': '🥇',
-      'XAG': '🥈',
-      'DOGE': '🐕',
-      'LTC': 'Ł',
-      'XRP': 'X',
-      'BCH': '₿',
-      'ETC': 'Ξ',
-      'EOS': 'E',
-      'BNB': 'B',
-      'DOT': '●',
-    };
-    return iconMap[symbol] || symbol[0];
-  };
-
-  const getIconColor = (symbol: string) => {
-    const colorMap: { [key: string]: string } = {
-      'BTC': 'bg-orange-500',
-      'ETH': 'bg-blue-500',
-      'TRX': 'bg-red-500',
-      'USDT': 'bg-green-500',
-      'XAU': 'bg-yellow-500',
-      'XAG': 'bg-gray-400',
-      'DOGE': 'bg-yellow-400',
-      'LTC': 'bg-gray-500',
-      'XRP': 'bg-blue-600',
-      'BCH': 'bg-orange-600',
-      'ETC': 'bg-green-600',
-      'EOS': 'bg-purple-600',
-      'BNB': 'bg-yellow-500',
-      'DOT': 'bg-pink-600',
-    };
-    return colorMap[symbol] || 'bg-primary';
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
@@ -223,11 +184,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                       <tr key={`${asset.symbol}-${asset.user_id || 'unknown'}-${index}`} className="border-b border-border hover:bg-[#1a1a1a]">
                         <td className="py-2 px-2">
                           <div className="flex items-center space-x-2">
-                            <div className={`w-6 h-6 ${getIconColor(asset.symbol)} rounded-full flex items-center justify-center`}>
-                              <span className="text-white text-xs font-bold">
-                                {getCryptoIcon(asset.symbol)}
-                              </span>
-                            </div>
+                            <CryptoIcon symbol={asset.symbol} size="sm" />
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-xs">{asset.symbol}</div>
                               <div className="text-xs text-gray-500 truncate">

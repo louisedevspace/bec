@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 
 interface PriceTickerProps {
   symbols: string[];
@@ -37,7 +38,10 @@ export const PriceTicker = memo(function PriceTicker({ symbols, className = "" }
 
           return (
             <div key={symbol} className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
-              <div className="text-[11px] text-gray-500 mb-1">{symbol}/USDT</div>
+              <div className="text-[11px] text-gray-500 mb-1 flex items-center gap-1.5">
+                <CryptoIcon symbol={symbol} size="xs" />
+                {symbol}/USDT
+              </div>
               <div className="text-base font-semibold text-white tabular-nums mb-1">
                 {getFormattedPrice(symbol)}
               </div>

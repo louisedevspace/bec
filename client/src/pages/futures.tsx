@@ -13,6 +13,7 @@ import { OrderBook } from '@/components/trading/order-book';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { FutureTradeTimerModal } from '@/components/modals/future-trade-timer-modal';
 import { formatUsdNumber } from '@/utils/format-utils';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 
 interface FuturesTrade {
   id: number;
@@ -413,6 +414,7 @@ export default function FuturesPage() {
               className="flex items-center space-x-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors"
             >
               <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
+              <CryptoIcon symbol={currentPair.split('/')[0]} size="xs" />
               <span className="text-sm font-medium text-white">{currentPair}</span>
               <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
             </button>
@@ -432,6 +434,7 @@ export default function FuturesPage() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
+                          <CryptoIcon symbol={p.base_asset} size="xs" />
                           <span className="font-semibold text-sm">{p.base_asset}</span>
                           <span className="text-gray-600">/</span>
                           <span className="text-gray-400 text-sm">{p.quote_asset}</span>
@@ -630,6 +633,7 @@ export default function FuturesPage() {
                         <div className="flex justify-between items-center gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
+                              <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
                               <span className="font-medium text-sm text-white">{trade.symbol}</span>
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                                 trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
@@ -677,6 +681,7 @@ export default function FuturesPage() {
                         <div className="flex justify-between items-center gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
+                              <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
                               <span className="font-medium text-sm text-white">{trade.symbol}</span>
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                                 trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'

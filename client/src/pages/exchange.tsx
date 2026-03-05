@@ -4,6 +4,7 @@ import { OrderBook } from "@/components/trading/order-book";
 import { OrderManagement } from "@/components/trading/order-management";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { TrendingUp, ChevronDown } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 
 interface SpotPair {
   id: number;
@@ -19,15 +20,6 @@ const CRYPTO_NAMES: Record<string, string> = {
   LTC: "Litecoin", MATIC: "Polygon", ATOM: "Cosmos", TRX: "TRON", SHIB: "Shiba Inu",
   BCH: "Bitcoin Cash", DASH: "Dash", XMR: "Monero", XLM: "Stellar", FIL: "Filecoin",
   APT: "Aptos", SUI: "Sui", ARB: "Arbitrum", OP: "Optimism", PEPE: "Pepe", INJ: "Injective",
-};
-
-const CRYPTO_COLORS: Record<string, { from: string; to: string; shadow: string; symbol: string }> = {
-  BTC: { from: "from-orange-400", to: "to-orange-600", shadow: "shadow-orange-500/20", symbol: "₿" },
-  ETH: { from: "from-blue-400", to: "to-indigo-600", shadow: "shadow-blue-500/20", symbol: "Ξ" },
-  BNB: { from: "from-yellow-400", to: "to-yellow-600", shadow: "shadow-yellow-500/20", symbol: "B" },
-  SOL: { from: "from-purple-400", to: "to-purple-600", shadow: "shadow-purple-500/20", symbol: "S" },
-  XRP: { from: "from-gray-300", to: "to-gray-500", shadow: "shadow-gray-400/20", symbol: "X" },
-  DEFAULT: { from: "from-cyan-400", to: "to-cyan-600", shadow: "shadow-cyan-500/20", symbol: "●" },
 };
 
 export default function ExchangePage() {
@@ -56,7 +48,6 @@ export default function ExchangePage() {
   const baseAsset = currentPair.split("/")[0];
   const quoteAsset = currentPair.split("/")[1];
   const cryptoName = CRYPTO_NAMES[baseAsset] || baseAsset;
-  const colors = CRYPTO_COLORS[baseAsset] || CRYPTO_COLORS.DEFAULT;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -64,9 +55,7 @@ export default function ExchangePage() {
       <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e] px-4 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 relative">
-            <div className={`w-9 h-9 bg-gradient-to-br ${colors.from} ${colors.to} rounded-xl flex items-center justify-center shadow-lg ${colors.shadow}`}>
-              <span className="text-white font-bold text-sm">{colors.symbol}</span>
-            </div>
+            <CryptoIcon symbol={baseAsset} size="lg" />
             <div>
               <div className="flex items-center gap-2">
                 <button
@@ -96,6 +85,7 @@ export default function ExchangePage() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
+                          <CryptoIcon symbol={p.base_asset} size="xs" />
                           <span className="font-semibold text-sm">{p.base_asset}</span>
                           <span className="text-gray-600">/</span>
                           <span className="text-gray-400 text-sm">{p.quote_asset}</span>

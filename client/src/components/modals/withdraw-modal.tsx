@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCryptoNumber } from "@/utils/format-utils";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
 
@@ -220,9 +221,15 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                  <SelectItem value="BTC" className="text-white">Bitcoin (BTC)</SelectItem>
-                  <SelectItem value="ETH" className="text-white">Ethereum (ETH)</SelectItem>
-                  <SelectItem value="USDT" className="text-white">Tether (USDT)</SelectItem>
+                  <SelectItem value="BTC" className="text-white">
+                    <div className="flex items-center gap-2"><CryptoIcon symbol="BTC" size="xs" /><span>Bitcoin (BTC)</span></div>
+                  </SelectItem>
+                  <SelectItem value="ETH" className="text-white">
+                    <div className="flex items-center gap-2"><CryptoIcon symbol="ETH" size="xs" /><span>Ethereum (ETH)</span></div>
+                  </SelectItem>
+                  <SelectItem value="USDT" className="text-white">
+                    <div className="flex items-center gap-2"><CryptoIcon symbol="USDT" size="xs" /><span>Tether (USDT)</span></div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -8,6 +8,7 @@ import { ArrowUpDown, RefreshCw } from "lucide-react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
 import { useEffect } from "react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useQuery } from "@tanstack/react-query";
 import { cryptoApi } from "@/services/crypto-api";
 
@@ -193,7 +194,10 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
                 <SelectContent className="bg-[#111] border-[#2a2a2a]">
                   {availableCurrencies.map(currency => (
                     <SelectItem key={currency} value={currency} className="text-white">
-                      {currency}
+                      <div className="flex items-center gap-2">
+                        <CryptoIcon symbol={currency} size="xs" />
+                        <span>{currency}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -226,7 +230,10 @@ export function ConvertModal({ isOpen, onClose, userId }: ConvertModalProps) {
                 <SelectContent className="bg-[#111] border-[#2a2a2a]">
                   {availableCurrencies.map(currency => (
                     <SelectItem key={currency} value={currency} className="text-white">
-                      {currency}
+                      <div className="flex items-center gap-2">
+                        <CryptoIcon symbol={currency} size="xs" />
+                        <span>{currency}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

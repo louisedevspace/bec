@@ -1,69 +1,7 @@
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import type { CryptoPrice } from "@/types/crypto";
-import { useEffect, useState } from "react";
-
-const CRYPTO_LOGOS: Record<string, { logo: string; homepage: string }> = {
-  BTC: { logo: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png', homepage: 'https://bitcoin.org' },
-  ETH: { logo: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png', homepage: 'https://ethereum.org' },
-  USDT: { logo: 'https://assets.coingecko.com/coins/images/325/large/Tether.png', homepage: 'https://tether.to' },
-  BNB: { logo: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png', homepage: 'https://www.bnbchain.org' },
-  TRX: { logo: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png', homepage: 'https://tron.network' },
-  DOGE: { logo: 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png', homepage: 'https://dogecoin.com' },
-  BCH: { logo: 'https://assets.coingecko.com/coins/images/780/large/bitcoin-cash.png', homepage: 'https://www.bitcoincash.org' },
-  DASH: { logo: 'https://assets.coingecko.com/coins/images/19/large/dash-logo.png', homepage: 'https://www.dash.org' },
-  DOT: { logo: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png', homepage: 'https://polkadot.network' },
-  LTC: { logo: 'https://assets.coingecko.com/coins/images/2/large/litecoin.png', homepage: 'https://litecoin.org' },
-  XRP: { logo: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png', homepage: 'https://xrp.com' },
-  ADA: { logo: 'https://assets.coingecko.com/coins/images/975/large/cardano.png', homepage: 'https://cardano.org' },
-  SOL: { logo: 'https://assets.coingecko.com/coins/images/4128/large/solana.png', homepage: 'https://solana.com' },
-  AVAX: { logo: 'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png', homepage: 'https://www.avax.network' },
-  MATIC: { logo: 'https://assets.coingecko.com/coins/images/4713/large/matic-token-icon.png', homepage: 'https://polygon.technology' },
-  SHIB: { logo: 'https://assets.coingecko.com/coins/images/11939/large/shiba.png', homepage: 'https://shibatoken.com' },
-  LINK: { logo: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png', homepage: 'https://chain.link' },
-  XMR: { logo: 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png', homepage: 'https://www.getmonero.org' },
-  XLM: { logo: 'https://assets.coingecko.com/coins/images/100/large/Stellar_symbol_black_RGB.png', homepage: 'https://stellar.org' },
-  ATOM: { logo: 'https://assets.coingecko.com/coins/images/1481/large/cosmos_hub.png', homepage: 'https://cosmos.network' },
-  FIL: { logo: 'https://assets.coingecko.com/coins/images/12817/large/filecoin.png', homepage: 'https://filecoin.io' },
-  APT: { logo: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png', homepage: 'https://aptoslabs.com' },
-  SUI: { logo: 'https://assets.coingecko.com/coins/images/26375/large/sui_asset.jpeg', homepage: 'https://sui.io' },
-  ARB: { logo: 'https://assets.coingecko.com/coins/images/16547/large/photo_2023-03-29_21.47.00.jpeg', homepage: 'https://arbitrum.io' },
-  OP: { logo: 'https://assets.coingecko.com/coins/images/25244/large/Optimism.png', homepage: 'https://optimism.io' },
-  PEPE: { logo: 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.jpeg', homepage: 'https://pepe.vip' },
-  INJ: { logo: 'https://assets.coingecko.com/coins/images/12882/large/Secondary_Symbol.png', homepage: 'https://injective.com' },
-  AAVE: { logo: 'https://assets.coingecko.com/coins/images/12645/large/AAVE.png', homepage: 'https://aave.com' },
-  ALGO: { logo: 'https://assets.coingecko.com/coins/images/4380/large/download.png', homepage: 'https://algorand.com' },
-  ETC: { logo: 'https://assets.coingecko.com/coins/images/453/large/ethereum-classic-logo.png', homepage: 'https://ethereumclassic.org' },
-  EOS: { logo: 'https://assets.coingecko.com/coins/images/738/large/eos-eos-logo.png', homepage: 'https://eos.io' },
-  THETA: { logo: 'https://assets.coingecko.com/coins/images/2538/large/theta-token-logo.png', homepage: 'https://www.thetatoken.org' },
-  UNI: { logo: 'https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png', homepage: 'https://uniswap.org' },
-  VET: { logo: 'https://assets.coingecko.com/coins/images/116/large/VeChain-Logo-768x725.png', homepage: 'https://www.vechain.org' }
-};
-
-function useCoinGeckoLogos(symbols: string[]) {
-  const [logos, setLogos] = useState<Record<string, { logo: string; homepage: string }>>({});
-
-  useEffect(() => {
-    if (!symbols.length) return;
-    
-    // Use hardcoded logos directly for reliability
-    const logoMap: Record<string, { logo: string; homepage: string }> = {};
-    symbols.forEach((symbol) => {
-      const upperSymbol = symbol.toUpperCase();
-      if (CRYPTO_LOGOS[upperSymbol]) {
-        logoMap[upperSymbol] = CRYPTO_LOGOS[upperSymbol];
-      } else {
-        console.warn(`No logo found for symbol: ${upperSymbol}`);
-      }
-    });
-    
-    console.log('Available symbols:', symbols);
-    console.log('Logo map:', logoMap);
-    setLogos(logoMap);
-  }, [symbols.join(",")]);
-  
-  return logos;
-}
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 
 interface CryptoListProps {
   limit?: number;
@@ -73,8 +11,6 @@ interface CryptoListProps {
 
 export function CryptoList({ limit, showVolume = true, className = "" }: CryptoListProps) {
   const { prices, isLoading, getFormattedPrice, getChangeColor } = useCryptoPrices();
-  const symbols = prices.map((p) => p.symbol);
-  const logos = useCoinGeckoLogos(symbols);
 
   if (isLoading) {
     return (
@@ -119,7 +55,6 @@ export function CryptoList({ limit, showVolume = true, className = "" }: CryptoL
                 showVolume={showVolume}
                 getFormattedPrice={getFormattedPrice}
                 getChangeColor={getChangeColor}
-                logos={logos}
               />
             ))}
           </tbody>
@@ -134,19 +69,12 @@ interface CryptoRowProps {
   showVolume: boolean;
   getFormattedPrice: (symbol: string) => string;
   getChangeColor: (symbol: string) => string;
-  logos: Record<string, { logo: string; homepage: string }>;
 }
 
-function CryptoRow({ crypto, showVolume, getFormattedPrice, getChangeColor, logos }: CryptoRowProps) {
+function CryptoRow({ crypto, showVolume, getFormattedPrice, getChangeColor }: CryptoRowProps) {
   const change = parseFloat(crypto.change24h);
   const isPositive = change >= 0;
   const volume = parseFloat(crypto.volume24h);
-  const logoData = logos[crypto.symbol];
-  
-  // Debug logging
-  if (!logoData) {
-    console.warn(`No logo data for ${crypto.symbol}. Available logos:`, Object.keys(logos));
-  }
 
   const formatVolume = (vol: number) => {
     if (vol >= 1000000) {
@@ -167,26 +95,7 @@ function CryptoRow({ crypto, showVolume, getFormattedPrice, getChangeColor, logo
     }`}>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2.5">
-          {logoData && logoData.logo ? (
-            <a href={logoData.homepage} target="_blank" rel="noopener noreferrer">
-              <img
-                src={logoData.logo}
-                alt={crypto.symbol}
-                className="w-7 h-7 rounded-lg object-contain border border-[#2a2a2a]"
-                style={{ background: "#111" }}
-              />
-            </a>
-          ) : (
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isBTC ? 'bg-orange-500' : 'bg-[#1a1a1a] border border-[#2a2a2a]'
-            }`}>
-              <span className={`text-[10px] font-bold ${
-                isBTC ? 'text-white' : 'text-gray-400'
-              }`}>
-                {isBTC ? '₿' : crypto.symbol[0]}
-              </span>
-            </div>
-          )}
+          <CryptoIcon symbol={crypto.symbol} size="md" />
           <div className="min-w-0 flex-1">
             <div className="font-medium flex items-center gap-1.5 text-sm text-white">
               <span className="truncate">{crypto.symbol}</span>

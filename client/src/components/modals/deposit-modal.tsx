@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QRCode } from "@/components/ui/qr-code";
@@ -374,7 +375,10 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                     )
                   ).map((symbol: any) => (
                     <SelectItem key={symbol} value={symbol} className="text-white">
-                      {symbol}
+                      <div className="flex items-center gap-2">
+                        <CryptoIcon symbol={symbol} size="xs" />
+                        <span>{symbol}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

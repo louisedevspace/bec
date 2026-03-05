@@ -7,6 +7,7 @@ import {
   ArrowUpRight, ArrowDownLeft, DollarSign, Calendar,
   Check, X, RefreshCw, History
 } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from '../../lib/supabaseClient';
 import { formatCryptoNumber } from '@/utils/format-utils';
 
@@ -249,7 +250,8 @@ export function UnifiedTransactionHistoryModal({
                             <ArrowUpRight className="text-red-400" size={20} />
                           )}
                           <div>
-                            <div className="font-semibold text-white">
+                            <div className="font-semibold text-white flex items-center gap-1.5">
+                              <CryptoIcon symbol={transaction.symbol} size="xs" />
                               {transaction.type === 'deposit' ? 'Deposit' : 'Withdraw'} - {transaction.symbol}
                             </div>
                             <div className="text-sm text-gray-300">

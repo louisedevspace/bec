@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoApi } from "@/services/crypto-api";
 import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles } from "lucide-react";
@@ -237,7 +238,12 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                             <tbody>
                               {positions.map((position: StakingPosition) => (
                                 <tr key={position.id} className="border-t border-[#252525]">
-                                  <td className="py-3 px-4 font-medium text-sm">{position.symbol}</td>
+                                  <td className="py-3 px-4 font-medium text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <CryptoIcon symbol={position.symbol} size="xs" />
+                                      {position.symbol}
+                                    </div>
+                                  </td>
                                   <td className="py-3 px-4 text-center text-sm">{formatUsdNumber(parseFloat(position.amount))}</td>
                                   <td className="py-3 px-4 text-center text-sm text-green-400">{position.apy}%</td>
                                   <td className="py-3 px-4 text-center text-sm">{position.duration}d</td>
@@ -263,7 +269,10 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                           {positions.map((position: StakingPosition) => (
                             <div key={position.id} className="p-4 flex items-center justify-between">
                               <div className="min-w-0">
-                                <div className="text-sm font-medium text-white">{position.symbol}</div>
+                                <div className="text-sm font-medium text-white flex items-center gap-1.5">
+                                  <CryptoIcon symbol={position.symbol} size="xs" />
+                                  {position.symbol}
+                                </div>
                                 <div className="text-xs text-gray-500 mt-0.5">
                                   {formatUsdNumber(parseFloat(position.amount))} USDT • {position.apy}% APY • {position.duration}d
                                 </div>
