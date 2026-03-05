@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, TrendingUp, BarChart3, RefreshCw, User, Info, Zap, Settings, MessageSquare } from "lucide-react";
+import { Home, TrendingUp, BarChart3, RefreshCw, User, Info, Zap, Settings, MessageSquare, Wallet } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -7,6 +7,7 @@ const navItems = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/market", icon: TrendingUp, label: "Markets" },
   { path: "/exchange", icon: RefreshCw, label: "Exchange" },
+  { path: "/wallet", icon: Wallet, label: "Wallet" },
   { path: "/futures", icon: Zap, label: "Futures" },
   { path: "/support", icon: MessageSquare, label: "Support" },
   { path: "/profile", icon: User, label: "Profile" },
@@ -59,7 +60,7 @@ export function BottomNavigation() {
     checkAdminAccess();
   }, [checkAdminAccess]);
 
-  const gridCols = useMemo(() => isAdmin ? 'grid-cols-7' : 'grid-cols-6', [isAdmin]);
+  const gridCols = useMemo(() => isAdmin ? 'grid-cols-8' : 'grid-cols-7', [isAdmin]);
   const isAdminActive = useMemo(() => location.startsWith('/admin'), [location]);
 
   return (

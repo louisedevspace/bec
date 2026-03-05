@@ -2,7 +2,7 @@ import { BottomNavigation } from "./bottom-navigation";
 import { useLocation } from "wouter";
 import { Logo } from "@/components/brand/logo";
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings } from "lucide-react";
+import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings, Wallet } from "lucide-react";
 import { supabase } from '../../lib/supabaseClient';
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { path: "/about", label: "About", icon: Info },
   { path: "/market", label: "Markets", icon: TrendingUp },
   { path: "/exchange", label: "Exchange", icon: RefreshCw },
+  { path: "/wallet", label: "Wallet", icon: Wallet },
   { path: "/futures", label: "Trading", icon: Zap },
   { path: "/support", label: "Support", icon: MessageSquare },
   { path: "/profile", label: "Profile", icon: User },

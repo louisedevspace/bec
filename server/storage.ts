@@ -90,6 +90,7 @@ export class MemStorage implements IStorage {
       creditScore: insertUser.creditScore ?? null,
       isActive: insertUser.isActive ?? null,
       fullName: insertUser.fullName ?? null,
+      walletLocked: insertUser.walletLocked ?? null,
     };
     this.users.set(user.id, user);
     return user;

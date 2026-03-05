@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   creditScore: decimal("credit_score", { precision: 3, scale: 2 }).default("0.60"), // Credit score from 0.00 to 1.00
   isVerified: boolean("is_verified").default(false),
   isActive: boolean("is_active").default(true), // User account status
+  walletLocked: boolean("wallet_locked").default(false), // Wallet lock status for admin control
   createdAt: timestamp("created_at").defaultNow(),
   role: text("role").notNull().default('user'),
 });

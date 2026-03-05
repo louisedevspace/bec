@@ -42,6 +42,8 @@ const AdminSimpleNotifications = lazy(() => import('./pages/admin-simple-notific
 const AdminStreamlinedNotifications = lazy(() => import('./pages/admin-streamlined-notifications'));
 const AdminNotificationsRedirect = lazy(() => import('./pages/admin-notifications-redirect'));
 const AdminTradingPairs = lazy(() => import('./pages/admin-trading-pairs'));
+const AdminWallets = lazy(() => import('./pages/admin-wallets'));
+const WalletPage = lazy(() => import('./pages/wallet'));
 
 function Router() {
   const [loading, setLoading] = useState(true);
@@ -185,6 +187,7 @@ function Router() {
           <Route path="/admin/settings" component={isAuthenticated && isAdmin ? AdminSettings : adminRedirect} />
           <Route path="/admin/trading-pairs" component={isAuthenticated && isAdmin ? AdminTradingPairs : adminRedirect} />
           <Route path="/admin/support" component={isAuthenticated && isAdmin ? AdminSupport : adminRedirect} />
+          <Route path="/admin/wallets" component={isAuthenticated && isAdmin ? AdminWallets : adminRedirect} />
           {/* User routes */}
           <Route path="/" component={isAuthenticated ? HomePage : LoginPage} />
           <Route path="/about" component={protectedRoute(AboutPage)} />
@@ -194,6 +197,7 @@ function Router() {
           <Route path="/loan" component={protectedRoute(LoanPage)} />
           <Route path="/profile" component={protectedRoute(ProfilePage)} />
           <Route path="/support" component={protectedRoute(SupportPage)} />
+          <Route path="/wallet" component={protectedRoute(WalletPage)} />
 
           <Route component={NotFound} />
         </Switch>
