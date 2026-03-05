@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL DEFAULT '--supabase-auth--',
   full_name TEXT,
-  credit_score INTEGER DEFAULT 60,
+  credit_score DECIMAL(5,2) DEFAULT 0.60,
   is_verified BOOLEAN DEFAULT FALSE,
   is_active BOOLEAN DEFAULT TRUE,
   role TEXT NOT NULL DEFAULT 'user',

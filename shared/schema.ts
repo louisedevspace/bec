@@ -8,12 +8,17 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name"),
-  creditScore: decimal("credit_score", { precision: 3, scale: 2 }).default("0.60"), // Credit score from 0.00 to 1.00
+  creditScore: decimal("credit_score", { precision: 5, scale: 2 }).default("0.60"),
   isVerified: boolean("is_verified").default(false),
-  isActive: boolean("is_active").default(true), // User account status
-  walletLocked: boolean("wallet_locked").default(false), // Wallet lock status for admin control
-  createdAt: timestamp("created_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
   role: text("role").notNull().default('user'),
+  displayId: text("display_id"),
+  profilePicture: text("profile_picture"),
+  phone: text("phone"),
+  futuresMinAmount: decimal("futures_min_amount", { precision: 20, scale: 8 }).default("50"),
+  futuresTradeResult: text("futures_trade_result"),
+  walletLocked: boolean("wallet_locked").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const depositAddresses = pgTable("deposit_addresses", {
