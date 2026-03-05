@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { timeAgo as timeAgoUtil, formatChartDate } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
 import { cryptoApi } from "@/services/crypto-api";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from 'wouter';
 import type { Trade } from "@/types/crypto";
 import AdminLayout from './admin-layout';
 import { supabase } from "@/lib/supabaseClient";
@@ -117,14 +119,7 @@ function formatNumber(value: number): string {
 }
 
 function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return timeAgoUtil(dateStr);
 }
 
 function ChartTooltipContent({ active, payload, label }: any) {
@@ -145,12 +140,17 @@ function ChartTooltipContent({ active, payload, label }: any) {
 
 // === Sub-components ===
 
-function StatCard({ icon, iconBg, iconColor, label, value, sub, trend, pendingBadge }: {
+function StatCard({ icon, iconBg, iconColor, label, value, sub, trend, pendingBadge, onClick }: {
   icon: React.ReactNode; iconBg: string; iconColor: string;
-  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral'; pendingBadge?: number;
+  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral'; pendingBadge?: number; onClick?: () => void;
 }) {
   return (
-    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 hover:border-[#2a2a2a] transition-all">
+    <div
+      className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 hover:border-[#2a2a2a] transition-all ${onClick ? 'cursor-pointer hover:bg-[#151515] active:scale-[0.98]' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <p className="text-[11px] font-medium text-gray-400 truncate">{label}</p>
@@ -214,6 +214,7 @@ function QuickActionLink({ href, icon, label, count, colorClasses }: {
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [, setLocation] = useLocation();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -345,6 +346,24 @@ export default function AdminDashboard() {
       case 'trade': return <BarChart3 size={14} className="text-blue-400" />;
       case 'support': return <MessageSquare size={14} className="text-purple-400" />;
       default: return <Activity size={14} className="text-gray-400" />;
+    }
+  };
+
+  const handleActivityClick = (type: string) => {
+    switch (type) {
+      case 'deposit':
+      case 'withdrawal':
+        setLocation('/admin/wallets');
+        break;
+      case 'trade':
+        setActiveTab('pending-orders');
+        break;
+      case 'support':
+        setLocation('/admin/support');
+        break;
+      default:
+        setLocation('/admin/users');
+        break;
     }
   };
 
@@ -483,18 +502,18 @@ export default function AdminDashboard() {
 
   // Chart data formatting
   const chartRegTrend = stats?.charts.registrationTrend.map(d => ({
-    date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatChartDate(d.date),
     Users: d.count
   })) || [];
 
   const chartVolTrend = stats?.charts.volumeTrend.map(d => ({
-    date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatChartDate(d.date),
     Volume: d.volume,
     Trades: d.count
   })) || [];
 
   const chartFinTrend = stats?.charts.financialTrend.map(d => ({
-    date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatChartDate(d.date),
     Deposits: d.deposits,
     Withdrawals: d.withdrawals
   })) || [];
@@ -582,22 +601,22 @@ export default function AdminDashboard() {
                   </a>
                 )}
                 {stats.financial.pendingDeposits > 0 && (
-                  <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                  <button onClick={() => setLocation('/admin/wallets')} className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 hover:bg-amber-500/15 transition-colors text-left">
                     <Clock size={18} className="text-amber-400 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-semibold text-amber-400">{stats.financial.pendingDeposits} Pending Deposits</p>
-                      <p className="text-[10px] text-amber-400/60">Awaiting approval</p>
+                      <p className="text-[10px] text-amber-400/60">Click to review</p>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {stats.financial.pendingWithdrawals > 0 && (
-                  <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3">
+                  <button onClick={() => setLocation('/admin/wallets')} className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 hover:bg-orange-500/15 transition-colors text-left">
                     <Clock size={18} className="text-orange-400 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-semibold text-orange-400">{stats.financial.pendingWithdrawals} Pending Withdrawals</p>
-                      <p className="text-[10px] text-orange-400/60">Awaiting approval</p>
+                      <p className="text-[10px] text-orange-400/60">Click to review</p>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {stats.trading.pendingTrades > 0 && (
                   <button onClick={() => setActiveTab('pending-orders')}
@@ -616,22 +635,28 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <StatCard icon={<Users size={18} />} iconBg="bg-blue-500/10" iconColor="text-blue-400"
                 label="Total Users" value={formatNumber(stats.users.total)}
-                sub={`${stats.users.newToday} today`} trend={stats.users.newToday > stats.users.newYesterday ? 'up' : stats.users.newToday < stats.users.newYesterday ? 'down' : 'neutral'} />
+                sub={`${stats.users.newToday} today`} trend={stats.users.newToday > stats.users.newYesterday ? 'up' : stats.users.newToday < stats.users.newYesterday ? 'down' : 'neutral'}
+                onClick={() => setLocation('/admin/users')} />
               <StatCard icon={<Activity size={18} />} iconBg="bg-green-500/10" iconColor="text-green-400"
                 label="Active Users" value={formatNumber(stats.users.active)}
-                sub={`${stats.users.total > 0 ? ((stats.users.active / stats.users.total) * 100).toFixed(0) : 0}% of total`} />
+                sub={`${stats.users.total > 0 ? ((stats.users.active / stats.users.total) * 100).toFixed(0) : 0}% of total`}
+                onClick={() => setLocation('/admin/users')} />
               <StatCard icon={<DollarSign size={18} />} iconBg="bg-emerald-500/10" iconColor="text-emerald-400"
                 label="Platform Value" value={formatCurrency(stats.financial.totalPlatformValue)}
-                sub={`${stats.users.usersWithPortfolio} portfolios`} />
+                sub={`${stats.users.usersWithPortfolio} portfolios`}
+                onClick={() => setLocation('/admin/wallets')} />
               <StatCard icon={<BarChart3 size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
                 label="Trade Volume" value={formatCurrency(stats.trading.totalVolume)}
-                sub={`${stats.trading.totalTrades} trades`} pendingBadge={pendingCounts.trades + pendingCounts.futures} />
+                sub={`${stats.trading.totalTrades} trades`} pendingBadge={pendingCounts.trades + pendingCounts.futures}
+                onClick={() => setActiveTab('pending-orders')} />
               <StatCard icon={<MessageSquare size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
                 label="Support" value={String(stats.support.open + stats.support.inProgress)}
-                sub={`${stats.support.open} open, ${stats.support.inProgress} active`} pendingBadge={pendingCounts.support} />
+                sub={`${stats.support.open} open, ${stats.support.inProgress} active`} pendingBadge={pendingCounts.support}
+                onClick={() => setLocation('/admin/support')} />
               <StatCard icon={<FileCheck size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
                 label="KYC Pending" value={String(stats.kyc.pending)}
-                sub={`${stats.kyc.approved} approved`} pendingBadge={pendingCounts.kyc} />
+                sub={`${stats.kyc.approved} approved`} pendingBadge={pendingCounts.kyc}
+                onClick={() => setLocation('/admin/users')} />
             </div>
 
             {/* Tabs */}
@@ -833,10 +858,11 @@ export default function AdminDashboard() {
                 {/* KYC & Support Pies + Loans */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* KYC Distribution */}
-                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/users')}>
                     <div className="flex items-center gap-2 mb-4">
                       <FileCheck size={16} className="text-cyan-400" />
                       <h3 className="text-sm font-semibold text-white">KYC Status</h3>
+                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
                     </div>
                     {pieKycData.length > 0 ? (
                       <div className="flex items-center gap-4">
@@ -865,10 +891,11 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Support Distribution */}
-                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/support')}>
                     <div className="flex items-center gap-2 mb-4">
                       <MessageSquare size={16} className="text-purple-400" />
                       <h3 className="text-sm font-semibold text-white">Support Tickets</h3>
+                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
                     </div>
                     {pieSupportData.length > 0 ? (
                       <div className="flex items-center gap-4">
@@ -897,10 +924,11 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Loans & Financial Summary */}
-                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/users')}>
                     <div className="flex items-center gap-2 mb-4">
                       <Landmark size={16} className="text-emerald-400" />
                       <h3 className="text-sm font-semibold text-white">Loans & Finance</h3>
+                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-xs">
@@ -1036,14 +1064,14 @@ export default function AdminDashboard() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
-                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              tickFormatter={(v) => formatChartDate(v)}
                               interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
                             <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
                             <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null;
                               return (
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
-                                  <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  <p className="text-[10px] text-gray-400 mb-1">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
                                     <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
                                   ))}
@@ -1084,14 +1112,14 @@ export default function AdminDashboard() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
-                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              tickFormatter={(v) => formatChartDate(v)}
                               interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
                             <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
                             <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null;
                               return (
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
-                                  <p className="text-[10px] text-gray-400 mb-1">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  <p className="text-[10px] text-gray-400 mb-1">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
                                     <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
                                   ))}
@@ -1132,7 +1160,7 @@ export default function AdminDashboard() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
-                              tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              tickFormatter={(v) => formatChartDate(v)}
                               interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
                             <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
                             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
@@ -1140,7 +1168,7 @@ export default function AdminDashboard() {
                               if (!active || !payload?.length) return null;
                               return (
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 shadow-xl">
-                                  <p className="text-[10px] text-gray-400 mb-1.5">{new Date(label).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                  <p className="text-[10px] text-gray-400 mb-1.5">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
                                     <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
                                       {p.name}: {formatCryptoAmount(Math.abs(p.value), p.name)}{p.value < 0 ? ' (loss)' : ''}
@@ -1440,7 +1468,7 @@ export default function AdminDashboard() {
                       <div className="text-center py-12 text-gray-500 text-sm">No recent activity</div>
                     ) : (
                       stats.recentActivity.map((item, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-[#0d0d0d] transition-colors">
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-[#0d0d0d] transition-colors cursor-pointer active:scale-[0.99]" onClick={() => handleActivityClick(item.type)}>
                           <div className="w-8 h-8 bg-[#1a1a1a] rounded-lg flex items-center justify-center flex-shrink-0">
                             {getActivityIcon(item.type)}
                           </div>
@@ -1451,6 +1479,7 @@ export default function AdminDashboard() {
                           <Badge className={`${getStatusColor(item.status)} text-[10px] px-1.5 py-0`}>
                             {item.status.replace('_', ' ')}
                           </Badge>
+                          <ArrowRight size={10} className="text-gray-600 flex-shrink-0" />
                         </div>
                       ))
                     )}

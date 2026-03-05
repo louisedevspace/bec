@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDateTime } from '@/lib/date-utils';
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
@@ -561,7 +562,7 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] text-gray-600">
-                  {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {formatDateTime(tx.date)}
                 </span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusColor(tx.status)}`}>
                   {tx.status}

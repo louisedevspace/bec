@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateTime as formatDate } from '@/lib/date-utils';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -173,9 +174,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
+  // formatDateTime imported from @/lib/date-utils as formatDate
 
   if (isLoading) {
     return (

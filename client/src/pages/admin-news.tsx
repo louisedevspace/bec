@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -420,7 +421,7 @@ export default function AdminNews() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                        {new Date(news.created_at).toLocaleDateString()}
+                        {formatDate(news.created_at)}
                       </span>
                       {news.show_popup && (
                         <span className="flex items-center gap-1">

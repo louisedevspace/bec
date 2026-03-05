@@ -1,4 +1,5 @@
 import AdminLayout from "./admin-layout";
+import { formatDate as formatDateUtil, formatDateTime, formatShortDate as formatShortDateUtil, timeAgo as timeAgoUtil } from '@/lib/date-utils';
 import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Badge } from "@/components/ui/badge";
@@ -200,17 +201,9 @@ export default function AdminUsers() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-  };
+  const formatDate = (dateString: string) => formatDateUtil(dateString);
 
-  const formatShortDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: '2-digit',
-    });
-  };
+  const formatShortDate = (dateString: string) => formatShortDateUtil(dateString);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -218,17 +211,7 @@ export default function AdminUsers() {
     }).format(value);
   };
 
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days < 30) return `${days}d ago`;
-    return formatShortDate(dateStr);
-  };
+  const timeAgo = (dateStr: string) => timeAgoUtil(dateStr);
 
   const getStatusBadge = (user: any) => {
     if (user.email_confirmed_at && user.is_verified) {

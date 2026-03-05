@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -418,7 +419,7 @@ export default function AdminSettings() {
                             <span className="text-gray-400">Network: </span>
                             <span className="text-gray-700 font-medium">{address.network}</span>
                           </div>
-                          <span className="text-[10px] text-gray-400">{new Date(address.updated_at).toLocaleDateString()}</span>
+                          <span className="text-[10px] text-gray-400">{formatDate(address.updated_at)}</span>
                         </div>
                       </div>
                     )}

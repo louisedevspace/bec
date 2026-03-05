@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDate } from '../lib/date-utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -126,13 +127,7 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
     return `$${formatUsdNumber(amount)}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  // formatDate imported from @/lib/date-utils
 
   const getDaysUntilDue = (payDate: string) => {
     const today = new Date();

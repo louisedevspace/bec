@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateTime as formatDate } from '@/lib/date-utils';
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -71,9 +72,7 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
+  // formatDateTime imported from @/lib/date-utils as formatDate
 
   const filteredRequests = depositRequests?.filter((request: DepositRequest) => 
     request.status === activeTab

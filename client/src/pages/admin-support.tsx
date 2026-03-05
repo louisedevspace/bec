@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { formatDate } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -544,7 +545,7 @@ export default function AdminSupportPage() {
                         <Tag className="h-2.5 w-2.5" /> {categoryLabels[selectedConversation.category] || selectedConversation.category}
                       </span>
                     )}
-                    <span className="text-[10px] text-gray-600">Created: {new Date(selectedConversation.created_at).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-gray-600">Created: {formatDate(selectedConversation.created_at)}</span>
                     {selectedConversation.users.is_verified !== undefined && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedConversation.users.is_verified ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"} border ${selectedConversation.users.is_verified ? "border-green-500/20" : "border-yellow-500/20"}`}>
                         {selectedConversation.users.is_verified ? "Verified" : "Unverified"}

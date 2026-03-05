@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -783,7 +784,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                       <div>
                         <Label className="text-gray-500 text-xs">Created</Label>
                         <div className="text-white text-sm">
-                          {new Date(user.created_at).toLocaleDateString()}
+                          {formatDate(user.created_at)}
               </div>
             </div>
           </div>
@@ -999,7 +1000,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                   <div>
                     <Label className="text-gray-500 text-xs">Created Date</Label>
                     <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
-                      {new Date(selectedUser.created_at).toLocaleString()}
+                      {formatDateTime(selectedUser.created_at)}
                     </div>
                   </div>
                 </div>

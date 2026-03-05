@@ -2,7 +2,7 @@ import { BottomNavigation } from "./bottom-navigation";
 import { useLocation } from "wouter";
 import { Logo } from "@/components/brand/logo";
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings, Wallet } from "lucide-react";
+import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings, Wallet, Bell } from "lucide-react";
 import { supabase } from '../../lib/supabaseClient';
 
 const navItems = [
@@ -17,8 +17,9 @@ const navItems = [
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
 
   // Memoize admin check to avoid unnecessary re-runs
   const checkAdminAccess = useCallback(async () => {
@@ -63,6 +64,29 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     checkAdminAccess();
   }, [checkAdminAccess]);
+
+  // Fetch unread deposit notification count for user bell
+  useEffect(() => {
+    let cancelled = false;
+    const fetchNotifCount = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setNotifCount(0); return; }
+        const { count, error } = await supabase
+          .from('deposit_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('hidden_for_user', false)
+          .in('status', ['pending', 'approved', 'rejected']);
+        if (!error && !cancelled) {
+          setNotifCount(count ?? 0);
+        }
+      } catch { /* silent */ }
+    };
+    fetchNotifCount();
+    const interval = setInterval(fetchNotifCount, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   // Memoize auth page check
   const isAuthPage = useMemo(() => location === '/login' || location === '/signup', [location]);
@@ -110,15 +134,27 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </nav>
       )}
 
-      {/* Mobile top bar - logo only */}
+      {/* Mobile top bar - logo + notification bell */}
       {!isAuthPage && (
-        <div className="flex md:hidden items-center justify-center h-12 border-b border-[#1e1e1e] bg-[#0a0a0a]/95 backdrop-blur-md sticky top-0 z-50" style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}>
+        <div className="flex md:hidden items-center justify-between px-4 h-12 border-b border-[#1e1e1e] bg-[#0a0a0a]/95 backdrop-blur-md sticky top-0 z-50" style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}>
           <a href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#111] border border-[#2a2a2a] rounded-lg flex items-center justify-center overflow-hidden">
               <Logo className="w-full h-full" />
             </div>
             <span className="font-bold text-base tracking-tight text-white">Becxus</span>
           </a>
+          <button
+            onClick={() => setLocation('/wallet')}
+            className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors"
+            aria-label="Notifications"
+          >
+            <Bell size={20} />
+            {notifCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                {notifCount > 99 ? '99+' : notifCount}
+              </span>
+            )}
+          </button>
         </div>
       )}
 

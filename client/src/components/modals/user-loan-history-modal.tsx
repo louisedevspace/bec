@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/date-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,9 +94,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
     return `$${formatUsdNumber(amount)}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  // formatDate imported from @/lib/date-utils
 
   const getDaysRemaining = (createdAt: string, duration: number) => {
     const createdDate = new Date(createdAt);

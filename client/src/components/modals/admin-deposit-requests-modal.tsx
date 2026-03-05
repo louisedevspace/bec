@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDateTime } from '@/lib/date-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -169,7 +170,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                         </div>
                         <p className="text-sm text-gray-400">
                           User: {request.users?.full_name || request.users?.email || (request.users?.display_id || request.user_id.substring(0, 8))} | 
-                          Submitted: {new Date(request.submitted_at).toLocaleString()}
+                          Submitted: {formatDateTime(request.submitted_at)}
                         </p>
                       </div>
                       

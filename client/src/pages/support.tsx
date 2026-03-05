@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { formatDate, formatTime } from '@/lib/date-utils';
 import { useLocation } from 'wouter';
 import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
@@ -282,7 +283,7 @@ export default function SupportPage() {
             <Info size={12} className="text-gray-500 flex-shrink-0" />
             <span className="text-xs text-gray-500">{msg.message}</span>
             <span className="text-[10px] text-gray-600 ml-1">
-              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(msg.created_at)}
             </span>
           </div>
         </div>
@@ -307,7 +308,7 @@ export default function SupportPage() {
           )}
           <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
           <p className="text-[10px] opacity-60 mt-1.5">
-            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {formatTime(msg.created_at)}
           </p>
         </div>
       </div>
@@ -415,8 +416,8 @@ export default function SupportPage() {
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {conv.last_message_at
-                              ? new Date(conv.last_message_at).toLocaleDateString()
-                              : new Date(conv.created_at).toLocaleDateString()}
+                              ? formatDate(conv.last_message_at)
+                              : formatDate(conv.created_at)}
                           </p>
                         </div>
                       </div>
@@ -464,7 +465,7 @@ export default function SupportPage() {
                     </span>
                   )}
                   <span className="text-xs bg-[#1a1a1a] text-gray-500 px-3 py-1 rounded border border-[#2a2a2a]">
-                    {new Date(selectedConversation.created_at).toLocaleDateString()}
+                    {formatDate(selectedConversation.created_at)}
                   </span>
                 </div>
 

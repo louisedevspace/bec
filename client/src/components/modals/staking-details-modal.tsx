@@ -4,6 +4,7 @@ import { ArrowLeft, Info, X, TrendingUp, Clock, DollarSign, Coins } from "lucide
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import type { StakingPosition } from "@/types/crypto";
 import { formatUsdNumber } from "@/utils/format-utils";
+import { formatDateTime, safeDate } from "@/lib/date-utils";
 
 interface StakingDetailsModalProps {
   isOpen: boolean;
@@ -14,8 +15,8 @@ interface StakingDetailsModalProps {
 export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetailsModalProps) {
   if (!position) return null;
 
-  const startDate = new Date(position.startDate);
-  const endDate = new Date(position.endDate);
+  const startDate = safeDate(position.startDate) || new Date();
+  const endDate = safeDate(position.endDate) || new Date();
   const now = new Date();
   
   const daysElapsed = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/date-utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -256,9 +257,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  // formatDate imported from @/lib/date-utils
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatDateTime as formatDate } from '@/lib/date-utils';
 import { supabase } from '@/lib/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -193,15 +194,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // formatDateTime imported from @/lib/date-utils as formatDate
 
   const pendingRequests = kycRequests.filter(k => k.status === 'pending');
   const approvedRequests = kycRequests.filter(k => k.status === 'approved');

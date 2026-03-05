@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime as formatDate } from '@/lib/date-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -181,15 +182,7 @@ export function UnifiedTransactionHistoryModal({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // formatDate imported from @/lib/date-utils
 
   const newTransactions = transactions.filter(t => t.isNew);
   const historyTransactions = transactions.filter(t => !t.isNew);

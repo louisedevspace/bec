@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { formatShortDate } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
@@ -459,7 +460,7 @@ function UserDetailView({
               columns={["Date", "Symbol", "Amount", "Status"]}
               renderRow={(d: any) => (
                 <tr key={d.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
-                  <td className="py-2 px-3 text-xs text-gray-400">{new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                  <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(d.created_at)}</td>
                   <td className="py-2 px-3 text-xs text-white flex items-center gap-1.5"><CryptoIcon symbol={d.symbol || "USDT"} size="xs" />{d.symbol || "USDT"}</td>
                   <td className="py-2 px-3 text-xs text-green-400 tabular-nums">+{formatCryptoNumber(parseFloat(d.amount || "0"))}</td>
                   <td className="py-2 px-3"><StatusBadge status={d.status} /></td>
@@ -474,7 +475,7 @@ function UserDetailView({
               columns={["Date", "Symbol", "Amount", "Status"]}
               renderRow={(w: any) => (
                 <tr key={w.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
-                  <td className="py-2 px-3 text-xs text-gray-400">{new Date(w.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                  <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(w.created_at)}</td>
                   <td className="py-2 px-3 text-xs text-white flex items-center gap-1.5"><CryptoIcon symbol={w.symbol || "USDT"} size="xs" />{w.symbol || "USDT"}</td>
                   <td className="py-2 px-3 text-xs text-red-400 tabular-nums">-{formatCryptoNumber(parseFloat(w.amount || "0"))}</td>
                   <td className="py-2 px-3"><StatusBadge status={w.status} /></td>
@@ -489,7 +490,7 @@ function UserDetailView({
               columns={["Date", "Pair", "Side", "Amount", "Price", "Status"]}
               renderRow={(t: any) => (
                 <tr key={t.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
-                  <td className="py-2 px-3 text-xs text-gray-400">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                  <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(t.created_at)}</td>
                   <td className="py-2 px-3 text-xs text-white"><span className="flex items-center gap-1.5"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</span></td>
                   <td className="py-2 px-3"><span className={`text-xs font-medium ${t.side === 'buy' ? 'text-green-400' : 'text-red-400'}`}>{t.side?.toUpperCase()}</span></td>
                   <td className="py-2 px-3 text-xs text-white tabular-nums">{formatCryptoNumber(parseFloat(t.amount || "0"))}</td>
@@ -508,7 +509,7 @@ function UserDetailView({
                 const result = parseFloat(f.final_result || "0");
                 return (
                   <tr key={f.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
-                    <td className="py-2 px-3 text-xs text-gray-400">{new Date(f.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                    <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(f.created_at)}</td>
                     <td className="py-2 px-3 text-xs text-white"><span className="flex items-center gap-1.5"><CryptoIcon symbol={f.symbol?.split('/')[0] || f.symbol} size="xs" />{f.symbol}</span></td>
                     <td className="py-2 px-3"><span className={`text-xs font-medium ${f.side === 'long' ? 'text-green-400' : 'text-red-400'}`}>{f.side?.toUpperCase()}</span></td>
                     <td className="py-2 px-3 text-xs text-white tabular-nums">{formatCryptoNumber(parseFloat(f.amount || "0"))}</td>
