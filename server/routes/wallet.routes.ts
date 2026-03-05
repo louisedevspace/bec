@@ -17,8 +17,8 @@ export default function registerWalletRoutes(app: Express) {
       // Fetch portfolio, transactions, prices in parallel
       const [portfolioRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, stakingRes, pricesRes] = await Promise.all([
         supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
-        supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, created_at, wallet_address").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
         supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
         supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
         supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
@@ -107,7 +107,7 @@ export default function registerWalletRoutes(app: Express) {
           symbol: d.symbol || "USDT",
           amount: parseFloat(d.amount || "0"),
           status: d.status,
-          date: d.created_at,
+          date: d.submitted_at,
         });
       });
 
@@ -118,7 +118,7 @@ export default function registerWalletRoutes(app: Express) {
           symbol: w.symbol || "USDT",
           amount: parseFloat(w.amount || "0"),
           status: w.status,
-          date: w.created_at,
+          date: w.submitted_at,
           walletAddress: w.wallet_address,
         });
       });
@@ -335,8 +335,8 @@ export default function registerWalletRoutes(app: Express) {
       const [userRes, portfolioRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, stakingRes, pricesRes] = await Promise.all([
         supabaseAdmin.from("users").select("*").eq("id", userId).maybeSingle(),
         supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
-        supabaseAdmin.from("deposit_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-        supabaseAdmin.from("withdraw_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("deposit_requests").select("*").eq("user_id", userId).order("submitted_at", { ascending: false }),
+        supabaseAdmin.from("withdraw_requests").select("*").eq("user_id", userId).order("submitted_at", { ascending: false }),
         supabaseAdmin.from("trades").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
         supabaseAdmin.from("futures_trades").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
         supabaseAdmin.from("staking_positions").select("*").eq("user_id", userId),
