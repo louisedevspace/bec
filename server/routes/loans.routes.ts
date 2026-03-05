@@ -6,6 +6,7 @@ import { storage } from "../storage";
 import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent, logAuditEvent } from "../utils/security";
+import { adminNotificationService } from "../services/admin-notification.service";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -15,6 +16,12 @@ export default function registerLoansRoutes(app: Express) {
     try {
       const validatedData = insertLoanApplicationSchema.parse(req.body);
       const application = await storage.createLoanApplication(validatedData);
+
+      // Admin notification
+      try {
+        await adminNotificationService.notifyLoanApplication(application, req.user?.email);
+      } catch {}
+
       res.json(application);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -273,6 +280,12 @@ export default function registerLoansRoutes(app: Express) {
       if (error) {
         return res.status(500).json({ message: "Failed to submit loan application", error: error.message });
       }
+
+      // Admin notification
+      try {
+        const loanRecord = insertResult && insertResult.length > 0 ? insertResult[0] : { amount: amountNum, user_id: userId };
+        await adminNotificationService.notifyLoanApplication(loanRecord, req.user?.email);
+      } catch {}
 
       res.json({ message: "Loan application submitted successfully" });
     } catch (error) {

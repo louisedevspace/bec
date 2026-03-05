@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { adminNotificationService } from "../services/admin-notification.service";
 
 export default function registerKycRoutes(app: Express) {
   // POST /api/kyc/submit
@@ -53,6 +54,11 @@ export default function registerKycRoutes(app: Express) {
       if (createError) {
         return res.status(500).json({ message: "Failed to submit KYC request", error: createError.message });
       }
+
+      // Admin notification
+      try {
+        await adminNotificationService.notifyKycSubmission(userId, req.user?.email);
+      } catch {}
 
       res.json({ message: "KYC verification request submitted successfully", kycId: newKYC.id });
     } catch (error) {

@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
+import { adminNotificationService } from "../services/admin-notification.service";
 
 // ─── Auto-categorization helpers ─────────────────────────────────
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -158,6 +159,12 @@ export default function registerSupportRoutes(app: Express) {
         .eq("id", conversation.id);
 
       syncManager.syncData("create-support-conversation", { ...conversation, userId });
+
+      // Admin notification
+      try {
+        await adminNotificationService.notifySupportTicket(conversation, req.user?.email);
+      } catch {}
+
       res.json({ ...conversation, support_messages: [supportMessage] });
     } catch (error) {
       res.status(500).json({
@@ -223,6 +230,17 @@ export default function registerSupportRoutes(app: Express) {
       await supabaseAdmin.from("support_conversations").update(updateData).eq("id", conversationId);
 
       syncManager.syncData("create-support-message", { ...supportMessage, userId });
+
+      // Admin notification — user replied in support conversation
+      try {
+        const { data: conv } = await supabaseAdmin
+          .from("support_conversations")
+          .select("subject")
+          .eq("id", conversationId)
+          .single();
+        await adminNotificationService.notifySupportMessage(supportMessage, conv?.subject || "Support Ticket", req.user?.email);
+      } catch {}
+
       res.json(supportMessage);
     } catch (error) {
       res.status(500).json({ message: "Internal server error", error: (error as Error).message });

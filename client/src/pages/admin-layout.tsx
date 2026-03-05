@@ -1,35 +1,93 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { 
   Menu, X, LayoutDashboard, Users, MessageSquare, Settings, 
-  ChevronRight, LogOut, Shield, BarChart3, Megaphone, TrendingUp, Wallet
+  ChevronRight, LogOut, Shield, BarChart3, Megaphone, TrendingUp, Wallet,
+  Bell, Check, CheckCheck, ExternalLink
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
+import { useAdminNotifications, type AdminNotification } from '@/hooks/use-admin-notifications';
+
+// Map sidebar hrefs to notification categories
+const CATEGORY_MAP: Record<string, string> = {
+  '/admin/users': 'users',
+  '/admin/wallets': 'wallets',
+  '/admin/support': 'support',
+  '/admin/dashboard': 'dashboard',
+  '/admin/trading-pairs': 'trading_pairs',
+};
 
 const navItems = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders' },
+  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeCategory: 'dashboard' },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Platform Analytics' },
-  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users' },
+  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeCategory: 'users' },
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
-  { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },
-  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management' },
-  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support' },
+  { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs', badgeCategory: 'trading_pairs' },
+  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeCategory: 'wallets' },
+  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeCategory: 'support' },
   { label: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform Config' },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  const {
+    notifications,
+    unreadCount,
+    categoryBadges,
+    markAsRead,
+    markAllAsRead,
+    markCategoryRead,
+  } = useAdminNotifications(30000);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) setAdminEmail(session.user.email);
     });
   }, []);
+
+  // Close bell dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    }
+    if (bellOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [bellOpen]);
+
+  // Auto-clear category badge when navigating to that section
+  useEffect(() => {
+    const cat = CATEGORY_MAP[location];
+    if (cat && categoryBadges[cat] && categoryBadges[cat] > 0) {
+      markCategoryRead(cat);
+    }
+  }, [location]);
+
+  const handleNotificationClick = async (n: AdminNotification) => {
+    if (!n.is_read) await markAsRead(n.id);
+    if (n.link) setLocation(n.link);
+    setBellOpen(false);
+  };
+
+  function timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -56,6 +114,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Mobile Bell */}
+            <button
+              onClick={() => setBellOpen(!bellOpen)}
+              className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
               {adminEmail ? adminEmail[0].toUpperCase() : 'A'}
             </div>
@@ -119,6 +189,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {navItems.map(item => {
             const isActive = location.startsWith(item.href);
             const Icon = item.icon;
+            const badgeCount = item.badgeCategory ? (categoryBadges[item.badgeCategory] || 0) : 0;
             return (
               <Link
                 href={item.href}
@@ -132,13 +203,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
                   }
                 `}
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? `${item.label}${badgeCount ? ` (${badgeCount})` : ''}` : undefined}
               >
                 <div className={`
-                  flex items-center justify-center rounded-lg flex-shrink-0 w-8 h-8
+                  relative flex items-center justify-center rounded-lg flex-shrink-0 w-8 h-8
                   ${isActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}
                 `}>
                   <Icon size={20} />
+                  {badgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {badgeCount > 9 ? '9+' : badgeCount}
+                    </span>
+                  )}
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0">
@@ -204,6 +280,97 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            <div ref={bellRef} className="relative">
+              <button
+                onClick={() => setBellOpen(!bellOpen)}
+                className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {bellOpen && (
+                <div className="absolute right-0 top-12 w-96 max-h-[480px] bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl shadow-black/60 z-50 flex flex-col overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#222]">
+                    <div className="flex items-center gap-2">
+                      <Bell size={16} className="text-blue-400" />
+                      <span className="text-sm font-semibold text-white">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() => markAllAsRead()}
+                        className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <CheckCheck size={13} />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="flex-1 overflow-y-auto max-h-[380px]">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                        <Bell size={32} className="mb-2 opacity-30" />
+                        <p className="text-sm">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 20).map(n => (
+                        <button
+                          key={n.id}
+                          onClick={() => handleNotificationClick(n)}
+                          className={`
+                            w-full text-left px-4 py-3 border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors flex items-start gap-3
+                            ${!n.is_read ? 'bg-blue-500/5' : ''}
+                          `}
+                        >
+                          {/* Unread dot */}
+                          <div className="mt-1.5 flex-shrink-0">
+                            {!n.is_read ? (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                            ) : (
+                              <div className="w-2 h-2 rounded-full" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-white' : 'text-gray-400'}`}>
+                              {n.title}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
+                              {n.link && <ExternalLink size={10} className="text-gray-600" />}
+                            </div>
+                          </div>
+                          {!n.is_read && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                              className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors flex-shrink-0"
+                              title="Mark as read"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a]">
               <Shield size={14} className="text-blue-400" />
               <span className="text-xs text-gray-300 font-medium">{adminEmail}</span>

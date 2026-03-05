@@ -4,6 +4,7 @@ import { syncManager } from "../sync-manager";
 import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import { adminNotificationService } from "../services/admin-notification.service";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -125,6 +126,11 @@ export default function registerWithdrawalsRoutes(app: Express) {
       } catch {
         // Continue even if sync fails
       }
+
+      // Admin notification
+      try {
+        await adminNotificationService.notifyWithdrawRequest(withdrawRequest, req.user?.email);
+      } catch {}
 
       res.json({ message: "Withdraw request submitted successfully", withdrawRequest });
     } catch (error) {

@@ -4,6 +4,7 @@ import { syncManager } from "../sync-manager";
 import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import { adminNotificationService } from "../services/admin-notification.service";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -116,6 +117,12 @@ export default function registerDepositsRoutes(app: Express) {
       });
 
       syncManager.syncDepositRequestCreated(depositRequest);
+
+      // Admin notification
+      try {
+        await adminNotificationService.notifyDepositRequest(depositRequest, req.user?.email);
+      } catch {}
+
       res.json({ message: "Deposit request submitted successfully", depositRequest });
     } catch (error) {
       res.status(500).json({ message: "Server error", error: (error as Error).message });
