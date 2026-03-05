@@ -555,28 +555,28 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white rounded-2xl shadow-2xl" hideCloseButton>
+      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0" hideCloseButton>
         <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
-          <DialogTitle className="text-base md:text-xl font-bold text-center text-white">
+          <DialogTitle className="text-base md:text-lg font-bold text-center text-white">
             Becxus Legal Agreements
           </DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="privacy" className="w-full p-4 md:p-6 space-y-4">
           <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl">
-            <TabsTrigger value="privacy" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-300 data-[state=active]:bg-[#1f2933] data-[state=active]:text-white rounded-lg transition-colors duration-200">
+            <TabsTrigger value="privacy" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Privacy</span>
                 <span>Policy</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="terms" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-300 data-[state=active]:bg-[#1f2933] data-[state=active]:text-white rounded-lg transition-colors duration-200">
+            <TabsTrigger value="terms" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Terms &</span>
                 <span>Conditions</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="loan" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-300 data-[state=active]:bg-[#1f2933] data-[state=active]:text-white rounded-lg transition-colors duration-200">
+            <TabsTrigger value="loan" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Loan</span>
                 <span>Agreement</span>
@@ -673,7 +673,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         </Tabs>
 
         <div className="flex justify-end pt-4 px-4 md:px-6 pb-4 md:pb-6 border-t border-[#1e1e1e]">
-          <Button onClick={onClose} variant="outline" className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white transition-colors duration-200">
+          <Button onClick={onClose} className="h-11 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a] hover:text-white font-semibold px-6 transition-colors duration-200">
             Close
           </Button>
         </div>

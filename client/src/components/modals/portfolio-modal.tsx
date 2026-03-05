@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUserDataSync } from "@/hooks/use-data-sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cryptoApi } from "@/services/crypto-api";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
@@ -125,30 +124,28 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
-        <DialogHeader className="p-4 md:p-6">
-          <DialogTitle className="text-base md:text-lg">Portfolio</DialogTitle>
+      <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0">
+        <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
+          <DialogTitle className="text-base md:text-lg text-white">Portfolio</DialogTitle>
         </DialogHeader>
 
+        <div className="p-4 md:p-6">
+
         {/* Portfolio Summary */}
-        <div className="space-y-3 mb-6 p-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-sm text-gray-500 mb-2">Available (USD)</div>
-              <div className="text-lg font-semibold text-red-500 break-all">{totals.available}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-sm text-gray-500 mb-2">Staked (USD)</div>
-              <div className="text-lg font-semibold text-blue-500 break-all">{totals.staked}</div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 text-center">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Available (USD)</div>
+            <div className="text-lg font-semibold text-green-400 break-all">{totals.available}</div>
+          </div>
+          <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 text-center">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Staked (USD)</div>
+            <div className="text-lg font-semibold text-blue-400 break-all">{totals.staked}</div>
+          </div>
         </div>
 
         {/* Holdings Table */}
-        <Card className="p-4">
-          <CardContent className="p-0">
+        <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+          <div className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -208,7 +205,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                   ) : (
                     <tr>
                       <td colSpan={3} className="text-center py-12 text-gray-500">
-                        <div className="w-16 h-16 bg-[#0a0a0a] border border-[#2a2a2a] rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-[#111] border border-[#2a2a2a] rounded-full mx-auto mb-4 flex items-center justify-center">
                           <span className="text-2xl">📊</span>
                         </div>
                         <p>No assets found</p>
@@ -219,8 +216,9 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

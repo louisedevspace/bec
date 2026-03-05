@@ -205,29 +205,31 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm sm:max-w-md max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
-        <DialogHeader className="p-4 md:p-6">
-          <DialogTitle className="text-base md:text-lg">
-            {step === 1 ? "Withdraw" : "Withdrawal Details"}
+      <DialogContent className="max-w-sm sm:max-w-md max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0">
+        <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
+          <DialogTitle className="text-base md:text-lg text-white">
+            {step === 1 ? "Withdraw" : "Confirm Withdrawal"}
           </DialogTitle>
         </DialogHeader>
+
+        <div className="p-4 md:p-6">
 
         {step === 1 && (
           <div className="space-y-6">
             <div>
               <Label htmlFor="crypto-select" className="text-gray-300">Select Cryptocurrency</Label>
               <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white">
+                <SelectTrigger className="bg-[#161616] border-[#2a2a2a] text-white rounded-xl h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                  <SelectItem value="BTC" className="text-white">
+                  <SelectItem value="BTC" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="BTC" size="xs" /><span>Bitcoin (BTC)</span></div>
                   </SelectItem>
-                  <SelectItem value="ETH" className="text-white">
+                  <SelectItem value="ETH" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="ETH" size="xs" /><span>Ethereum (ETH)</span></div>
                   </SelectItem>
-                  <SelectItem value="USDT" className="text-white">
+                  <SelectItem value="USDT" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="USDT" size="xs" /><span>Tether (USDT)</span></div>
                   </SelectItem>
                 </SelectContent>
@@ -243,10 +245,10 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+                className="bg-[#161616] border-[#2a2a2a] text-white placeholder-gray-600 rounded-xl h-11"
               />
-              <div className="text-sm text-gray-500 mt-1">
-                Available: {formatCryptoNumber(getAvailableBalance())} {selectedCrypto}
+              <div className="text-xs text-gray-500 mt-1">
+                Available: <span className="text-green-400 font-medium">{formatCryptoNumber(getAvailableBalance())} {selectedCrypto}</span>
               </div>
             </div>
 
@@ -258,14 +260,14 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 placeholder={`Enter your ${selectedCrypto} wallet address`}
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+                className="bg-[#161616] border-[#2a2a2a] text-white placeholder-gray-600 rounded-xl h-11"
               />
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="text-xs text-gray-500 mt-1">
                 Please double-check your wallet address before submitting
               </div>
             </div>
 
-            <Button onClick={handleNext} className="w-full bg-blue-500 hover:bg-blue-600 text-white">
+            <Button onClick={handleNext} className="w-full h-11 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[1px] disabled:opacity-40 disabled:shadow-none">
               Next
             </Button>
           </div>
@@ -273,35 +275,37 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
         {step === 2 && (
           <div className="space-y-6">
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-4 rounded-lg">
-              <p className="font-medium text-blue-500 mb-2">Withdraw Request Information</p>
-              <div className="space-y-2 text-sm">
+            <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+              <div className="p-4">
+                <p className="font-medium text-blue-400 text-xs uppercase tracking-wider mb-3">Withdrawal Details</p>
+                <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Cryptocurrency:</span>
+                  <span className="text-gray-500">Cryptocurrency:</span>
                   <span className="font-medium text-white">{selectedCrypto}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Amount:</span>
+                  <span className="text-gray-500">Amount:</span>
                   <span className="font-medium text-white">{amount} {selectedCrypto}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Wallet Address:</span>
+                  <span className="text-gray-500">Wallet Address:</span>
                   <span className="font-medium text-xs break-all text-white">{walletAddress}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Available Balance:</span>
+                <div className="border-t border-[#2a2a2a] pt-2.5 flex justify-between">
+                  <span className="text-gray-500">Available Balance:</span>
                   <span className="font-medium text-white">{getAvailableBalance().toFixed(8)} {selectedCrypto}</span>
                 </div>
               </div>
+              </div>
             </div>
 
-            <div className="flex space-x-2">
-              <Button onClick={handleBack} variant="outline" className="flex-1 bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]">
+            <div className="flex gap-3">
+              <Button onClick={handleBack} className="flex-1 h-11 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a] hover:text-white font-semibold">
                 Back
               </Button>
               <Button 
                 onClick={handleSubmit} 
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                className="flex-1 h-11 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all duration-150 hover:translate-y-[1px] disabled:opacity-40 disabled:shadow-none"
                 disabled={withdrawMutation.isPending}
               >
                 {withdrawMutation.isPending ? "Submitting..." : "Confirm Withdrawal"}
@@ -309,6 +313,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

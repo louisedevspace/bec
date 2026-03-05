@@ -8,7 +8,7 @@ import {
   RefreshCw, Eye, EyeOff, Shield, Mail, Phone, Calendar, User, Users, Key,
   DollarSign, TrendingUp, Coins, Settings, FileText, History, Search, Copy,
   Check, Download, ChevronLeft, ChevronRight, ArrowUpDown, Filter, UserCheck,
-  UserX, Clock, Activity, BarChart3, AlertTriangle, Globe, Wallet, ChevronsUpDown,
+  UserX, Clock, Activity, BarChart3, AlertTriangle, Globe, ChevronsUpDown,
   SortAsc, SortDesc, X,
 } from "lucide-react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
@@ -344,27 +344,6 @@ export default function AdminUsers() {
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh
             </Button>
           </div>
-        </div>
-
-        {/* ---- Stats Overview ---- */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-          {[
-            { label: 'Total Users', value: stats.total, icon: <Users size={16} />, bg: 'bg-blue-500/10', color: 'text-blue-400' },
-            { label: 'Active', value: stats.active, icon: <Activity size={16} />, bg: 'bg-green-500/10', color: 'text-green-400' },
-            { label: 'Inactive', value: stats.inactive, icon: <UserX size={16} />, bg: 'bg-red-500/10', color: 'text-red-400' },
-            { label: 'Verified', value: stats.verified, icon: <UserCheck size={16} />, bg: 'bg-emerald-500/10', color: 'text-emerald-400' },
-            { label: 'KYC Pending', value: stats.kycPending, icon: <FileText size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-400' },
-            { label: 'Portfolio', value: stats.totalPortfolio >= 1e6 ? `$${(stats.totalPortfolio / 1e6).toFixed(1)}M` : stats.totalPortfolio >= 1e3 ? `$${(stats.totalPortfolio / 1e3).toFixed(1)}K` : `$${stats.totalPortfolio.toFixed(0)}`, icon: <Wallet size={16} />, bg: 'bg-purple-500/10', color: 'text-purple-400' },
-            { label: 'Total Trades', value: stats.totalTrades, icon: <TrendingUp size={16} />, bg: 'bg-cyan-500/10', color: 'text-cyan-400' },
-          ].map((s, i) => (
-            <div key={i} className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-3 hover:border-[#2a2a2a] transition-all">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">{s.label}</span>
-                <div className={`w-7 h-7 ${s.bg} rounded-lg flex items-center justify-center ${s.color}`}>{s.icon}</div>
-              </div>
-              <p className="text-lg font-bold text-white leading-none">{s.value}</p>
-            </div>
-          ))}
         </div>
 
         {/* ---- Action Buttons Grid ---- */}
