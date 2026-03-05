@@ -266,7 +266,9 @@ export default function registerDepositsRoutes(app: Express) {
           );
 
         if (portfolioError) {
-          return res.status(500).json({ message: "Failed to update portfolio" });
+          console.error("Deposit approval - portfolio upsert error:", portfolioError);
+          console.error("Upsert payload:", { user_id: depositRequest.user_id, symbol: depositRequest.symbol, available: newAvailable, frozen: newFrozen });
+          return res.status(500).json({ message: "Failed to update portfolio", error: portfolioError.message });
         }
 
         // Transaction record

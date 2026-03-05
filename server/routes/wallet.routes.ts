@@ -25,6 +25,10 @@ export default function registerWalletRoutes(app: Express) {
         supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
       ]);
 
+      if (portfolioRes.error) {
+        console.error("Wallet summary - portfolio query error:", portfolioRes.error);
+      }
+
       const portfolio = portfolioRes.data || [];
       const deposits = depositsRes.data || [];
       const withdrawals = withdrawalsRes.data || [];
@@ -313,7 +317,7 @@ export default function registerWalletRoutes(app: Express) {
         activeWallets: wallets.filter((w: any) => w.totalValue > 0).length,
       };
 
-      res.json({ wallets, platformStats });
+      res.json({ users: wallets, platformStats });
     } catch (err) {
       console.error("Admin wallets error:", err);
       res.status(500).json({ message: "Failed to fetch wallets" });
@@ -386,20 +390,21 @@ export default function registerWalletRoutes(app: Express) {
   app.post("/api/admin/wallets/:userId/lock", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
-      const { locked } = req.body;
+      const { locked, lock } = req.body;
+      const isLocked = typeof locked === "boolean" ? locked : lock;
 
-      if (typeof locked !== "boolean") {
-        return res.status(400).json({ message: "'locked' must be a boolean" });
+      if (typeof isLocked !== "boolean") {
+        return res.status(400).json({ message: "'locked' (or 'lock') must be a boolean" });
       }
 
       const { error } = await supabaseAdmin
         .from("users")
-        .update({ wallet_locked: locked })
+        .update({ wallet_locked: isLocked })
         .eq("id", userId);
 
       if (error) throw error;
 
-      res.json({ message: locked ? "Wallet locked" : "Wallet unlocked", walletLocked: locked });
+      res.json({ message: isLocked ? "Wallet locked" : "Wallet unlocked", walletLocked: isLocked });
     } catch (err) {
       console.error("Wallet lock error:", err);
       res.status(500).json({ message: "Failed to update wallet lock status" });

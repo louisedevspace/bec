@@ -39,3 +39,28 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_users_wallet_locked ON users(wallet_locked) WHERE wallet_locked = TRUE;
 CREATE INDEX IF NOT EXISTS idx_trades_deleted_for_user ON trades(deleted_for_user);
 CREATE INDEX IF NOT EXISTS idx_trades_user_deleted ON trades(user_id, deleted_for_user);
+
+-- 4. Ensure portfolios table has the UNIQUE constraint for upserts
+-- (The upsert in deposit approval uses onConflict: "user_id,symbol")
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'portfolios'
+    AND constraint_type = 'UNIQUE'
+  ) THEN
+    ALTER TABLE portfolios ADD CONSTRAINT portfolios_user_id_symbol_key UNIQUE (user_id, symbol);
+  END IF;
+END $$;
+
+-- 5. Ensure portfolios table exists (in case it was never created)
+CREATE TABLE IF NOT EXISTS portfolios (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  available DECIMAL(20,8) DEFAULT 0,
+  frozen DECIMAL(20,8) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, symbol)
+);
