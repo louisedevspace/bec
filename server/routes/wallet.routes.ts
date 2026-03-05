@@ -302,8 +302,8 @@ export default function registerWalletRoutes(app: Express) {
         totalPlatformValue: wallets.reduce((s: number, w: any) => s + w.totalValue, 0),
         totalPlatformDeposited: wallets.reduce((s: number, w: any) => s + w.totalDeposited, 0),
         totalPlatformWithdrawn: wallets.reduce((s: number, w: any) => s + w.totalWithdrawn, 0),
-        totalPlatformTradeVolume: wallets.reduce((s: number, w: any) => s + w.tradeEarnings, 0),
-        totalPlatformFuturesPnl: wallets.reduce((s: number, w: any) => s + w.futuresPnl, 0),
+        totalTradeEarnings: wallets.reduce((s: number, w: any) => s + w.tradeEarnings, 0),
+        totalFuturesPnl: wallets.reduce((s: number, w: any) => s + w.futuresPnl, 0),
         lockedWallets: wallets.filter((w: any) => w.walletLocked).length,
         activeWallets: wallets.filter((w: any) => w.totalValue > 0).length,
       };

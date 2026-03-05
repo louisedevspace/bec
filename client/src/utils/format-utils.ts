@@ -93,21 +93,25 @@ export function formatBalance(
 /**
  * Format a USD-denominated number for display (always 2dp, thousands separators).
  */
-export function formatUsdNumber(value: number): string {
-  if (Math.abs(value) < 0.01 && value !== 0) return value.toFixed(4);
-  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export function formatUsdNumber(value: number | undefined | null): string {
+  const num = typeof value === 'string' ? parseFloat(value as any) : (value ?? 0);
+  if (isNaN(num)) return '0.00';
+  if (Math.abs(num) < 0.01 && num !== 0) return num.toFixed(4);
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**
  * Format a crypto amount for display (adaptive decimal places).
  */
-export function formatCryptoNumber(value: number): string {
-  if (value === 0) return '0.00000000';
-  if (Math.abs(value) < 0.000001) return value.toFixed(8);
-  if (Math.abs(value) < 0.01) return value.toFixed(6);
-  if (Math.abs(value) < 1) return value.toFixed(4);
-  if (Math.abs(value) < 1000) return value.toFixed(2);
-  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export function formatCryptoNumber(value: number | undefined | null): string {
+  const num = typeof value === 'string' ? parseFloat(value as any) : (value ?? 0);
+  if (isNaN(num)) return '0.00000000';
+  if (num === 0) return '0.00000000';
+  if (Math.abs(num) < 0.000001) return num.toFixed(8);
+  if (Math.abs(num) < 0.01) return num.toFixed(6);
+  if (Math.abs(num) < 1) return num.toFixed(4);
+  if (Math.abs(num) < 1000) return num.toFixed(2);
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**
