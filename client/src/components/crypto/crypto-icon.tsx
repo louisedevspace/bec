@@ -1,50 +1,32 @@
 import { useState, useEffect, memo } from 'react';
 
-// ===== Hardcoded CoinGecko image URLs for all supported coins =====
-// Using /large/ variant for quality; browser will cache after first load
-const ICON_URLS: Record<string, string> = {
-  BTC: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-  ETH: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-  USDT: 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-  BNB: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
-  TRX: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png',
-  DOGE: 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
-  BCH: 'https://assets.coingecko.com/coins/images/780/large/bitcoin-cash.png',
-  DASH: 'https://assets.coingecko.com/coins/images/19/large/dash-logo.png',
-  DOT: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png',
-  LTC: 'https://assets.coingecko.com/coins/images/2/large/litecoin.png',
-  XRP: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
-  ADA: 'https://assets.coingecko.com/coins/images/975/large/cardano.png',
-  SOL: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
-  AVAX: 'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png',
-  MATIC: 'https://assets.coingecko.com/coins/images/4713/large/matic-token-icon.png',
-  SHIB: 'https://assets.coingecko.com/coins/images/11939/large/shiba.png',
-  LINK: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png',
-  XMR: 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png',
-  XLM: 'https://assets.coingecko.com/coins/images/100/large/Stellar_symbol_black_RGB.png',
-  ATOM: 'https://assets.coingecko.com/coins/images/1481/large/cosmos_hub.png',
-  FIL: 'https://assets.coingecko.com/coins/images/12817/large/filecoin.png',
-  APT: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png',
-  SUI: 'https://assets.coingecko.com/coins/images/26375/large/sui_asset.jpeg',
-  ARB: 'https://assets.coingecko.com/coins/images/16547/large/photo_2023-03-29_21.47.00.jpeg',
-  OP: 'https://assets.coingecko.com/coins/images/25244/large/Optimism.png',
-  PEPE: 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.jpeg',
-  INJ: 'https://assets.coingecko.com/coins/images/12882/large/Secondary_Symbol.png',
-  AAVE: 'https://assets.coingecko.com/coins/images/12645/large/AAVE.png',
-  ALGO: 'https://assets.coingecko.com/coins/images/4380/large/download.png',
-  ETC: 'https://assets.coingecko.com/coins/images/453/large/ethereum-classic-logo.png',
-  EOS: 'https://assets.coingecko.com/coins/images/738/large/eos-eos-logo.png',
-  THETA: 'https://assets.coingecko.com/coins/images/2538/large/theta-token-logo.png',
-  UNI: 'https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png',
-  VET: 'https://assets.coingecko.com/coins/images/116/large/VeChain-Logo-768x725.png',
-  XAU: 'https://assets.coingecko.com/coins/images/25263/large/xaut.png',
-  XAG: 'https://assets.coingecko.com/coins/images/30463/large/slvr.png',
+// ===== CoinCap CDN — reliable, simple pattern, no auth, no CORS issues =====
+// Pattern: https://assets.coincap.io/assets/icons/{symbol_lowercase}@2x.png
+// Covers all major crypto. XAU/XAG (commodities) use special handling.
+const COINCAP_URL = (sym: string) =>
+  `https://assets.coincap.io/assets/icons/${sym.toLowerCase()}@2x.png`;
+
+// Special-case overrides (commodities, rebranded tokens)
+const ICON_OVERRIDES: Record<string, string> = {
+  XAU: 'https://assets.coincap.io/assets/icons/xaut@2x.png', // Tether Gold icon for gold
+  // XAG has no CDN icon — uses fallback circle
 };
 
 // ===== Module-level caches (shared across all component instances) =====
 const imageCache = new Map<string, string>();   // symbol → verified URL
 const failedSet = new Set<string>();            // symbols that failed to load
 const pendingMap = new Map<string, Promise<string>>(); // in-flight loads
+
+/**
+ * Get the icon URL for a symbol, using overrides or the CoinCap CDN pattern.
+ */
+function getIconUrl(symbol: string): string | null {
+  const key = symbol.toUpperCase();
+  if (ICON_OVERRIDES[key]) return ICON_OVERRIDES[key];
+  // Skip known missing symbols (commodities without icons)
+  if (key === 'XAG') return null;
+  return COINCAP_URL(key);
+}
 
 /**
  * Preload an image for a symbol. Deduplicates concurrent requests.
@@ -57,7 +39,7 @@ function preloadImage(symbol: string): Promise<string> {
   if (failedSet.has(key)) return Promise.reject(new Error('failed'));
   if (pendingMap.has(key)) return pendingMap.get(key)!;
 
-  const url = ICON_URLS[key];
+  const url = getIconUrl(key);
   if (!url) {
     failedSet.add(key);
     return Promise.reject(new Error('no url'));
@@ -75,7 +57,9 @@ function preloadImage(symbol: string): Promise<string> {
       pendingMap.delete(key);
       reject(new Error('load error'));
     };
-    img.crossOrigin = 'anonymous';
+    // NOTE: Do NOT set img.crossOrigin — it forces a CORS preflight check
+    // which fails on CDNs that don't send Access-Control-Allow-Origin headers.
+    // <img> tags display fine without CORS for display-only use.
     img.src = url;
   });
 

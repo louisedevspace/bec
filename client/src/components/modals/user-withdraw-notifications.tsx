@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
 
@@ -130,6 +131,7 @@ export function UserWithdrawNotifications({ userId, onClose }: UserWithdrawNotif
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(request.status)}
+                    <CryptoIcon symbol={request.symbol} size="xs" />
                     <span className="font-medium">
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </span>
@@ -177,6 +179,7 @@ export function UserWithdrawNotifications({ userId, onClose }: UserWithdrawNotif
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(request.status)}
+                    <CryptoIcon symbol={request.symbol} size="xs" />
                     <span className="font-medium">
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </span>
@@ -207,6 +210,7 @@ export function UserWithdrawNotifications({ userId, onClose }: UserWithdrawNotif
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(request.status)}
+                    <CryptoIcon symbol={request.symbol} size="xs" />
                     <span className="font-medium">
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </span>

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditScoreBadge } from '@/components/ui/credit-score-badge';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 import { 
   Search, Edit, Save, X, User, Mail, Shield, CheckCircle, XCircle, 
   Trash2, History, Power, PowerOff, Eye, AlertTriangle, Settings
@@ -1047,7 +1048,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                                 key={position.id}
                                 className="border-t border-[#1e1e1e] hover:bg-[#151515] transition-colors duration-200"
                               >
-                                <td className="py-2 px-3 text-gray-100">{position.symbol}</td>
+                                <td className="py-2 px-3 text-gray-100"><span className="flex items-center gap-1.5"><CryptoIcon symbol={position.symbol} size="xs" />{position.symbol}</span></td>
                                 <td className="py-2 px-3 text-right text-gray-100">
                                   {parseFloat(position.amount || "0").toLocaleString()}
                                 </td>
@@ -1166,7 +1167,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                 {manageTransactionsData.map(t => (
                   <div key={`${t.type}-${t.id}`} className="grid grid-cols-5 items-center text-sm px-3 py-2 border-b border-[#1e1e1e]">
                     <div className="text-white">{t.type}</div>
-                    <div className="text-white">{t.symbol}</div>
+                    <div className="text-white flex items-center gap-1"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</div>
                     <div className="text-white">{Number(t.amount).toFixed(8)}</div>
                     <div className="text-white">{t.status}</div>
                     <div>

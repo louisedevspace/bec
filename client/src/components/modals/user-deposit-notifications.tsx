@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { X, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { buildApiUrl } from '@/lib/config';
@@ -161,7 +162,8 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
                         {new Date(request.reviewed_at || '').toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="font-medium">
+                    <p className="font-medium flex items-center gap-1.5">
+                      <CryptoIcon symbol={request.symbol} size="xs" />
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </p>
                   </div>
@@ -215,7 +217,8 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
                     {new Date(request.submitted_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="font-medium">
+                <p className="font-medium flex items-center gap-1.5">
+                  <CryptoIcon symbol={request.symbol} size="xs" />
                   {parseFloat(request.amount).toFixed(8)} {request.symbol}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -242,7 +245,8 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
                     {new Date(request.reviewed_at || '').toLocaleDateString()}
                   </span>
                 </div>
-                <p className="font-medium">
+                <p className="font-medium flex items-center gap-1.5">
+                  <CryptoIcon symbol={request.symbol} size="xs" />
                   {parseFloat(request.amount).toFixed(8)} {request.symbol}
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400 mt-1">

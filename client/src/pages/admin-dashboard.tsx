@@ -12,6 +12,7 @@ import {
   MessageSquare, FileCheck, Zap, Globe, ArrowRight, Bell
 } from "lucide-react";
 import { cryptoApi } from "@/services/crypto-api";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
 import type { Trade } from "@/types/crypto";
 import AdminLayout from './admin-layout';
@@ -421,6 +422,7 @@ export default function AdminDashboard() {
                   {order.side === "buy" || order.side === "long"
                     ? <TrendingUp size={14} className="text-green-400" />
                     : <TrendingDown size={14} className="text-red-400" />}
+                  <CryptoIcon symbol={order.symbol?.split('/')[0] || order.symbol} size="xs" />
                   <span className="font-semibold text-white">{order.symbol}</span>
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.side.toUpperCase()}</Badge>
                   <Badge className={`${getStatusColor(order.status)} text-[10px] px-1.5 py-0`}>

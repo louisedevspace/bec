@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { formatUsdNumber } from '@/utils/format-utils';
@@ -113,7 +114,7 @@ export function StickyTradeNotification({
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-600">Symbol</span>
-            <span className="text-sm font-medium text-gray-800">{symbol}</span>
+            <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><CryptoIcon symbol={symbol?.split('/')[0] || symbol} size="xs" />{symbol}</span>
           </div>
           
           <div className="flex items-center justify-between">

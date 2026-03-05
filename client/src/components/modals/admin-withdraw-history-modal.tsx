@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, History } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
 
@@ -148,6 +149,7 @@ export function AdminWithdrawHistoryModal({ isOpen, onClose }: AdminWithdrawHist
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     {getStatusBadge(request.status)}
+                    <CryptoIcon symbol={request.symbol} size="xs" />
                     <span className="font-medium text-white">
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </span>

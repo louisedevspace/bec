@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUserDataSync } from "@/hooks/use-data-sync";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { cryptoApi } from "@/services/crypto-api";
 import { formatCryptoNumber, formatPrice as formatPriceUtil } from "@/utils/format-utils";
 import type { Trade } from "@/types/crypto";
@@ -198,6 +199,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
+                    <CryptoIcon symbol={order.symbol?.split('/')[0] || order.symbol} size="xs" />
                     <span className="text-white font-medium text-sm">{order.symbol}</span>
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                       order.side === "buy" || order.side === "long"

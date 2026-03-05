@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -160,7 +161,8 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-white">
+                          <h3 className="font-semibold text-white flex items-center gap-1.5">
+                            <CryptoIcon symbol={request.symbol} size="xs" />
                             {parseFloat(request.amount).toFixed(8)} {request.symbol}
                           </h3>
                           {getStatusBadge(request.status)}
@@ -234,7 +236,8 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
           {selectedRequest && (
             <div className="space-y-4">
               <div className="bg-[#0a0a0a] p-4 rounded-lg border border-[#1e1e1e]">
-                <p className="text-base font-medium text-white mb-2">
+                <p className="text-base font-medium text-white mb-2 flex items-center gap-1.5">
+                  <CryptoIcon symbol={selectedRequest.symbol} size="xs" />
                   Amount: {parseFloat(selectedRequest.amount).toFixed(8)} {selectedRequest.symbol}
                 </p>
                 <p className="text-base text-gray-400">

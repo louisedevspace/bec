@@ -10,6 +10,7 @@ import {
   UserX, Clock, Activity, BarChart3, AlertTriangle, Globe, Wallet, ChevronsUpDown,
   SortAsc, SortDesc, X,
 } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Input } from "@/components/ui/input";
 
 const AdminChangePasswordModal = lazy(() =>
@@ -696,7 +697,7 @@ export default function AdminUsers() {
                               <div className="space-y-1">
                                 {user.portfolio.slice(0, 5).map((asset: any, index: number) => (
                                   <div key={index} className="flex justify-between text-[11px]">
-                                    <span className="font-semibold text-gray-300">{asset.symbol}</span>
+                                    <span className="font-semibold text-gray-300 flex items-center gap-1.5"><CryptoIcon symbol={asset.symbol} size="xs" />{asset.symbol}</span>
                                     <span className="text-gray-500">{formatGenericCryptoBalance(asset.available || '0', asset.symbol)}</span>
                                   </div>
                                 ))}

@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from './admin-layout';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 
 interface TradingPair {
   id: number;
@@ -537,6 +538,7 @@ export default function AdminTradingPairs() {
                       <tr key={pair.id} className={`border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${!pair.is_enabled ? 'opacity-50' : ''}`}>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
+                            <CryptoIcon symbol={pair.base_asset} size="xs" />
                             <span className="font-semibold text-white text-sm">{pair.base_asset}</span>
                             <span className="text-gray-600">/</span>
                             <span className="text-gray-400 text-sm">{pair.quote_asset}</span>
@@ -648,6 +650,7 @@ export default function AdminTradingPairs() {
                   <div key={pair.id} className={`p-4 ${!pair.is_enabled ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
+                        <CryptoIcon symbol={pair.base_asset} size="xs" />
                         <span className="font-bold text-white">{pair.base_asset}/{pair.quote_asset}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                           pair.pair_type === 'both' ? 'bg-purple-500/10 text-purple-400' :

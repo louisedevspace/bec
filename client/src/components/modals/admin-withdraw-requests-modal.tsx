@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
@@ -225,6 +226,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       {getStatusBadge(request.status)}
+                      <CryptoIcon symbol={request.symbol} size="xs" />
                       <span className="font-medium text-white">
                         {request.amount.toFixed(8)} {request.symbol}
                       </span>
@@ -301,7 +303,8 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
 
             <div className="space-y-4">
               <div className="bg-[#0a0a0a] p-4 rounded-lg border border-[#1e1e1e]">
-                <p className="text-base font-medium text-white mb-2">
+                <p className="text-base font-medium text-white mb-2 flex items-center gap-1.5">
+                  <CryptoIcon symbol={selectedRequest.symbol} size="xs" />
                   Amount: {selectedRequest.amount.toFixed(8)} {selectedRequest.symbol}
                 </p>
                 <p className="text-base text-gray-400">

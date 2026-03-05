@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { CheckCircle, XCircle, Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 
 interface FutureTrade {
   id: number;
@@ -300,6 +301,7 @@ export function AdminFuturesTradesModal({ isOpen, onClose }: AdminFuturesTradesM
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="flex items-center space-x-2">
+                              <CryptoIcon symbol={trade.symbol?.split('/')[0] || trade.symbol} size="xs" />
                               <span>{trade.symbol}</span>
                               {trade.side === 'long' ? (
                                 <TrendingUp className="w-4 h-4 text-green-500" />

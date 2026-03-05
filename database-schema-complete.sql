@@ -36,8 +36,12 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT,
   futures_min_amount DECIMAL(20,8) DEFAULT 50,      -- Per-user futures minimum trade amount
   futures_trade_result TEXT DEFAULT NULL,           -- NULL = use is_active logic, 'win', 'loss'
+  wallet_locked BOOLEAN DEFAULT FALSE,              -- Admin can lock user wallet
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index for quick lookup of locked wallets
+CREATE INDEX IF NOT EXISTS idx_users_wallet_locked ON users(wallet_locked) WHERE wallet_locked = TRUE;
 
 -- ----------------------------------------------------------
 -- 1.2 User Passwords (separate secure storage)

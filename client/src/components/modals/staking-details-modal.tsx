@@ -1,6 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Info, X, TrendingUp, Clock, DollarSign, Coins } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import type { StakingPosition } from "@/types/crypto";
 import { formatUsdNumber } from "@/utils/format-utils";
 
@@ -60,9 +61,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <TrendingUp size={18} className="text-white" />
-              </div>
+              <CryptoIcon symbol={position.symbol} size="lg" />
               <div>
                 <div className="text-lg font-bold text-white">{position.symbol}</div>
                 <div className="text-xs text-gray-500">Staking Asset</div>

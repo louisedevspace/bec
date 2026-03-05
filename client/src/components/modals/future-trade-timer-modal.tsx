@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
@@ -326,7 +327,8 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-sm mx-auto bg-[#111] border border-[#1e1e1e] text-white shadow-2xl p-0" hideCloseButton>
         <DialogHeader className="relative p-6 pb-4">
-          <DialogTitle className="text-center text-lg font-semibold text-white">
+          <DialogTitle className="text-center text-lg font-semibold text-white flex items-center justify-center gap-2">
+            <CryptoIcon symbol={tradeData.symbol?.split('/')[0] || tradeData.symbol} size="sm" />
             {tradeData.symbol}
           </DialogTitle>
           <button

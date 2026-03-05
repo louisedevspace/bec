@@ -490,7 +490,7 @@ function UserDetailView({
               renderRow={(t: any) => (
                 <tr key={t.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
                   <td className="py-2 px-3 text-xs text-gray-400">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
-                  <td className="py-2 px-3 text-xs text-white">{t.symbol}</td>
+                  <td className="py-2 px-3 text-xs text-white"><span className="flex items-center gap-1.5"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</span></td>
                   <td className="py-2 px-3"><span className={`text-xs font-medium ${t.side === 'buy' ? 'text-green-400' : 'text-red-400'}`}>{t.side?.toUpperCase()}</span></td>
                   <td className="py-2 px-3 text-xs text-white tabular-nums">{formatCryptoNumber(parseFloat(t.amount || "0"))}</td>
                   <td className="py-2 px-3 text-xs text-gray-400 tabular-nums">${formatUsdNumber(parseFloat(t.price || "0"))}</td>
@@ -509,7 +509,7 @@ function UserDetailView({
                 return (
                   <tr key={f.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
                     <td className="py-2 px-3 text-xs text-gray-400">{new Date(f.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
-                    <td className="py-2 px-3 text-xs text-white">{f.symbol}</td>
+                    <td className="py-2 px-3 text-xs text-white"><span className="flex items-center gap-1.5"><CryptoIcon symbol={f.symbol?.split('/')[0] || f.symbol} size="xs" />{f.symbol}</span></td>
                     <td className="py-2 px-3"><span className={`text-xs font-medium ${f.side === 'long' ? 'text-green-400' : 'text-red-400'}`}>{f.side?.toUpperCase()}</span></td>
                     <td className="py-2 px-3 text-xs text-white tabular-nums">{formatCryptoNumber(parseFloat(f.amount || "0"))}</td>
                     <td className="py-2 px-3 text-xs tabular-nums"><span className={result >= 0 ? 'text-green-400' : 'text-red-400'}>${formatUsdNumber(Math.abs(result))}</span></td>
