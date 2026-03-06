@@ -42,3 +42,6 @@ coverage/
 
 # Drizzle
 drizzle/
+
+# Browser debug files (HAR, etc.)
+browser files/

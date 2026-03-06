@@ -1581,15 +1581,15 @@ VALUES
   ('ETH', '0x000000000', 'ERC-20', true)
 ON CONFLICT (asset_symbol) DO NOTHING;
 
--- Sample welcome news
-INSERT INTO news (title, content, type, priority, created_by) VALUES
-(
+-- Sample welcome news (only insert if no news exists yet)
+INSERT INTO news (title, content, type, priority, created_by)
+SELECT
   'Welcome to Becxus Exchange!',
   'We are excited to have you join our platform. Explore our trading features and start your crypto journey today!',
   'announcement',
   'normal',
   (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
-) ON CONFLICT DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'Welcome to Becxus Exchange!');
 
 -- Sample broadcast notifications
 INSERT INTO broadcast_notifications (title, body, target_role, total_users, sent_count, failed_count, status, sent_at) VALUES
