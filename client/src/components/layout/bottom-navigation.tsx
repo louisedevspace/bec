@@ -10,6 +10,7 @@ const navItems = [
   { path: "/wallet", icon: Wallet, label: "Wallet" },
   { path: "/futures", icon: Zap, label: "Futures" },
   { path: "/support", icon: MessageSquare, label: "Support" },
+  { path: "/about", icon: Info, label: "About" },
   { path: "/profile", icon: User, label: "Profile" },
 ];
 
@@ -60,41 +61,42 @@ export function BottomNavigation() {
     checkAdminAccess();
   }, [checkAdminAccess]);
 
-  const gridCols = useMemo(() => isAdmin ? 'grid-cols-8' : 'grid-cols-7', [isAdmin]);
   const isAdminActive = useMemo(() => location.startsWith('/admin'), [location]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#1e1e1e] z-40 md:hidden">
-      <div className={`grid h-16 ${gridCols}`}>
-        {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive = location === path;
-          return (
-            <Link key={path} href={path} className={`flex flex-col items-center justify-center space-y-1 h-full transition-all duration-200 ${
-              isActive
+      <div className="h-16 overflow-x-auto scrollbar-hide flex items-center">
+        <div className="flex h-full min-w-max">
+          {navItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location === path;
+            return (
+              <Link key={path} href={path} className={`flex flex-col items-center justify-center space-y-1 h-full px-4 transition-all duration-200 ${
+                isActive
+                  ? "text-blue-500 scale-105"
+                  : "text-gray-500 hover:text-gray-400 scale-100"
+              }`}>
+                <Icon size={18} className={isActive ? "animate-pulse" : ""} />
+                <span className="text-xs font-medium">{label}</span>
+                {isActive && (
+                  <div className="absolute bottom-0 w-1 h-1 bg-blue-500 rounded-full" />
+                )}
+              </Link>
+            );
+          })}
+          {isAdmin && (
+            <Link href="/admin/dashboard" className={`flex flex-col items-center justify-center space-y-1 h-full px-4 transition-all duration-200 ${
+              isAdminActive
                 ? "text-blue-500 scale-105"
                 : "text-gray-500 hover:text-gray-400 scale-100"
             }`}>
-              <Icon size={18} className={isActive ? "animate-pulse" : ""} />
-              <span className="text-xs font-medium">{label}</span>
-              {isActive && (
+              <Settings size={18} className={isAdminActive ? "animate-pulse" : ""} />
+              <span className="text-xs font-medium">Admin</span>
+              {isAdminActive && (
                 <div className="absolute bottom-0 w-1 h-1 bg-blue-500 rounded-full" />
               )}
             </Link>
-          );
-        })}
-        {isAdmin && (
-          <Link href="/admin/dashboard" className={`flex flex-col items-center justify-center space-y-1 h-full transition-all duration-200 ${
-            isAdminActive
-              ? "text-blue-500 scale-105"
-              : "text-gray-500 hover:text-gray-400 scale-100"
-          }`}>
-            <Settings size={18} className={isAdminActive ? "animate-pulse" : ""} />
-            <span className="text-xs font-medium">Admin</span>
-            {isAdminActive && (
-              <div className="absolute bottom-0 w-1 h-1 bg-blue-500 rounded-full" />
-            )}
-          </Link>
-        )}
+          )}
+        </div>
       </div>
     </nav>
   );
