@@ -40,6 +40,29 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='display_id') THEN
+    ALTER TABLE users ADD COLUMN display_id TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='profile_picture') THEN
+    ALTER TABLE users ADD COLUMN profile_picture TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='phone') THEN
+    ALTER TABLE users ADD COLUMN phone TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='futures_min_amount') THEN
+    ALTER TABLE users ADD COLUMN futures_min_amount DECIMAL(20,8) DEFAULT 50;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='futures_trade_result') THEN
+    ALTER TABLE users ADD COLUMN futures_trade_result TEXT DEFAULT NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='wallet_locked') THEN
+    ALTER TABLE users ADD COLUMN wallet_locked BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
 -- Index for quick lookup of locked wallets
 CREATE INDEX IF NOT EXISTS idx_users_wallet_locked ON users(wallet_locked) WHERE wallet_locked = TRUE;
 
@@ -151,6 +174,18 @@ CREATE TABLE IF NOT EXISTS trades (
   rejection_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='deleted_for_user') THEN
+    ALTER TABLE trades ADD COLUMN deleted_for_user BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='rejection_reason') THEN
+    ALTER TABLE trades ADD COLUMN rejection_reason TEXT;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_trades_deleted_for_user ON trades(deleted_for_user);
 CREATE INDEX IF NOT EXISTS idx_trades_user_deleted ON trades(user_id, deleted_for_user);
 CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);
@@ -185,6 +220,23 @@ CREATE TABLE IF NOT EXISTS futures_trades (
   final_profit DECIMAL(20,8),
   trade_intervals JSONB
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='deleted_for_user') THEN
+    ALTER TABLE futures_trades ADD COLUMN deleted_for_user BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='final_result') THEN
+    ALTER TABLE futures_trades ADD COLUMN final_result TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='final_profit') THEN
+    ALTER TABLE futures_trades ADD COLUMN final_profit DECIMAL(20,8);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='trade_intervals') THEN
+    ALTER TABLE futures_trades ADD COLUMN trade_intervals JSONB;
+  END IF;
+END $$;
 
 -- Performance indexes for futures trades
 CREATE INDEX IF NOT EXISTS idx_futures_trades_user_id ON futures_trades(user_id);
@@ -235,6 +287,31 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   rejection_reason TEXT,
   loan_pay_date TIMESTAMPTZ
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'loan_applications' AND column_name = 'loan_status'
+  ) THEN
+    ALTER TABLE loan_applications ADD COLUMN loan_status TEXT DEFAULT 'pending';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'loan_applications' AND column_name = 'is_reminder_sent'
+  ) THEN
+    ALTER TABLE loan_applications ADD COLUMN is_reminder_sent BOOLEAN DEFAULT FALSE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'loan_applications' AND column_name = 'loan_pay_date'
+  ) THEN
+    ALTER TABLE loan_applications ADD COLUMN loan_pay_date TIMESTAMPTZ;
+  END IF;
+END $$;
 
 -- Performance indexes for loan applications
 CREATE INDEX IF NOT EXISTS idx_loan_applications_user_id ON loan_applications(user_id);
@@ -318,6 +395,21 @@ CREATE TABLE IF NOT EXISTS deposit_requests (
   reviewed_by TEXT,
   is_new BOOLEAN DEFAULT TRUE
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='require_reverification') THEN
+    ALTER TABLE deposit_requests ADD COLUMN require_reverification BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='hidden_for_user') THEN
+    ALTER TABLE deposit_requests ADD COLUMN hidden_for_user BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='is_new') THEN
+    ALTER TABLE deposit_requests ADD COLUMN is_new BOOLEAN DEFAULT TRUE;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_user ON deposit_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON deposit_requests(status);
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_is_new ON deposit_requests(is_new);
@@ -342,6 +434,24 @@ CREATE TABLE IF NOT EXISTS withdraw_requests (
   reviewed_by TEXT,
   is_new BOOLEAN DEFAULT TRUE
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='admin_screenshot_url') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN admin_screenshot_url TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='require_reverification') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN require_reverification BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='hidden_for_user') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN hidden_for_user BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='is_new') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN is_new BOOLEAN DEFAULT TRUE;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_withdraw_requests_user ON withdraw_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_withdraw_requests_status ON withdraw_requests(status);
 CREATE INDEX IF NOT EXISTS idx_withdraw_requests_is_new ON withdraw_requests(is_new);
@@ -362,6 +472,26 @@ CREATE TABLE IF NOT EXISTS support_conversations (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='support_conversations' AND column_name='subject') THEN
+    ALTER TABLE support_conversations ADD COLUMN subject TEXT NOT NULL DEFAULT '';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='support_conversations' AND column_name='priority') THEN
+    ALTER TABLE support_conversations ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='support_conversations' AND column_name='category') THEN
+    ALTER TABLE support_conversations ADD COLUMN category TEXT DEFAULT 'general';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='support_conversations' AND column_name='assigned_to') THEN
+    ALTER TABLE support_conversations ADD COLUMN assigned_to UUID;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='support_conversations' AND column_name='is_active') THEN
+    ALTER TABLE support_conversations ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+  END IF;
+END $$;
 
 -- Performance indexes for support conversations
 CREATE INDEX IF NOT EXISTS idx_support_conversations_user_id ON support_conversations(user_id);
