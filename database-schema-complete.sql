@@ -8,8 +8,8 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.2.0
--- Last Updated: 2026-03-05
+-- Version: 2.3.0
+-- Last Updated: 2025-06-14
 -- Compatible with: Supabase PostgreSQL 15+
 -- ============================================================
 
@@ -110,6 +110,9 @@ CREATE TABLE IF NOT EXISTS portfolios (
   UNIQUE(user_id, symbol)
 );
 
+-- Performance indexes for portfolios
+CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);
+
 -- ----------------------------------------------------------
 -- 1.5 Transactions
 -- ----------------------------------------------------------
@@ -125,6 +128,12 @@ CREATE TABLE IF NOT EXISTS transactions (
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Performance indexes for transactions
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_type ON transactions(user_id, type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
 
 -- ----------------------------------------------------------
 -- 1.6 Trades (spot)
@@ -144,6 +153,10 @@ CREATE TABLE IF NOT EXISTS trades (
 );
 CREATE INDEX IF NOT EXISTS idx_trades_deleted_for_user ON trades(deleted_for_user);
 CREATE INDEX IF NOT EXISTS idx_trades_user_deleted ON trades(user_id, deleted_for_user);
+CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);
+CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
+CREATE INDEX IF NOT EXISTS idx_trades_user_status ON trades(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades(created_at DESC);
 
 -- ----------------------------------------------------------
 -- 1.7 Futures Trades
@@ -173,6 +186,13 @@ CREATE TABLE IF NOT EXISTS futures_trades (
   trade_intervals JSONB
 );
 
+-- Performance indexes for futures trades
+CREATE INDEX IF NOT EXISTS idx_futures_trades_user_id ON futures_trades(user_id);
+CREATE INDEX IF NOT EXISTS idx_futures_trades_status ON futures_trades(status);
+CREATE INDEX IF NOT EXISTS idx_futures_trades_user_status ON futures_trades(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_futures_trades_expires_at ON futures_trades(expires_at) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_futures_trades_deleted ON futures_trades(user_id, deleted_for_user);
+
 -- ----------------------------------------------------------
 -- 1.8 Staking Positions
 -- ----------------------------------------------------------
@@ -187,6 +207,11 @@ CREATE TABLE IF NOT EXISTS staking_positions (
   end_date TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL                -- active, completed
 );
+
+-- Performance indexes for staking positions
+CREATE INDEX IF NOT EXISTS idx_staking_positions_user_id ON staking_positions(user_id);
+CREATE INDEX IF NOT EXISTS idx_staking_positions_status ON staking_positions(status);
+CREATE INDEX IF NOT EXISTS idx_staking_positions_end_date ON staking_positions(end_date) WHERE status = 'active';
 
 -- ----------------------------------------------------------
 -- 1.9 Loan Applications
@@ -210,6 +235,11 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   rejection_reason TEXT,
   loan_pay_date TIMESTAMPTZ
 );
+
+-- Performance indexes for loan applications
+CREATE INDEX IF NOT EXISTS idx_loan_applications_user_id ON loan_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_loan_applications_status ON loan_applications(status);
+CREATE INDEX IF NOT EXISTS idx_loan_applications_loan_status ON loan_applications(loan_status);
 
 -- ----------------------------------------------------------
 -- 1.10 Crypto Prices (public market data)
@@ -252,6 +282,10 @@ CREATE TABLE IF NOT EXISTS kyc_verifications (
   rejection_reason TEXT
 );
 
+-- Performance indexes for KYC verifications
+CREATE INDEX IF NOT EXISTS idx_kyc_verifications_user_id ON kyc_verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_kyc_verifications_status ON kyc_verifications(status);
+
 -- 1.12a KYC Documents (legacy/cleanup support)
 CREATE TABLE IF NOT EXISTS kyc_documents (
   id SERIAL PRIMARY KEY,
@@ -261,6 +295,9 @@ CREATE TABLE IF NOT EXISTS kyc_documents (
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Performance indexes for KYC documents
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON kyc_documents(user_id);
 
 -- ----------------------------------------------------------
 -- 1.13 Deposit Requests
@@ -326,6 +363,11 @@ CREATE TABLE IF NOT EXISTS support_conversations (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Performance indexes for support conversations
+CREATE INDEX IF NOT EXISTS idx_support_conversations_user_id ON support_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_conversations_status ON support_conversations(status);
+CREATE INDEX IF NOT EXISTS idx_support_conversations_last_message ON support_conversations(last_message_at DESC);
+
 -- Drop unique constraint if it exists (for migration from old schema)
 ALTER TABLE support_conversations DROP CONSTRAINT IF EXISTS support_conversations_user_id_key;
 
@@ -344,6 +386,10 @@ CREATE TABLE IF NOT EXISTS support_messages (
   read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Performance indexes for support messages
+CREATE INDEX IF NOT EXISTS idx_support_messages_conversation_id ON support_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_support_messages_created_at ON support_messages(conversation_id, created_at DESC);
 
 -- ----------------------------------------------------------
 -- 1.17 Audit Logs (Security & Compliance)
@@ -1484,8 +1530,8 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - withdraw-screenshots (private)
 --   - news-images (public)
 --
--- Version: 2.2.0
--- Last Updated: 2026-03-05
+-- Version: 2.3.0
+-- Last Updated: 2025-06-14
 -- Compatible with: Supabase PostgreSQL 15+
 -- 
 -- ************************************************************

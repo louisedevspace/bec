@@ -121,6 +121,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.use(["/api/future-trade/submit", "/api/future-trade/complete"], tradeLimiter);
 
+  // Withdrawal rate limiter — 10 requests per 15 minutes
+  const withdrawLimiter = rateLimit({
+    windowMs: 15 * 60_000,
+    max: 10,
+    message: { message: "Too many withdrawal requests. Please try again later." },
+  });
+  app.use("/api/withdraw-requests", withdrawLimiter);
+
+  // Conversion rate limiter — 20 requests per minute
+  const convertLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 20,
+    message: { message: "Too many conversion requests. Please slow down." },
+  });
+  app.use("/api/convert", convertLimiter);
+
   app.use("/api/coingecko/*", async (req, res) => {
     try {
       const targetUrl = `https://api.coingecko.com/api/v3${req.url.replace("/api/coingecko", "")}`;

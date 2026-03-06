@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes/index";
 import { setupVite, serveStatic, log } from "./vite";
 import LiveCryptoService from "./services/live-crypto-service";
@@ -65,6 +66,17 @@ app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Gzip/deflate compression — reduces response sizes by ~70%
+app.use(compression({
+  level: 6,           // balanced speed vs compression
+  threshold: 1024,    // only compress responses > 1 KB
+  filter: (req, res) => {
+    // Don't compress WebSocket upgrade requests or SSE streams
+    if (req.headers['upgrade']) return false;
+    return compression.filter(req, res);
+  },
+}));
 
 // Server-side HTTPS redirect in production (when behind a reverse proxy that sets X-Forwarded-Proto)
 if (process.env.NODE_ENV === 'production') {
