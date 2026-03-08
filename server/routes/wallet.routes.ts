@@ -15,15 +15,27 @@ export default function registerWalletRoutes(app: Express) {
     try {
       const userId = (req as any).user.id;
 
-      // Fetch portfolio, transactions, prices in parallel
-      const [portfolioRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, stakingRes, pricesRes] = await Promise.all([
+      // Fetch data in parallel: aggregate queries (no limit, filtered) + transaction list queries (limited)
+      const [
+        portfolioRes, pricesRes, stakingRes,
+        // Aggregate queries — ALL matching records for accurate totals
+        allApprovedDepositsRes, allApprovedWithdrawalsRes, allCompletedTradesRes, allCompletedFuturesRes,
+        // Transaction list queries — limited for display
+        recentDepositsRes, recentWithdrawalsRes, recentTradesRes, recentFuturesRes,
+      ] = await Promise.all([
         supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
+        supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
+        supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
+        // Aggregates: only columns needed for math, status-filtered, no limit
+        supabaseAdmin.from("deposit_requests").select("symbol, amount").eq("user_id", userId).eq("status", "approved"),
+        supabaseAdmin.from("withdraw_requests").select("symbol, amount").eq("user_id", userId).eq("status", "approved"),
+        supabaseAdmin.from("trades").select("side, amount, price").eq("user_id", userId).in("status", ["completed", "approved"]),
+        supabaseAdmin.from("futures_trades").select("final_result").eq("user_id", userId).in("status", ["completed", "closed"]),
+        // Transaction list: full columns, limited for display
         supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
         supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
         supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
         supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
-        supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
       ]);
 
       if (portfolioRes.error) {
@@ -31,12 +43,18 @@ export default function registerWalletRoutes(app: Express) {
       }
 
       const portfolio = portfolioRes.data || [];
-      const deposits = depositsRes.data || [];
-      const withdrawals = withdrawalsRes.data || [];
-      const trades = tradesRes.data || [];
-      const futures = futuresRes.data || [];
-      const staking = stakingRes.data || [];
       const prices = pricesRes.data || [];
+      const staking = stakingRes.data || [];
+      // Aggregate data (all matching records)
+      const allApprovedDeposits = allApprovedDepositsRes.data || [];
+      const allApprovedWithdrawals = allApprovedWithdrawalsRes.data || [];
+      const allCompletedTrades = allCompletedTradesRes.data || [];
+      const allCompletedFutures = allCompletedFuturesRes.data || [];
+      // Recent transactions for display
+      const deposits = recentDepositsRes.data || [];
+      const withdrawals = recentWithdrawalsRes.data || [];
+      const trades = recentTradesRes.data || [];
+      const futures = recentFuturesRes.data || [];
 
       // Build price map
       const priceMap: Record<string, number> = {};
@@ -66,36 +84,32 @@ export default function registerWalletRoutes(app: Express) {
         };
       });
 
-      // Calculate total deposits (approved only)
-      const totalDeposited = deposits
-        .filter((d: any) => d.status === "approved")
+      // Calculate total deposits (all approved — from aggregate query)
+      const totalDeposited = allApprovedDeposits
         .reduce((sum: number, d: any) => {
           const sym = (d.symbol || "USDT").toUpperCase();
           const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
           return sum + parseFloat(d.amount || "0") * price;
         }, 0);
 
-      // Calculate total withdrawals (approved only)
-      const totalWithdrawn = withdrawals
-        .filter((w: any) => w.status === "approved")
+      // Calculate total withdrawals (all approved — from aggregate query)
+      const totalWithdrawn = allApprovedWithdrawals
         .reduce((sum: number, w: any) => {
           const sym = (w.symbol || "USDT").toUpperCase();
           const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
           return sum + parseFloat(w.amount || "0") * price;
         }, 0);
 
-      // Calculate trade P&L (approximate)
-      const tradePnl = trades
-        .filter((t: any) => t.status === "completed" || t.status === "approved")
+      // Calculate trade P&L (all completed/approved — from aggregate query)
+      const tradePnl = allCompletedTrades
         .reduce((sum: number, t: any) => {
           const amt = parseFloat(t.amount || "0");
           const price = parseFloat(t.price || "0");
           return sum + (t.side === "sell" ? amt * price : -(amt * price));
         }, 0);
 
-      // Calculate futures P&L
-      const futuresPnl = futures
-        .filter((f: any) => f.status === "completed" || f.status === "closed")
+      // Calculate futures P&L (all completed/closed — from aggregate query)
+      const futuresPnl = allCompletedFutures
         .reduce((sum: number, f: any) => sum + parseFloat(f.final_result || "0"), 0);
 
       // Build unified transaction history
