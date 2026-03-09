@@ -11,7 +11,7 @@ import { PortfolioModal } from "@/components/modals/portfolio-modal";
 import {
   Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
   RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
-  BarChart3, History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
+  History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, CreditCard, Snowflake
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -185,14 +185,6 @@ export default function WalletPage() {
               <span className={`text-sm font-medium ${wallet.estimatedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {wallet.estimatedPnl >= 0 ? '+' : ''}{hideBalances ? '••••' : `$${formatUsdNumber(Math.abs(wallet.estimatedPnl))}`}
               </span>
-            </div>
-
-            {/* Mini Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatBox icon={ArrowDownLeft} label="Deposited" value={bal(wallet.totalDeposited)} color="text-green-400" />
-              <StatBox icon={ArrowUpRight} label="Withdrawn" value={bal(wallet.totalWithdrawn)} color="text-red-400" />
-              <StatBox icon={BarChart3} label="Trade P&L" value={bal(wallet.tradePnl)} color={wallet.tradePnl >= 0 ? "text-green-400" : "text-red-400"} />
-              <StatBox icon={Zap} label="Futures P&L" value={bal(wallet.futuresPnl)} color={wallet.futuresPnl >= 0 ? "text-green-400" : "text-red-400"} />
             </div>
 
             {/* Quick Actions */}
@@ -499,18 +491,6 @@ export default function WalletPage() {
         isOpen={activeModal === "portfolio"}
         onClose={() => setActiveModal(null)}
       />
-    </div>
-  );
-}
-
-function StatBox({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
-  return (
-    <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon size={12} className={color} />
-        <span className="text-[10px] text-gray-500">{label}</span>
-      </div>
-      <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
     </div>
   );
 }
