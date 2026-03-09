@@ -232,9 +232,10 @@ export default function AdminNews() {
       });
     } catch (error) {
       console.error('Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
       toast({
         title: "Error",
-        description: "Failed to upload image. Ensure the 'news-images' bucket exists in Supabase Storage.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
