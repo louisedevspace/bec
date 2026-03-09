@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoApi } from "@/services/crypto-api";
-import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles, AlertTriangle } from "lucide-react";
 import type { StakingPosition } from "@/types/crypto";
 import { StakingDetailsModal } from "./staking-details-modal";
 import { formatUsdNumber } from "@/utils/format-utils";
@@ -42,6 +43,22 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
   
   const usdtBalance = portfolio?.find(p => p.symbol === 'USDT')?.available || '0';
 
+  // Fetch user staking limits
+  const { data: stakingLimits } = useQuery<{
+    isEnabled: boolean;
+    maxStakeAmount: string | null;
+    maxTotalStaked: string | null;
+    maxDuration: number | null;
+    minStakeAmount: string | null;
+  }>({
+    queryKey: ["/api/staking/my-limits"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/staking/my-limits");
+      return res.json();
+    },
+    enabled: isOpen && !!userId,
+  });
+
   const stakingProducts: StakingProduct[] = [
     { duration: 7, apy: "0.5", minAmount: "10", maxAmount: "10000", title: "7 Days" },
     { duration: 15, apy: "0.8", minAmount: "100", maxAmount: "50000", title: "15 Days" },
@@ -66,8 +83,18 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
       setSelectedProduct(null);
       setStakeAmount("");
     },
-    onError: () => {
-      toast({ title: "Staking Failed", description: "Failed to stake USDT. Please try again.", variant: "destructive" });
+    onError: (error: any) => {
+      const msg = error?.message || "Failed to stake USDT. Please try again.";
+      // Parse error message from server (format: "400: {\"message\":\"...\"}") 
+      let description = msg;
+      try {
+        const match = msg.match(/\d+:\s*(.+)/);
+        if (match) {
+          const parsed = JSON.parse(match[1]);
+          description = parsed.message || msg;
+        }
+      } catch { /* use raw message */ }
+      toast({ title: "Staking Failed", description, variant: "destructive" });
     },
   });
 
@@ -80,15 +107,32 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
       toast({ title: "Invalid Input", description: "Please enter a valid amount.", variant: "destructive" });
       return;
     }
+
+    // Check if staking is disabled for this user
+    if (stakingLimits && !stakingLimits.isEnabled) {
+      toast({ title: "Staking Disabled", description: "Staking is currently disabled for your account. Contact support for details.", variant: "destructive" });
+      return;
+    }
+
     const amount = parseFloat(stakeAmount);
     const minAmount = parseFloat(selectedProduct.minAmount);
     const maxAmount = parseFloat(selectedProduct.maxAmount);
     const availableBalance = parseFloat(usdtBalance);
 
-    if (amount < minAmount || amount > maxAmount) {
-      toast({ title: "Invalid Amount", description: `Amount must be between $${formatUsdNumber(minAmount)} and $${formatUsdNumber(maxAmount)}.`, variant: "destructive" });
+    // Apply user-specific limits if set
+    const effectiveMin = stakingLimits?.minStakeAmount ? Math.max(minAmount, parseFloat(stakingLimits.minStakeAmount)) : minAmount;
+    const effectiveMax = stakingLimits?.maxStakeAmount ? Math.min(maxAmount, parseFloat(stakingLimits.maxStakeAmount)) : maxAmount;
+
+    if (amount < effectiveMin || amount > effectiveMax) {
+      toast({ title: "Invalid Amount", description: `Amount must be between $${formatUsdNumber(effectiveMin)} and $${formatUsdNumber(effectiveMax)}.`, variant: "destructive" });
       return;
     }
+
+    if (stakingLimits?.maxDuration && selectedProduct.duration > stakingLimits.maxDuration) {
+      toast({ title: "Duration Exceeds Limit", description: `Maximum staking duration is ${stakingLimits.maxDuration} days.`, variant: "destructive" });
+      return;
+    }
+
     if (amount > availableBalance) {
       toast({ title: "Insufficient Balance", description: `You only have ${formatUsdNumber(availableBalance)} USDT available.`, variant: "destructive" });
       return;
@@ -130,6 +174,30 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
         {/* Content with padding to account for fixed header */}
         <div className="pt-20 p-4 sm:p-6 space-y-6">
+          {/* Staking disabled warning */}
+          {stakingLimits && !stakingLimits.isEnabled && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-400">Staking Disabled</p>
+                <p className="text-xs text-red-400/70 mt-0.5">Staking is currently disabled for your account. Please contact support for more details.</p>
+              </div>
+            </div>
+          )}
+
+          {/* User-specific limit info */}
+          {stakingLimits && stakingLimits.isEnabled && (stakingLimits.maxStakeAmount || stakingLimits.maxTotalStaked || stakingLimits.maxDuration) && (
+            <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex items-start gap-2">
+              <Info size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-yellow-400/80">
+                Your account has custom staking limits:
+                {stakingLimits.maxStakeAmount && ` Max per stake: $${parseFloat(stakingLimits.maxStakeAmount).toLocaleString()}`}
+                {stakingLimits.maxTotalStaked && ` • Max total: $${parseFloat(stakingLimits.maxTotalStaked).toLocaleString()}`}
+                {stakingLimits.maxDuration && ` • Max duration: ${stakingLimits.maxDuration} days`}
+              </p>
+            </div>
+          )}
+
           {!selectedProduct ? (
             <>
               {/* Balance Card */}
@@ -162,11 +230,16 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                   Choose Your Staking Plan
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {stakingProducts.map((product, index) => (
+                  {stakingProducts.map((product, index) => {
+                    const stakingDisabled = stakingLimits && !stakingLimits.isEnabled;
+                    const durationExceeded = stakingLimits?.maxDuration ? product.duration > stakingLimits.maxDuration : false;
+                    const isProductDisabled = !userId || stakingDisabled || durationExceeded;
+
+                    return (
                     <div 
                       key={index}
-                      className={`relative bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${!userId ? 'opacity-50 pointer-events-none' : ''}`}
-                      onClick={() => userId && handleStake(product)}
+                      className={`relative bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${isProductDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                      onClick={() => !isProductDisabled && handleStake(product)}
                     >
                       {product.apy === "4.0" && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-[10px] font-bold px-2 py-0.5 rounded-full text-black">
@@ -188,10 +261,11 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                         </div>
                       </div>
                       <button className="w-full mt-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors">
-                        Stake Now
+                        {durationExceeded ? 'Exceeds Limit' : 'Stake Now'}
                       </button>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
 

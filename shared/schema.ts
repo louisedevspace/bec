@@ -101,6 +101,21 @@ export const stakingPositions = pgTable("staking_positions", {
   status: text("status").notNull(), // active, completed
 });
 
+// User Staking Limits — per-user overrides for staking amounts & durations
+export const userStakingLimits = pgTable("user_staking_limits", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),           // specific user ID
+  maxStakeAmount: decimal("max_stake_amount", { precision: 20, scale: 8 }), // max single stake
+  maxTotalStaked: decimal("max_total_staked", { precision: 20, scale: 8 }), // max total active staked
+  maxDuration: integer("max_duration"),        // max staking duration in days
+  minStakeAmount: decimal("min_stake_amount", { precision: 20, scale: 8 }), // min single stake
+  isEnabled: boolean("is_enabled").notNull().default(true), // allow/block staking for this user
+  notes: text("notes"),                        // admin notes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),               // admin user ID
+});
+
 export const loanApplications = pgTable("loan_applications", {
   id: serial("id").primaryKey(),
   user_id: text("user_id").notNull(),
@@ -232,6 +247,13 @@ export const insertStakingPositionSchema = z.object({
   userId: undefined, // Add this so the server can override it
 }));
 
+export const insertUserStakingLimitSchema = createInsertSchema(userStakingLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  updatedBy: true,
+});
+
 export const insertTradingPairSchema = createInsertSchema(tradingPairs).omit({
   id: true,
   createdAt: true,
@@ -302,6 +324,9 @@ export type InsertTradingPair = z.infer<typeof insertTradingPairSchema>;
 
 export type UserTradingLimit = typeof userTradingLimits.$inferSelect;
 export type InsertUserTradingLimit = z.infer<typeof insertUserTradingLimitSchema>;
+
+export type UserStakingLimit = typeof userStakingLimits.$inferSelect;
+export type InsertUserStakingLimit = z.infer<typeof insertUserStakingLimitSchema>;
 
 export const withdrawRequests = pgTable("withdraw_requests", {
   id: serial("id").primaryKey(),

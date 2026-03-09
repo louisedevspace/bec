@@ -4,7 +4,7 @@ import { Link, useLocation } from 'wouter';
 import { 
   Menu, X, LayoutDashboard, Users, MessageSquare, Settings, 
   ChevronRight, LogOut, Shield, BarChart3, Megaphone, TrendingUp, Wallet,
-  Bell, Check, CheckCheck, ExternalLink
+  Bell, Check, CheckCheck, ExternalLink, Coins
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
@@ -39,6 +39,7 @@ const navItems = [
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
   { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },
+  { label: 'Staking', href: '/admin/staking', icon: Coins, description: 'Staking Management' },
   { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeKey: 'wallets' },
   { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeKey: 'support' },
   { label: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform Config' },

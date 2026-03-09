@@ -33,6 +33,7 @@ import registerStreamlinedNotificationsRoutes from "./streamlined-notifications-
 import registerTradingPairsRoutes from "./trading-pairs.routes";
 import registerWalletRoutes from "./wallet.routes";
 import registerAdminNotificationRoutes from "./admin-notifications.routes";
+import registerAdminStakingRoutes from "./admin-staking.routes";
 
 // Broadcast price updates to all connected WebSocket clients
 function broadcastPriceUpdate(priceData: any) {
@@ -237,6 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTradingPairsRoutes(app);
   registerWalletRoutes(app);
   registerAdminNotificationRoutes(app);
+  registerAdminStakingRoutes(app);
 
   // Live price updates every 30 seconds
   setInterval(async () => {

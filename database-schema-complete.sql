@@ -266,6 +266,26 @@ CREATE INDEX IF NOT EXISTS idx_staking_positions_status ON staking_positions(sta
 CREATE INDEX IF NOT EXISTS idx_staking_positions_end_date ON staking_positions(end_date) WHERE status = 'active';
 
 -- ----------------------------------------------------------
+-- 1.8a User Staking Limits
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_staking_limits (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  max_stake_amount DECIMAL(20,8),        -- max single stake amount
+  max_total_staked DECIMAL(20,8),        -- max total active staked amount
+  max_duration INTEGER,                   -- max staking duration in days
+  min_stake_amount DECIMAL(20,8),        -- min single stake amount
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE, -- allow/block staking for this user
+  notes TEXT,                             -- admin notes
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT                         -- admin user ID who last updated
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_staking_limits_user ON user_staking_limits(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_staking_limits_enabled ON user_staking_limits(is_enabled);
+
+-- ----------------------------------------------------------
 -- 1.9 Loan Applications
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS loan_applications (
@@ -1037,6 +1057,30 @@ CREATE POLICY "staking_positions_update_policy" ON staking_positions FOR UPDATE 
 CREATE POLICY "staking_positions_delete_policy" ON staking_positions FOR DELETE USING (
   auth.uid() = user_id::uuid
   OR public.is_admin()
+);
+
+-- ----------------------------------------------------------
+-- 4.7a User Staking Limits
+-- ----------------------------------------------------------
+ALTER TABLE user_staking_limits ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "user_staking_limits_select_policy" ON user_staking_limits;
+DROP POLICY IF EXISTS "user_staking_limits_insert_policy" ON user_staking_limits;
+DROP POLICY IF EXISTS "user_staking_limits_update_policy" ON user_staking_limits;
+DROP POLICY IF EXISTS "user_staking_limits_delete_policy" ON user_staking_limits;
+
+CREATE POLICY "user_staking_limits_select_policy" ON user_staking_limits FOR SELECT USING (
+  auth.uid() = user_id::uuid
+  OR public.is_admin()
+);
+CREATE POLICY "user_staking_limits_insert_policy" ON user_staking_limits FOR INSERT WITH CHECK (
+  public.is_admin()
+);
+CREATE POLICY "user_staking_limits_update_policy" ON user_staking_limits FOR UPDATE USING (
+  public.is_admin()
+);
+CREATE POLICY "user_staking_limits_delete_policy" ON user_staking_limits FOR DELETE USING (
+  public.is_admin()
 );
 
 -- ----------------------------------------------------------
