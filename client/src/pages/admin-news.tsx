@@ -37,6 +37,37 @@ interface News {
   updated_at: string;
 }
 
+async function fileToInlineImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxWidth = 1600;
+        const scale = image.width > maxWidth ? maxWidth / image.width : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Unable to process image'));
+          return;
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const quality = outputType === 'image/png' ? undefined : 0.82;
+        resolve(canvas.toDataURL(outputType, quality));
+      };
+      image.onerror = () => reject(new Error('Unable to read image file'));
+      image.src = typeof reader.result === 'string' ? reader.result : '';
+    };
+    reader.onerror = () => reject(new Error('Unable to read image file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AdminNews() {
   const [newsList, setNewsList] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,6 +234,10 @@ export default function AdminNews() {
 
     setUploadingImage(true);
     try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select a valid image file');
+      }
+
       const { data: authData } = await supabase.auth.getSession();
       const accessToken = authData?.session?.access_token;
       if (!accessToken) {
@@ -232,14 +267,28 @@ export default function AdminNews() {
       });
     } catch (error) {
       console.error('Error uploading image:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      try {
+        const inlineImage = await fileToInlineImage(file);
+        setFormData(prev => ({ ...prev, image_url: inlineImage }));
+        toast({
+          title: "Success",
+          description: "Image attached locally because server upload failed"
+        });
+      } catch (inlineError) {
+        const errorMessage = inlineError instanceof Error
+          ? inlineError.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to upload image';
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setUploadingImage(false);
+      event.target.value = '';
     }
   };
 
