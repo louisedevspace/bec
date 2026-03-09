@@ -58,6 +58,15 @@ async function saveNewsImageLocally(file: Express.Multer.File, fileName: string)
   };
 }
 
+function createInlineNewsImage(file: Express.Multer.File, fileName: string) {
+  const base64 = file.buffer.toString('base64');
+  return {
+    publicUrl: `data:${file.mimetype};base64,${base64}`,
+    path: `inline/${fileName}`,
+    storage: 'inline' as const,
+  };
+}
+
 // Upload news image (admin only)
 router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), async (req, res) => {
   try {
@@ -89,8 +98,13 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
       return res.json({ publicUrl: data.publicUrl, path: filePath, storage: 'supabase' });
     } catch (storageError) {
       console.error('Supabase news image upload failed, using local fallback:', storageError);
-      const localUpload = await saveNewsImageLocally(file, fileName);
-      return res.json(localUpload);
+      try {
+        const localUpload = await saveNewsImageLocally(file, fileName);
+        return res.json(localUpload);
+      } catch (localError) {
+        console.error('Local news image save failed, using inline fallback:', localError);
+        return res.json(createInlineNewsImage(file, fileName));
+      }
     }
   } catch (error) {
     console.error('Error uploading news image:', error);
