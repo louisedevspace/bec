@@ -504,8 +504,12 @@ export default function registerAdminRoutes(app: Express) {
         supabaseAdmin.from("futures_trades").select("id", { count: "exact", head: true }).eq("status", "pending_approval"),
         supabaseAdmin.from("loan_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabaseAdmin.from("kyc_verifications").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabaseAdmin.from("support_conversations").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+        supabaseAdmin.from("support_messages").select("conversation_id").eq("sender_type", "user").eq("is_read", false),
       ]);
+
+      const unreadSupportConversationCount = new Set(
+        (supportRes.data || []).map((message: any) => message.conversation_id)
+      ).size;
 
       res.json({
         deposits: depositsRes.count ?? 0,
@@ -514,7 +518,7 @@ export default function registerAdminRoutes(app: Express) {
         futures: futuresRes.count ?? 0,
         loans: loansRes.count ?? 0,
         kyc: kycRes.count ?? 0,
-        support: supportRes.count ?? 0,
+        support: unreadSupportConversationCount,
       });
     } catch (error: any) {
       console.error("Pending counts error:", error);

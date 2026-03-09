@@ -192,19 +192,38 @@ export default function AdminSupportPage() {
   // ─── Mark messages as read (bulk) ───────────────────────────
   useEffect(() => {
     if (!selectedConversation || selectedConversation.unreadCount === 0) return;
+    let cancelled = false;
+
     const markRead = async () => {
       try {
         const headers = await authHeaders();
-        await fetch(`/api/admin/support/conversations/${selectedConversation.id}/bulk-read`, { method: "PUT", headers });
+        const conversationId = selectedConversation.id;
+        const unreadCount = selectedConversation.unreadCount;
+        const res = await fetch(`/api/admin/support/conversations/${conversationId}/bulk-read`, { method: "PUT", headers });
+        if (!res.ok || cancelled) return;
+
         // Update cache
         queryClient.setQueryData(["/api/admin/support/conversations"], (old: any) =>
-          old?.map((c: any) => c.id === selectedConversation.id ? { ...c, support_messages: c.support_messages.map((m: any) => m.sender_type === "user" ? { ...m, is_read: true } : m), unreadCount: 0 } : c)
+          old?.map((c: any) => c.id === conversationId ? { ...c, support_messages: c.support_messages.map((m: any) => m.sender_type === "user" ? { ...m, is_read: true } : m), unreadCount: 0 } : c)
         );
+        queryClient.setQueryData(["/api/admin/support/stats"], (old: AdminStats | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            unreadMessages: Math.max(0, old.unreadMessages - unreadCount),
+          };
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-counts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/support/stats"] });
         setSelectedConversation(prev => prev ? { ...prev, unreadCount: 0, support_messages: prev.support_messages.map(m => m.sender_type === "user" ? { ...m, is_read: true } : m) } : null);
       } catch {}
     };
+
     markRead();
-  }, [selectedConversation?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedConversation?.id, selectedConversation?.unreadCount, queryClient]);
 
   // Keep selectedConversation in sync with refetched data
   useEffect(() => {
@@ -450,7 +469,7 @@ export default function AdminSupportPage() {
                                 <StatusIcon className={`h-3 w-3 ${sc.color} flex-shrink-0`} />
                                 <h4 className="text-sm font-medium text-white truncate flex-1">{conv.users.full_name}</h4>
                                 {conv.unreadCount > 0 && (
-                                  <Badge className="bg-red-500 text-white text-[9px] px-1.5 py-0 h-4 rounded-full">{conv.unreadCount}</Badge>
+                                  <Badge className="bg-red-500 text-white text-[9px] px-1.5 py-0 h-4 rounded-full">{conv.unreadCount} new</Badge>
                                 )}
                               </div>
                               <p className="text-xs text-gray-400 truncate mb-1">{conv.subject}</p>
@@ -462,9 +481,12 @@ export default function AdminSupportPage() {
                                 <span className="text-[10px] text-gray-600 ml-auto">{formatTime(conv.last_message_at)}</span>
                               </div>
                               {lastMsg && (
-                                <p className="text-[11px] text-gray-500 truncate mt-1">
+                                <p className={`text-[11px] truncate mt-1 ${conv.unreadCount > 0 ? "text-red-300" : "text-gray-500"}`}>
                                   {lastMsg.sender_type === "admin" ? "You: " : ""}{lastMsg.message.substring(0, 60)}
                                 </p>
+                              )}
+                              {conv.unreadCount > 0 && (
+                                <p className="text-[10px] text-red-400 mt-1">Unread user messages in this chat</p>
                               )}
                             </div>
                           </div>

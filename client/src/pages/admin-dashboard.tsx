@@ -55,6 +55,15 @@ interface DashboardStats {
   recentActivity: Array<{ type: string; description: string; time: string; status: string }>;
 }
 
+interface SupportConversationPreview {
+  id: number;
+  subject: string;
+  unreadCount: number;
+  users: {
+    full_name: string;
+  };
+}
+
 interface AnalyticsData {
   depositDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
   withdrawalDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
@@ -225,6 +234,43 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { counts: pendingCounts } = useAdminPendingCounts(15000);
+
+  const { data: unreadSupportChats = [] } = useQuery<SupportConversationPreview[]>({
+    queryKey: ["/api/admin/support/conversations", "dashboard-unread-preview"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return [];
+
+      const res = await fetch('/api/admin/support/conversations', {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch support conversations');
+      }
+
+      const data = await res.json();
+      return data
+        .map((conversation: any) => ({
+          id: conversation.id,
+          subject: conversation.subject,
+          users: {
+            full_name: conversation.users?.full_name || 'Unknown User',
+          },
+          unreadCount: conversation.support_messages?.filter((message: any) => !message.is_read && message.sender_type === 'user').length || 0,
+        }))
+        .filter((conversation: SupportConversationPreview) => conversation.unreadCount > 0);
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+
+  const unreadSupportPreview = unreadSupportChats.slice(0, 2)
+    .map((conversation) => `${conversation.users.full_name} (#${conversation.id})`)
+    .join(', ');
+  const unreadSupportSummary = unreadSupportChats.length > 0
+    ? `${unreadSupportChats.length} unread chat${unreadSupportChats.length === 1 ? '' : 's'}${unreadSupportPreview ? `: ${unreadSupportPreview}${unreadSupportChats.length > 2 ? ', …' : ''}` : ''}`
+    : `${stats?.support.open || 0} open, ${stats?.support.inProgress || 0} active`;
 
   // Badge counts for each dashboard tab
   const tabBadges: Record<string, number> = {
@@ -589,8 +635,17 @@ export default function AdminDashboard() {
         {stats && (
           <>
             {/* Alert Banners */}
-            {(stats.support.urgent > 0 || stats.financial.pendingDeposits > 0 || stats.financial.pendingWithdrawals > 0 || stats.trading.pendingTrades > 0) && (
+            {(unreadSupportChats.length > 0 || stats.support.urgent > 0 || stats.financial.pendingDeposits > 0 || stats.financial.pendingWithdrawals > 0 || stats.trading.pendingTrades > 0) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {unreadSupportChats.length > 0 && (
+                  <button onClick={() => setLocation('/admin/support')} className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 hover:bg-purple-500/15 transition-colors text-left">
+                    <MessageSquare size={18} className="text-purple-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-purple-400">{unreadSupportChats.length} Unread Support Chat{unreadSupportChats.length === 1 ? '' : 's'}</p>
+                      <p className="text-[10px] text-purple-400/70 truncate">{unreadSupportPreview}{unreadSupportChats.length > 2 ? ', …' : ''}</p>
+                    </div>
+                  </button>
+                )}
                 {stats.support.urgent > 0 && (
                   <a href="/admin/support" className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 hover:bg-red-500/15 transition-colors">
                     <AlertTriangle size={18} className="text-red-400 flex-shrink-0" />
@@ -651,7 +706,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('pending-orders')} />
               <StatCard icon={<MessageSquare size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
                 label="Support" value={String(stats.support.open + stats.support.inProgress)}
-                sub={`${stats.support.open} open, ${stats.support.inProgress} active`} pendingBadge={pendingCounts.support}
+                sub={unreadSupportSummary} pendingBadge={pendingCounts.support}
                 onClick={() => setLocation('/admin/support')} />
               <StatCard icon={<FileCheck size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
                 label="KYC Pending" value={String(stats.kyc.pending)}
@@ -831,6 +886,22 @@ export default function AdminDashboard() {
                         colorClasses={{ bg: 'bg-blue-500/10', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400' }} />
                       <QuickActionLink href="/admin/support" icon={<MessageSquare size={16} />} label="Support Tickets" count={pendingCounts.support}
                         colorClasses={{ bg: 'bg-amber-500/10', text: 'text-amber-400', badge: 'bg-red-500/20 text-red-400' }} />
+                      {unreadSupportChats.length > 0 && (
+                        <div className="px-3 py-2 rounded-xl bg-[#0a0a0a] border border-purple-500/20">
+                          <p className="text-[10px] font-semibold text-purple-400 mb-1">Unread support chats</p>
+                          <div className="space-y-1">
+                            {unreadSupportChats.slice(0, 3).map((conversation) => (
+                              <button
+                                key={conversation.id}
+                                onClick={() => setLocation('/admin/support')}
+                                className="w-full text-left text-[11px] text-gray-300 hover:text-white transition-colors truncate"
+                              >
+                                {conversation.users.full_name} · #{conversation.id} · {conversation.unreadCount} new
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <QuickActionLink href="/admin/analytics" icon={<BarChart3 size={16} />} label="Full Analytics"
                         colorClasses={{ bg: 'bg-purple-500/10', text: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-400' }} />
                       <QuickActionLink href="/admin/news" icon={<Globe size={16} />} label="News & Broadcasts"
