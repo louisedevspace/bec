@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
+import fs from 'fs/promises';
+import path from 'path';
 import { supabaseAdmin } from '../routes/middleware';
 import { requireAdmin, requireAuth } from '../routes/middleware';
 import type { Express } from 'express';
@@ -42,6 +44,20 @@ async function ensureNewsImagesBucket() {
   }
 }
 
+async function saveNewsImageLocally(file: Express.Multer.File, fileName: string) {
+  const uploadsDir = path.resolve(process.cwd(), 'uploads', 'news-images');
+  await fs.mkdir(uploadsDir, { recursive: true });
+
+  const localPath = path.join(uploadsDir, fileName);
+  await fs.writeFile(localPath, file.buffer);
+
+  return {
+    publicUrl: `/uploads/news-images/${fileName}`,
+    path: `news-images/${fileName}`,
+    storage: 'local' as const,
+  };
+}
+
 // Upload news image (admin only)
 router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), async (req, res) => {
   try {
@@ -54,23 +70,28 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
     const fileName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
     const filePath = `uploads/${fileName}`;
 
-    await ensureNewsImagesBucket();
+    try {
+      await ensureNewsImagesBucket();
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('news-images')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        cacheControl: '3600',
-        upsert: false,
-      });
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('news-images')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          cacheControl: '3600',
+          upsert: false,
+        });
 
-    if (uploadError) {
-      console.error('Supabase news image upload failed:', uploadError);
-      return res.status(500).json({ error: uploadError.message });
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const { data } = supabaseAdmin.storage.from('news-images').getPublicUrl(filePath);
+      return res.json({ publicUrl: data.publicUrl, path: filePath, storage: 'supabase' });
+    } catch (storageError) {
+      console.error('Supabase news image upload failed, using local fallback:', storageError);
+      const localUpload = await saveNewsImageLocally(file, fileName);
+      return res.json(localUpload);
     }
-
-    const { data } = supabaseAdmin.storage.from('news-images').getPublicUrl(filePath);
-    return res.json({ publicUrl: data.publicUrl, path: filePath });
   } catch (error) {
     console.error('Error uploading news image:', error);
     return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to upload image' });

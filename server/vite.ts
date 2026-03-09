@@ -22,6 +22,7 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   // Serve critical public assets before Vite middlewares to avoid "*" fallback returning HTML
   const publicDir = path.resolve(import.meta.dirname, "..", "client", "public");
+  const uploadsDir = path.resolve(import.meta.dirname, "..", "uploads");
   app.get("/icons/icon-192.png", (_req, res) => {
     res.type("image/png").sendFile(path.join(publicDir, "icons", "icon-192.png"));
   });
@@ -38,6 +39,7 @@ export async function setupVite(app: Express, server: Server) {
   app.get("/offline.html", (_req, res) => {
     res.type("text/html").sendFile(path.join(publicDir, "offline.html"));
   });
+  app.use("/uploads", express.static(uploadsDir));
 
   const serverOptions = {
     middlewareMode: true,
@@ -88,6 +90,7 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
+  const uploadsDir = path.resolve(import.meta.dirname, "..", "uploads");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -96,6 +99,7 @@ export function serveStatic(app: Express) {
   }
 
   app.use(express.static(distPath));
+  app.use("/uploads", express.static(uploadsDir));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {

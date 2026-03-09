@@ -7,6 +7,9 @@ let serviceWorkerError: string | null = null;
 // Capture the beforeinstallprompt event as early as possible
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
+    if (window.location.pathname.startsWith('/admin')) {
+      return;
+    }
     e.preventDefault();
     deferredInstallPrompt = e;
     installPromptListeners.forEach(listener => listener(e));
