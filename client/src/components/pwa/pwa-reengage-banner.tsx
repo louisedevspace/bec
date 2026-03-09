@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/logo";
 import { trackClientMetric } from "@/lib/perf";
+import { clearInstallPrompt, getInstallPrompt, onInstallPromptChange } from "@/sw-register";
 
 function isInstalledNow() {
   const standalone = window.matchMedia("(display-mode: standalone)").matches;
@@ -18,7 +19,7 @@ function getVariant() {
 }
 
 export function PwaReengageBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => getInstallPrompt());
   const [visible, setVisible] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -27,11 +28,10 @@ export function PwaReengageBanner() {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const onBIP = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setCanInstall(true);
-    };
+    const unsubscribe = onInstallPromptChange((prompt) => {
+      setDeferredPrompt(prompt);
+      setCanInstall(!!prompt);
+    });
     const onInstalled = () => {
       try {
         localStorage.setItem("pwa_installed_at", String(Date.now()));
@@ -40,11 +40,11 @@ export function PwaReengageBanner() {
       setVisible(false);
       setDeferredPrompt(null);
       setCanInstall(false);
+      clearInstallPrompt();
     };
-    window.addEventListener("beforeinstallprompt", onBIP);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBIP);
+      unsubscribe();
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
@@ -108,6 +108,7 @@ export function PwaReengageBanner() {
     trackClientMetric("pwa_reengage_install_initiated", Math.max(0, now - startedAt));
     setVisible(false);
     setDeferredPrompt(null);
+    clearInstallPrompt();
   };
 
   const onDismiss = () => {

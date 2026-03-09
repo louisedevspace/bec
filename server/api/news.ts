@@ -11,7 +11,36 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024,
   },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(new Error('Only image uploads are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
 });
+
+async function ensureNewsImagesBucket() {
+  const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+  if (listError) {
+    throw new Error(`Unable to verify storage buckets: ${listError.message}`);
+  }
+
+  const existingBucket = buckets?.find((bucket) => bucket.name === 'news-images' || bucket.id === 'news-images');
+  if (existingBucket) {
+    return;
+  }
+
+  const { error: createError } = await supabaseAdmin.storage.createBucket('news-images', {
+    public: true,
+    fileSizeLimit: 5 * 1024 * 1024,
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/svg+xml'],
+  });
+
+  if (createError && !/already exists/i.test(createError.message)) {
+    throw new Error(`Failed to create news-images bucket: ${createError.message}`);
+  }
+}
 
 // Upload news image (admin only)
 router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), async (req, res) => {
@@ -25,6 +54,8 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
     const fileName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
     const filePath = `uploads/${fileName}`;
 
+    await ensureNewsImagesBucket();
+
     const { error: uploadError } = await supabaseAdmin.storage
       .from('news-images')
       .upload(filePath, file.buffer, {
@@ -34,14 +65,15 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
       });
 
     if (uploadError) {
-      return res.status(400).json({ error: uploadError.message });
+      console.error('Supabase news image upload failed:', uploadError);
+      return res.status(500).json({ error: uploadError.message });
     }
 
     const { data } = supabaseAdmin.storage.from('news-images').getPublicUrl(filePath);
     return res.json({ publicUrl: data.publicUrl, path: filePath });
   } catch (error) {
     console.error('Error uploading news image:', error);
-    return res.status(500).json({ error: 'Failed to upload image' });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to upload image' });
   }
 });
 

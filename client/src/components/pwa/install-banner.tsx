@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { config } from "@/lib/config";
 import { Logo } from "@/components/brand/logo";
 import { trackClientMetric } from "@/lib/perf";
+import { clearInstallPrompt, getInstallPrompt, onInstallPromptChange } from "@/sw-register";
 
 export function InstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => getInstallPrompt());
   const [visible, setVisible] = useState(false);
   const shownAtRef = useRef<number>(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -18,12 +19,13 @@ export function InstallBanner() {
       setVisible(false);
       return;
     }
-    const onBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setVisible(true);
-      shownAtRef.current = typeof performance !== "undefined" ? performance.now() : Date.now();
-    };
+    const unsubscribe = onInstallPromptChange((prompt) => {
+      setDeferredPrompt(prompt);
+      setVisible(!!prompt);
+      if (prompt) {
+        shownAtRef.current = typeof performance !== "undefined" ? performance.now() : Date.now();
+      }
+    });
     const onAppInstalled = () => {
       try {
         localStorage.setItem("pwa_installed_at", String(Date.now()));
@@ -31,11 +33,11 @@ export function InstallBanner() {
       } catch {}
       setVisible(false);
       setDeferredPrompt(null);
+      clearInstallPrompt();
     };
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      unsubscribe();
       window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, []);
@@ -66,6 +68,7 @@ export function InstallBanner() {
     trackClientMetric("pwa_install_initiated", Math.max(0, now - startedAt));
     setDeferredPrompt(null);
     setVisible(false);
+    clearInstallPrompt();
   };
 
   const onDismiss = () => {
