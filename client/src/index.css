@@ -410,6 +410,80 @@ html:not(.dark) [class*="bg-destructive"] > .text-white {
 /* ---- Placeholder overrides ---- */
 html:not(.dark) .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
 html:not(.dark) .placeholder-gray-600::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder\:text-gray-500::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder\:text-gray-600::placeholder { color: #94a3b8 !important; }
+
+/* ---- Gradient overrides (from-[#…] / to-[#…]) ---- */
+html:not(.dark) .from-\[\#111\]     { --tw-gradient-from: #ffffff !important; }
+html:not(.dark) .from-\[\#0a0a0a\]  { --tw-gradient-from: #f8fafc !important; }
+html:not(.dark) .from-\[\#0f0f0f\]  { --tw-gradient-from: #f1f5f9 !important; }
+html:not(.dark) .from-\[\#1e1e1e\]  { --tw-gradient-from: #e2e8f0 !important; }
+html:not(.dark) .to-\[\#0a0a0a\]    { --tw-gradient-to: #f8fafc !important; }
+html:not(.dark) .to-\[\#0f0f0f\]    { --tw-gradient-to: #f1f5f9 !important; }
+html:not(.dark) .to-\[\#111\]       { --tw-gradient-to: #ffffff !important; }
+
+/* ---- Additional hover overrides ---- */
+html:not(.dark) .hover\:bg-\[\#111\]:hover     { background-color: #f1f5f9 !important; }
+html:not(.dark) .hover\:bg-\[\#1a1a1a\]\/50:hover { background-color: rgba(226,232,240,0.5) !important; }
+
+/* ---- Additional border overrides ---- */
+html:not(.dark) .border-\[\#252525\]   { border-color: #cbd5e1 !important; }
+html:not(.dark) .border-\[\#1a1a1a\]   { border-color: #e2e8f0 !important; }
+
+/* Focus border */
+html:not(.dark) .focus\:border-\[\#2a2a2a\]:focus { border-color: #94a3b8 !important; }
+
+/* ---- Divide color overrides ---- */
+html:not(.dark) .divide-\[\#1e1e1e\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* ---- Data-state overrides (tab triggers, etc.) ---- */
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:bg-\[\#2a2a2a\] {
+  background-color: #e2e8f0 !important;
+}
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:text-white {
+  color: #0f172a !important;
+}
+
+/* ---- Shadow overrides ---- */
+html:not(.dark) .shadow-black\/40 { --tw-shadow-color: rgba(148,163,184,0.15) !important; }
+html:not(.dark) .shadow-black\/50 { --tw-shadow-color: rgba(148,163,184,0.2) !important; }
+html:not(.dark) .shadow-2xl        { box-shadow: 0 25px 50px -12px rgba(100,116,139,0.15) !important; }
+
+/* ---- Ring overrides ---- */
+html:not(.dark) .ring-white\/10     { --tw-ring-color: rgba(15,23,42,0.06) !important; }
+
+/* ---- UI component overrides (select, dropdown, menubar) ---- */
+html:not(.dark) .text-gray-100     { color: #1e293b !important; }
+html:not(.dark) .hover\:bg-\[\#1E3A8A\]:hover  { background-color: #dbeafe !important; }
+html:not(.dark) .focus\:bg-\[\#1E3A8A\]:focus   { background-color: #dbeafe !important; }
+html:not(.dark) .hover\:bg-\[\#1E3A8A\]:hover,
+html:not(.dark) .focus\:bg-\[\#1E3A8A\]:focus {
+  color: #1e40af !important;
+}
+
+/* ---- Order-book: allow dark text on faint colored rows in light mode ---- */
+html:not(.dark) .bg-red-500\/10 > .text-white,
+html:not(.dark) .bg-green-500\/10 > .text-white,
+html:not(.dark) .hover\:bg-red-500\/20:hover > .text-white,
+html:not(.dark) .hover\:bg-green-500\/20:hover > .text-white {
+  color: #334155 !important;
+}
+
+/* ---- Loading screen gradient fix ---- */
+html:not(.dark) .bg-gradient-to-br.from-\[\#1e1e1e\].to-\[\#0a0a0a\] {
+  background: linear-gradient(to bottom right, #e2e8f0, #f8fafc) !important;
+}
+
+/* ---- Bottom navigation ---- */
+html:not(.dark) nav.bg-\[\#0a0a0a\] {
+  background-color: #ffffff !important;
+  border-top-color: #e2e8f0 !important;
+}
+
+/* ---- Fix text-gray-600 in light mode (ensure it's readable not too light) ---- */
+/* Already handled above, but for gray text on light backgrounds ensure contrast */
 
 /* ---- Scrollbar overrides ---- */
 html:not(.dark) ::-webkit-scrollbar-thumb {
