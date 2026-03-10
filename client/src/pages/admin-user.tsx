@@ -311,65 +311,65 @@ export default function AdminUsers() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto space-y-5">
         {/* ---- Header ---- */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">User Management</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">User Management</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               {stats.total} total users &middot; {stats.newToday > 0 && <span className="text-green-400">{stats.newToday} new today</span>}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={() => setViewMode(v => v === 'cards' ? 'compact' : 'cards')}
-              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
+              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
               title={viewMode === 'cards' ? 'Switch to compact view' : 'Switch to card view'}
             >
-              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
               {viewMode === 'cards' ? 'Compact' : 'Cards'}
             </button>
             <button
               onClick={() => setShowPasswords(!showPasswords)}
-              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
+              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              {showPasswords ? <EyeOff className="h-3.5 w-3.5 mr-1.5" /> : <Eye className="h-3.5 w-3.5 mr-1.5" />}
+              {showPasswords ? <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" /> : <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />}
               {showPasswords ? 'Hide' : 'Show'} Auth
             </button>
             <button
               onClick={handleExportCSV}
-              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-8 px-3 transition-colors"
+              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              <Download className="h-3.5 w-3.5 mr-1.5" />Export
+              <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Export
             </button>
-            <Button onClick={fetchUsers} size="sm" className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 h-8">
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh
+            <Button onClick={fetchUsers} size="sm" className="rounded-xl text-[11px] sm:text-xs bg-blue-600 hover:bg-blue-700 h-7 sm:h-8">
+              <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Refresh
             </Button>
           </div>
         </div>
 
         {/* ---- Action Buttons Grid ---- */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
           {[
-            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
-            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
-            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Deposit History', color: 'orange', badge: 0 },
-            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-4 w-4" />, label: 'Withdraw History', color: 'purple', badge: 0 },
-            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-4 w-4" />, label: 'KYC Mgmt', color: 'indigo', badge: pendingCounts.kyc },
-            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-4 w-4" />, label: 'Loan Mgmt', color: 'teal', badge: pendingCounts.loans },
+            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
+            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
+            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit History', color: 'orange', badge: 0 },
+            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw History', color: 'purple', badge: 0 },
+            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'KYC Mgmt', color: 'indigo', badge: pendingCounts.kyc },
+            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Loan Mgmt', color: 'teal', badge: pendingCounts.loans },
           ].map((btn, i) => (
             <button
               key={i}
               onClick={btn.onClick}
-              className={`group relative flex flex-col items-center gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
+              className={`group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
             >
-              <div className={`relative w-9 h-9 bg-${btn.color}-500/10 rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
+              <div className={`relative w-7 h-7 sm:w-9 sm:h-9 bg-${btn.color}-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
                 {btn.icon}
                 {btn.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                     {btn.badge > 99 ? '99+' : btn.badge}
                   </span>
                 )}
               </div>
-              <span className={`text-[11px] font-medium text-gray-400 group-hover:text-${btn.color}-400 transition-colors text-center leading-tight`}>
+              <span className={`text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-${btn.color}-400 transition-colors text-center leading-tight`}>
                 {btn.label}
               </span>
             </button>
@@ -402,12 +402,12 @@ export default function AdminUsers() {
           </div>
 
           {/* Search + Sort + Page Size */}
-          <div className="p-4 border-b border-[#1e1e1e]">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
+          <div className="p-3 sm:p-4 border-b border-[#1e1e1e]">
+            <div className="flex flex-col gap-3">
+              <div className="relative w-full sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <Input
-                  placeholder="Search by name, email, username, ID, phone..."
+                  placeholder="Search name, email, ID, phone..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-9 pr-8 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-sm h-9 text-white placeholder:text-gray-600 focus:border-blue-500"
@@ -418,15 +418,15 @@ export default function AdminUsers() {
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {/* Sort selector */}
-                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
-                  <span className="text-[10px] text-gray-500 px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
+                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
+                  <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
                   {sortOptions.map(opt => (
                     <button
                       key={opt.field}
                       onClick={() => handleToggleSort(opt.field)}
-                      className={`text-[11px] px-2 py-1.5 transition-colors flex items-center gap-1
+                      className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors flex items-center gap-0.5 sm:gap-1 whitespace-nowrap
                         ${sortField === opt.field
                           ? 'bg-blue-500/10 text-blue-400 font-semibold'
                           : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
@@ -439,13 +439,13 @@ export default function AdminUsers() {
                   ))}
                 </div>
                 {/* Page size */}
-                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
-                  <span className="text-[10px] text-gray-500 px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
+                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
+                  <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <button
                       key={size}
                       onClick={() => setPageSize(size)}
-                      className={`text-[11px] px-2 py-1.5 transition-colors
+                      className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors whitespace-nowrap
                         ${pageSize === size ? 'bg-blue-500/10 text-blue-400 font-semibold' : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
                     >
                       {size}
@@ -453,7 +453,7 @@ export default function AdminUsers() {
                   ))}
                 </div>
                 {/* Result count */}
-                <span className="text-[11px] text-gray-500 flex-shrink-0">
+                <span className="text-[10px] sm:text-[11px] text-gray-500 flex-shrink-0">
                   {filteredUsers.length} result{filteredUsers.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -556,82 +556,82 @@ export default function AdminUsers() {
               /* ===== CARD VIEW ===== */
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
                 {paginatedUsers.map(user => (
-                  <div key={user.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-2xl p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div key={user.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
                       {/* Left Column - User Info */}
                       <div>
                         {/* User Header */}
-                        <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
                           <div className="relative flex-shrink-0">
                             <div
-                              className={`w-11 h-11 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-[#111] ${user.profile_picture ? 'cursor-pointer hover:ring-blue-500/50' : ''}`}
+                              className={`w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg sm:rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-[#111] ${user.profile_picture ? 'cursor-pointer hover:ring-blue-500/50' : ''}`}
                               onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                             >
                               {user.profile_picture
                                 ? <img src={user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
-                                : <User className="h-5 w-5 text-blue-400" />}
+                                : <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />}
                             </div>
                             {user.is_active !== false && (
-                              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full ring-2 ring-[#111]" />
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 rounded-full ring-2 ring-[#111]" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-white text-sm truncate">{user.full_name || user.email}</h3>
-                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{user.full_name || user.email}</h3>
+                            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap mt-0.5">
                               {getStatusBadge(user)}
-                              <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-md">
+                              <span className="text-[10px] sm:text-xs font-mono text-blue-400 bg-blue-500/10 px-1 sm:px-1.5 py-0.5 rounded-md truncate max-w-[120px] sm:max-w-none">
                                 @{user.username || user.email?.split('@')[0] || 'unknown'}
                               </span>
-                              <span className="text-[10px] text-gray-500">#{user.display_id || user.id.substring(0, 8)}</span>
+                              <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline">#{user.display_id || user.id.substring(0, 8)}</span>
                             </div>
                           </div>
                           {/* Role Badge */}
                           {user.role === 'admin' && (
-                            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] flex-shrink-0">
-                              <Shield size={10} className="mr-1" />Admin
+                            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] sm:text-[10px] flex-shrink-0">
+                              <Shield size={10} className="mr-0.5 sm:mr-1" />Admin
                             </Badge>
                           )}
                         </div>
 
                         {/* Contact Info */}
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex items-center gap-2 text-gray-400">
-                            <Mail className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                        <div className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-xs">
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
                             <span className="truncate">{user.email}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-400">
-                            <Calendar className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                            <span>Joined {formatDate(user.created_at)}</span>
-                            <span className="text-gray-600 text-[10px]">({timeAgo(user.created_at)})</span>
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="truncate">Joined {formatDate(user.created_at)}</span>
+                            <span className="text-gray-600 text-[9px] sm:text-[10px] hidden sm:inline">({timeAgo(user.created_at)})</span>
                           </div>
                           {user.last_sign_in_at && (
-                            <div className="flex items-center gap-2 text-gray-400">
-                              <Activity className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                              <span>Last login {timeAgo(user.last_sign_in_at)}</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                              <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                              <span className="truncate">Last login {timeAgo(user.last_sign_in_at)}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-gray-400">
-                            <Phone className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
                             <span>{user.phone || 'No phone'}</span>
                           </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-wrap gap-2 mt-4">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                           <button onClick={() => handleChangePassword(user)}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-8 px-3 transition-colors">
+                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
                             <Key className="h-3 w-3" />Password
                           </button>
                           <button onClick={() => handleOpenManagement(user)}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-8 px-3 transition-colors">
+                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
                             <Settings className="h-3 w-3" />Manage
                           </button>
                           <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-8 px-3 transition-colors">
+                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
                             <TrendingUp className="h-3 w-3" />Futures
                           </button>
                           <button onClick={() => copyToClipboard(user.id)}
-                            className="inline-flex items-center gap-1 rounded-xl text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-8 px-2.5 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
                             title="Copy User ID">
                             {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                           </button>
@@ -641,25 +641,25 @@ export default function AdminUsers() {
                       {/* Right Column - Portfolio & Status */}
                       <div className="space-y-3">
                         {/* Portfolio Card */}
-                        <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-3">
-                          <div className="flex items-center gap-2 mb-2.5">
+                        <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 sm:p-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center">
                               <Coins className="h-3 w-3 text-blue-400" />
                             </div>
-                            <span className="text-xs font-semibold text-gray-300">Portfolio & Trading</span>
+                            <span className="text-[11px] sm:text-xs font-semibold text-gray-300">Portfolio & Trading</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
-                              <p className="text-base font-bold text-white">{user.assets_count || 0}</p>
-                              <p className="text-[10px] text-gray-500">Assets</p>
+                          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-sm sm:text-base font-bold text-white">{user.assets_count || 0}</p>
+                              <p className="text-[9px] sm:text-[10px] text-gray-500">Assets</p>
                             </div>
-                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
-                              <p className="text-base font-bold text-white">{formatCurrency(user.total_portfolio_value || 0)}</p>
-                              <p className="text-[10px] text-gray-500">Value</p>
+                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-[11px] sm:text-base font-bold text-white truncate">{formatCurrency(user.total_portfolio_value || 0)}</p>
+                              <p className="text-[9px] sm:text-[10px] text-gray-500">Value</p>
                             </div>
-                            <div className="bg-[#0a0a0a] rounded-lg p-2 text-center">
-                              <p className="text-base font-bold text-white">{user.trade_count || 0}</p>
-                              <p className="text-[10px] text-gray-500">Trades</p>
+                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-sm sm:text-base font-bold text-white">{user.trade_count || 0}</p>
+                              <p className="text-[9px] sm:text-[10px] text-gray-500">Trades</p>
                             </div>
                           </div>
                           {user.portfolio && user.portfolio.length > 0 && (
@@ -680,26 +680,26 @@ export default function AdminUsers() {
                         </div>
 
                         {/* Status Grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">Email</p>
-                            <Badge variant={user.email_confirmed_at ? "default" : "outline"} className={`text-[10px] px-1.5 py-0 ${user.email_confirmed_at ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Email</p>
+                            <Badge variant={user.email_confirmed_at ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.email_confirmed_at ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                               {user.email_confirmed_at ? 'Confirmed' : 'Pending'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">KYC</p>
-                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[10px] px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : user.kyc_status === 'rejected' ? 'text-red-400 bg-red-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">KYC</p>
+                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : user.kyc_status === 'rejected' ? 'text-red-400 bg-red-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                               {user.kyc_status === 'approved' ? 'Approved' : user.kyc_status === 'pending' ? 'Pending' : user.kyc_status === 'rejected' ? 'Rejected' : 'None'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">Loans</p>
-                            <span className="text-sm font-semibold text-white">{user.active_loans_count || 0}</span>
+                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Loans</p>
+                            <span className="text-xs sm:text-sm font-semibold text-white">{user.active_loans_count || 0}</span>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">Staking</p>
-                            <span className="text-sm font-semibold text-white">{user.active_staking_count || 0}</span>
+                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Staking</p>
+                            <span className="text-xs sm:text-sm font-semibold text-white">{user.active_staking_count || 0}</span>
                           </div>
                         </div>
 
@@ -754,25 +754,28 @@ export default function AdminUsers() {
 
           {/* ---- Pagination ---- */}
           {filteredUsers.length > 0 && (
-            <div className="p-4 border-t border-[#1e1e1e] flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-[11px] text-gray-500">
+            <div className="p-3 sm:p-4 border-t border-[#1e1e1e] flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
+              <p className="text-[10px] sm:text-[11px] text-gray-500">
                 Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
               </p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage <= 1}
-                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={14} />
-                  <ChevronLeft size={14} className="-ml-2" />
+                  <ChevronLeft size={12} className="sm:hidden" />
+                  <ChevronLeft size={14} className="hidden sm:block" />
+                  <ChevronLeft size={12} className="-ml-1.5 sm:hidden" />
+                  <ChevronLeft size={14} className="-ml-2 hidden sm:block" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage <= 1}
-                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={12} className="sm:hidden" />
+                  <ChevronLeft size={14} className="hidden sm:block" />
                 </button>
                 {/* Page numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -790,7 +793,7 @@ export default function AdminUsers() {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 rounded-lg text-[11px] font-medium transition-colors
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] sm:text-[11px] font-medium transition-colors
                         ${currentPage === pageNum
                           ? 'bg-blue-600 text-white border border-blue-500'
                           : 'bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 hover:text-white hover:border-[#2a2a2a]'}`}
@@ -802,17 +805,20 @@ export default function AdminUsers() {
                 <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
-                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={12} className="sm:hidden" />
+                  <ChevronRight size={14} className="hidden sm:block" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage >= totalPages}
-                  className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={14} />
-                  <ChevronRight size={14} className="-ml-2" />
+                  <ChevronRight size={12} className="sm:hidden" />
+                  <ChevronRight size={14} className="hidden sm:block" />
+                  <ChevronRight size={12} className="-ml-1.5 sm:hidden" />
+                  <ChevronRight size={14} className="-ml-2 hidden sm:block" />
                 </button>
               </div>
             </div>

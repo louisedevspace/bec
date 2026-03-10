@@ -422,8 +422,13 @@ html:not(.dark) .to-\[\#0a0a0a\]    { --tw-gradient-to: #f8fafc !important; }
 html:not(.dark) .to-\[\#0f0f0f\]    { --tw-gradient-to: #f1f5f9 !important; }
 html:not(.dark) .to-\[\#111\]       { --tw-gradient-to: #ffffff !important; }
 
+/* ---- Additional background overrides ---- */
+html:not(.dark) .bg-\[\#0d0d0d\]   { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#141414\]   { background-color: #f1f5f9 !important; }
+
 /* ---- Additional hover overrides ---- */
 html:not(.dark) .hover\:bg-\[\#111\]:hover     { background-color: #f1f5f9 !important; }
+html:not(.dark) .hover\:bg-\[\#0d0d0d\]:hover   { background-color: #e2e8f0 !important; }
 html:not(.dark) .hover\:bg-\[\#1a1a1a\]\/50:hover { background-color: rgba(226,232,240,0.5) !important; }
 
 /* ---- Additional border overrides ---- */
@@ -437,6 +442,12 @@ html:not(.dark) .focus\:border-\[\#2a2a2a\]:focus { border-color: #94a3b8 !impor
 html:not(.dark) .divide-\[\#1e1e1e\] > :not([hidden]) ~ :not([hidden]) {
   border-color: #e2e8f0 !important;
 }
+html:not(.dark) .divide-\[\#141414\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* ---- Ring overrides ---- */
+html:not(.dark) .ring-\[\#111\]     { --tw-ring-color: #e2e8f0 !important; }
 
 /* ---- Data-state overrides (tab triggers, etc.) ---- */
 html:not(.dark) [data-state="active"].data-\[state\=active\]\:bg-\[\#2a2a2a\] {
