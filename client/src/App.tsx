@@ -14,6 +14,7 @@ import { useLocation } from 'wouter';
 import type { RouteComponentProps } from "wouter";
 import { trackClientMetric } from "./lib/perf";
 import { InstallBanner, PwaReengageBanner } from "@/components/pwa";
+import { NetworkStatusNotification } from "@/components/network-status";
 
 // Eager load critical pages
 import HomePage from "@/pages/home";
@@ -223,6 +224,7 @@ function App() {
         <StickyNotificationsProvider>
           <div className="dark min-h-screen becxus-bg">
             <Toaster />
+            <NetworkStatusNotification />
             <InstallBanner />
             <PwaReengageBanner />
             <Router />
