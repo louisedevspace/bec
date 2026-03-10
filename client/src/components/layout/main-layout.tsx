@@ -145,12 +145,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </a>
           <button
             onClick={() => setLocation('/wallet')}
-            className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors"
+            className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
             aria-label="Notifications"
           >
-            <Bell size={20} />
+            <Bell size={22} />
             {notifCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+              <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}

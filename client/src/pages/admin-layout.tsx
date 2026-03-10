@@ -123,23 +123,117 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             {/* Mobile Bell */}
-            <button
-              onClick={() => setBellOpen(!bellOpen)}
-              className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
-            >
-              <Bell size={20} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
+            <div ref={bellRef} className="relative">
+              <button
+                onClick={() => setBellOpen(!bellOpen)}
+                className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
+              >
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
               {adminEmail ? adminEmail[0].toUpperCase() : 'A'}
             </div>
           </div>
         </div>
       </header>
+
+      {/* Mobile Notification Panel - Rendered outside desktop header for mobile access */}
+      {bellOpen && (
+        <div className="lg:hidden fixed inset-0 z-[60]" onClick={() => setBellOpen(false)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          {/* Panel */}
+          <div
+            className="absolute left-2 right-2 bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden max-h-[70vh]"
+            style={{ top: 'calc(var(--pwa-banner-top, 0px) + 60px)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#222] flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Bell size={16} className="text-blue-400" />
+                <span className="text-sm font-semibold text-white">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead()}
+                    className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors p-1.5 rounded-lg active:bg-blue-500/10 touch-manipulation"
+                  >
+                    <CheckCheck size={14} />
+                    Read all
+                  </button>
+                )}
+                <button
+                  onClick={() => setBellOpen(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Notification List */}
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <Bell size={32} className="mb-2 opacity-30" />
+                  <p className="text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                notifications.slice(0, 20).map(n => (
+                  <button
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={`
+                      w-full text-left px-4 py-3.5 border-b border-[#1e1e1e] hover:bg-[#1a1a1a] active:bg-[#222] transition-colors flex items-start gap-3 touch-manipulation min-h-[56px]
+                      ${!n.is_read ? 'bg-blue-500/5' : ''}
+                    `}
+                  >
+                    <div className="mt-1.5 flex-shrink-0">
+                      {!n.is_read ? (
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                      ) : (
+                        <div className="w-2.5 h-2.5 rounded-full" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-white' : 'text-gray-400'}`}>
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
+                        {n.link && <ExternalLink size={10} className="text-gray-600" />}
+                      </div>
+                    </div>
+                    {!n.is_read && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                        className="p-2 rounded-lg text-gray-500 hover:text-blue-400 active:bg-blue-500/10 transition-colors flex-shrink-0 touch-manipulation"
+                        title="Mark as read"
+                      >
+                        <Check size={16} />
+                      </button>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Overlay */}
       {sidebarOpen && (

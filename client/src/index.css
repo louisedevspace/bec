@@ -339,6 +339,7 @@
 html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #f8fafc !important; }
 html:not(.dark) .bg-\[\#111\],
 html:not(.dark) .bg-\[\#111111\]  { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#111\]\/95  { background-color: rgba(255,255,255,0.95) !important; }
 html:not(.dark) .bg-\[\#1a1a1a\]  { background-color: #f1f5f9 !important; }
 html:not(.dark) .bg-\[\#151515\]  { background-color: #f1f5f9 !important; }
 html:not(.dark) .bg-\[\#161616\]  { background-color: #f1f5f9 !important; }
