@@ -50,6 +50,15 @@
     <link rel="canonical" href="https://becxus.com" />
   </head>
   <body>
+    <!-- Prevent flash: apply theme class BEFORE React mounts -->
+    <script>
+      (function(){
+        try{
+          var t=localStorage.getItem('becxus-theme');
+          if(t!=='light'){document.documentElement.classList.add('dark');}
+        }catch(e){document.documentElement.classList.add('dark');}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

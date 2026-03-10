@@ -222,7 +222,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <StickyNotificationsProvider>
-          <div className="dark min-h-screen becxus-bg">
+          <div className="min-h-screen becxus-bg">
             <Toaster />
             <NetworkStatusNotification />
             <InstallBanner />

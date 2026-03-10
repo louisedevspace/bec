@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Wallet, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp } from 'lucide-react';
+import { Wallet, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTheme } from '@/hooks/use-theme';
 import { PwaControls } from '@/components/pwa/pwa-controls';
 import { supabase } from '../lib/supabaseClient';
 import { StakingModal } from '@/components/modals/staking-modal';
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { prices } = useCryptoPrices();
+  const { isDark, toggleTheme } = useTheme();
 
   const handlePictureUpdate = (pictureUrl: string) => {
     setProfile((prev: any) => ({
@@ -478,6 +480,32 @@ export default function ProfilePage() {
             <ActionButton icon={Wallet} label="My Wallet" onClick={() => handleQuickAction('wallet')} />
             <ActionButton icon={TrendingUp} label="Staking" onClick={() => handleQuickAction('staking')} />
           </div>
+        </div>
+
+        {/* Appearance */}
+        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center px-4 py-3 text-left transition-colors hover:bg-[#1a1a1a] focus:outline-none"
+          >
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center mr-3 border border-[#2a2a2a] ${
+              isDark ? 'bg-[#1a1a1a]' : 'bg-[#1a1a1a]'
+            }`}>
+              {isDark ? (
+                <Moon size={14} className="text-blue-400" />
+              ) : (
+                <Sun size={14} className="text-yellow-500" />
+              )}
+            </div>
+            <span className="flex-1 text-sm text-gray-300">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+            <div className={`w-10 h-[22px] rounded-full relative transition-colors duration-200 ${
+              isDark ? 'bg-blue-500' : 'bg-gray-300'
+            }`}>
+              <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                isDark ? 'translate-x-[22px]' : 'translate-x-[3px]'
+              }`} />
+            </div>
+          </button>
         </div>
 
         {/* Menu Section 1 */}

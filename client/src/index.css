@@ -2,39 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   LIGHT THEME (default :root values)
+   ============================================================ */
 :root {
-  --background: 0 0% 4%;
-  --foreground: 0 0% 98%;
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 55%;
-  --popover: 0 0% 7%;
-  --popover-foreground: 0 0% 98%;
-  --card: 0 0% 7%;
-  --card-foreground: 0 0% 98%;
-  --border: 0 0% 12%;
-  --input: 0 0% 16%;
-  --input-bg: 0 0% 16%;
-  --input-bg-hover: 0 0% 22%;
-  --input-bg-focus: 0 0% 29%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --input-bg: 210 40% 96%;
+  --input-bg-hover: 214 32% 91%;
+  --input-bg-focus: 213 27% 84%;
   --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 10%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 0 0% 12%;
-  --accent-foreground: 0 0% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
   --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive-foreground: 0 0% 100%;
   --ring: 217 91% 60%;
   --radius: 0.5rem;
-  
+
   --success: 142 71% 45%;
-  --success-foreground: 0 0% 98%;
+  --success-foreground: 0 0% 100%;
   --warning: 38 92% 50%;
   --warning-foreground: 48 96% 89%;
   --danger: 0 84% 60%;
-  --danger-foreground: 0 0% 98%;
+  --danger-foreground: 0 0% 100%;
 }
 
+/* ============================================================
+   DARK THEME (.dark class on <html>)
+   ============================================================ */
 .dark {
   --background: 0 0% 4%;
   --foreground: 0 0% 98%;
@@ -96,8 +102,12 @@
     opacity: 0.8;
   }
   
-      /* Custom Becxus styling */
+  /* Custom Becxus styling */
   .becxus-bg {
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 100%);
+  }
+  .dark .becxus-bg,
+  .dark.becxus-bg {
     background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
   }
   
@@ -114,6 +124,10 @@
   }
   
   .gradient-bg {
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 50%, #f0f4f8 100%);
+  }
+  .dark .gradient-bg,
+  .dark.gradient-bg {
     background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
   }
   
@@ -267,29 +281,143 @@
 }
 
 .neon-bg {
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 50%, #f0f4f8 100%);
+}
+.dark .neon-bg,
+.dark.neon-bg {
   background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
 }
 
 .neon-glow-blue {
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.15);
+}
+.dark .neon-glow-blue {
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.4),
               0 0 40px rgba(59, 130, 246, 0.2),
               inset 0 0 20px rgba(59, 130, 246, 0.1);
 }
 
 .neon-glow-purple {
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.15);
+}
+.dark .neon-glow-purple {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.4),
               0 0 40px rgba(139, 92, 246, 0.2),
               inset 0 0 20px rgba(139, 92, 246, 0.1);
 }
 
 .neon-text-glow {
+  text-shadow: none;
+}
+.dark .neon-text-glow {
   text-shadow: 0 0 10px rgba(59, 130, 246, 0.5),
                0 0 20px rgba(59, 130, 246, 0.3),
                0 0 30px rgba(59, 130, 246, 0.2);
 }
 
 .neon-border-glow {
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+.dark .neon-border-glow {
   border: 1px solid rgba(59, 130, 246, 0.5);
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.3),
               inset 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+
+/* ================================================================
+   LIGHT THEME — HARDCODED COLOR OVERRIDES
+   ================================================================
+   The app uses hardcoded hex colors (e.g. bg-[#0a0a0a]) throughout.
+   These CSS overrides remap them to light equivalents when the
+   .dark class is NOT present on <html>. Pure CSS — instant switch,
+   zero JavaScript overhead, single repaint.
+   ================================================================ */
+
+/* ---- Background overrides ---- */
+html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #f8fafc !important; }
+html:not(.dark) .bg-\[\#111\],
+html:not(.dark) .bg-\[\#111111\]  { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#1a1a1a\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#151515\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#161616\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#1e1e1e\]  { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#222\]     { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#252525\]  { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#0a0a0a\]\/95 { background-color: rgba(248,250,252,0.95) !important; }
+
+/* ---- Hover background overrides ---- */
+html:not(.dark) .hover\:bg-\[\#1a1a1a\]:hover  { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#151515\]:hover   { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#222\]:hover      { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#252525\]:hover   { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#2a2a2a\]:hover   { background-color: #cbd5e1 !important; }
+
+/* Active state */
+html:not(.dark) .active\:bg-\[\#222\]:active    { background-color: #cbd5e1 !important; }
+
+/* ---- Border overrides ---- */
+html:not(.dark) .border-\[\#1e1e1e\] { border-color: #e2e8f0 !important; }
+html:not(.dark) .border-\[\#2a2a2a\] { border-color: #cbd5e1 !important; }
+html:not(.dark) .border-\[\#3a3a3a\] { border-color: #94a3b8 !important; }
+html:not(.dark) .border-\[\#222\]    { border-color: #e2e8f0 !important; }
+
+/* Hover border */
+html:not(.dark) .hover\:border-\[\#2a2a2a\]:hover { border-color: #cbd5e1 !important; }
+html:not(.dark) .hover\:border-\[\#3a3a3a\]:hover { border-color: #94a3b8 !important; }
+
+/* ---- Text color overrides ---- */
+html:not(.dark) .text-white        { color: #0f172a !important; }
+html:not(.dark) .text-gray-300     { color: #334155 !important; }
+html:not(.dark) .text-gray-400     { color: #475569 !important; }
+html:not(.dark) .text-gray-500     { color: #64748b !important; }
+html:not(.dark) .text-gray-600     { color: #94a3b8 !important; }
+
+/* Hover text */
+html:not(.dark) .hover\:text-white:hover   { color: #0f172a !important; }
+html:not(.dark) .hover\:text-gray-400:hover { color: #475569 !important; }
+html:not(.dark) .group:hover .group-hover\:text-blue-400 { color: #3b82f6 !important; }
+
+/* ---- Preserve white text on colored backgrounds ---- */
+html:not(.dark) [class*="bg-blue-"].text-white,
+html:not(.dark) [class*="bg-blue-"] > .text-white,
+html:not(.dark) [class*="bg-red-"].text-white,
+html:not(.dark) [class*="bg-red-"] > .text-white,
+html:not(.dark) [class*="bg-green-"].text-white,
+html:not(.dark) [class*="bg-green-"] > .text-white,
+html:not(.dark) [class*="bg-emerald-"].text-white,
+html:not(.dark) [class*="bg-emerald-"] > .text-white,
+html:not(.dark) [class*="bg-orange-"].text-white,
+html:not(.dark) [class*="bg-orange-"] > .text-white,
+html:not(.dark) [class*="bg-purple-"].text-white,
+html:not(.dark) [class*="bg-purple-"] > .text-white,
+html:not(.dark) [class*="bg-violet-"].text-white,
+html:not(.dark) [class*="bg-violet-"] > .text-white,
+html:not(.dark) [class*="bg-yellow-"].text-white,
+html:not(.dark) [class*="bg-yellow-"] > .text-white,
+html:not(.dark) [class*="bg-pink-"].text-white,
+html:not(.dark) [class*="bg-pink-"] > .text-white,
+html:not(.dark) [class*="bg-indigo-"].text-white,
+html:not(.dark) [class*="bg-indigo-"] > .text-white,
+html:not(.dark) [class*="bg-primary"].text-white,
+html:not(.dark) [class*="bg-primary"] > .text-white,
+html:not(.dark) [class*="bg-destructive"].text-white,
+html:not(.dark) [class*="bg-destructive"] > .text-white {
+  color: #ffffff !important;
+}
+
+/* ---- Placeholder overrides ---- */
+html:not(.dark) .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder-gray-600::placeholder { color: #94a3b8 !important; }
+
+/* ---- Scrollbar overrides ---- */
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.4);
+}
+html:not(.dark) * {
+  scrollbar-color: rgba(100, 116, 139, 0.25) transparent;
 }
