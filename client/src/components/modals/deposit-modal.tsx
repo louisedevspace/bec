@@ -278,10 +278,35 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       return;
     }
 
+    // Validate against min/max deposit limits from database
+    const addr = depositAddresses.find((a: any) => a.asset_symbol === selectedCrypto);
+    if (addr?.min_deposit != null && amountNum < parseFloat(addr.min_deposit)) {
+      toast({
+        title: "Below Minimum",
+        description: `Minimum deposit for ${selectedCrypto} is ${addr.min_deposit} ${selectedCrypto}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (addr?.max_deposit != null && amountNum > parseFloat(addr.max_deposit)) {
+      toast({
+        title: "Exceeds Maximum",
+        description: `Maximum deposit for ${selectedCrypto} is ${addr.max_deposit} ${selectedCrypto}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     submitDepositRequestMutation.mutate();
   };
 
   const getMinimumDeposit = (crypto: string) => {
+    // Use database-configured minimum if available
+    const addr = depositAddresses.find((a: any) => a.asset_symbol === crypto);
+    if (addr?.min_deposit != null) {
+      return `${addr.min_deposit} ${crypto}`;
+    }
+    // Fallback defaults
     switch (crypto) {
       case "BTC":
         return "0.001 BTC";
@@ -296,6 +321,14 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       default:
         return "10 USDT";
     }
+  };
+
+  const getMaximumDeposit = (crypto: string) => {
+    const addr = depositAddresses.find((a: any) => a.asset_symbol === crypto);
+    if (addr?.max_deposit != null) {
+      return `${addr.max_deposit} ${crypto}`;
+    }
+    return null; // No maximum configured
   };
 
   const getNetworkFee = (crypto: string, network: string) => {
@@ -408,6 +441,10 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   <div className="font-medium">{getMinimumDeposit(selectedCrypto)}</div>
                 </div>
                 <div>
+                  <div className="text-gray-500 text-xs mb-1">Maximum Deposit</div>
+                  <div className="font-medium">{getMaximumDeposit(selectedCrypto) || 'No limit'}</div>
+                </div>
+                <div>
                   <div className="text-gray-500 text-xs mb-1">Network Fee</div>
                   <div className="font-medium">{getNetworkFee(selectedCrypto, selectedNetwork)}</div>
                 </div>
@@ -472,6 +509,9 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   <ul className="space-y-1 text-gray-400">
                     <li>• Only send {selectedCrypto} to this address</li>
                     <li>• Minimum deposit: {getMinimumDeposit(selectedCrypto)}</li>
+                    {getMaximumDeposit(selectedCrypto) && (
+                      <li>• Maximum deposit: {getMaximumDeposit(selectedCrypto)}</li>
+                    )}
                     <li>• Network: {selectedNetwork}</li>
                     <li>• Deposits will appear after 1 confirmation</li>
                     <li>• Sending other cryptocurrencies may result in permanent loss</li>

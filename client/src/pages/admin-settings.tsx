@@ -22,6 +22,8 @@ interface DepositAddress {
   address: string;
   network: string;
   is_active: boolean;
+  min_deposit: number | null;
+  max_deposit: number | null;
   created_at: string;
   updated_at: string;
   updated_by?: string;
@@ -34,8 +36,8 @@ export default function AdminSettings() {
   const [error, setError] = useState<string | null>(null);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ address: '', network: '' });
-  const [newAddressForm, setNewAddressForm] = useState({ asset_symbol: '', address: '', network: '' });
+  const [editForm, setEditForm] = useState({ address: '', network: '', min_deposit: '', max_deposit: '' });
+  const [newAddressForm, setNewAddressForm] = useState({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '' });
   const { copied, copyToClipboard } = useCopyToClipboard();
 
   const refreshDepositAddresses = async () => {
@@ -107,12 +109,17 @@ export default function AdminSettings() {
 
   const startEditingAddress = (address: DepositAddress) => {
     setEditingAddress(address.asset_symbol);
-    setEditForm({ address: address.address, network: address.network });
+    setEditForm({
+      address: address.address,
+      network: address.network,
+      min_deposit: address.min_deposit != null ? String(address.min_deposit) : '',
+      max_deposit: address.max_deposit != null ? String(address.max_deposit) : '',
+    });
   };
 
   const cancelEditing = () => {
     setEditingAddress(null);
-    setEditForm({ address: '', network: '' });
+    setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '' });
   };
 
   const handleCopyAddress = async (address: string, assetSymbol: string) => {
@@ -134,7 +141,12 @@ export default function AdminSettings() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify({
+          address: editForm.address,
+          network: editForm.network,
+          min_deposit: editForm.min_deposit || null,
+          max_deposit: editForm.max_deposit || null,
+        })
       });
 
       if (response.ok) {
@@ -142,12 +154,19 @@ export default function AdminSettings() {
         setDepositAddresses(addresses => 
           addresses.map(addr => 
             addr.asset_symbol === assetSymbol 
-              ? { ...addr, address: editForm.address, network: editForm.network, updated_at: new Date().toISOString() }
+              ? {
+                  ...addr,
+                  address: editForm.address,
+                  network: editForm.network,
+                  min_deposit: editForm.min_deposit ? parseFloat(editForm.min_deposit) : null,
+                  max_deposit: editForm.max_deposit ? parseFloat(editForm.max_deposit) : null,
+                  updated_at: new Date().toISOString()
+                }
               : addr
           )
         );
         setEditingAddress(null);
-        setEditForm({ address: '', network: '' });
+        setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '' });
       } else {
         const error = await response.json();
         setError(error.message || 'Failed to update address');
@@ -169,6 +188,8 @@ export default function AdminSettings() {
       const body = {
         address: newAddressForm.address.trim(),
         network: newAddressForm.network.trim(),
+        min_deposit: newAddressForm.min_deposit || null,
+        max_deposit: newAddressForm.max_deposit || null,
       };
 
       const response = await fetch(`/api/admin/deposit-addresses/${assetSymbol}`, {
@@ -199,7 +220,7 @@ export default function AdminSettings() {
         return [...addresses, result.address];
       });
 
-      setNewAddressForm({ asset_symbol: '', address: '', network: '' });
+      setNewAddressForm({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '' });
     } catch {
       setError('Failed to create address');
     }
@@ -311,9 +332,37 @@ export default function AdminSettings() {
                       placeholder="e.g., mainnet, ethereum, trc20"
                     />
                   </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div>
+                  <Label className="text-xs text-gray-500 mb-1 block">Min Deposit</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newAddressForm.min_deposit}
+                    onChange={(e) => setNewAddressForm({ ...newAddressForm, min_deposit: e.target.value })}
+                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    placeholder="e.g., 0.001"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500 mb-1 block">Max Deposit</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={newAddressForm.max_deposit}
+                    onChange={(e) => setNewAddressForm({ ...newAddressForm, max_deposit: e.target.value })}
+                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    placeholder="e.g., 100"
+                  />
+                </div>
+                <div className="flex items-end">
                   <Button
                     size="sm"
-                    className="h-9 rounded-lg bg-orange-500 hover:bg-orange-600"
+                    className="h-9 rounded-lg bg-orange-500 hover:bg-orange-600 w-full md:w-auto"
                     onClick={createAddress}
                     disabled={!newAddressForm.asset_symbol || !newAddressForm.address || !newAddressForm.network}
                   >
@@ -390,6 +439,32 @@ export default function AdminSettings() {
                             placeholder="e.g., mainnet, trc20"
                           />
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">Min Deposit</Label>
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0"
+                              value={editForm.min_deposit}
+                              onChange={(e) => setEditForm({ ...editForm, min_deposit: e.target.value })}
+                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              placeholder="e.g., 0.001"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">Max Deposit</Label>
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0"
+                              value={editForm.max_deposit}
+                              onChange={(e) => setEditForm({ ...editForm, max_deposit: e.target.value })}
+                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              placeholder="e.g., 100"
+                            />
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -421,6 +496,22 @@ export default function AdminSettings() {
                           </div>
                           <span className="text-[10px] text-gray-400">{formatDate(address.updated_at)}</span>
                         </div>
+                        {(address.min_deposit != null || address.max_deposit != null) && (
+                          <div className="flex items-center gap-3 text-xs mt-1 pt-1 border-t border-[#1e1e1e]">
+                            {address.min_deposit != null && (
+                              <div>
+                                <span className="text-gray-400">Min: </span>
+                                <span className="text-orange-400 font-medium">{address.min_deposit} {address.asset_symbol}</span>
+                              </div>
+                            )}
+                            {address.max_deposit != null && (
+                              <div>
+                                <span className="text-gray-400">Max: </span>
+                                <span className="text-orange-400 font-medium">{address.max_deposit} {address.asset_symbol}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

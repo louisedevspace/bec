@@ -102,10 +102,23 @@ CREATE TABLE IF NOT EXISTS deposit_addresses (
   address TEXT NOT NULL,
   network TEXT NOT NULL DEFAULT 'mainnet',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  min_deposit DECIMAL(20,8) DEFAULT NULL,
+  max_deposit DECIMAL(20,8) DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by TEXT
 );
+
+-- Add min/max deposit columns if they don't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='min_deposit') THEN
+    ALTER TABLE deposit_addresses ADD COLUMN min_deposit DECIMAL(20,8) DEFAULT NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='max_deposit') THEN
+    ALTER TABLE deposit_addresses ADD COLUMN max_deposit DECIMAL(20,8) DEFAULT NULL;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS deposit_address_audit_logs (
   id SERIAL PRIMARY KEY,

@@ -363,12 +363,26 @@ export default function registerDepositsRoutes(app: Express) {
   app.put("/api/admin/deposit-addresses/:asset", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { asset } = req.params;
-      const { address, network } = req.body;
+      const { address, network, min_deposit, max_deposit } = req.body;
       const assetSymbol = asset.toUpperCase();
 
       const validationError = validateDepositAddress(assetSymbol, address, network);
       if (validationError) {
         return res.status(400).json({ message: validationError });
+      }
+
+      // Validate min/max deposit amounts if provided
+      const minDep = min_deposit !== undefined && min_deposit !== null && min_deposit !== '' ? parseFloat(min_deposit) : null;
+      const maxDep = max_deposit !== undefined && max_deposit !== null && max_deposit !== '' ? parseFloat(max_deposit) : null;
+
+      if (minDep !== null && (isNaN(minDep) || minDep < 0)) {
+        return res.status(400).json({ message: "Minimum deposit must be a non-negative number" });
+      }
+      if (maxDep !== null && (isNaN(maxDep) || maxDep <= 0)) {
+        return res.status(400).json({ message: "Maximum deposit must be a positive number" });
+      }
+      if (minDep !== null && maxDep !== null && minDep >= maxDep) {
+        return res.status(400).json({ message: "Minimum deposit must be less than maximum deposit" });
       }
 
       const { data: existing, error: existingError } = await supabaseAdmin
@@ -388,6 +402,8 @@ export default function registerDepositsRoutes(app: Express) {
             asset_symbol: assetSymbol,
             address,
             network,
+            min_deposit: minDep,
+            max_deposit: maxDep,
             updated_at: new Date().toISOString(),
             updated_by: req.user.id,
           },
@@ -467,7 +483,7 @@ export default function registerDepositsRoutes(app: Express) {
     try {
       const { data: addresses, error } = await supabase
         .from("deposit_addresses")
-        .select("asset_symbol, address, network")
+        .select("asset_symbol, address, network, min_deposit, max_deposit")
         .eq("is_active", true)
         .order("asset_symbol");
 
