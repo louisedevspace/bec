@@ -609,7 +609,7 @@ export default function AdminSupportPage() {
                                 </Avatar>
                                 <div className={`space-y-0.5 ${isAdmin ? "text-right" : "text-left"}`}>
                                   <div className={`px-3.5 py-2.5 rounded-2xl text-sm ${
-                                    isAdmin ? "bg-blue-600 text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-200 rounded-bl-md border border-[#2a2a2a]"
+                                    isAdmin ? "bg-blue-600 text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-300 rounded-bl-md border border-[#2a2a2a]"
                                   }`}>
                                     <p className="whitespace-pre-wrap leading-relaxed">{msg.message}</p>
                                   </div>

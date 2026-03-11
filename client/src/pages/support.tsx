@@ -300,7 +300,7 @@ export default function SupportPage() {
         )}
         <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${
           isUser
-            ? 'bg-blue-500/20 border border-blue-500/30 text-blue-100 rounded-br-md'
+            ? 'bg-blue-600 text-white rounded-br-md'
             : 'bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 rounded-bl-md'
         }`}>
           {!isUser && (
