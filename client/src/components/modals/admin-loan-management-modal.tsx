@@ -12,6 +12,7 @@ import {
   Eye, AlertTriangle, Settings, FileText, DollarSign, Calendar, Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { buildImageViewerPath, buildStorageImageUrl } from '@/lib/image';
 
 interface LoanApplication {
   id: number;
@@ -508,9 +509,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                             <div key={index} className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-blue-400" />
                               <a
-                                href={`https://pemccgwoblzihaszectm.supabase.co/storage/v1/object/public/loan-documents/${url}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(buildStorageImageUrl('loan-documents', url), `Loan document ${index + 1}`)}
                                 className="text-blue-400 hover:text-blue-300 underline text-xs"
                               >
                                 Document {index + 1} - {url.split('/').pop()}

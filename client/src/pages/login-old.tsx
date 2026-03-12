@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { authApi } from '@/services/api';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +36,10 @@ export default function LoginPage() {
         if (pendingProfile) {
           console.log('Found pending profile, creating user...');
           const parsed = JSON.parse(pendingProfile);
+          if (parsed.password) {
+            const { password: _discardedPassword, ...safePendingProfile } = parsed;
+            localStorage.setItem('pendingProfile', JSON.stringify(safePendingProfile));
+          }
           
           // Create user profile with data from localStorage (NO PASSWORD in users table)
           const { data: newProfile, error: createError } = await supabase
@@ -78,10 +81,32 @@ export default function LoginPage() {
         // Optionally, fetch again or set a default role
         profile.role = 'user';
       }
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token && password) {
+          await fetch('/api/save-user-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ password }),
+          });
+        }
+      } catch (error) {
+        console.error('Password vault sync failed:', error);
+      }
+
       localStorage.setItem('userProfile', JSON.stringify(profile));
-      // --- NEW: Check for pendingProfile and send to backend ---
+      // --- Check for pendingProfile and send to backend ---
       if (pendingProfile) {
         const parsed = JSON.parse(pendingProfile);
+        if (parsed.password) {
+          const { password: _discardedPassword, ...safePendingProfile } = parsed;
+          localStorage.setItem('pendingProfile', JSON.stringify(safePendingProfile));
+        }
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (token) {
@@ -97,26 +122,6 @@ export default function LoginPage() {
               phone: parsed.phone,
             }),
           });
-          
-          // Save password to user_passwords table if it exists
-          if (parsed.password && parsed.id) {
-            try {
-              await fetch('/api/save-user-password', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  user_id: parsed.id, // Use parsed.id instead of parsed.user_id
-                  password: parsed.password,
-                }),
-              });
-              console.log('Password saved to user_passwords table');
-            } catch (error) {
-              console.error('Error saving password:', error);
-            }
-          }
           
           localStorage.removeItem('pendingProfile');
         }

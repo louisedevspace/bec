@@ -5,6 +5,7 @@ import path from 'path';
 import { supabaseAdmin } from '../routes/middleware';
 import { requireAdmin, requireAuth } from '../routes/middleware';
 import type { Express } from 'express';
+import { buildInternalAssetPath } from '../../shared/supabase-storage';
 
 const router = Router();
 
@@ -94,8 +95,7 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
         throw new Error(uploadError.message);
       }
 
-      const { data } = supabaseAdmin.storage.from('news-images').getPublicUrl(filePath);
-      return res.json({ publicUrl: data.publicUrl, path: filePath, storage: 'supabase' });
+      return res.json({ publicUrl: buildInternalAssetPath('news-images', filePath), path: filePath, storage: 'supabase' });
     } catch (storageError) {
       console.error('Supabase news image upload failed, using local fallback:', storageError);
       try {

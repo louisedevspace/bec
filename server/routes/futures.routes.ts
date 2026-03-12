@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, requireUnlockedWallet, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireInternalTask, requireUnlockedWallet, requireVerifiedUser, supabaseAdmin } from "./middleware";
 import { updatePortfolioBalance } from "./helpers";
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
@@ -211,12 +211,9 @@ export default function registerFuturesRoutes(app: Express) {
   });
 
   // POST /api/future-trade/submit
-  app.post("/api/future-trade/submit", requireAuth, requireUnlockedWallet, async (req, res) => {
+  app.post("/api/future-trade/submit", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
     try {
-      const {
-        symbol, side, amount, duration, profitRatio,
-        isAdminApproval, isDirectTrade, lossAmount, finalAmount,
-      } = req.body;
+      const { symbol, side, amount, duration, profitRatio } = req.body;
       const userId = req.user.id;
       const ipAddress = getClientIP(req);
       const userAgent = getUserAgent(req);
@@ -281,7 +278,6 @@ export default function registerFuturesRoutes(app: Express) {
 
       const expiresAt = new Date(Date.now() + parseInt(duration) * 1000);
 
-      let status = "pending";
       const tradeData: any = {
         user_id: userId,
         symbol,
@@ -291,18 +287,8 @@ export default function registerFuturesRoutes(app: Express) {
         profit_ratio: parseInt(profitRatio),
         entry_price: currentPrice,
         expires_at: expiresAt.toISOString(),
-        status,
+        status: "pending",
       };
-
-      if (isDirectTrade) {
-        tradeData.status = "completed";
-        tradeData.profit_loss = -parseFloat(lossAmount || 0);
-        tradeData.exit_price = finalAmount || 0;
-        tradeData.is_admin_approved = false;
-      } else if (isAdminApproval) {
-        tradeData.status = "pending";
-        tradeData.is_admin_approved = false;
-      }
 
       const { data, error } = await supabaseAdmin
         .from("futures_trades")
@@ -334,7 +320,7 @@ export default function registerFuturesRoutes(app: Express) {
         resourceId: data?.id,
         amount: parseFloat(amount),
         symbol,
-        details: { side, duration, profitRatio, isDirectTrade, isAdminApproval },
+        details: { side, duration, profitRatio },
         ipAddress,
         userAgent,
         status: 'success',
@@ -539,13 +525,7 @@ export default function registerFuturesRoutes(app: Express) {
   });
 
   // POST /api/future-trades/process-expired — admin or scheduled task
-  app.post("/api/future-trades/process-expired", async (req, res, next) => {
-    const internalKey = req.headers["x-internal-key"];
-    if (internalKey === process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return next();
-    }
-    requireAuth(req, res, () => requireAdmin(req, res, next));
-  }, async (req, res) => {
+  app.post("/api/future-trades/process-expired", requireInternalTask, async (req, res) => {
     try {
       const { data: expiredTrades, error: fetchError } = await supabaseAdmin
         .from("futures_trades")

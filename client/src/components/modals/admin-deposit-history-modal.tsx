@@ -8,6 +8,7 @@ import { Eye, History } from "lucide-react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
+import { openImageViewer } from "@/lib/image";
 
 interface DepositRequest {
   id: number;
@@ -159,7 +160,7 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
                        <Button
                          variant="outline"
                          size="sm"
-                         onClick={() => window.open(request.screenshot_url, '_blank')}
+                         onClick={() => openImageViewer(request.screenshot_url, `${request.symbol} deposit screenshot`)}
                          className="text-xs bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
                        >
                          <Eye className="h-3 w-3 mr-1" />

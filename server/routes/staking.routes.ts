@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, requireInternalTask, requireVerifiedUser, requireUnlockedWallet, supabaseAdmin } from "./middleware";
 import { insertStakingPositionSchema } from "@shared/schema";
 import { z } from "zod";
 import { syncManager } from "../sync-manager";
@@ -253,13 +253,7 @@ export default function registerStakingRoutes(app: Express) {
   });
 
   // POST /api/staking/process-completed — admin or scheduled task
-  app.post("/api/staking/process-completed", async (req, res, next) => {
-    const internalKey = req.headers["x-internal-key"];
-    if (internalKey === process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return next();
-    }
-    requireAuth(req, res, () => requireAdmin(req, res, next));
-  }, async (req, res) => {
+  app.post("/api/staking/process-completed", requireInternalTask, async (req, res) => {
     try {
       const now = new Date();
 

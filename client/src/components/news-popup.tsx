@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
+import { getImageDisplayUrl } from '@/lib/image';
 import { supabase } from '@/lib/supabaseClient';
 
 interface NewsItem {
@@ -141,7 +142,7 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
             {news.image_url && (
               <div className="mb-4">
                 <img
-                  src={news.image_url}
+                  src={getImageDisplayUrl(news.image_url)}
                   alt={news.title}
                   className="w-full h-52 object-cover rounded-xl border border-white/10 shadow-lg"
                   onError={(e) => {

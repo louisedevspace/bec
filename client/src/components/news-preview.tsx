@@ -1,4 +1,5 @@
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
+import { getImageDisplayUrl } from '@/lib/image';
 
 interface NewsPreviewProps {
   title: string;
@@ -72,7 +73,7 @@ export default function NewsPreview({
           {image_url && (
             <div className="mb-4">
               <img
-                src={image_url}
+                src={getImageDisplayUrl(image_url)}
                 alt={title}
                 className="w-full h-48 object-cover rounded-lg border border-[#1e1e1e]"
                 onError={(e) => {

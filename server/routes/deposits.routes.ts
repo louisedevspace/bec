@@ -5,8 +5,10 @@ import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 import { adminNotificationService } from "../services/admin-notification.service";
+import { buildInternalAssetPath } from "../../shared/supabase-storage";
+import { sanitizeUploadFileName } from "../utils/uploads";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 export default function registerDepositsRoutes(app: Express) {
   // POST /api/deposit-requests — submit deposit request
@@ -28,7 +30,7 @@ export default function registerDepositsRoutes(app: Express) {
       }
 
       // Upload screenshot
-      const filePath = `${userId}/${Date.now()}-${file.originalname}`;
+      const filePath = `${userId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
       const { error: uploadError } = await supabase.storage
         .from("deposit-screenshots")
         .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: false });
@@ -37,9 +39,7 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to upload screenshot" });
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from("deposit-screenshots")
-        .getPublicUrl(filePath);
+      const screenshotUrl = buildInternalAssetPath("deposit-screenshots", filePath);
 
       // Create deposit request — handle sequence issues
       let { data: depositRequest, error: insertError } = await supabaseAdmin
@@ -48,7 +48,7 @@ export default function registerDepositsRoutes(app: Express) {
           user_id: userId,
           symbol: symbol.toUpperCase(),
           amount: amountNum.toString(),
-          screenshot_url: publicUrlData.publicUrl,
+          screenshot_url: screenshotUrl,
           status: "pending",
         })
         .select()
@@ -78,7 +78,7 @@ export default function registerDepositsRoutes(app: Express) {
             user_id: userId,
             symbol: symbol.toUpperCase(),
             amount: amountNum.toString(),
-            screenshot_url: publicUrlData.publicUrl,
+            screenshot_url: screenshotUrl,
             status: "pending",
           })
           .select()

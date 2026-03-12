@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS user_passwords (
   id SERIAL PRIMARY KEY,
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
   password TEXT NOT NULL,                           -- Hashed password for authentication
-  plaintext_password TEXT,                          -- Plaintext password for admin viewing
+  plaintext_password TEXT,                          -- AES-GCM encrypted password for admin viewing
   encrypted_at TIMESTAMPTZ DEFAULT NOW(),
   last_updated TIMESTAMPTZ DEFAULT NOW()
 );
@@ -91,7 +91,7 @@ BEGIN
 END $$;
 
 COMMENT ON COLUMN user_passwords.password IS 'Stores hashed password (PBKDF2) for secure authentication';
-COMMENT ON COLUMN user_passwords.plaintext_password IS 'Stores plaintext password for admin viewing purposes';
+COMMENT ON COLUMN user_passwords.plaintext_password IS 'Stores AES-GCM encrypted password for admin viewing (never plaintext)';
 
 -- ----------------------------------------------------------
 -- 1.3 Deposit Addresses (admin-managed crypto addresses)

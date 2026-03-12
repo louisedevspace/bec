@@ -13,6 +13,7 @@ import { CreditScoreBadge } from '@/components/ui/credit-score-badge';
 import { useLocation } from 'wouter';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { formatBalance, formatUsdNumber } from '@/utils/format-utils';
+import { getImageDisplayUrl } from '@/lib/image';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -341,7 +342,7 @@ export default function ProfilePage() {
             <div className="relative flex-shrink-0">
               {profile.profile_picture ? (
                 <img
-                  src={profile.profile_picture}
+                  src={getImageDisplayUrl(profile.profile_picture)}
                   alt="Profile"
                   className="w-14 h-14 rounded-xl object-cover border border-[#2a2a2a]"
                 />

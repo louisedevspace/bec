@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
 import supabase from "../supabaseClient";
+import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
+import { decryptPasswordForAdminView, encryptPasswordForAdminView, isEncryptedPasswordRecord } from "../utils/admin-password-vault";
 
 // Cache for admin users data
 let adminUsersCache: any = null;
@@ -9,6 +11,103 @@ let adminUsersCacheTime = 0;
 const ADMIN_CACHE_DURATION = 60000; // 1 minute
 
 export default function registerAdminRoutes(app: Express) {
+  // POST /api/admin/users/:userId/reveal-password — reveal decrypted password for a single user
+  app.post("/api/admin/users/:userId/reveal-password", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const adminUserId = req.user.id;
+      const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
+
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      if (!reason || reason.length < 6) {
+        return res.status(400).json({ message: "A valid access reason is required" });
+      }
+
+      const { data: passwordRecord, error } = await supabaseAdmin
+        .from("user_passwords")
+        .select("id, user_id, plaintext_password, last_updated")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to load password record" });
+      }
+
+      if (!passwordRecord || !passwordRecord.plaintext_password) {
+        return res.status(404).json({ message: "No password available for this user" });
+      }
+
+      let decryptedPassword: string;
+
+      if (isEncryptedPasswordRecord(passwordRecord.plaintext_password)) {
+        decryptedPassword = decryptPasswordForAdminView(passwordRecord.plaintext_password);
+      } else {
+        // Legacy fallback for historical plaintext rows; re-encrypt in-place immediately.
+        decryptedPassword = passwordRecord.plaintext_password;
+        const { error: migrateError } = await supabaseAdmin
+          .from("user_passwords")
+          .update({
+            plaintext_password: encryptPasswordForAdminView(decryptedPassword),
+            encrypted_at: new Date().toISOString(),
+          })
+          .eq("id", passwordRecord.id);
+
+        if (migrateError) {
+          console.error("Failed to migrate legacy password row:", migrateError.message);
+        }
+      }
+
+      if (!decryptedPassword) {
+        return res.status(404).json({ message: "Password is not available for this user" });
+      }
+
+      await logAuditEvent({
+        userId: adminUserId,
+        action: "ADMIN_PASSWORD_VIEWED",
+        resourceType: "user_passwords",
+        resourceId: userId,
+        details: {
+          targetUserId: userId,
+          reason,
+        },
+        ipAddress,
+        userAgent,
+        status: "success",
+      });
+
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({
+        password: decryptedPassword,
+        last_updated: passwordRecord.last_updated,
+      });
+    } catch (error) {
+      const adminUserId = req.user?.id;
+      if (adminUserId) {
+        await logAuditEvent({
+          userId: adminUserId,
+          action: "ADMIN_PASSWORD_VIEW_FAILED",
+          resourceType: "user_passwords",
+          resourceId: req.params.userId,
+          details: {
+            targetUserId: req.params.userId,
+          },
+          ipAddress: getClientIP(req),
+          userAgent: getUserAgent(req),
+          status: "failure",
+          errorMessage: (error as Error).message,
+        });
+      }
+
+      const errorMessage = (error as Error).message || "Failed to reveal password";
+      return res.status(500).json({ message: errorMessage });
+    }
+  });
+
   // GET /api/admin/users — merged user data with portfolio, KYC, loans, staking
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -34,7 +133,7 @@ export default function registerAdminRoutes(app: Express) {
 
       const { data: passwords } = await supabaseAdmin
         .from("user_passwords")
-        .select("user_id, password, plaintext_password, encrypted_at, last_updated");
+        .select("user_id, encrypted_at, last_updated");
 
       const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
 
@@ -100,13 +199,11 @@ export default function registerAdminRoutes(app: Express) {
           phone: customUser.phone,
           futures_min_amount: customUser.futures_min_amount,
           futures_trade_result: customUser.futures_trade_result,
-          password: userPassword?.plaintext_password || userPassword?.password || null,
-          password_hash: userPassword?.password || null,
+          has_password_record: !!userPassword,
           password_encrypted_at: userPassword?.encrypted_at || null,
           password_last_updated: userPassword?.last_updated || null,
           email_confirmed_at: authUser?.email_confirmed_at,
           last_sign_in_at: authUser?.last_sign_in_at,
-          encrypted_password: (authUser as any)?.encrypted_password,
           app_metadata: authUser?.app_metadata,
           user_metadata: authUser?.user_metadata,
           portfolio: userPortfolio,

@@ -5,34 +5,22 @@ import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 import { adminNotificationService } from "../services/admin-notification.service";
+import { buildInternalAssetPath } from "../../shared/supabase-storage";
+import { sanitizeUploadFileName } from "../utils/uploads";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 export default function registerWithdrawalsRoutes(app: Express) {
   // POST /api/withdraw-requests
   app.post("/api/withdraw-requests", requireAuth, requireUnlockedWallet, async (req, res) => {
     try {
-      const { userId, symbol, amount, walletAddress } = req.body;
+      const { symbol, amount, walletAddress } = req.body;
+      const userId = req.user.id;
       const ipAddress = getClientIP(req);
       const userAgent = getUserAgent(req);
 
-      if (!userId || !symbol || !amount || !walletAddress) {
-        return res.status(400).json({ message: "Missing required fields: userId, symbol, amount, walletAddress" });
-      }
-
-      // SECURITY FIX: Verify ownership - user can only create withdrawal requests for themselves
-      if (userId !== req.user.id) {
-        await logFinancialOperation({
-          userId: req.user.id,
-          operation: 'WITHDRAWAL',
-          action: 'CREATE',
-          details: { attemptedUserId: userId, reason: 'unauthorized_access' },
-          ipAddress,
-          userAgent,
-          status: 'failure',
-          errorMessage: 'Attempted to create withdrawal for another user',
-        });
-        return res.status(403).json({ message: "You can only create withdrawal requests for your own account" });
+      if (!symbol || !amount || !walletAddress) {
+        return res.status(400).json({ message: "Missing required fields: symbol, amount, walletAddress" });
       }
 
       const amountNum = parseFloat(amount);
@@ -212,7 +200,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
         let adminScreenshotUrl = null;
 
         if (action === "approve" && req.file) {
-          const filePath = `${Date.now()}-${req.file.originalname}`;
+          const filePath = `${Date.now()}-${sanitizeUploadFileName(req.file.originalname)}`;
           const { error: uploadError } = await supabase.storage
             .from("withdraw-screenshots")
             .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, cacheControl: "3600" });
@@ -221,10 +209,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to upload screenshot" });
           }
 
-          const { data: publicUrlData } = supabase.storage
-            .from("withdraw-screenshots")
-            .getPublicUrl(filePath);
-          adminScreenshotUrl = publicUrlData.publicUrl;
+          adminScreenshotUrl = buildInternalAssetPath("withdraw-screenshots", filePath);
         }
 
         const updateData: any = {

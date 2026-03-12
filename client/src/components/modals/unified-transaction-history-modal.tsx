@@ -11,6 +11,7 @@ import {
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from '../../lib/supabaseClient';
 import { formatCryptoNumber } from '@/utils/format-utils';
+import { openImageViewer } from '@/lib/image';
 
 interface UnifiedTransactionHistoryModalProps {
   isOpen: boolean;
@@ -293,7 +294,7 @@ export function UnifiedTransactionHistoryModal({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(transaction.screenshot_url, '_blank')}
+                              onClick={() => openImageViewer(transaction.screenshot_url, `${transaction.symbol} ${transaction.type} screenshot`)}
                               className="flex items-center space-x-1"
                             >
                               <Eye size={14} />
@@ -404,7 +405,7 @@ export function UnifiedTransactionHistoryModal({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(transaction.screenshot_url, '_blank')}
+                          onClick={() => openImageViewer(transaction.screenshot_url, `${transaction.symbol} ${transaction.type} screenshot`)}
                           className="flex items-center space-x-1"
                         >
                           <Eye size={14} />

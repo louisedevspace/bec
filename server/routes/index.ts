@@ -34,6 +34,7 @@ import registerTradingPairsRoutes from "./trading-pairs.routes";
 import registerWalletRoutes from "./wallet.routes";
 import registerAdminNotificationRoutes from "./admin-notifications.routes";
 import registerAdminStakingRoutes from "./admin-staking.routes";
+import registerAssetRoutes from "./assets.routes";
 
 // Broadcast price updates to all connected WebSocket clients
 function broadcastPriceUpdate(priceData: any) {
@@ -169,6 +170,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     recordClientMetric({ event, path, durationMs });
     res.status(204).end();
   });
+
+  registerAssetRoutes(app);
 
   app.get("/api/metrics/perf", (_req, res) => {
     const apiSummary = getApiMetricsSummary();

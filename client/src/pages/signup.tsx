@@ -39,7 +39,6 @@ export default function SignupPage() {
         id: data.user.id,
         username: email.split('@')[0],
         email: email,
-        password: password,
         full_name: fullName,
         phone,
         role: 'user',

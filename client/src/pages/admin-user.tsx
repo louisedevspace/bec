@@ -14,6 +14,7 @@ import {
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Input } from "@/components/ui/input";
 import { useAdminPendingCounts } from "@/hooks/use-admin-pending-counts";
+import { getImageDisplayUrl } from "@/lib/image";
 
 const AdminChangePasswordModal = lazy(() =>
   import("../components/modals/admin-change-password-modal").then((m) => ({ default: m.AdminChangePasswordModal })),
@@ -74,6 +75,8 @@ export default function AdminUsers() {
   const [selectedProfilePicture, setSelectedProfilePicture] = useState<{ url: string; userName: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
+  const [revealingPasswordFor, setRevealingPasswordFor] = useState<string | null>(null);
 
   // New state for enhanced features
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -176,6 +179,49 @@ export default function AdminUsers() {
     navigator.clipboard.writeText(text);
     setCopiedId(text);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const revealPassword = async (userId: string) => {
+    const reason = window.prompt('Enter reason for password access (required for audit log):', 'Account recovery assistance');
+    if (!reason || reason.trim().length < 6) {
+      return;
+    }
+
+    setRevealingPasswordFor(userId);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token');
+
+      const res = await fetch(`/api/admin/users/${userId}/reveal-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to reveal password');
+      }
+
+      setRevealedPasswords(prev => ({ ...prev, [userId]: data.password || '' }));
+    } catch (err: any) {
+      alert(err?.message || 'Failed to reveal password');
+    } finally {
+      setRevealingPasswordFor(null);
+    }
+  };
+
+  const hideRevealedPassword = (userId: string) => {
+    setRevealedPasswords(prev => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
   };
 
   const fetchUsers = async () => {
@@ -505,7 +551,7 @@ export default function AdminUsers() {
                                 onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                               >
                                 {user.profile_picture
-                                  ? <img src={user.profile_picture} alt="" className="w-full h-full object-cover" />
+                                  ? <img src={getImageDisplayUrl(user.profile_picture)} alt="" className="w-full h-full object-cover" />
                                   : <User className="h-3.5 w-3.5 text-blue-400" />}
                               </div>
                               {getActivityBadge(user)}
@@ -568,7 +614,7 @@ export default function AdminUsers() {
                               onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                             >
                               {user.profile_picture
-                                ? <img src={user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                                ? <img src={getImageDisplayUrl(user.profile_picture)} alt="Profile" className="w-full h-full object-cover" />
                                 : <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />}
                             </div>
                             {user.is_active !== false && (
@@ -730,12 +776,38 @@ export default function AdminUsers() {
                               </div>
                               <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/15 mt-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-red-400 font-medium">Password</span>
-                                  <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={user.password || 'Not set'}>
-                                    {user.password
-                                      ? (user.password.includes(':') && user.password.length > 100 ? '***HASHED***' : user.password)
-                                      : 'Not set'}
-                                  </span>
+                                  <span className="text-red-400 font-medium">Password Access</span>
+                                  {user.has_password_record ? (
+                                    <div className="flex items-center gap-1">
+                                      {revealedPasswords[user.id] ? (
+                                        <>
+                                          <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={revealedPasswords[user.id]}>
+                                            {revealedPasswords[user.id]}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => hideRevealedPassword(user.id)}
+                                            className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                                          >
+                                            Hide
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => revealPassword(user.id)}
+                                          disabled={revealingPasswordFor === user.id}
+                                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-60 transition-colors"
+                                        >
+                                          {revealingPasswordFor === user.id ? 'Loading...' : 'Reveal'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate">
+                                      Not synced
+                                    </span>
+                                  )}
                                 </div>
                                 {user.password_last_updated && (
                                   <p className="text-[10px] text-red-400/60 mt-1">Updated: {formatDate(user.password_last_updated)}</p>

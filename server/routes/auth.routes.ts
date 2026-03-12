@@ -1,8 +1,57 @@
 import type { Express } from "express";
-import { requireAuth, supabaseAdmin } from "./middleware";
+import { hasAdminAccess, requireAdmin, requireAuth, supabaseAdmin } from "./middleware";
 import { generateDisplayId } from "./helpers";
 import supabase from "../supabaseClient";
 import { hashPassword, verifyPassword, logAuditEvent, logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import { encryptPasswordForAdminView } from "../utils/admin-password-vault";
+
+async function upsertPasswordRecord(userId: string, password: string) {
+  const hashedPassword = hashPassword(password);
+  const encryptedPassword = encryptPasswordForAdminView(password);
+  const timestamp = new Date().toISOString();
+
+  const { data: existingRecord, error: checkError } = await supabaseAdmin
+    .from("user_passwords")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (checkError) {
+    throw new Error(checkError.message || "Failed to check password record");
+  }
+
+  if (existingRecord) {
+    const { error } = await supabaseAdmin
+      .from("user_passwords")
+      .update({
+        password: hashedPassword,
+        plaintext_password: encryptedPassword,
+        encrypted_at: timestamp,
+        last_updated: timestamp,
+      })
+      .eq("user_id", userId);
+
+    if (error) {
+      throw new Error(error.message || "Failed to update password record");
+    }
+
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("user_passwords")
+    .insert({
+      user_id: userId,
+      password: hashedPassword,
+      plaintext_password: encryptedPassword,
+      encrypted_at: timestamp,
+      last_updated: timestamp,
+    });
+
+  if (error) {
+    throw new Error(error.message || "Failed to create password record");
+  }
+}
 
 export default function registerAuthRoutes(app: Express) {
   // POST /api/auth/store-password
@@ -13,21 +62,20 @@ export default function registerAuthRoutes(app: Express) {
     const userAgent = getUserAgent(req);
 
     try {
-      // Hash the password for secure authentication, but also store plaintext for admin viewing
-      const hashedPassword = hashPassword(password);
-      
-      const { error } = await supabaseAdmin
-        .from("user_passwords")
-        .insert({ user_id: userId, password: hashedPassword, plaintext_password: password });
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ message: "Password is required" });
+      }
 
-      if (error) {
+      try {
+        await upsertPasswordRecord(userId, password);
+      } catch (error) {
         await logAuditEvent({
           userId,
           action: 'PASSWORD_STORE_FAILED',
           ipAddress,
           userAgent,
           status: 'failure',
-          errorMessage: error.message,
+          errorMessage: (error as Error).message,
         });
         return res.status(500).json({ message: "Failed to store password" });
       }
@@ -262,15 +310,22 @@ export default function registerAuthRoutes(app: Express) {
   // GET /api/users/:userId — user info
   app.get("/api/users/:userId", requireAuth, async (req, res) => {
     try {
-      const userId = req.params.userId;
-      if (!userId) {
+      const requestedUserId = req.params.userId;
+      if (!requestedUserId) {
         return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const currentUserId = req.user.id;
+      const isAdmin = await hasAdminAccess(currentUserId);
+
+      if (!isAdmin && requestedUserId !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const { data: user, error } = await supabaseAdmin
         .from("users")
         .select("*")
-        .eq("id", userId)
+        .eq("id", requestedUserId)
         .single();
 
       if (error || !user) {
@@ -287,93 +342,26 @@ export default function registerAuthRoutes(app: Express) {
   // POST /api/save-user-password
   app.post("/api/save-user-password", requireAuth, async (req, res) => {
     try {
-      const { user_id, password } = req.body;
+      const { password } = req.body;
+      const userId = req.user.id;
       const ipAddress = getClientIP(req);
       const userAgent = getUserAgent(req);
 
-      if (!user_id || !password) {
-        return res.status(400).json({ message: "Missing user_id or password" });
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ message: "Missing password" });
       }
 
-      if (req.user.id !== user_id) {
-        await logAuditEvent({
-          userId: req.user.id,
-          action: 'PASSWORD_SAVE_UNAUTHORIZED',
-          details: { attemptedUserId: user_id },
-          ipAddress,
-          userAgent,
-          status: 'failure',
-        });
-        return res
-          .status(403)
-          .json({ message: "Unauthorized: user_id mismatch" });
-      }
+      await upsertPasswordRecord(userId, password);
 
-      const { data: existing, error: checkError } = await supabaseAdmin
-        .from("user_passwords")
-        .select("*")
-        .eq("user_id", user_id)
-        .single();
+      await logAuditEvent({
+        userId,
+        action: 'PASSWORD_SAVED',
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
 
-      if (checkError && checkError.code !== "PGRST116") {
-        return res.status(500).json({ message: "Database error" });
-      }
-
-      // Hash the password for secure authentication, but also store plaintext for admin viewing
-      const hashedPassword = hashPassword(password);
-
-      if (existing) {
-        const { error: updateError } = await supabaseAdmin
-          .from("user_passwords")
-          .update({
-            password: hashedPassword,
-            plaintext_password: password,
-            last_updated: new Date().toISOString(),
-          })
-          .eq("user_id", user_id);
-
-        if (updateError) {
-          return res
-            .status(500)
-            .json({ message: "Failed to update password" });
-        }
-        
-        await logAuditEvent({
-          userId: user_id,
-          action: 'PASSWORD_UPDATED',
-          ipAddress,
-          userAgent,
-          status: 'success',
-        });
-        
-        return res.json({ message: "Password updated successfully" });
-      } else {
-        const { error: insertError } = await supabaseAdmin
-          .from("user_passwords")
-          .insert([
-            {
-              user_id,
-              password: hashedPassword,
-              plaintext_password: password,
-              encrypted_at: new Date().toISOString(),
-              last_updated: new Date().toISOString(),
-            },
-          ]);
-
-        if (insertError) {
-          return res.status(500).json({ message: "Failed to save password" });
-        }
-        
-        await logAuditEvent({
-          userId: user_id,
-          action: 'PASSWORD_SAVED',
-          ipAddress,
-          userAgent,
-          status: 'success',
-        });
-        
-        return res.json({ message: "Password saved successfully" });
-      }
+      return res.json({ message: "Password saved successfully" });
     } catch (error) {
       res
         .status(500)
@@ -445,23 +433,7 @@ export default function registerAuthRoutes(app: Express) {
           .json({ message: "Failed to update authentication password" });
       }
 
-      // Hash the new password for secure authentication, but also store plaintext for admin viewing
-      const hashedNewPassword = hashPassword(newPassword);
-
-      const { error: dbError } = await supabaseAdmin
-        .from("user_passwords")
-        .update({
-          password: hashedNewPassword,
-          plaintext_password: newPassword,
-          last_updated: new Date().toISOString(),
-        })
-        .eq("user_id", userId);
-
-      if (dbError) {
-        return res
-          .status(500)
-          .json({ message: "Failed to update password in database" });
-      }
+      await upsertPasswordRecord(userId, newPassword);
 
       await logAuditEvent({
         userId,
@@ -480,7 +452,7 @@ export default function registerAuthRoutes(app: Express) {
   });
 
   // POST /api/admin/update-user-password — admin changes any user's password
-  app.post("/api/admin/update-user-password", requireAuth, async (req, res) => {
+  app.post("/api/admin/update-user-password", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { userId, newPassword } = req.body;
       const ipAddress = getClientIP(req);
@@ -498,25 +470,6 @@ export default function registerAuthRoutes(app: Express) {
       }
 
       const currentUserId = req.user.id;
-      const { data: currentUser } = await supabaseAdmin
-        .from("users")
-        .select("role")
-        .eq("id", currentUserId)
-        .maybeSingle();
-
-      if (currentUser?.role !== "admin") {
-        await logAuditEvent({
-          userId: currentUserId,
-          action: 'ADMIN_PASSWORD_UPDATE_UNAUTHORIZED',
-          details: { targetUserId: userId },
-          ipAddress,
-          userAgent,
-          status: 'failure',
-        });
-        return res
-          .status(403)
-          .json({ message: "Only admins can change user passwords" });
-      }
 
       const { error: authUpdateError } =
         await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -529,49 +482,7 @@ export default function registerAuthRoutes(app: Express) {
           .json({ message: "Failed to update authentication password" });
       }
 
-      // Hash the new password for secure authentication, but also store plaintext for admin viewing
-      const hashedNewPassword = hashPassword(newPassword);
-
-      // Upsert password record
-      const { data: existingPassword, error: checkError } = await supabaseAdmin
-        .from("user_passwords")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-
-      if (checkError && checkError.code !== "PGRST116") {
-        return res.status(500).json({ message: "Database error" });
-      }
-
-      let dbError = null;
-      if (existingPassword) {
-        const { error } = await supabaseAdmin
-          .from("user_passwords")
-          .update({
-            password: hashedNewPassword,
-            plaintext_password: newPassword,
-            last_updated: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
-        dbError = error;
-      } else {
-        const { error } = await supabaseAdmin
-          .from("user_passwords")
-          .insert({
-            user_id: userId,
-            password: hashedNewPassword,
-            plaintext_password: newPassword,
-            encrypted_at: new Date().toISOString(),
-            last_updated: new Date().toISOString(),
-          });
-        dbError = error;
-      }
-
-      if (dbError) {
-        return res
-          .status(500)
-          .json({ message: "Failed to update password in database" });
-      }
+      await upsertPasswordRecord(userId, newPassword);
 
       await logAuditEvent({
         userId: currentUserId,

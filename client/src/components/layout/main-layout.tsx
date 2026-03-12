@@ -47,17 +47,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         const updatedProfile = { ...cachedProfile, role: freshProfile.role };
         localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
       } else {
-        // Fallback to localStorage
-        const cachedProfile = JSON.parse(localStorage.getItem('userProfile') || '{}') || {};
-        const hasAdminAccess = cachedProfile?.role === 'admin';
-        setIsAdmin(hasAdminAccess);
+        setIsAdmin(false);
       }
     } catch (error) {
       console.log('MainLayout - Admin access check error:', error);
-      // Fallback to localStorage
-      const cachedProfile = JSON.parse(localStorage.getItem('userProfile') || '{}') || {};
-      const hasAdminAccess = cachedProfile?.role === 'admin';
-      setIsAdmin(hasAdminAccess);
+      setIsAdmin(false);
     }
   }, []);
 

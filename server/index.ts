@@ -6,11 +6,12 @@ import { setupVite, serveStatic, log } from "./vite";
 import LiveCryptoService from "./services/live-crypto-service";
 import { recordApiMetric } from "./perf-metrics";
 import { getServerConfig } from "./config";
+import { getInternalTaskSecret } from "./routes/middleware";
 import postgres from "postgres";
 
 // Function to start scheduled tasks
 function startScheduledTasks(port: number) {
-  const internalKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const internalKey = getInternalTaskSecret();
   
   // Process completed staking positions every hour
   setInterval(async () => {

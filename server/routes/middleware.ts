@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { validateSession, getClientIP, getUserAgent, logAuditEvent, invalidateSession } from '../utils/security';
 
 // Augment Express Request to include Supabase auth user and session info
@@ -27,6 +28,23 @@ export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
+
+const internalTaskSecret = process.env.INTERNAL_TASK_SECRET || randomBytes(32).toString('hex');
+
+function matchesInternalTaskSecret(headerValue: string | undefined): boolean {
+  if (!headerValue) {
+    return false;
+  }
+
+  const expected = Buffer.from(internalTaskSecret);
+  const received = Buffer.from(headerValue);
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, received);
+}
 
 /**
  * Auth middleware — verifies Bearer token via Supabase and attaches user to req.
@@ -92,6 +110,21 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   }
 }
 
+export async function requireInternalTask(req: Request, res: Response, next: NextFunction) {
+  const internalKeyHeader = req.headers['x-internal-key'];
+  const internalKey = Array.isArray(internalKeyHeader) ? internalKeyHeader[0] : internalKeyHeader;
+
+  if (matchesInternalTaskSecret(internalKey)) {
+    return next();
+  }
+
+  return requireAuth(req, res, () => requireAdmin(req, res, next));
+}
+
+export function getInternalTaskSecret(): string {
+  return internalTaskSecret;
+}
+
 /**
  * Verified user middleware — requires confirmed email. Must run after requireAuth.
  */
@@ -151,7 +184,10 @@ export async function requireUnlockedWallet(req: Request, res: Response, next: N
       .single();
 
     if (error || !user) {
-      return next(); // If user not found in custom table, let through (fail-open for schema issues)
+      return res.status(503).json({
+        message: 'Unable to verify wallet status. Please try again later.',
+        code: 'WALLET_STATUS_UNAVAILABLE',
+      });
     }
 
     // Admins bypass wallet lock
@@ -168,8 +204,10 @@ export async function requireUnlockedWallet(req: Request, res: Response, next: N
 
     next();
   } catch (error) {
-    // Fail-open: don't block user if the check itself fails
-    next();
+    return res.status(503).json({
+      message: 'Unable to verify wallet status. Please try again later.',
+      code: 'WALLET_STATUS_UNAVAILABLE',
+    });
   }
 }
 

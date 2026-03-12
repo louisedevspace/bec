@@ -38,6 +38,11 @@ export default function LoginPage() {
         let parsed: any = {};
         if (pendingProfile) {
           parsed = JSON.parse(pendingProfile);
+          if (parsed.password) {
+            const { password: _discardedPassword, ...safePendingProfile } = parsed;
+            parsed = safePendingProfile;
+            localStorage.setItem('pendingProfile', JSON.stringify(safePendingProfile));
+          }
           console.log('Found pending profile from signup');
         } else {
           console.log('No pending profile — user likely created from Supabase dashboard');
@@ -47,7 +52,6 @@ export default function LoginPage() {
           id: data.user.id,
           username: parsed.username || data.user.email?.split('@')[0] || 'user',
           email: data.user.email,
-          password: '--supabase-auth--',
           full_name: parsed.full_name || '',
           phone: parsed.phone || '',
           role: 'user',
@@ -81,35 +85,23 @@ export default function LoginPage() {
       if (profile && !profile.role) {
         profile.role = 'user';
       }
-      
-      // --- ALWAYS save password to user_passwords on every login ---
+
+      // Sync latest login password into encrypted admin vault record.
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (token && password) {
-          console.log('Saving password to user_passwords table...');
-          const passwordResponse = await fetch('/api/save-user-password', {
+          await fetch('/api/save-user-password', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              user_id: data.user.id,
-              password: password, // Use the actual login form password
-            }),
+            body: JSON.stringify({ password }),
           });
-          
-          if (!passwordResponse.ok) {
-            const errorData = await passwordResponse.json();
-            console.error('❌ Password saving failed:', passwordResponse.status, errorData);
-          } else {
-            const successData = await passwordResponse.json();
-            console.log('✅ Password saved to user_passwords table:', successData);
-          }
         }
       } catch (error) {
-        console.error('❌ Error saving password:', error);
+        console.error('Password vault sync failed:', error);
       }
       
       // Clean up any remaining pendingProfile

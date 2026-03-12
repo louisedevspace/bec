@@ -7,15 +7,20 @@ import multer from "multer";
 import supabase from "../supabaseClient";
 import { logFinancialOperation, getClientIP, getUserAgent, logAuditEvent } from "../utils/security";
 import { adminNotificationService } from "../services/admin-notification.service";
+import { buildInternalAssetPath } from "../../shared/supabase-storage";
+import { sanitizeUploadFileName } from "../utils/uploads";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 export default function registerLoansRoutes(app: Express) {
   // POST /api/loans — create loan application
   app.post("/api/loans", requireAuth, requireVerifiedUser, async (req, res) => {
     try {
       const validatedData = insertLoanApplicationSchema.parse(req.body);
-      const application = await storage.createLoanApplication(validatedData);
+      const application = await storage.createLoanApplication({
+        ...validatedData,
+        user_id: req.user.id,
+      });
 
       // Admin notification
       try {
@@ -210,7 +215,7 @@ export default function registerLoansRoutes(app: Express) {
   });
 
   // POST /api/loan/submit — loan with file upload
-  app.post("/api/loan/submit", requireAuth, multer().array("documents"), async (req, res) => {
+  app.post("/api/loan/submit", requireAuth, requireVerifiedUser, upload.array("documents"), async (req, res) => {
     try {
       const { amount, purpose, duration, monthly_income } = req.body;
       const files = (req.files as Express.Multer.File[]) || [];
@@ -233,7 +238,7 @@ export default function registerLoansRoutes(app: Express) {
       // Upload documents
       const documentUrls: string[] = [];
       for (const file of files) {
-        const fileName = `${userId}/${Date.now()}_${file.originalname}`;
+        const fileName = `${userId}/${Date.now()}_${sanitizeUploadFileName(file.originalname)}`;
         const { data, error } = await supabaseAdmin.storage
           .from("loan-documents")
           .upload(fileName, file.buffer, { contentType: file.mimetype });
@@ -296,17 +301,16 @@ export default function registerLoansRoutes(app: Express) {
   // POST /api/upload-loan-doc
   app.post("/api/upload-loan-doc", requireAuth, requireVerifiedUser, upload.single("file"), async (req, res) => {
     const file = req.file;
-    const userId = req.body.userId;
-    if (!file || !userId) return res.status(400).json({ message: "No file or userId provided" });
+    const userId = req.user.id;
+    if (!file) return res.status(400).json({ message: "No file provided" });
 
-    const filePath = `${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `${userId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
     const { error } = await supabase.storage
       .from("loan-documents")
       .upload(filePath, file.buffer, { contentType: file.mimetype });
 
     if (error) return res.status(500).json({ message: "Upload failed", error });
 
-    const { data: publicUrlData } = supabase.storage.from("loan-documents").getPublicUrl(filePath);
-    res.json({ url: publicUrlData.publicUrl });
+    res.json({ url: buildInternalAssetPath("loan-documents", filePath) });
   });
 }

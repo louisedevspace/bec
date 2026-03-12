@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { buildApiUrl } from '@/lib/config';
+import { buildImageViewerPath } from '@/lib/image';
 
 interface KYCVerification {
   id: number;
@@ -311,9 +312,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                             <div className="grid grid-cols-3 gap-2">
                               {kyc.front_id_url && (
                                 <a 
-                                  href={kyc.front_id_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
+                                  href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
                                   className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
                                 >
                                   <FileText className="h-6 w-6 text-blue-400" />
@@ -322,9 +321,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                               )}
                               {kyc.back_id_url && (
                                 <a 
-                                  href={kyc.back_id_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
+                                  href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
                                   className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
                                 >
                                   <FileText className="h-6 w-6 text-blue-400" />
@@ -333,9 +330,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                               )}
                               {kyc.selfie_with_id_url && (
                                 <a 
-                                  href={kyc.selfie_with_id_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
+                                  href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
                                   className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
                                 >
                                   <Camera className="h-6 w-6 text-green-400" />
@@ -405,9 +400,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                           <div className="grid grid-cols-3 gap-2">
                             {kyc.front_id_url && (
                               <a 
-                                href={kyc.front_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <FileText className="h-6 w-6 text-blue-400" />
@@ -416,9 +409,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                             )}
                             {kyc.back_id_url && (
                               <a 
-                                href={kyc.back_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <FileText className="h-6 w-6 text-blue-400" />
@@ -427,9 +418,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                             )}
                             {kyc.selfie_with_id_url && (
                               <a 
-                                href={kyc.selfie_with_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <Camera className="h-6 w-6 text-green-400" />
@@ -473,9 +462,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                           <div className="grid grid-cols-3 gap-2">
                             {kyc.front_id_url && (
                               <a 
-                                href={kyc.front_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <FileText className="h-6 w-6 text-blue-400" />
@@ -484,9 +471,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                             )}
                             {kyc.back_id_url && (
                               <a 
-                                href={kyc.back_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <FileText className="h-6 w-6 text-blue-400" />
@@ -495,9 +480,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                             )}
                             {kyc.selfie_with_id_url && (
                               <a 
-                                href={kyc.selfie_with_id_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
+                                href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
                                 className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
                               >
                                 <Camera className="h-6 w-6 text-green-400" />

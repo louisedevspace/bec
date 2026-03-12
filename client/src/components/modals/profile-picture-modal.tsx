@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, Upload, Camera, User, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { getImageDisplayUrl } from '@/lib/image';
+import { buildInternalAssetPath } from '../../../../shared/supabase-storage';
 
 interface ProfilePictureModalProps {
   isOpen: boolean;
@@ -192,19 +194,12 @@ export function ProfilePictureModal({
         throw new Error('Failed to upload image');
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      if (!urlData.publicUrl) {
-        throw new Error('Failed to get image URL');
-      }
+      const internalImagePath = buildInternalAssetPath('avatars', filePath);
 
       // Update user profile in database
       const { error: updateError } = await supabase
         .from('users')
-        .update({ profile_picture: urlData.publicUrl })
+        .update({ profile_picture: internalImagePath })
         .eq('id', userId);
 
       if (updateError) {
@@ -213,7 +208,7 @@ export function ProfilePictureModal({
       }
 
       setSuccess('Profile picture updated successfully!');
-      onPictureUpdate(urlData.publicUrl);
+  onPictureUpdate(internalImagePath);
 
       // Clear form
       setSelectedFile(null);
@@ -293,7 +288,7 @@ export function ProfilePictureModal({
             <h3 className="text-sm font-medium text-gray-400 mb-3">Current Picture</h3>
             <div className="relative inline-block">
               <img
-                src={currentProfilePicture}
+                src={getImageDisplayUrl(currentProfilePicture)}
                 alt="Current profile"
                 className="w-24 h-24 rounded-full object-cover border-2 border-[#2a2a2a]"
               />

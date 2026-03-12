@@ -1,4 +1,4 @@
-export interface CryptoPrice {
+ export interface CryptoPrice {
   id: number;
   symbol: string;
   price: string;

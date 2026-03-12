@@ -29,6 +29,7 @@ const MarketPage = lazy(() => import("@/pages/market"));
 const LoanPage = lazy(() => import("@/pages/loan"));
 const ProfilePage = lazy(() => import("@/pages/profile"));
 const SupportPage = lazy(() => import('./pages/support'));
+const ImageViewerPage = lazy(() => import('./pages/image-viewer'));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Lazy load admin pages
@@ -62,10 +63,11 @@ function Router() {
       const currentUser = await authApi.getCurrentUser();
       setUser(currentUser);
       setIsAuthenticated(!!currentUser);
-      setLoading(false);
       
       // If not authenticated and not on login/signup, redirect to login
       if (!currentUser && location !== '/login' && location !== '/signup') {
+        setIsAdmin(false);
+        setLoading(false);
         setLocation('/login');
         return;
       }
@@ -73,51 +75,36 @@ function Router() {
       // Check admin role - fetch fresh data from database
       if (currentUser) {
         try {
-          // First try localStorage for quick check
           const cachedProfile = JSON.parse(localStorage.getItem('userProfile') || '{}') || {};
-          const hasAdminAccess = cachedProfile?.role === 'admin';
-          setIsAdmin(hasAdminAccess);
-          
-          // If we have admin access from cache, use it immediately
-          if (hasAdminAccess) {
-            return;
-          }
-          
-          // Only try to fetch fresh data if we don't have admin access from cache
           const { data: freshProfile, error } = await supabase
             .from('users')
             .select('role')
             .eq('id', currentUser.id)
             .maybeSingle();
-          
+
+          const hasAdminAccess = !error && freshProfile?.role === 'admin';
+          setIsAdmin(hasAdminAccess);
+
           if (!error && freshProfile) {
-            const hasAdminAccess = freshProfile.role === 'admin';
-            setIsAdmin(hasAdminAccess);
-            
-            // Update localStorage with fresh role data
-            if (cachedProfile?.role !== freshProfile.role) {
-              const updatedProfile = { ...cachedProfile, role: freshProfile.role };
-              localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-            }
+            const updatedProfile = { ...cachedProfile, role: freshProfile.role };
+            localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
           }
         } catch (error) {
           console.log('Admin access check error:', error);
-          // Don't set to false if we have cached admin access
-          const cachedProfile = JSON.parse(localStorage.getItem('userProfile') || '{}') || {};
-          if (cachedProfile?.role !== 'admin') {
-            setIsAdmin(false);
-          }
+          setIsAdmin(false);
         }
       } else {
         setIsAdmin(false);
       }
+
+      setLoading(false);
     } catch (error) {
       console.error('Auth check error:', error);
       setLoading(false);
       setIsAuthenticated(false);
       setIsAdmin(false);
     }
-  }, []);
+  }, [location, setLocation]);
 
   useEffect(() => {
     checkAuth();
@@ -201,6 +188,7 @@ function Router() {
           <Route path="/profile" component={protectedRoute(ProfilePage)} />
           <Route path="/support" component={protectedRoute(SupportPage)} />
           <Route path="/wallet" component={protectedRoute(WalletPage)} />
+          <Route path="/image-viewer" component={protectedRoute(ImageViewerPage)} />
 
           <Route component={NotFound} />
         </Switch>

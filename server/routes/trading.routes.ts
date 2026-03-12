@@ -98,7 +98,7 @@ export default function registerTradingRoutes(app: Express) {
   });
 
   // POST /api/transactions — create deposit/withdraw transaction
-  app.post("/api/transactions", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
+  app.post("/api/transactions", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { insertTransactionSchema } = await import("@shared/schema");
       const validatedData = insertTransactionSchema.parse(req.body);
@@ -131,18 +131,25 @@ export default function registerTradingRoutes(app: Express) {
   app.post("/api/trades", requireAuth, requireVerifiedUser, requireUnlockedWallet, async (req, res) => {
     try {
       const validatedData = insertTradeSchema.parse(req.body);
+      const tradeData = {
+        ...validatedData,
+        userId: req.user.id,
+        status: "pending",
+        deletedForUser: false,
+        rejectionReason: null,
+      };
       const ipAddress = getClientIP(req);
       const userAgent = getUserAgent(req);
 
-      const balanceValidation = await validateTradeBalance(validatedData);
+      const balanceValidation = await validateTradeBalance(tradeData);
       if (!balanceValidation.valid) {
         await logFinancialOperation({
-          userId: validatedData.userId,
+          userId: tradeData.userId,
           operation: 'TRADE',
           action: 'CREATE',
-          amount: validatedData.amount,
-          symbol: validatedData.symbol,
-          details: { side: validatedData.side, reason: 'insufficient_balance' },
+          amount: tradeData.amount,
+          symbol: tradeData.symbol,
+          details: { side: tradeData.side, reason: 'insufficient_balance' },
           ipAddress,
           userAgent,
           status: 'failure',
@@ -154,18 +161,18 @@ export default function registerTradingRoutes(app: Express) {
         });
       }
 
-      const trade = await storage.createTrade(validatedData);
-      await ensurePortfolioExists(validatedData.userId, validatedData.symbol);
+      const trade = await storage.createTrade(tradeData);
+      await ensurePortfolioExists(tradeData.userId, tradeData.symbol);
 
       // Log successful trade creation
       await logFinancialOperation({
-        userId: validatedData.userId,
+        userId: tradeData.userId,
         operation: 'TRADE',
         action: 'CREATE',
         resourceId: trade.id,
-        amount: validatedData.amount,
-        symbol: validatedData.symbol,
-        details: { side: validatedData.side, price: validatedData.price },
+        amount: tradeData.amount,
+        symbol: tradeData.symbol,
+        details: { side: tradeData.side, price: tradeData.price },
         ipAddress,
         userAgent,
         status: 'success',
@@ -220,8 +227,34 @@ export default function registerTradingRoutes(app: Express) {
   app.put("/api/trades/:tradeId/cancel", requireAuth, requireVerifiedUser, async (req, res) => {
     try {
       const tradeId = parseInt(req.params.tradeId);
+      const currentUserId = req.user.id;
       if (isNaN(tradeId)) {
         return res.status(400).json({ message: "Invalid trade ID" });
+      }
+
+      const { data: currentUser } = await supabaseAdmin
+        .from("users")
+        .select("role")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      const { data: existingTrade, error: tradeLookupError } = await supabaseAdmin
+        .from("trades")
+        .select("id, user_id, status")
+        .eq("id", tradeId)
+        .single();
+
+      if (tradeLookupError || !existingTrade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      const isAdmin = currentUser?.role === "admin";
+      if (!isAdmin && existingTrade.user_id !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!["pending", "approved"].includes(existingTrade.status)) {
+        return res.status(400).json({ message: "Only pending or approved trades can be cancelled" });
       }
 
       const updatedTrade = await storage.updateTrade(tradeId, { status: "cancelled" });

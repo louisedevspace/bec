@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, Camera, User, CheckCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { buildApiUrl } from "@/lib/config";
+import { buildInternalAssetPath } from '../../../../shared/supabase-storage';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -95,7 +96,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       }
       
       console.log('🔍 Front ID uploaded successfully');
-      documentUrls.frontIdUrl = `${supabase.storage.from('kyc-documents').getPublicUrl(frontIdPath).data.publicUrl}`;
+      documentUrls.frontIdUrl = buildInternalAssetPath('kyc-documents', frontIdPath);
 
       // Upload back ID
       console.log('🔍 Uploading back ID...');
@@ -118,7 +119,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       }
       
       console.log('🔍 Back ID uploaded successfully');
-      documentUrls.backIdUrl = `${supabase.storage.from('kyc-documents').getPublicUrl(backIdPath).data.publicUrl}`;
+      documentUrls.backIdUrl = buildInternalAssetPath('kyc-documents', backIdPath);
 
       // Upload selfie with ID
       console.log('🔍 Uploading selfie...');
@@ -141,7 +142,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       }
       
       console.log('🔍 Selfie uploaded successfully');
-      documentUrls.selfieWithIdUrl = `${supabase.storage.from('kyc-documents').getPublicUrl(selfiePath).data.publicUrl}`;
+      documentUrls.selfieWithIdUrl = buildInternalAssetPath('kyc-documents', selfiePath);
 
       console.log('🔍 All documents uploaded successfully');
       console.log('🔍 Document URLs:', documentUrls);

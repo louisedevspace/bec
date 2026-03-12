@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS user_passwords (
   id SERIAL PRIMARY KEY,
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
   password TEXT NOT NULL,
+  plaintext_password TEXT,
   encrypted_at TIMESTAMPTZ DEFAULT NOW(),
   last_updated TIMESTAMPTZ DEFAULT NOW()
 );

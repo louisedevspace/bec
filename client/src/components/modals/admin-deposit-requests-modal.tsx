@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { buildApiUrl } from '@/lib/config';
+import { openImageViewer } from '@/lib/image';
 
 interface DepositRequest {
   id: number;
@@ -178,7 +179,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(request.screenshot_url, '_blank')}
+                          onClick={() => openImageViewer(request.screenshot_url, `${request.symbol} deposit screenshot`)}
                           className="text-xs bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
                         >
                           <Eye className="h-3 w-3 mr-1" />
