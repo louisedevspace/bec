@@ -1215,7 +1215,14 @@ export default function registerAdminRoutes(app: Express) {
 
       const approvedDeposits = allDeposits.filter(d => d.status === 'approved');
       const approvedWithdrawals = allWithdrawals.filter(w => w.status === 'approved');
-      const completedFutures = allFutures.filter(f => f.status === 'completed');
+      const isSettledFutures = (f: any) => {
+        if (f.status === 'completed') return true;
+        if (f.final_result === 'win' || f.final_result === 'loss') return true;
+        const pnl = parseFloat(f.profit_loss ?? f.final_profit ?? '0');
+        return Number.isFinite(pnl) && pnl !== 0;
+      };
+
+      const completedFutures = allFutures.filter(isSettledFutures);
 
       const getFuturesPnl = (f: any) => {
         const pnl = parseFloat(f.profit_loss ?? f.final_profit ?? '0');
@@ -1226,6 +1233,16 @@ export default function registerAdminRoutes(app: Express) {
         if (f.final_result === 'loss') return true;
         if (f.final_result === 'win') return false;
         return getFuturesPnl(f) < 0;
+      };
+      const getFuturesLossRevenue = (f: any) => {
+        const pnl = getFuturesPnl(f);
+        if (pnl < 0) return Math.abs(pnl);
+        // Fallback for legacy rows marked as loss but missing pnl fields.
+        if (isFuturesLoss(f)) {
+          const amount = parseFloat(f.amount || '0');
+          return Number.isFinite(amount) && amount > 0 ? amount : 0;
+        }
+        return 0;
       };
 
       const priceMap = new Map(prices.map((p: any) => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
@@ -1296,7 +1313,7 @@ export default function registerAdminRoutes(app: Express) {
             const t = new Date(f.completed_at || f.created_at);
             return t >= d && t < next && isFuturesLoss(f);
           })
-          .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
+          .reduce((s, f) => s + getFuturesLossRevenue(f), 0);
 
         const netFlow = dayDepAmt - dayWdAmt;
         const dayProfit = netFlow + dayFuturesRevenue;
@@ -1340,7 +1357,7 @@ export default function registerAdminRoutes(app: Express) {
             const t = new Date(f.completed_at || f.created_at);
             return t >= monthStart && t <= monthEnd && isFuturesLoss(f);
           })
-          .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
+          .reduce((s, f) => s + getFuturesLossRevenue(f), 0);
 
         const mDepTotal = mDeps.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
         const mWdTotal = mWds.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
@@ -1405,9 +1422,9 @@ export default function registerAdminRoutes(app: Express) {
       // ==================
       const totalDeposits = approvedDeposits.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
       const totalWithdrawals = approvedWithdrawals.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
-      const totalFuturesRevenue = completedFutures
-        .filter(f => isFuturesLoss(f))
-        .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
+      const futuresLossTrades = completedFutures.filter(f => isFuturesLoss(f));
+      const totalFuturesRevenue = futuresLossTrades
+        .reduce((s, f) => s + getFuturesLossRevenue(f), 0);
 
       // Symbol breakdown with original and USDT equivalent
       const depositsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }> = {};
@@ -1444,6 +1461,7 @@ export default function registerAdminRoutes(app: Express) {
           totalWithdrawals,
           totalNetFlow: totalDeposits - totalWithdrawals,
           totalFuturesRevenue,
+          totalFuturesLossTrades: futuresLossTrades.length,
           totalProfit: totalDeposits - totalWithdrawals + totalFuturesRevenue,
           depositsBySymbol,
           withdrawalsBySymbol,

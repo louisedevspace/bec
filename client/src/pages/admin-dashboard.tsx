@@ -116,7 +116,7 @@ interface AnalyticsData {
   };
   summary: {
     totalDeposits: number; totalWithdrawals: number; totalNetFlow: number;
-    totalFuturesRevenue: number; totalProfit: number;
+    totalFuturesRevenue: number; totalFuturesLossTrades: number; totalProfit: number;
     depositsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }>;
     withdrawalsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }>;
     totalDepositCount: number; totalWithdrawalCount: number;
@@ -1179,7 +1179,9 @@ export default function AdminDashboard() {
                         trend={analytics.summary.totalNetFlow >= 0 ? 'up' : 'down'} />
                       <StatCard icon={<Zap size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
                         label="Futures Revenue" value={formatCurrency(analytics.summary.totalFuturesRevenue)}
-                        sub="From user losses" />
+                        sub={analytics.summary.totalFuturesLossTrades > 0
+                          ? `From ${analytics.summary.totalFuturesLossTrades} user loss trades`
+                          : 'No realized loss trades yet'} />
                       <StatCard icon={<DollarSign size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
                         label="Total Profit" value={formatCurrency(analytics.summary.totalProfit)}
                         sub="Net flow + futures" trend="up" />
