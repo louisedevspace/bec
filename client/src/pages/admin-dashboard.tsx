@@ -527,7 +527,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-              {showActions && order.status === "pending_approval" && (
+              {showActions && ["pending_approval", "pending"].includes(order.status) && (
                 <div className="flex gap-2 flex-shrink-0">
                   <Button size="sm" onClick={() => approveMutation.mutate(order.id)} disabled={approveMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-3">

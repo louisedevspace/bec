@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { supabase } from '../lib/supabaseClient';
+import { config } from '../lib/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +30,7 @@ export default function SignupPage() {
         email, 
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`
+          emailRedirectTo: config.authRedirectUrl
         }
       });
       if (signUpError || !data.user) throw signUpError || new Error('Signup failed');

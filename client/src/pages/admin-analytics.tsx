@@ -137,7 +137,7 @@ export default function AdminAnalyticsPage() {
       const pendingWithdrawals = withdrawals?.filter(w => w.status === 'pending').length || 0;
 
       const totalTrades = trades?.length || 0;
-      const pendingTrades = trades?.filter(t => t.status === 'pending_approval').length || 0;
+      const pendingTrades = trades?.filter(t => t.status === 'pending_approval' || t.status === 'pending').length || 0;
       const completedTrades = trades?.filter(t => t.status === 'executed' || t.status === 'filled').length || 0;
       const totalVolume = trades?.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || 0;
 
@@ -296,7 +296,7 @@ export default function AdminAnalyticsPage() {
 
             chartData.tradeStatus = [
               { status: 'Completed', count: statusCounts['executed'] || statusCounts['filled'] || 0, color: '#10b981' },
-              { status: 'Pending', count: statusCounts['pending_approval'] || 0, color: '#f59e0b' },
+              { status: 'Pending', count: (statusCounts['pending_approval'] || 0) + (statusCounts['pending'] || 0), color: '#f59e0b' },
               { status: 'Rejected', count: statusCounts['rejected'] || 0, color: '#ef4444' }
             ];
           }

@@ -12,7 +12,7 @@ export const authApi = {
       email, 
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`
+        emailRedirectTo: config.authRedirectUrl
       }
     });
     if (error) throw error;

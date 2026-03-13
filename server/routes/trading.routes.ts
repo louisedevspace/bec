@@ -311,7 +311,9 @@ export default function registerTradingRoutes(app: Express) {
         return res.status(500).json({ message: "Database error", error: error.message });
       }
 
-      const pendingOrders = trades?.filter((t) => t.status === "pending_approval") || [];
+      const pendingOrders = trades?.filter(
+        (t) => t.status === "pending_approval" || t.status === "pending"
+      ) || [];
 
       const ordersWithUserDetails = await Promise.all(
         pendingOrders.map(async (trade) => {
@@ -389,7 +391,7 @@ export default function registerTradingRoutes(app: Express) {
       if (trade.status === "approved" || trade.status === "executed") {
         return res.status(400).json({ message: `Trade is already ${trade.status}` });
       }
-      if (trade.status !== "pending_approval") {
+      if (!["pending_approval", "pending"].includes(trade.status)) {
         return res.status(400).json({ message: `Cannot approve trade with status: ${trade.status}` });
       }
 
@@ -426,7 +428,7 @@ export default function registerTradingRoutes(app: Express) {
       if (["approved", "executed", "rejected"].includes(trade.status)) {
         return res.status(400).json({ message: `Cannot reject trade with status: ${trade.status}` });
       }
-      if (trade.status !== "pending_approval") {
+      if (!["pending_approval", "pending"].includes(trade.status)) {
         return res.status(400).json({ message: `Cannot reject trade with status: ${trade.status}` });
       }
 

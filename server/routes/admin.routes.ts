@@ -765,7 +765,7 @@ export default function registerAdminRoutes(app: Express) {
       ] = await Promise.all([
         supabaseAdmin.from("deposit_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabaseAdmin.from("withdraw_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabaseAdmin.from("trades").select("id", { count: "exact", head: true }).eq("status", "pending_approval"),
+        supabaseAdmin.from("trades").select("id", { count: "exact", head: true }).in("status", ["pending_approval", "pending"]),
         supabaseAdmin.from("futures_trades").select("id", { count: "exact", head: true }).eq("status", "pending_approval"),
         supabaseAdmin.from("loan_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabaseAdmin.from("kyc_verifications").select("id", { count: "exact", head: true }).eq("status", "pending"),

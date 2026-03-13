@@ -10,8 +10,9 @@ const currentHost = window.location.host;
 
 // App metadata and URLs (Vite envs)
 const appName = import.meta.env.VITE_APP_NAME || 'Becxus Exchange';
-const publicUrl = import.meta.env.VITE_PUBLIC_URL || `${currentProtocol}//${currentHost}`;
+const publicUrl = (import.meta.env.VITE_PUBLIC_URL || `${currentProtocol}//${currentHost}`).replace(/\/+$/, '');
 const forceHttps = (import.meta.env.VITE_FORCE_HTTPS || 'false').toLowerCase() === 'true';
+const authRedirectUrl = `${publicUrl}/login`;
 
 // Determine the API and WebSocket base URLs (env overrides supported)
 let apiBaseUrl: string = import.meta.env.VITE_API_BASE_URL || `${currentProtocol}//${currentHost}`;
@@ -24,6 +25,7 @@ function validateConfig() {
     ['apiBaseUrl', apiBaseUrl],
     ['wsBaseUrl', wsBaseUrl],
     ['publicUrl', publicUrl],
+    ['authRedirectUrl', authRedirectUrl],
   ] as const;
   const missing = required.filter(([, v]) => !v || String(v).includes('undefined')).map(([k]) => k);
   if (missing.length && isDevelopment) {
@@ -36,6 +38,7 @@ validateConfig();
 export const config = {
   appName,
   publicUrl,
+  authRedirectUrl,
   forceHttps,
   apiBaseUrl,
   wsBaseUrl,
@@ -64,6 +67,7 @@ if (import.meta.env.DEV) {
     environment: isDevelopment ? 'development' : 'production',
     appName,
     publicUrl,
+    authRedirectUrl,
     apiBaseUrl,
     wsBaseUrl,
     currentHost,
@@ -75,6 +79,7 @@ if (import.meta.env.DEV) {
       VITE_NODE_ENV: import.meta.env.VITE_NODE_ENV,
       VITE_APP_NAME: import.meta.env.VITE_APP_NAME,
       VITE_PUBLIC_URL: import.meta.env.VITE_PUBLIC_URL,
+      VITE_AUTH_REDIRECT_URL: import.meta.env.VITE_AUTH_REDIRECT_URL,
       VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
       VITE_WS_BASE_URL: import.meta.env.VITE_WS_BASE_URL,
       VITE_FORCE_HTTPS: import.meta.env.VITE_FORCE_HTTPS,
