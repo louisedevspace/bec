@@ -839,6 +839,16 @@ export default function registerAdminRoutes(app: Express) {
         return safeAmount * px;
       };
       const tradeBaseSymbol = (pair?: string | null) => (pair || '').split('/')[0]?.toUpperCase() || 'USDT';
+      const finalTradeStatuses = new Set(['approved', 'executed', 'filled', 'completed']);
+      const tradeNotionalUsdt = (trade: any) => {
+        const amount = parseFloat(trade.amount || '0');
+        const price = parseFloat(trade.price || '0');
+        if (price > 0) {
+          return amount * price;
+        }
+        return toUsdt(amount, tradeBaseSymbol(trade.symbol));
+      };
+      const settledTrades = trades.filter(t => finalTradeStatuses.has(t.status));
 
       // === USER STATS ===
       const totalUsers = users.filter(u => u.role !== 'admin').length;
@@ -876,13 +886,8 @@ export default function registerAdminRoutes(app: Express) {
       // === TRADING STATS ===
       const totalTrades = trades.length;
       const pendingTrades = trades.filter(t => ['pending_approval', 'pending'].includes(t.status)).length;
-      const completedTrades = trades.filter(t => ['executed', 'filled'].includes(t.status)).length;
-      const totalTradeVolume = trades.reduce((s, t) => {
-        const amount = parseFloat(t.amount || '0');
-        const price = parseFloat(t.price || '0');
-        if (price > 0) return s + (amount * price);
-        return s + toUsdt(amount, tradeBaseSymbol(t.symbol));
-      }, 0);
+      const completedTrades = settledTrades.length;
+      const totalTradeVolume = settledTrades.reduce((sum, trade) => sum + tradeNotionalUsdt(trade), 0);
 
       // === FUTURES STATS ===
       const totalFutures = futures.length;
@@ -935,13 +940,8 @@ export default function registerAdminRoutes(app: Express) {
         const d = new Date(today.getTime() - i * 86400000);
         const dateStr = d.toISOString().split('T')[0];
         const next = new Date(d.getTime() + 86400000);
-        const dayTrades = trades.filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next);
-        const vol = dayTrades.reduce((s, t) => {
-          const amount = parseFloat(t.amount || '0');
-          const price = parseFloat(t.price || '0');
-          if (price > 0) return s + amount * price;
-          return s + toUsdt(amount, tradeBaseSymbol(t.symbol));
-        }, 0);
+        const dayTrades = settledTrades.filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next);
+        const vol = dayTrades.reduce((sum, trade) => sum + tradeNotionalUsdt(trade), 0);
         volumeTrend.push({ date: dateStr, volume: vol, count: dayTrades.length });
       }
 

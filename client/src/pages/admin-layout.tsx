@@ -1,11 +1,11 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
 import { timeAgo } from '@/lib/date-utils';
 import { Link, useLocation } from 'wouter';
-import { 
-  Menu, X, LayoutDashboard, Users, MessageSquare, Settings, 
-  ChevronRight, LogOut, Shield, BarChart3, Megaphone, TrendingUp, Wallet,
+import {
+  Menu, X, LayoutDashboard, Users, MessageSquare, Settings,
+  ChevronRight, LogOut, Shield, Megaphone, TrendingUp, Wallet,
   Bell, Check, CheckCheck, ExternalLink, Coins
-} from 'lucide-react'; 
+} from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
 import { useAdminNotifications, type AdminNotification } from '@/hooks/use-admin-notifications';
@@ -17,7 +17,6 @@ const CATEGORY_MAP: Record<string, string> = {
   '/admin/wallets': 'wallets',
   '/admin/support': 'support',
   '/admin/dashboard': 'dashboard',
-  '/admin/deleted-users': 'users',
   '/admin/trading-pairs': 'trading_pairs',
 };
 

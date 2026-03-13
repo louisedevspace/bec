@@ -207,13 +207,12 @@ function MetricRow({ label, value, total, color }: { label: string; value: numbe
   );
 }
 
-function QuickActionLink({ href, icon, label, count, colorClasses }: {
-  href: string; icon: React.ReactNode; label: string; count?: number;
+function QuickActionLink({ href, onClick, icon, label, count, colorClasses }: {
+  href?: string; onClick?: () => void; icon: React.ReactNode; label: string; count?: number;
   colorClasses: { bg: string; text: string; badge: string };
 }) {
-  return (
-    <a href={href}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all group">
+  const content = (
+    <>
       <div className={`w-8 h-8 ${colorClasses.bg} rounded-lg flex items-center justify-center flex-shrink-0 ${colorClasses.text}`}>
         {icon}
       </div>
@@ -224,6 +223,25 @@ function QuickActionLink({ href, icon, label, count, colorClasses }: {
         <span className={`text-[10px] font-bold ${colorClasses.badge} px-1.5 py-0.5 rounded-md`}>{count}</span>
       )}
       <ArrowRight size={12} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all group text-left"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a href={href}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all group">
+      {content}
     </a>
   );
 }
@@ -988,7 +1006,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       )}
-                      <QuickActionLink href="/admin/analytics" icon={<BarChart3 size={16} />} label="Full Analytics"
+                      <QuickActionLink onClick={() => setActiveTab('analytics')} icon={<BarChart3 size={16} />} label="Analytics Tab"
                         colorClasses={{ bg: 'bg-purple-500/10', text: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-400' }} />
                       <QuickActionLink href="/admin/news" icon={<Globe size={16} />} label="News & Broadcasts"
                         colorClasses={{ bg: 'bg-green-500/10', text: 'text-green-400', badge: 'bg-green-500/20 text-green-400' }} />

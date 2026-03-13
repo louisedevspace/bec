@@ -2,7 +2,6 @@ import AdminLayout from "./admin-layout";
 import { formatDate as formatDateUtil, formatDateTime, formatShortDate as formatShortDateUtil, timeAgo as timeAgoUtil } from '@/lib/date-utils';
 import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,23 +22,11 @@ const AdminChangePasswordModal = lazy(() =>
 const AdminUserManagementModal = lazy(() =>
   import("../components/modals/admin-user-management-modal").then((m) => ({ default: m.AdminUserManagementModal })),
 );
-const AdminKYCManagementModal = lazy(() =>
-  import("../components/modals/admin-kyc-management-modal").then((m) => ({ default: m.AdminKYCManagementModal })),
-);
 const AdminDepositRequestsModal = lazy(() =>
   import("../components/modals/admin-deposit-requests-modal").then((m) => ({ default: m.AdminDepositRequestsModal })),
 );
 const AdminWithdrawRequestsModal = lazy(() =>
   import("../components/modals/admin-withdraw-requests-modal").then((m) => ({ default: m.AdminWithdrawRequestsModal })),
-);
-const AdminWithdrawHistoryModal = lazy(() =>
-  import("../components/modals/admin-withdraw-history-modal").then((m) => ({ default: m.AdminWithdrawHistoryModal })),
-);
-const AdminDepositHistoryModal = lazy(() =>
-  import("../components/modals/admin-deposit-history-modal").then((m) => ({ default: m.AdminDepositHistoryModal })),
-);
-const AdminLoanManagementModal = lazy(() =>
-  import("../components/modals/admin-loan-management-modal").then((m) => ({ default: m.AdminLoanManagementModal })),
 );
 const AdminFuturesSettingsModal = lazy(() =>
   import("../components/modals/admin-futures-settings-modal").then((m) => ({ default: m.AdminFuturesSettingsModal })),
@@ -52,12 +39,27 @@ import { formatGenericCryptoBalance } from '../utils/format-utils';
 type SortField = 'name' | 'email' | 'date' | 'portfolio' | 'trades' | 'status';
 type SortDir = 'asc' | 'desc';
 type StatusFilter = 'all' | 'active' | 'inactive' | 'verified' | 'pending' | 'kyc_pending' | 'deleted';
+type DeletionType = 'admin' | 'self';
+
+interface DeletedUserRow {
+  id: number;
+  deleted_at: string;
+  deletion_type: DeletionType;
+  reason: string | null;
+  target_user_id: string | null;
+  target_email: string | null;
+  target_full_name: string | null;
+  target_display_id: string | null;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  actor_full_name: string | null;
+}
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function AdminUsers() {
-  const [, setLocation] = useLocation();
   const [users, setUsers] = useState<any[]>([]);
+  const [deletedUsers, setDeletedUsers] = useState<DeletedUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
@@ -65,12 +67,8 @@ export default function AdminUsers() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedManagementUser, setSelectedManagementUser] = useState<any>(null);
   const [showManagementModal, setShowManagementModal] = useState(false);
-  const [showKYCModal, setShowKYCModal] = useState(false);
   const [showDepositRequestsModal, setShowDepositRequestsModal] = useState(false);
   const [showWithdrawRequestsModal, setShowWithdrawRequestsModal] = useState(false);
-  const [showWithdrawHistoryModal, setShowWithdrawHistoryModal] = useState(false);
-  const [showDepositHistoryModal, setShowDepositHistoryModal] = useState(false);
-  const [showLoanManagementModal, setShowLoanManagementModal] = useState(false);
   const [showFuturesSettingsModal, setShowFuturesSettingsModal] = useState(false);
   const [selectedFuturesUser, setSelectedFuturesUser] = useState<any>(null);
   const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
@@ -88,6 +86,7 @@ export default function AdminUsers() {
   const [pageSize, setPageSize] = useState(25);
   const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
   const [deletedUsersCount, setDeletedUsersCount] = useState(0);
+  const [deletedTypeFilter, setDeletedTypeFilter] = useState<'all' | DeletionType>('all');
 
   const { counts: pendingCounts } = useAdminPendingCounts(15000);
 
@@ -169,15 +168,68 @@ export default function AdminUsers() {
     return result;
   }, [users, statusFilter, searchQuery, sortField, sortDir]);
 
+  const filteredDeletedUsers = useMemo(() => {
+    let result = deletedUsers;
+
+    if (deletedTypeFilter !== 'all') {
+      result = result.filter((row) => row.deletion_type === deletedTypeFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((row) => {
+        const haystack = [
+          row.target_email,
+          row.target_full_name,
+          row.target_display_id,
+          row.target_user_id,
+          row.actor_email,
+          row.actor_full_name,
+          row.reason,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(q);
+      });
+    }
+
+    return [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = (a.target_full_name || a.target_email || '').localeCompare(b.target_full_name || b.target_email || '');
+          break;
+        case 'email':
+          cmp = (a.target_email || '').localeCompare(b.target_email || '');
+          break;
+        case 'status':
+          cmp = a.deletion_type.localeCompare(b.deletion_type);
+          break;
+        case 'date':
+        default:
+          cmp = new Date(a.deleted_at).getTime() - new Date(b.deleted_at).getTime();
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [deletedUsers, deletedTypeFilter, searchQuery, sortField, sortDir]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const activeResultCount = statusFilter === 'deleted' ? filteredDeletedUsers.length : filteredUsers.length;
+  const totalPages = Math.max(1, Math.ceil(activeResultCount / pageSize));
   const paginatedUsers = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredUsers.slice(start, start + pageSize);
   }, [filteredUsers, currentPage, pageSize]);
+  const paginatedDeletedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredDeletedUsers.slice(start, start + pageSize);
+  }, [filteredDeletedUsers, currentPage, pageSize]);
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, sortField, sortDir, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, deletedTypeFilter, sortField, sortDir, pageSize]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -248,7 +300,9 @@ export default function AdminUsers() {
       });
       if (deletedRes.ok) {
         const deletedData = await deletedRes.json();
-        setDeletedUsersCount(Array.isArray(deletedData?.deletedUsers) ? deletedData.deletedUsers.length : 0);
+        const deletedRows = Array.isArray(deletedData?.deletedUsers) ? deletedData.deletedUsers : [];
+        setDeletedUsers(deletedRows);
+        setDeletedUsersCount(deletedRows.length);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch users');
@@ -406,14 +460,10 @@ export default function AdminUsers() {
         </div>
 
         {/* ---- Action Buttons Grid ---- */}
-        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5 sm:gap-2">
           {[
             { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
             { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
-            { onClick: () => setShowDepositHistoryModal(true), icon: <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit History', color: 'orange', badge: 0 },
-            { onClick: () => setShowWithdrawHistoryModal(true), icon: <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw History', color: 'purple', badge: 0 },
-            { onClick: () => setShowKYCModal(true), icon: <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'KYC Mgmt', color: 'indigo', badge: pendingCounts.kyc },
-            { onClick: () => setShowLoanManagementModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Loan Mgmt', color: 'teal', badge: pendingCounts.loans },
           ].map((btn, i) => (
             <button
               key={i}
@@ -443,13 +493,7 @@ export default function AdminUsers() {
               {filterTabs.map(tab => (
                 <button
                   key={tab.key}
-                  onClick={() => {
-                    if (tab.key === 'deleted') {
-                      setLocation('/admin/deleted-users');
-                      return;
-                    }
-                    setStatusFilter(tab.key);
-                  }}
+                  onClick={() => setStatusFilter(tab.key)}
                   className={`inline-flex items-center gap-1.5 rounded-t-lg text-xs font-medium px-3 py-2 border-b-2 transition-all
                     ${statusFilter === tab.key
                       ? 'border-blue-500 text-blue-400 bg-blue-500/5'
@@ -484,25 +528,46 @@ export default function AdminUsers() {
                 )}
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {/* Sort selector */}
-                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
-                  <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
-                  {sortOptions.map(opt => (
-                    <button
-                      key={opt.field}
-                      onClick={() => handleToggleSort(opt.field)}
-                      className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors flex items-center gap-0.5 sm:gap-1 whitespace-nowrap
-                        ${sortField === opt.field
-                          ? 'bg-blue-500/10 text-blue-400 font-semibold'
-                          : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
-                    >
-                      {opt.label}
-                      {sortField === opt.field && (
-                        sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />
-                      )}
-                    </button>
-                  ))}
-                </div>
+                {statusFilter !== 'deleted' ? (
+                  <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
+                    <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
+                    {sortOptions.map(opt => (
+                      <button
+                        key={opt.field}
+                        onClick={() => handleToggleSort(opt.field)}
+                        className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors flex items-center gap-0.5 sm:gap-1 whitespace-nowrap
+                          ${sortField === opt.field
+                            ? 'bg-blue-500/10 text-blue-400 font-semibold'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                      >
+                        {opt.label}
+                        {sortField === opt.field && (
+                          sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
+                    <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Type</span>
+                    {[
+                      { key: 'all', label: 'All' },
+                      { key: 'admin', label: 'Admin Deleted' },
+                      { key: 'self', label: 'Self Deleted' },
+                    ].map(option => (
+                      <button
+                        key={option.key}
+                        onClick={() => setDeletedTypeFilter(option.key as 'all' | DeletionType)}
+                        className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors whitespace-nowrap
+                          ${deletedTypeFilter === option.key
+                            ? 'bg-blue-500/10 text-blue-400 font-semibold'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* Page size */}
                 <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
                   <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
@@ -519,7 +584,7 @@ export default function AdminUsers() {
                 </div>
                 {/* Result count */}
                 <span className="text-[10px] sm:text-[11px] text-gray-500 flex-shrink-0">
-                  {filteredUsers.length} result{filteredUsers.length !== 1 ? 's' : ''}
+                  {activeResultCount} result{activeResultCount !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
@@ -538,15 +603,64 @@ export default function AdminUsers() {
                   <AlertTriangle size={16} />{error}
                 </div>
               </div>
-            ) : filteredUsers.length === 0 ? (
+            ) : activeResultCount === 0 ? (
               <div className="text-center py-16">
                 <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <Users className="h-8 w-8 text-gray-600" />
+                  {statusFilter === 'deleted' ? <Shield className="h-8 w-8 text-gray-600" /> : <Users className="h-8 w-8 text-gray-600" />}
                 </div>
-                <p className="text-gray-500 text-sm mb-1">No users found</p>
+                <p className="text-gray-500 text-sm mb-1">{statusFilter === 'deleted' ? 'No deleted records found' : 'No users found'}</p>
                 <p className="text-gray-600 text-xs">
-                  {searchQuery ? 'Try adjusting your search or filters' : 'No users match the current filter'}
+                  {searchQuery ? 'Try adjusting your search or filters' : statusFilter === 'deleted' ? 'No deleted users match the current filter' : 'No users match the current filter'}
                 </p>
+              </div>
+            ) : statusFilter === 'deleted' ? (
+              <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+                {paginatedDeletedUsers.map((row) => (
+                  <div key={row.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={row.deletion_type === 'admin' ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'}>
+                          {row.deletion_type === 'admin' ? 'Admin Deleted' : 'Self Deleted'}
+                        </Badge>
+                        <span className="text-xs text-gray-500">{timeAgo(row.deleted_at)}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{formatDateTime(row.deleted_at)}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-md bg-[#0d0d0d] border border-[#1f1f1f] p-3">
+                        <p className="text-xs text-gray-500 mb-1">Deleted Account</p>
+                        <p className="text-white font-medium">{row.target_full_name || 'Unknown user'}</p>
+                        <p className="text-gray-300">{row.target_email || 'No email snapshot'}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID: {row.target_display_id || row.target_user_id || 'Unavailable'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-md bg-[#0d0d0d] border border-[#1f1f1f] p-3">
+                        <p className="text-xs text-gray-500 mb-1">Deletion Source</p>
+                        {row.deletion_type === 'admin' ? (
+                          <>
+                            <p className="text-white font-medium">Admin action</p>
+                            <p className="text-gray-300">{row.actor_full_name || row.actor_email || 'Unknown admin'}</p>
+                            <p className="text-xs text-gray-500 mt-1">Admin ID: {row.actor_user_id || 'Unavailable'}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-white font-medium">User self-deleted</p>
+                            <p className="text-gray-300">Initiated by the account owner</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {row.reason && (
+                      <div className="text-xs text-gray-400 border-t border-[#1f1f1f] pt-3 mt-3">
+                        Reason: {row.reason}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : viewMode === 'compact' ? (
               /* ===== COMPACT TABLE VIEW ===== */
@@ -844,10 +958,10 @@ export default function AdminUsers() {
           </div>
 
           {/* ---- Pagination ---- */}
-          {filteredUsers.length > 0 && (
+          {activeResultCount > 0 && (
             <div className="p-3 sm:p-4 border-t border-[#1e1e1e] flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
               <p className="text-[10px] sm:text-[11px] text-gray-500">
-                Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
+                Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, activeResultCount)} of {activeResultCount} {statusFilter === 'deleted' ? 'deleted records' : 'users'}
               </p>
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
@@ -926,12 +1040,8 @@ export default function AdminUsers() {
 
       <Suspense fallback={null}>
         <AdminUserManagementModal isOpen={showManagementModal} onClose={handleManagementModalClose} initialUserId={selectedManagementUser?.id} />
-        <AdminKYCManagementModal isOpen={showKYCModal} onClose={() => setShowKYCModal(false)} />
         <AdminDepositRequestsModal isOpen={showDepositRequestsModal} onClose={() => setShowDepositRequestsModal(false)} />
         <AdminWithdrawRequestsModal isOpen={showWithdrawRequestsModal} onClose={() => setShowWithdrawRequestsModal(false)} />
-        <AdminWithdrawHistoryModal isOpen={showWithdrawHistoryModal} onClose={() => setShowWithdrawHistoryModal(false)} />
-        <AdminDepositHistoryModal isOpen={showDepositHistoryModal} onClose={() => setShowDepositHistoryModal(false)} />
-        <AdminLoanManagementModal isOpen={showLoanManagementModal} onClose={() => setShowLoanManagementModal(false)} />
         {selectedProfilePicture && (
           <ProfilePictureViewerModal
             isOpen={showProfilePictureModal}

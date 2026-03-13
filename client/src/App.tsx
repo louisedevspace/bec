@@ -37,7 +37,6 @@ const AdminDashboard = lazy(() => import('./pages/admin-dashboard'));
 const AdminUsers = lazy(() => import('./pages/admin-user'));
 const AdminSettings = lazy(() => import('./pages/admin-settings'));
 const AdminSupport = lazy(() => import('./pages/admin-support'));
-const AdminAnalytics = lazy(() => import('./pages/admin-analytics'));
 const AdminNews = lazy(() => import('./pages/admin-news'));
 const AdminNotifications = lazy(() => import('./pages/admin-notifications'));
 const AdminSimpleNotifications = lazy(() => import('./pages/admin-simple-notifications'));
@@ -46,7 +45,6 @@ const AdminNotificationsRedirect = lazy(() => import('./pages/admin-notification
 const AdminTradingPairs = lazy(() => import('./pages/admin-trading-pairs'));
 const AdminWallets = lazy(() => import('./pages/admin-wallets'));
 const AdminStaking = lazy(() => import('./pages/admin-staking'));
-const AdminDeletedUsers = lazy(() => import('./pages/admin-deleted-users'));
 const WalletPage = lazy(() => import('./pages/wallet'));
 
 function Router() {
@@ -150,6 +148,18 @@ function Router() {
         };
   }, [isAuthenticated, isAdmin, setLocation]);
 
+  const adminUsersRedirect = useMemo(() => {
+    return isAuthenticated && isAdmin
+      ? (_props: RouteComponentProps) => {
+          setLocation("/admin/users");
+          return null;
+        }
+      : (_props: RouteComponentProps) => {
+          setLocation("/");
+          return null;
+        };
+  }, [isAuthenticated, isAdmin, setLocation]);
+
   const protectedRoute = useCallback(
     (Component: React.ComponentType<any>) => {
       return (_props: RouteComponentProps) =>
@@ -169,9 +179,9 @@ function Router() {
           {/* Admin routes */}
           <Route path="/admin" component={adminRedirect} />
           <Route path="/admin/dashboard" component={isAuthenticated && isAdmin ? AdminDashboard : adminRedirect} />
-          <Route path="/admin/analytics" component={isAuthenticated && isAdmin ? AdminAnalytics : adminRedirect} />
+          <Route path="/admin/analytics" component={adminRedirect} />
           <Route path="/admin/users" component={isAuthenticated && isAdmin ? AdminUsers : adminRedirect} />
-          <Route path="/admin/deleted-users" component={isAuthenticated && isAdmin ? AdminDeletedUsers : adminRedirect} />
+          <Route path="/admin/deleted-users" component={adminUsersRedirect} />
           <Route path="/admin/news" component={isAuthenticated && isAdmin ? AdminNews : adminRedirect} />
           <Route path="/admin/notifications" component={isAuthenticated && isAdmin ? AdminNotificationsRedirect : adminRedirect} />
           <Route path="/admin/notifications/simple" component={isAuthenticated && isAdmin ? AdminStreamlinedNotifications : adminRedirect} />
