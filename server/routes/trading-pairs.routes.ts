@@ -1,6 +1,23 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 
+function normalizeTradingFeeRate(value: unknown, unit?: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  const normalizedRate = unit === "percent" ? numeric / 100 : numeric;
+
+  if (!Number.isFinite(normalizedRate) || normalizedRate < 0 || normalizedRate > 1) {
+    return null;
+  }
+
+  return normalizedRate.toFixed(8);
+}
+
 export default function registerTradingPairsRoutes(app: Express) {
 
   // GET /api/trading-pairs — public: returns enabled pairs for users
@@ -87,10 +104,15 @@ export default function registerTradingPairsRoutes(app: Express) {
   // POST /api/admin/trading-pairs — admin: create new pair
   app.post("/api/admin/trading-pairs", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { symbol, baseAsset, quoteAsset, isEnabled, minTradeAmount, maxTradeAmount, tradingFee, sortOrder, pairType } = req.body;
+      const { symbol, baseAsset, quoteAsset, isEnabled, minTradeAmount, maxTradeAmount, tradingFee, tradingFeeUnit, sortOrder, pairType } = req.body;
 
       if (!symbol || !baseAsset || !quoteAsset) {
         return res.status(400).json({ message: "symbol, baseAsset, and quoteAsset are required" });
+      }
+
+      const normalizedTradingFee = normalizeTradingFeeRate(tradingFee, tradingFeeUnit);
+      if (tradingFee !== undefined && normalizedTradingFee === null) {
+        return res.status(400).json({ message: "Invalid trading fee. Use a percentage value between 0 and 100." });
       }
 
       // Normalize
@@ -105,7 +127,7 @@ export default function registerTradingPairsRoutes(app: Express) {
           is_enabled: isEnabled !== undefined ? isEnabled : true,
           min_trade_amount: minTradeAmount || "0.0001",
           max_trade_amount: maxTradeAmount || "100",
-          trading_fee: tradingFee || "0.001",
+          trading_fee: normalizedTradingFee || "0.001",
           sort_order: sortOrder || 0,
           pair_type: pairType || "spot",
         })
@@ -135,13 +157,19 @@ export default function registerTradingPairsRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid pair ID" });
       }
 
-      const { isEnabled, minTradeAmount, maxTradeAmount, tradingFee, sortOrder, pairType } = req.body;
+      const { isEnabled, minTradeAmount, maxTradeAmount, tradingFee, tradingFeeUnit, sortOrder, pairType } = req.body;
 
       const updateData: any = { updated_at: new Date().toISOString() };
       if (isEnabled !== undefined) updateData.is_enabled = isEnabled;
       if (minTradeAmount !== undefined) updateData.min_trade_amount = minTradeAmount;
       if (maxTradeAmount !== undefined) updateData.max_trade_amount = maxTradeAmount;
-      if (tradingFee !== undefined) updateData.trading_fee = tradingFee;
+      if (tradingFee !== undefined) {
+        const normalizedTradingFee = normalizeTradingFeeRate(tradingFee, tradingFeeUnit);
+        if (normalizedTradingFee === null) {
+          return res.status(400).json({ message: "Invalid trading fee. Use a percentage value between 0 and 100." });
+        }
+        updateData.trading_fee = normalizedTradingFee;
+      }
       if (sortOrder !== undefined) updateData.sort_order = sortOrder;
       if (pairType !== undefined) updateData.pair_type = pairType;
 

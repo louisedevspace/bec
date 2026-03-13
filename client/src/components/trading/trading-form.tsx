@@ -14,9 +14,10 @@ interface TradingFormProps {
   pair: string;
   type: "spot";
   className?: string;
+  tradingFeeRate?: number;
 }
 
-export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
+export function TradingForm({ pair, type, className = "", tradingFeeRate = 0 }: TradingFormProps) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [amountMode, setAmountMode] = useState<"crypto" | "usdt">("crypto"); // crypto = units, usdt = total spend/receive
@@ -77,6 +78,7 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
 
   const baseSymbol = pair.split("/")[0];
   const quoteSymbol = pair.split("/")[1];
+  const tradingFeePercent = tradingFeeRate * 100;
 
   // Fetch effective trading limits for this pair + user
   const [tradeLimits, setTradeLimits] = useState<{ min_amount: number; max_amount: number; is_enabled: boolean }>({ min_amount: 0, max_amount: 1000000, is_enabled: true });
@@ -152,6 +154,12 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       cryptoAmount = amountNum / currentPrice;
     }
 
+    const effectiveTradePrice = orderType === "limit" && priceNum > 0
+      ? priceNum
+      : parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
+    const grossUsdtValue = cryptoAmount * (Number.isFinite(effectiveTradePrice) ? effectiveTradePrice : 0);
+    const estimatedFeeUsdt = grossUsdtValue * tradingFeeRate;
+
     // Check trading limits (using crypto amount)
     if (!tradeLimits.is_enabled) {
       toast({
@@ -192,11 +200,12 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
       } else {
         requiredUSDT = cryptoAmount * priceNum;
       }
+      const requiredWithFee = requiredUSDT + estimatedFeeUsdt;
       
-      if (requiredUSDT > availableBalance) {
+      if (requiredWithFee > availableBalance) {
         toast({
           title: "Insufficient Balance",
-          description: `You need ${formatCryptoNumber(requiredUSDT)} ${quoteSymbol} but have ${formatCryptoNumber(availableBalance)} ${quoteSymbol} available.`,
+          description: `You need ${formatCryptoNumber(requiredWithFee)} ${quoteSymbol} (incl. fee ${formatCryptoNumber(estimatedFeeUsdt)}) but have ${formatCryptoNumber(availableBalance)} ${quoteSymbol} available.`,
           variant: "destructive",
         });
         return;
@@ -247,6 +256,30 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
     }
   })();
 
+  const estimatedFeeInfo = (() => {
+    const amountNum = parseFloat(amount);
+    if (!amount || isNaN(amountNum) || amountNum <= 0) return null;
+
+    const currentPrice = orderType === "limit" && price
+      ? parseFloat(price)
+      : parseFloat(getFormattedPrice(baseSymbol).replace(/[$,]/g, ''));
+
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) return null;
+
+    const cryptoAmount = amountMode === "crypto" ? amountNum : amountNum / currentPrice;
+    const grossUsdt = cryptoAmount * currentPrice;
+    const feeUsdt = grossUsdt * tradingFeeRate;
+
+    if (!Number.isFinite(feeUsdt)) return null;
+
+    return {
+      feeUsdt,
+      grossUsdt,
+      totalBuyUsdt: grossUsdt + feeUsdt,
+      netSellUsdt: grossUsdt - feeUsdt,
+    };
+  })();
+
   return (
     <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 ${className}`}>
       <h3 className="text-sm font-semibold text-white mb-4">Spot Trading</h3>
@@ -285,6 +318,15 @@ export function TradingForm({ pair, type, className = "" }: TradingFormProps) {
               : `Sell ${baseSymbol} for ${quoteSymbol} at ${orderType === "limit" ? "your specified price" : "market price"}`
             }
           </p>
+          <p className="text-[11px] text-gray-500 mt-1">Trading Fee: {tradingFeePercent.toFixed(4).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')}%</p>
+          {estimatedFeeInfo && (
+            <p className="text-[10px] text-gray-500 mt-1">
+              Est. Fee: {formatCryptoNumber(estimatedFeeInfo.feeUsdt)} {quoteSymbol}
+              {side === "buy"
+                ? ` • Total: ${formatCryptoNumber(estimatedFeeInfo.totalBuyUsdt)} ${quoteSymbol}`
+                : ` • Net: ${formatCryptoNumber(estimatedFeeInfo.netSellUsdt)} ${quoteSymbol}`}
+            </p>
+          )}
         </div>
 
         {/* Order Type */}

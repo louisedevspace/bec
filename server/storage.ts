@@ -433,7 +433,7 @@ class SupabaseStorage implements IStorage {
   async createTrade(trade: InsertTrade) {
     try {
       // Map the field names to match the database schema
-      const tradeData = {
+      const tradeData: any = {
         user_id: trade.userId,
         symbol: trade.symbol,
         side: trade.side,
@@ -441,6 +441,10 @@ class SupabaseStorage implements IStorage {
         price: trade.price,
         status: trade.status
       };
+
+      if (trade.feeAmount !== undefined) tradeData.fee_amount = trade.feeAmount;
+      if (trade.feeRate !== undefined) tradeData.fee_rate = trade.feeRate;
+      if (trade.feeSymbol !== undefined) tradeData.fee_symbol = trade.feeSymbol;
       
       const { data, error } = await supabase.from('trades').insert([tradeData]).select().maybeSingle();
       if (error) { console.error('Supabase createTrade error:', error); throw error; }
@@ -459,6 +463,9 @@ class SupabaseStorage implements IStorage {
       if (updates.side !== undefined) updateData.side = updates.side;
       if (updates.amount !== undefined) updateData.amount = updates.amount;
       if (updates.price !== undefined) updateData.price = updates.price;
+      if (updates.feeAmount !== undefined) updateData.fee_amount = updates.feeAmount;
+      if (updates.feeRate !== undefined) updateData.fee_rate = updates.feeRate;
+      if (updates.feeSymbol !== undefined) updateData.fee_symbol = updates.feeSymbol;
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.expiresAt !== undefined) updateData.expires_at = updates.expiresAt;
       if (updates.deletedForUser !== undefined) updateData.deleted_for_user = updates.deletedForUser;

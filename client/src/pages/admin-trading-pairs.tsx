@@ -44,6 +44,12 @@ interface UserOption {
   username: string;
 }
 
+function rateToPercent(rate: string | number): string {
+  const numeric = Number(rate);
+  if (!Number.isFinite(numeric)) return '0.10';
+  return (numeric * 100).toFixed(4).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+}
+
 const AVAILABLE_ASSETS = [
   'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'DOGE', 'AVAX', 'LINK',
   'LTC', 'MATIC', 'ATOM', 'TRX', 'SHIB', 'BCH', 'DASH', 'XMR', 'XLM', 'FIL',
@@ -65,7 +71,7 @@ export default function AdminTradingPairs() {
     pairType: 'both',
     minTradeAmount: '0.001',
     maxTradeAmount: '1000',
-    tradingFee: '0.001',
+    tradingFeePercent: '0.10',
   });
 
   // Trading limits state
@@ -165,7 +171,8 @@ export default function AdminTradingPairs() {
           pairType: newPair.pairType,
           minTradeAmount: newPair.minTradeAmount,
           maxTradeAmount: newPair.maxTradeAmount,
-          tradingFee: newPair.tradingFee,
+          tradingFee: newPair.tradingFeePercent,
+          tradingFeeUnit: 'percent',
           sortOrder: pairs.length + 1,
         }),
       });
@@ -173,7 +180,7 @@ export default function AdminTradingPairs() {
         const data = await response.json();
         setPairs(prev => [...prev, data]);
         setShowAddForm(false);
-        setNewPair({ baseAsset: '', quoteAsset: 'USDT', pairType: 'both', minTradeAmount: '0.001', maxTradeAmount: '1000', tradingFee: '0.001' });
+        setNewPair({ baseAsset: '', quoteAsset: 'USDT', pairType: 'both', minTradeAmount: '0.001', maxTradeAmount: '1000', tradingFeePercent: '0.10' });
         toast({ title: 'Success', description: `${data.symbol} added` });
       } else {
         const err = await response.json();
@@ -189,7 +196,7 @@ export default function AdminTradingPairs() {
     setEditForm({
       min_trade_amount: pair.min_trade_amount,
       max_trade_amount: pair.max_trade_amount,
-      trading_fee: pair.trading_fee,
+      trading_fee: rateToPercent(pair.trading_fee),
       pair_type: pair.pair_type,
       sort_order: pair.sort_order,
     });
@@ -206,6 +213,7 @@ export default function AdminTradingPairs() {
           minTradeAmount: editForm.min_trade_amount,
           maxTradeAmount: editForm.max_trade_amount,
           tradingFee: editForm.trading_fee,
+          tradingFeeUnit: 'percent',
           pairType: editForm.pair_type,
           sortOrder: editForm.sort_order,
         }),
@@ -474,10 +482,10 @@ export default function AdminTradingPairs() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Fee</label>
+                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Fee (%)</label>
                 <Input
-                  type="number" step="any" value={newPair.tradingFee}
-                  onChange={(e) => setNewPair({ ...newPair, tradingFee: e.target.value })}
+                  type="number" step="0.0001" min="0" max="100" value={newPair.tradingFeePercent}
+                  onChange={(e) => setNewPair({ ...newPair, tradingFeePercent: e.target.value })}
                   className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
                 />
               </div>

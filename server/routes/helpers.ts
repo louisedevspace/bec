@@ -1,6 +1,18 @@
 import { supabaseAdmin } from './middleware';
 import LiveCryptoService from '../services/live-crypto-service';
 
+async function getTradingFeeRate(symbol: string): Promise<number> {
+  const { data: pairData } = await supabaseAdmin
+    .from('trading_pairs')
+    .select('trading_fee')
+    .eq('symbol', symbol)
+    .maybeSingle();
+
+  const rawRate = parseFloat(pairData?.trading_fee || '0.001');
+  if (!Number.isFinite(rawRate) || rawRate < 0) return 0.001;
+  return rawRate;
+}
+
 /**
  * Upsert a portfolio entry — update if exists, create if not.
  */
@@ -97,16 +109,7 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
   const totalValue = amount * price;
   if (isNaN(totalValue) || totalValue <= 0) throw new Error(`Invalid total value: ${totalValue}`);
 
-  // Fetch trading fee for this pair
-  let feeRate = 0.001; // Default 0.1%
-  const { data: pairData } = await supabaseAdmin
-    .from('trading_pairs')
-    .select('trading_fee')
-    .eq('symbol', trade.symbol)
-    .maybeSingle();
-  if (pairData?.trading_fee) {
-    feeRate = parseFloat(pairData.trading_fee);
-  }
+  const feeRate = await getTradingFeeRate(trade.symbol);
 
   const { data: existingPortfolio } = await supabaseAdmin
     .from('portfolios')
@@ -176,6 +179,12 @@ export async function executeTradeAndUpdatePortfolio(trade: any) {
       console.error('Failed to log platform fee:', err);
     });
   }
+
+  return {
+    feeAmount,
+    feeRate,
+    feeSymbol: feeSymbol || 'USDT',
+  };
 }
 
 /**
@@ -196,6 +205,8 @@ export async function validateTradeBalance(tradeData: any) {
     }
 
     const totalValue = parseFloat(amount) * parseFloat(tradePrice);
+    const feeRate = await getTradingFeeRate(symbol);
+    const estimatedFee = totalValue * feeRate;
 
     if (side === 'buy') {
       const { data: usdtPortfolio, error } = await supabaseAdmin
@@ -206,8 +217,9 @@ export async function validateTradeBalance(tradeData: any) {
         .maybeSingle();
       if (error && (error as any).code !== 'PGRST116') return { valid: false, error: 'Failed to check USDT balance' };
       const balance = usdtPortfolio ? parseFloat(usdtPortfolio.available) : 0;
-      if (balance < totalValue) {
-        return { valid: false, error: `Insufficient USDT balance. Required: ${totalValue.toFixed(2)}, Available: ${balance.toFixed(2)}` };
+      const requiredWithFee = totalValue + estimatedFee;
+      if (balance < requiredWithFee) {
+        return { valid: false, error: `Insufficient USDT balance. Required: ${requiredWithFee.toFixed(2)} (incl. fee ${estimatedFee.toFixed(2)}), Available: ${balance.toFixed(2)}` };
       }
     } else if (side === 'sell') {
       const crypto = symbol.split('/')[0];

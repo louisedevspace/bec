@@ -12,6 +12,7 @@ interface SpotPair {
   base_asset: string;
   quote_asset: string;
   is_enabled: boolean;
+  trading_fee: string;
 }
 
 const CRYPTO_NAMES: Record<string, string> = {
@@ -48,6 +49,8 @@ export default function ExchangePage() {
   const baseAsset = currentPair.split("/")[0];
   const quoteAsset = currentPair.split("/")[1];
   const cryptoName = CRYPTO_NAMES[baseAsset] || baseAsset;
+  const selectedPair = pairs.find((p) => p.symbol === currentPair);
+  const tradingFeeRate = Number(selectedPair?.trading_fee || "0");
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -117,7 +120,7 @@ export default function ExchangePage() {
         <div className="flex flex-col lg:flex-row gap-3 flex-1 min-h-0">
           {/* Trading Form - Left Sidebar */}
           <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0 order-2 lg:order-1">
-            <TradingForm pair={currentPair} type="spot" />
+            <TradingForm pair={currentPair} type="spot" tradingFeeRate={tradingFeeRate} />
           </div>
 
           {/* Order Book - Main Area */}

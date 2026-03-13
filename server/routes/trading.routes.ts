@@ -400,8 +400,13 @@ export default function registerTradingRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to update order status" });
       }
 
-      await executeTradeAndUpdatePortfolio(trade);
-      const executedTrade = await storage.updateTrade(orderId, { status: "executed" });
+      const executionResult = await executeTradeAndUpdatePortfolio(trade);
+      const executedTrade = await storage.updateTrade(orderId, {
+        status: "executed",
+        feeAmount: executionResult.feeAmount.toFixed(8),
+        feeRate: executionResult.feeRate.toFixed(8),
+        feeSymbol: executionResult.feeSymbol,
+      });
       syncManager.syncTradeUpdated(executedTrade);
       res.json(executedTrade);
     } catch (error) {
