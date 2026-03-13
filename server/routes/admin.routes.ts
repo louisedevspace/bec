@@ -303,6 +303,67 @@ export default function registerAdminRoutes(app: Express) {
           break;
         }
 
+        case "delete-user": {
+          const { data: userRoleRecord, error: roleFetchError } = await supabaseAdmin
+            .from("users")
+            .select("role")
+            .eq("id", userId)
+            .maybeSingle();
+
+          if (roleFetchError) {
+            return res.status(500).json({ message: "Failed to validate target user role" });
+          }
+
+          if (userRoleRecord?.role === "admin") {
+            return res.status(403).json({ message: "Admin users cannot be deleted from this action" });
+          }
+
+          // Remove dependent rows first to satisfy FK constraints.
+          const cleanupSteps: Array<{ table: string; column: string }> = [
+            { table: "user_passwords", column: "user_id" },
+            { table: "user_news_seen", column: "user_id" },
+            { table: "kyc_documents", column: "user_id" },
+            { table: "portfolios", column: "user_id" },
+            { table: "transactions", column: "user_id" },
+            { table: "trades", column: "user_id" },
+            { table: "futures_trades", column: "user_id" },
+            { table: "staking_positions", column: "user_id" },
+            { table: "loan_applications", column: "user_id" },
+            { table: "kyc_verifications", column: "user_id" },
+            { table: "deposit_requests", column: "user_id" },
+            { table: "withdraw_requests", column: "user_id" },
+            { table: "support_conversations", column: "user_id" },
+            { table: "support_messages", column: "sender_id" },
+            { table: "admin_notifications", column: "user_id" },
+          ];
+
+          for (const step of cleanupSteps) {
+            const { error: cleanupError } = await supabaseAdmin
+              .from(step.table)
+              .delete()
+              .eq(step.column, userId);
+
+            if (cleanupError) {
+              return res.status(500).json({
+                message: `Failed to clean up ${step.table} before user deletion`,
+                error: cleanupError.message,
+              });
+            }
+          }
+
+          const { error: deleteUserError } = await supabaseAdmin
+            .from("users")
+            .delete()
+            .eq("id", userId);
+
+          if (deleteUserError) {
+            return res.status(500).json({ message: "Failed to delete user", error: deleteUserError.message });
+          }
+
+          message = "User deleted successfully";
+          break;
+        }
+
         case "update-credit-score": {
           const { creditScore } = req.body;
           // Validate credit score

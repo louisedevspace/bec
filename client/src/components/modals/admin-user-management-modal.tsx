@@ -312,16 +312,23 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const handleDeleteUser = async (user: User) => {
     try {
-      // First delete all user data
-      await handleDeleteUserHistory(user);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
 
-      // Then delete the user
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', user.id);
+      const response = await fetch(buildApiUrl('/admin/user-management/delete-user'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: user.id })
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || 'Failed to delete user');
+      }
 
       setUsers(prev => prev.filter(u => u.id !== user.id));
       setError(null);
