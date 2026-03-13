@@ -7,6 +7,7 @@ import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/secur
 import { adminNotificationService } from "../services/admin-notification.service";
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
+import { getServerConfig } from "../config";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -217,11 +218,20 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(400).json({ message: "Deposit request has already been reviewed" });
       }
 
+      const feeRate = getServerConfig().depositFeeRate;
+      const grossAmount = parseFloat(depositRequest.amount || "0");
+      const feeAmount = action === "approve" ? Math.max(0, grossAmount * feeRate) : 0;
+      const netAmount = action === "approve" ? Math.max(0, grossAmount - feeAmount) : grossAmount;
+
       const updateData: any = {
         status: action === "approve" ? "approved" : "rejected",
         admin_notes: adminNotes,
         reviewed_at: new Date().toISOString(),
         reviewed_by: currentUserId,
+        fee_amount: feeAmount.toFixed(8),
+        fee_symbol: depositRequest.symbol,
+        fee_rate: feeRate.toFixed(8),
+        net_amount: netAmount.toFixed(8),
       };
 
       if (action === "reject") {
@@ -242,7 +252,7 @@ export default function registerDepositsRoutes(app: Express) {
 
       // If approved, add to user's portfolio
       if (action === "approve") {
-        const depositAmount = parseFloat(depositRequest.amount);
+        const depositAmount = netAmount;
 
         const { data: existingPortfolio, error: fetchErr } = await supabaseAdmin
           .from("portfolios")
@@ -285,7 +295,11 @@ export default function registerDepositsRoutes(app: Express) {
             user_id: depositRequest.user_id,
             type: "deposit",
             symbol: depositRequest.symbol,
-            amount: depositRequest.amount,
+            amount: grossAmount.toFixed(8),
+            fee_amount: feeAmount.toFixed(8),
+            fee_symbol: depositRequest.symbol,
+            fee_rate: feeRate.toFixed(8),
+            net_amount: netAmount.toFixed(8),
             status: "completed",
             address: "Manual approval",
           });

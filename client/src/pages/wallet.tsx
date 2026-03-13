@@ -31,6 +31,10 @@ interface WalletTransaction {
   type: "deposit" | "withdrawal" | "trade" | "futures";
   symbol: string;
   amount: number;
+  feeAmount?: number;
+  feeSymbol?: string;
+  feeRate?: number;
+  netAmount?: number;
   price?: number;
   side?: string;
   status: string;
@@ -556,6 +560,16 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
               }`}>
                 {hideBalances ? "••••" : `${tx.type === "deposit" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
               </p>
+              {!hideBalances && typeof tx.feeAmount === "number" && tx.feeAmount > 0 && (
+                <p className="text-[10px] text-amber-400">
+                  Fee: {formatCryptoNumber(tx.feeAmount)} {tx.feeSymbol || tx.symbol}
+                </p>
+              )}
+              {!hideBalances && typeof tx.netAmount === "number" && tx.netAmount > 0 && ["deposit", "withdrawal"].includes(tx.type) && (
+                <p className="text-[10px] text-gray-500">
+                  Net: {formatCryptoNumber(tx.netAmount)} {tx.symbol}
+                </p>
+              )}
               {tx.price && !hideBalances && (
                 <p className="text-[10px] text-gray-600">@${formatUsdNumber(tx.price)}</p>
               )}

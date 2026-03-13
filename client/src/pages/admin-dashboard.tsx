@@ -36,6 +36,23 @@ interface DashboardStats {
     totalDeposits: number; pendingDeposits: number; totalDepositsCount: number;
     totalWithdrawals: number; pendingWithdrawals: number; totalWithdrawalsCount: number;
     totalPlatformValue: number; netFlow: number;
+    fees: {
+      total: number;
+      byType: { deposits: number; withdrawals: number; trading: number };
+      trends: {
+        daily: Array<{ date: string; deposits: number; withdrawals: number; trading: number; total: number }>;
+        monthly: Array<{ month: string; deposits: number; withdrawals: number; trading: number; total: number }>;
+      };
+      byUser: Array<{
+        userId: string;
+        username: string;
+        email: string;
+        totalFees: number;
+        depositFees: number;
+        withdrawalFees: number;
+        tradingFees: number;
+      }>;
+    };
   };
   trading: {
     totalTrades: number; pendingTrades: number; completedTrades: number;
@@ -562,6 +579,22 @@ export default function AdminDashboard() {
     date: formatChartDate(d.date),
     Deposits: d.deposits,
     Withdrawals: d.withdrawals
+  })) || [];
+
+  const chartFeeDailyTrend = stats?.financial.fees?.trends.daily.map(d => ({
+    date: formatChartDate(d.date),
+    Deposits: d.deposits,
+    Withdrawals: d.withdrawals,
+    Trading: d.trading,
+    Total: d.total,
+  })) || [];
+
+  const chartFeeMonthlyTrend = stats?.financial.fees?.trends.monthly.map(d => ({
+    month: d.month,
+    Deposits: d.deposits,
+    Withdrawals: d.withdrawals,
+    Trading: d.trading,
+    Total: d.total,
   })) || [];
 
   const pieKycData = stats ? [
@@ -1431,6 +1464,18 @@ export default function AdminDashboard() {
                   <StatCard icon={<DollarSign size={18} />} iconBg="bg-blue-500/10" iconColor="text-blue-400"
                     label="Platform AUM" value={formatCurrency(stats.financial.totalPlatformValue)} sub={`${stats.users.usersWithPortfolio} portfolios`} />
                 </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <StatCard icon={<Landmark size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
+                    label="Total Fees" value={formatCurrency(stats.financial.fees?.total || 0)} sub="All fee sources" />
+                  <StatCard icon={<ArrowDownRight size={18} />} iconBg="bg-teal-500/10" iconColor="text-teal-400"
+                    label="Deposit Fees" value={formatCurrency(stats.financial.fees?.byType?.deposits || 0)} sub="From approved deposits" />
+                  <StatCard icon={<ArrowUpRight size={18} />} iconBg="bg-orange-500/10" iconColor="text-orange-400"
+                    label="Withdrawal Fees" value={formatCurrency(stats.financial.fees?.byType?.withdrawals || 0)} sub="From approved withdrawals" />
+                  <StatCard icon={<BarChart3 size={18} />} iconBg="bg-indigo-500/10" iconColor="text-indigo-400"
+                    label="Trading Fees" value={formatCurrency(stats.financial.fees?.byType?.trading || 0)} sub="From completed trades" />
+                </div>
+
                 <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
                   <h3 className="text-sm font-semibold text-white mb-4">Deposit vs Withdrawal (30 days)</h3>
                   <div className="h-64">
@@ -1455,6 +1500,75 @@ export default function AdminDashboard() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                    <h3 className="text-sm font-semibold text-white mb-4">Daily Fee Trend (30 days)</h3>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={chartFeeDailyTrend}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} interval="preserveStartEnd" />
+                          <YAxis tick={{ fontSize: 10, fill: '#666' }} />
+                          <Tooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="Total" fill="#f59e0b" radius={[3, 3, 0, 0]} opacity={0.45} />
+                          <Line type="monotone" dataKey="Deposits" stroke="#14b8a6" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="Withdrawals" stroke="#f97316" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="Trading" stroke="#6366f1" strokeWidth={2} dot={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                    <h3 className="text-sm font-semibold text-white mb-4">Monthly Fee Trend (6 months)</h3>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartFeeMonthlyTrend}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#666' }} />
+                          <Tooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="Deposits" stackId="fees" fill="#14b8a6" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="Withdrawals" stackId="fees" fill="#f97316" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="Trading" stackId="fees" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+                  <h3 className="text-sm font-semibold text-white mb-4">Top Users By Fees</h3>
+                  {stats.financial.fees?.byUser?.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-[#1e1e1e] text-gray-500">
+                            <th className="text-left py-2 pr-2">User</th>
+                            <th className="text-right py-2 px-2">Deposit</th>
+                            <th className="text-right py-2 px-2">Withdrawal</th>
+                            <th className="text-right py-2 px-2">Trading</th>
+                            <th className="text-right py-2 pl-2">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats.financial.fees.byUser.map((user, idx) => (
+                            <tr key={`${user.userId}-${idx}`} className="border-b border-[#1e1e1e] last:border-b-0">
+                              <td className="py-2 pr-2 text-gray-300">{user.username !== 'N/A' ? user.username : user.email}</td>
+                              <td className="py-2 px-2 text-right text-teal-400">{formatCurrency(user.depositFees)}</td>
+                              <td className="py-2 px-2 text-right text-orange-400">{formatCurrency(user.withdrawalFees)}</td>
+                              <td className="py-2 px-2 text-right text-indigo-400">{formatCurrency(user.tradingFees)}</td>
+                              <td className="py-2 pl-2 text-right text-amber-400 font-semibold">{formatCurrency(user.totalFees)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">No fee data available yet.</p>
+                  )}
                 </div>
               </TabsContent>
 

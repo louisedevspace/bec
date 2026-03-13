@@ -7,6 +7,7 @@ import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/secur
 import { adminNotificationService } from "../services/admin-notification.service";
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
+import { getServerConfig } from "../config";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -47,10 +48,18 @@ export default function registerWithdrawalsRoutes(app: Express) {
         });
       }
 
+      const feeRate = getServerConfig().withdrawalFeeRate;
+      const feeAmount = Math.max(0, amountNum * feeRate);
+      const netAmount = Math.max(0, amountNum - feeAmount);
+
       const withdrawData = {
         user_id: userId,
         symbol: symbol.toUpperCase(),
         amount: amountNum.toString(),
+        fee_amount: feeAmount.toFixed(8),
+        fee_symbol: symbol.toUpperCase(),
+        fee_rate: feeRate.toFixed(8),
+        net_amount: netAmount.toFixed(8),
         wallet_address: walletAddress.trim(),
         status: "pending",
       };
@@ -252,6 +261,9 @@ export default function registerWithdrawalsRoutes(app: Express) {
           const portfolio = portfolios[0];
           const currentBalance = parseFloat(portfolio.available);
           const withdrawAmount = parseFloat(withdrawRequest.amount);
+          const withdrawFeeAmount = parseFloat(withdrawRequest.fee_amount || "0");
+          const withdrawFeeRate = parseFloat(withdrawRequest.fee_rate || "0");
+          const withdrawNetAmount = parseFloat(withdrawRequest.net_amount || withdrawRequest.amount);
           const newBalance = Math.max(0, currentBalance - withdrawAmount);
 
           const { error: portfolioUpdateError } = await supabaseAdmin
@@ -272,12 +284,30 @@ export default function registerWithdrawalsRoutes(app: Express) {
               type: "withdraw",
               symbol: withdrawRequest.symbol,
               amount: withdrawRequest.amount,
+              fee_amount: withdrawFeeAmount.toFixed(8),
+              fee_symbol: withdrawRequest.symbol,
+              fee_rate: withdrawFeeRate.toFixed(8),
+              net_amount: withdrawNetAmount.toFixed(8),
               status: "completed",
               address: "Manual withdrawal",
             });
 
           if (transactionError) {
             return res.status(500).json({ message: "Failed to create transaction" });
+          }
+
+          if (withdrawFeeAmount > 0) {
+            await supabaseAdmin.from("platform_fees").insert({
+              user_id: withdrawRequest.user_id,
+              trade_id: parsedId,
+              trade_type: "withdrawal",
+              symbol: withdrawRequest.symbol,
+              fee_amount: withdrawFeeAmount.toFixed(8),
+              fee_symbol: withdrawRequest.symbol,
+              fee_rate: withdrawFeeRate.toFixed(8),
+            }).then(() => {}).catch((err: any) => {
+              console.error("Failed to log withdrawal fee:", err);
+            });
           }
 
           syncManager.syncPortfolioUpdated(withdrawRequest.user_id, {

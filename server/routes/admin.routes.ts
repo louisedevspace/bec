@@ -805,10 +805,10 @@ export default function registerAdminRoutes(app: Express) {
         usersRes, depositsRes, withdrawalsRes, tradesRes, futuresRes,
         stakingRes, loansRes, supportRes, kycRes, portfoliosRes, pricesRes
       ] = await Promise.all([
-        supabaseAdmin.from("users").select("id, created_at, is_active, is_verified, role"),
-        supabaseAdmin.from("deposit_requests").select("id, amount, status, submitted_at, symbol"),
-        supabaseAdmin.from("withdraw_requests").select("id, amount, status, submitted_at, symbol"),
-        supabaseAdmin.from("trades").select("id, amount, price, status, side, symbol, created_at"),
+        supabaseAdmin.from("users").select("id, username, email, created_at, is_active, is_verified, role"),
+        supabaseAdmin.from("deposit_requests").select("id, user_id, amount, status, submitted_at, symbol, fee_amount, fee_rate, fee_symbol, net_amount"),
+        supabaseAdmin.from("withdraw_requests").select("id, user_id, amount, status, submitted_at, symbol, fee_amount, fee_rate, fee_symbol, net_amount"),
+        supabaseAdmin.from("trades").select("id, user_id, amount, price, status, side, symbol, created_at, fee_amount, fee_rate, fee_symbol"),
         supabaseAdmin.from("futures_trades").select("id, amount, status, side, symbol, created_at, final_result, final_profit"),
         supabaseAdmin.from("staking_positions").select("id, amount, status, symbol, start_date"),
         supabaseAdmin.from("loan_applications").select("id, amount, status, created_at"),
@@ -845,6 +845,16 @@ export default function registerAdminRoutes(app: Express) {
       const pendingDeposits = deposits.filter(d => d.status === 'pending').length;
       const totalWithdrawalAmount = withdrawals.filter(w => w.status === 'approved').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
       const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').length;
+
+      // === FEE STATS ===
+      const approvedDepositsWithFees = deposits.filter(d => d.status === 'approved');
+      const approvedWithdrawalsWithFees = withdrawals.filter(w => w.status === 'approved');
+      const completedTradesWithFees = trades.filter(t => ['completed', 'approved', 'executed', 'filled'].includes(t.status));
+
+      const depositFeesTotal = approvedDepositsWithFees.reduce((s, d) => s + parseFloat(d.fee_amount || '0'), 0);
+      const withdrawalFeesTotal = approvedWithdrawalsWithFees.reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
+      const tradingFeesTotal = completedTradesWithFees.reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+      const totalFeesCollected = depositFeesTotal + withdrawalFeesTotal + tradingFeesTotal;
 
       // === TRADING STATS ===
       const totalTrades = trades.length;
@@ -928,6 +938,88 @@ export default function registerAdminRoutes(app: Express) {
         financialTrend.push({ date: dateStr, deposits: dayDeposits, withdrawals: dayWithdrawals });
       }
 
+      // === FEE TRENDS ===
+      const feeDailyTrend: Array<{ date: string; deposits: number; withdrawals: number; trading: number; total: number }> = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * 86400000);
+        const dateStr = d.toISOString().split('T')[0];
+        const next = new Date(d.getTime() + 86400000);
+
+        const dayDepositFees = approvedDepositsWithFees
+          .filter(dep => new Date(dep.submitted_at) >= d && new Date(dep.submitted_at) < next)
+          .reduce((s, dep) => s + parseFloat(dep.fee_amount || '0'), 0);
+        const dayWithdrawalFees = approvedWithdrawalsWithFees
+          .filter(w => new Date(w.submitted_at) >= d && new Date(w.submitted_at) < next)
+          .reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
+        const dayTradingFees = completedTradesWithFees
+          .filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next)
+          .reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+        const dayTotal = dayDepositFees + dayWithdrawalFees + dayTradingFees;
+
+        feeDailyTrend.push({
+          date: dateStr,
+          deposits: dayDepositFees,
+          withdrawals: dayWithdrawalFees,
+          trading: dayTradingFees,
+          total: dayTotal,
+        });
+      }
+
+      const feeMonthlyTrend: Array<{ month: string; deposits: number; withdrawals: number; trading: number; total: number }> = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 1);
+        const monthLabel = monthStart.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+
+        const monthDepositFees = approvedDepositsWithFees
+          .filter(dep => new Date(dep.submitted_at) >= monthStart && new Date(dep.submitted_at) < monthEnd)
+          .reduce((s, dep) => s + parseFloat(dep.fee_amount || '0'), 0);
+        const monthWithdrawalFees = approvedWithdrawalsWithFees
+          .filter(w => new Date(w.submitted_at) >= monthStart && new Date(w.submitted_at) < monthEnd)
+          .reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
+        const monthTradingFees = completedTradesWithFees
+          .filter(t => new Date(t.created_at) >= monthStart && new Date(t.created_at) < monthEnd)
+          .reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+
+        feeMonthlyTrend.push({
+          month: monthLabel,
+          deposits: monthDepositFees,
+          withdrawals: monthWithdrawalFees,
+          trading: monthTradingFees,
+          total: monthDepositFees + monthWithdrawalFees + monthTradingFees,
+        });
+      }
+
+      const feeByUserMap = new Map<string, { userId: string; username: string; email: string; totalFees: number; depositFees: number; withdrawalFees: number; tradingFees: number }>();
+      const userLookup = new Map((users || []).map((u: any) => [u.id, u]));
+
+      const upsertUserFee = (userId: string, kind: 'deposit' | 'withdrawal' | 'trading', fee: number) => {
+        if (!userId || fee <= 0) return;
+        const user = userLookup.get(userId);
+        const entry = feeByUserMap.get(userId) || {
+          userId,
+          username: user?.username || 'N/A',
+          email: user?.email || 'N/A',
+          totalFees: 0,
+          depositFees: 0,
+          withdrawalFees: 0,
+          tradingFees: 0,
+        };
+        entry.totalFees += fee;
+        if (kind === 'deposit') entry.depositFees += fee;
+        if (kind === 'withdrawal') entry.withdrawalFees += fee;
+        if (kind === 'trading') entry.tradingFees += fee;
+        feeByUserMap.set(userId, entry);
+      };
+
+      approvedDepositsWithFees.forEach((d: any) => upsertUserFee(d.user_id, 'deposit', parseFloat(d.fee_amount || '0')));
+      approvedWithdrawalsWithFees.forEach((w: any) => upsertUserFee(w.user_id, 'withdrawal', parseFloat(w.fee_amount || '0')));
+      completedTradesWithFees.forEach((t: any) => upsertUserFee(t.user_id, 'trading', parseFloat(t.fee_amount || '0')));
+
+      const topUsersByFees = Array.from(feeByUserMap.values())
+        .sort((a, b) => b.totalFees - a.totalFees)
+        .slice(0, 10);
+
       // === RECENT ACTIVITY (last 20 events) ===
       type ActivityItem = { type: string; description: string; time: string; status: string };
       const recentActivity: ActivityItem[] = [];
@@ -993,6 +1085,19 @@ export default function registerAdminRoutes(app: Express) {
           totalWithdrawalsCount: withdrawals.length,
           totalPlatformValue,
           netFlow: totalDepositAmount - totalWithdrawalAmount,
+          fees: {
+            total: totalFeesCollected,
+            byType: {
+              deposits: depositFeesTotal,
+              withdrawals: withdrawalFeesTotal,
+              trading: tradingFeesTotal,
+            },
+            trends: {
+              daily: feeDailyTrend,
+              monthly: feeMonthlyTrend,
+            },
+            byUser: topUsersByFees,
+          },
         },
         trading: {
           totalTrades,

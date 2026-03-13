@@ -457,12 +457,14 @@ function UserDetailView({
           {activeTab === "deposits" && (
             <TransactionTable
               items={detail.deposits || []}
-              columns={["Date", "Symbol", "Amount", "Status"]}
+              columns={["Date", "Symbol", "Amount", "Fee", "Net", "Status"]}
               renderRow={(d: any) => (
                 <tr key={d.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
                   <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(d.created_at)}</td>
                   <td className="py-2 px-3 text-xs text-white flex items-center gap-1.5"><CryptoIcon symbol={d.symbol || "USDT"} size="xs" />{d.symbol || "USDT"}</td>
                   <td className="py-2 px-3 text-xs text-green-400 tabular-nums">+{formatCryptoNumber(parseFloat(d.amount || "0"))}</td>
+                  <td className="py-2 px-3 text-xs text-amber-400 tabular-nums">{formatCryptoNumber(parseFloat(d.fee_amount || "0"))}</td>
+                  <td className="py-2 px-3 text-xs text-blue-400 tabular-nums">{formatCryptoNumber(parseFloat(d.net_amount || d.amount || "0"))}</td>
                   <td className="py-2 px-3"><StatusBadge status={d.status} /></td>
                 </tr>
               )}
@@ -472,12 +474,14 @@ function UserDetailView({
           {activeTab === "withdrawals" && (
             <TransactionTable
               items={detail.withdrawals || []}
-              columns={["Date", "Symbol", "Amount", "Status"]}
+              columns={["Date", "Symbol", "Amount", "Fee", "Net", "Status"]}
               renderRow={(w: any) => (
                 <tr key={w.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
                   <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(w.created_at)}</td>
                   <td className="py-2 px-3 text-xs text-white flex items-center gap-1.5"><CryptoIcon symbol={w.symbol || "USDT"} size="xs" />{w.symbol || "USDT"}</td>
                   <td className="py-2 px-3 text-xs text-red-400 tabular-nums">-{formatCryptoNumber(parseFloat(w.amount || "0"))}</td>
+                  <td className="py-2 px-3 text-xs text-amber-400 tabular-nums">{formatCryptoNumber(parseFloat(w.fee_amount || "0"))}</td>
+                  <td className="py-2 px-3 text-xs text-blue-400 tabular-nums">{formatCryptoNumber(parseFloat(w.net_amount || w.amount || "0"))}</td>
                   <td className="py-2 px-3"><StatusBadge status={w.status} /></td>
                 </tr>
               )}
@@ -487,7 +491,7 @@ function UserDetailView({
           {activeTab === "trades" && (
             <TransactionTable
               items={detail.trades || []}
-              columns={["Date", "Pair", "Side", "Amount", "Price", "Status"]}
+              columns={["Date", "Pair", "Side", "Amount", "Price", "Fee", "Status"]}
               renderRow={(t: any) => (
                 <tr key={t.id} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a] transition-colors">
                   <td className="py-2 px-3 text-xs text-gray-400">{formatShortDate(t.created_at)}</td>
@@ -495,6 +499,7 @@ function UserDetailView({
                   <td className="py-2 px-3"><span className={`text-xs font-medium ${t.side === 'buy' ? 'text-green-400' : 'text-red-400'}`}>{t.side?.toUpperCase()}</span></td>
                   <td className="py-2 px-3 text-xs text-white tabular-nums">{formatCryptoNumber(parseFloat(t.amount || "0"))}</td>
                   <td className="py-2 px-3 text-xs text-gray-400 tabular-nums">${formatUsdNumber(parseFloat(t.price || "0"))}</td>
+                  <td className="py-2 px-3 text-xs text-amber-400 tabular-nums">{formatCryptoNumber(parseFloat(t.fee_amount || "0"))} {t.fee_symbol || 'USDT'}</td>
                   <td className="py-2 px-3"><StatusBadge status={t.status} /></td>
                 </tr>
               )}

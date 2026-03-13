@@ -47,6 +47,10 @@ export const transactions = pgTable("transactions", {
   type: text("type").notNull(), // deposit, withdraw, trade, convert
   symbol: text("symbol").notNull(),
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
+  feeAmount: decimal("fee_amount", { precision: 20, scale: 8 }).default("0"),
+  feeSymbol: text("fee_symbol"),
+  feeRate: decimal("fee_rate", { precision: 10, scale: 8 }),
+  netAmount: decimal("net_amount", { precision: 20, scale: 8 }),
   status: text("status").notNull(), // pending, completed, failed
   txHash: text("tx_hash"),
   address: text("address"),
@@ -61,6 +65,9 @@ export const trades = pgTable("trades", {
   side: text("side").notNull(), // buy, sell, long, short
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
   price: decimal("price", { precision: 20, scale: 8 }),
+  feeAmount: decimal("fee_amount", { precision: 20, scale: 8 }).default("0"),
+  feeSymbol: text("fee_symbol"),
+  feeRate: decimal("fee_rate", { precision: 10, scale: 8 }),
   status: text("status").notNull(), // pending, filled, cancelled
   expiresAt: timestamp("expires_at"),
   deletedForUser: boolean("deleted_for_user").default(false), // Soft delete for user view
@@ -186,6 +193,10 @@ export const depositRequests = pgTable("deposit_requests", {
   userId: text("user_id").notNull(),
   symbol: text("symbol").notNull(),
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
+  feeAmount: decimal("fee_amount", { precision: 20, scale: 8 }).default("0"),
+  feeSymbol: text("fee_symbol"),
+  feeRate: decimal("fee_rate", { precision: 10, scale: 8 }),
+  netAmount: decimal("net_amount", { precision: 20, scale: 8 }),
   screenshotUrl: text("screenshot_url").notNull(),
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   adminNotes: text("admin_notes"),
@@ -333,6 +344,10 @@ export const withdrawRequests = pgTable("withdraw_requests", {
   userId: text("user_id").notNull(),
   symbol: text("symbol").notNull(),
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
+  feeAmount: decimal("fee_amount", { precision: 20, scale: 8 }).default("0"),
+  feeSymbol: text("fee_symbol"),
+  feeRate: decimal("fee_rate", { precision: 10, scale: 8 }),
+  netAmount: decimal("net_amount", { precision: 20, scale: 8 }),
   walletAddress: text("wallet_address").notNull(), // User's wallet address
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   adminScreenshotUrl: text("admin_screenshot_url"), // Screenshot provided by admin
