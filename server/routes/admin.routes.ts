@@ -809,7 +809,7 @@ export default function registerAdminRoutes(app: Express) {
         supabaseAdmin.from("deposit_requests").select("id, user_id, amount, status, submitted_at, symbol, fee_amount, fee_rate, fee_symbol, net_amount"),
         supabaseAdmin.from("withdraw_requests").select("id, user_id, amount, status, submitted_at, symbol, fee_amount, fee_rate, fee_symbol, net_amount"),
         supabaseAdmin.from("trades").select("id, user_id, amount, price, status, side, symbol, created_at, fee_amount, fee_rate, fee_symbol"),
-        supabaseAdmin.from("futures_trades").select("id, amount, status, side, symbol, created_at, final_result, final_profit"),
+        supabaseAdmin.from("futures_trades").select("id, amount, status, side, symbol, created_at, final_result, final_profit, profit_loss"),
         supabaseAdmin.from("staking_positions").select("id, amount, status, symbol, start_date"),
         supabaseAdmin.from("loan_applications").select("id, amount, status, created_at"),
         supabaseAdmin.from("support_conversations").select("id, status, priority, created_at"),
@@ -840,6 +840,21 @@ export default function registerAdminRoutes(app: Express) {
       };
       const tradeBaseSymbol = (pair?: string | null) => (pair || '').split('/')[0]?.toUpperCase() || 'USDT';
       const finalTradeStatuses = new Set(['approved', 'executed', 'filled', 'completed']);
+      const getFuturesPnl = (f: any) => {
+        const pnl = parseFloat(f.profit_loss ?? f.final_profit ?? '0');
+        if (Number.isFinite(pnl)) return pnl;
+        return 0;
+      };
+      const isFuturesWin = (f: any) => {
+        if (f.final_result === 'win') return true;
+        if (f.final_result === 'loss') return false;
+        return getFuturesPnl(f) > 0;
+      };
+      const isFuturesLoss = (f: any) => {
+        if (f.final_result === 'loss') return true;
+        if (f.final_result === 'win') return false;
+        return getFuturesPnl(f) < 0;
+      };
       const tradeNotionalUsdt = (trade: any) => {
         const amount = parseFloat(trade.amount || '0');
         const price = parseFloat(trade.price || '0');
@@ -893,8 +908,8 @@ export default function registerAdminRoutes(app: Express) {
       const totalFutures = futures.length;
       const activeFutures = futures.filter(f => f.status === 'active').length;
       const completedFutures = futures.filter(f => f.status === 'completed').length;
-      const futuresWins = futures.filter(f => f.final_result === 'win').length;
-      const futuresLosses = futures.filter(f => f.final_result === 'loss').length;
+      const futuresWins = futures.filter(f => f.status === 'completed' && isFuturesWin(f)).length;
+      const futuresLosses = futures.filter(f => f.status === 'completed' && isFuturesLoss(f)).length;
 
       // === STAKING STATS ===
       const activeStaking = staking.filter(s => s.status === 'active').length;
@@ -1189,7 +1204,7 @@ export default function registerAdminRoutes(app: Express) {
       const [depositsRes, withdrawalsRes, futuresRes, pricesRes] = await Promise.all([
         supabaseAdmin.from("deposit_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
         supabaseAdmin.from("withdraw_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
-        supabaseAdmin.from("futures_trades").select("id, amount, status, final_result, final_profit, created_at, completed_at"),
+        supabaseAdmin.from("futures_trades").select("id, amount, status, final_result, final_profit, profit_loss, created_at, completed_at"),
         supabaseAdmin.from("crypto_prices").select("symbol, price"),
       ]);
 
@@ -1201,6 +1216,17 @@ export default function registerAdminRoutes(app: Express) {
       const approvedDeposits = allDeposits.filter(d => d.status === 'approved');
       const approvedWithdrawals = allWithdrawals.filter(w => w.status === 'approved');
       const completedFutures = allFutures.filter(f => f.status === 'completed');
+
+      const getFuturesPnl = (f: any) => {
+        const pnl = parseFloat(f.profit_loss ?? f.final_profit ?? '0');
+        if (Number.isFinite(pnl)) return pnl;
+        return 0;
+      };
+      const isFuturesLoss = (f: any) => {
+        if (f.final_result === 'loss') return true;
+        if (f.final_result === 'win') return false;
+        return getFuturesPnl(f) < 0;
+      };
 
       const priceMap = new Map(prices.map((p: any) => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
       const toUsdt = (amount: number, symbol?: string | null) => {
@@ -1268,9 +1294,9 @@ export default function registerAdminRoutes(app: Express) {
         const dayFuturesRevenue = completedFutures
           .filter(f => {
             const t = new Date(f.completed_at || f.created_at);
-            return t >= d && t < next && f.final_result === 'loss';
+            return t >= d && t < next && isFuturesLoss(f);
           })
-          .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+          .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
 
         const netFlow = dayDepAmt - dayWdAmt;
         const dayProfit = netFlow + dayFuturesRevenue;
@@ -1312,9 +1338,9 @@ export default function registerAdminRoutes(app: Express) {
         const mFutRev = completedFutures
           .filter(f => {
             const t = new Date(f.completed_at || f.created_at);
-            return t >= monthStart && t <= monthEnd && f.final_result === 'loss';
+            return t >= monthStart && t <= monthEnd && isFuturesLoss(f);
           })
-          .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+          .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
 
         const mDepTotal = mDeps.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
         const mWdTotal = mWds.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
@@ -1380,8 +1406,8 @@ export default function registerAdminRoutes(app: Express) {
       const totalDeposits = approvedDeposits.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
       const totalWithdrawals = approvedWithdrawals.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
       const totalFuturesRevenue = completedFutures
-        .filter(f => f.final_result === 'loss')
-        .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
+        .filter(f => isFuturesLoss(f))
+        .reduce((s, f) => s + Math.max(0, -getFuturesPnl(f)), 0);
 
       // Symbol breakdown with original and USDT equivalent
       const depositsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }> = {};
