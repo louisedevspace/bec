@@ -232,7 +232,7 @@ export default function AdminUsers() {
       const token = session?.access_token;
       if (!token) throw new Error('No authentication token');
 
-      const res = await fetch(`/api/admin/users?t=${Date.now()}`, {
+      const res = await fetch(`/api/admin/users?refresh=true&t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error('Failed to fetch users');

@@ -128,7 +128,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       if (initialUserId) {
         // If an initialUserId is provided, fetch only that user from admin API
         console.log(`🔍 Fetching initial user with ID: ${initialUserId}`);
-        const response = await fetch('/api/admin/users', {
+        const response = await fetch(`/api/admin/users?refresh=true&t=${Date.now()}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       } else {
         // Fetch all users from admin API
         console.log('🔍 Fetching all users for admin panel');
-        const response = await fetch(`/api/admin/users?t=${Date.now()}`, {
+        const response = await fetch(`/api/admin/users?refresh=true&t=${Date.now()}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -312,6 +312,8 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const handleDeleteUser = async (user: User) => {
     try {
+      const reason = window.prompt('Reason for deleting this user (optional):', 'Admin requested account removal') || '';
+
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error('No authentication token available');
@@ -322,7 +324,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId: user.id, reason: reason.trim() })
       });
 
       const result = await response.json();

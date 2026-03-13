@@ -249,10 +249,12 @@ export default function registerAuthRoutes(app: Express) {
   app.delete("/api/user/delete-account", requireAuth, async (req, res) => {
     try {
       const supabaseUserId = req.user.id;
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
 
       const { data: currentUser } = await supabaseAdmin
         .from("users")
-        .select("role")
+        .select("id, email, full_name, display_id, role")
         .eq("id", supabaseUserId)
         .maybeSingle();
 
@@ -264,6 +266,25 @@ export default function registerAuthRoutes(app: Express) {
           });
       }
 
+
+      await logAuditEvent({
+        userId: supabaseUserId,
+        action: "USER_SELF_DELETED",
+        resourceType: "users",
+        resourceId: supabaseUserId,
+        details: {
+          deletionType: "self",
+          targetUser: {
+            id: supabaseUserId,
+            email: currentUser?.email || req.user.email || null,
+            full_name: currentUser?.full_name || null,
+            display_id: currentUser?.display_id || null,
+          },
+        },
+        ipAddress,
+        userAgent,
+        status: "success",
+      });
       const tablesToClean = [
         "portfolios",
         "transactions",

@@ -10,6 +10,11 @@ let adminUsersCache: any = null;
 let adminUsersCacheTime = 0;
 const ADMIN_CACHE_DURATION = 60000; // 1 minute
 
+function invalidateAdminUsersCache() {
+  adminUsersCache = null;
+  adminUsersCacheTime = 0;
+}
+
 export default function registerAdminRoutes(app: Express) {
   // POST /api/admin/users/:userId/reveal-password — reveal decrypted password for a single user
   app.post("/api/admin/users/:userId/reveal-password", requireAuth, requireAdmin, async (req, res) => {
@@ -22,6 +27,22 @@ export default function registerAdminRoutes(app: Express) {
 
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
+      }
+
+      if (action !== "delete-user") {
+        const { data: targetUser, error: targetUserError } = await supabaseAdmin
+          .from("users")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (targetUserError) {
+          return res.status(500).json({ message: "Failed to validate target user" });
+        }
+
+        if (!targetUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
       }
 
       if (!reason || reason.length < 6) {
@@ -112,7 +133,7 @@ export default function registerAdminRoutes(app: Express) {
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {
       const now = Date.now();
-      const forceRefresh = req.query.refresh === 'true';
+      const forceRefresh = req.query.refresh === 'true' || typeof req.query.t === 'string';
       
       // Return cached data if available and not force refreshing
       if (!forceRefresh && adminUsersCache && (now - adminUsersCacheTime) < ADMIN_CACHE_DURATION) {
@@ -239,20 +260,10 @@ export default function registerAdminRoutes(app: Express) {
   app.post("/api/admin/user-management/:action", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { action } = req.params;
-      const { userId } = req.body;
+      const userId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
 
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
-      }
-
-      const { data: targetUser, error: targetUserError } = await supabaseAdmin
-        .from("users")
-        .select("id, email")
-        .eq("id", userId)
-        .single();
-
-      if (targetUserError || !targetUser) {
-        return res.status(404).json({ message: "User not found" });
       }
 
       let message;
@@ -304,17 +315,28 @@ export default function registerAdminRoutes(app: Express) {
         }
 
         case "delete-user": {
-          const { data: userRoleRecord, error: roleFetchError } = await supabaseAdmin
+          const adminUserId = req.user.id;
+          const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+          const ipAddress = getClientIP(req);
+          const userAgent = getUserAgent(req);
+
+          const { data: targetUser, error: targetUserError } = await supabaseAdmin
             .from("users")
-            .select("role")
+            .select("id, email, full_name, display_id, role")
             .eq("id", userId)
             .maybeSingle();
 
-          if (roleFetchError) {
-            return res.status(500).json({ message: "Failed to validate target user role" });
+          if (targetUserError) {
+            return res.status(500).json({ message: "Failed to fetch target user" });
           }
 
-          if (userRoleRecord?.role === "admin") {
+          // Idempotent response for stale UI/cache cases where user was already removed.
+          if (!targetUser) {
+            invalidateAdminUsersCache();
+            return res.json({ message: "User was already deleted", alreadyDeleted: true });
+          }
+
+          if (targetUser.role === "admin") {
             return res.status(403).json({ message: "Admin users cannot be deleted from this action" });
           }
 
@@ -360,6 +382,28 @@ export default function registerAdminRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to delete user", error: deleteUserError.message });
           }
 
+          await logAuditEvent({
+            userId: adminUserId,
+            action: "ADMIN_USER_DELETED",
+            resourceType: "users",
+            resourceId: targetUser.id,
+            details: {
+              deletionType: "admin",
+              reason: reason || null,
+              targetUser: {
+                id: targetUser.id,
+                email: targetUser.email,
+                full_name: targetUser.full_name,
+                display_id: targetUser.display_id,
+              },
+            },
+            ipAddress,
+            userAgent,
+            status: "success",
+          });
+
+          invalidateAdminUsersCache();
+
           message = "User deleted successfully";
           break;
         }
@@ -389,6 +433,67 @@ export default function registerAdminRoutes(app: Express) {
       res.json({ message });
     } catch (error: any) {
       res.status(500).json({ message: "Server error", error: error.message });
+    }
+  });
+
+  // GET /api/admin/deleted-users - list users deleted by admin and self-deleted users
+  app.get("/api/admin/deleted-users", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const { data: logs, error: logsError } = await supabaseAdmin
+        .from("audit_logs")
+        .select("id, user_id, action, details, created_at, status")
+        .in("action", ["ADMIN_USER_DELETED", "USER_SELF_DELETED"])
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (logsError) {
+        return res.status(500).json({ message: "Failed to fetch deleted users", error: logsError.message });
+      }
+
+      const actorIds = Array.from(
+        new Set(
+          (logs || [])
+            .filter((log) => log.action === "ADMIN_USER_DELETED" && typeof log.user_id === "string")
+            .map((log) => log.user_id)
+        )
+      );
+
+      let actorsById = new Map<string, { id: string; email: string | null; full_name: string | null }>();
+      if (actorIds.length > 0) {
+        const { data: actorRows } = await supabaseAdmin
+          .from("users")
+          .select("id, email, full_name")
+          .in("id", actorIds);
+
+        actorsById = new Map(
+          (actorRows || []).map((row: any) => [row.id, { id: row.id, email: row.email || null, full_name: row.full_name || null }])
+        );
+      }
+
+      const deletedUsers = (logs || []).map((log: any) => {
+        const details = (log.details || {}) as Record<string, any>;
+        const targetUser = (details.targetUser || {}) as Record<string, any>;
+        const deletionType = log.action === "ADMIN_USER_DELETED" ? "admin" : "self";
+        const actor = actorsById.get(log.user_id);
+
+        return {
+          id: log.id,
+          deleted_at: log.created_at,
+          deletion_type: deletionType,
+          reason: details.reason || null,
+          target_user_id: targetUser.id || details.targetUserId || null,
+          target_email: targetUser.email || details.email || null,
+          target_full_name: targetUser.full_name || details.full_name || null,
+          target_display_id: targetUser.display_id || details.display_id || null,
+          actor_user_id: deletionType === "admin" ? log.user_id : null,
+          actor_email: deletionType === "admin" ? actor?.email || null : null,
+          actor_full_name: deletionType === "admin" ? actor?.full_name || null : null,
+        };
+      });
+
+      return res.json({ deletedUsers });
+    } catch (error: any) {
+      return res.status(500).json({ message: "Server error", error: error.message });
     }
   });
 
@@ -515,6 +620,8 @@ export default function registerAdminRoutes(app: Express) {
       if (updateError) {
         return res.status(500).json({ message: "Failed to update user status" });
       }
+
+      invalidateAdminUsersCache();
 
       res.json({
         message: `User ${isActive ? "enabled" : "disabled"} successfully`,
