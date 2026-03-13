@@ -35,9 +35,7 @@ function getPendingBadge(key: string | undefined, counts: PendingCounts): number
 
 const navItems = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeKey: 'dashboard' },
-  { label: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Platform Analytics' },
   { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeKey: 'users' },
-    { label: 'Deleted Users', href: '/admin/deleted-users', icon: Shield, description: 'Deleted Account Audit' },
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
   { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },

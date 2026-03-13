@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { timeAgo as timeAgoUtil, formatChartDate } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,25 @@ import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend
 } from 'recharts';
+
+const AdminKYCManagementModal = lazy(() =>
+  import("../components/modals/admin-kyc-management-modal").then((m) => ({ default: m.AdminKYCManagementModal })),
+);
+const AdminDepositRequestsModal = lazy(() =>
+  import("../components/modals/admin-deposit-requests-modal").then((m) => ({ default: m.AdminDepositRequestsModal })),
+);
+const AdminWithdrawRequestsModal = lazy(() =>
+  import("../components/modals/admin-withdraw-requests-modal").then((m) => ({ default: m.AdminWithdrawRequestsModal })),
+);
+const AdminWithdrawHistoryModal = lazy(() =>
+  import("../components/modals/admin-withdraw-history-modal").then((m) => ({ default: m.AdminWithdrawHistoryModal })),
+);
+const AdminDepositHistoryModal = lazy(() =>
+  import("../components/modals/admin-deposit-history-modal").then((m) => ({ default: m.AdminDepositHistoryModal })),
+);
+const AdminLoanManagementModal = lazy(() =>
+  import("../components/modals/admin-loan-management-modal").then((m) => ({ default: m.AdminLoanManagementModal })),
+);
 
 interface DashboardStats {
   users: {
@@ -82,8 +101,8 @@ interface SupportConversationPreview {
 }
 
 interface AnalyticsData {
-  depositDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
-  withdrawalDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }>;
+  depositDaily: Array<{ date: string; usdtAmount: number; count: number }>;
+  withdrawalDaily: Array<{ date: string; usdtAmount: number; count: number }>;
   profitDaily: Array<{ date: string; netFlow: number; cumulativeProfit: number; deposits: number; withdrawals: number; futuresRevenue: number }>;
   monthlyData: Array<{
     month: string; monthLabel: string; deposits: number; withdrawals: number;
@@ -98,38 +117,11 @@ interface AnalyticsData {
   summary: {
     totalDeposits: number; totalWithdrawals: number; totalNetFlow: number;
     totalFuturesRevenue: number; totalProfit: number;
-    depositsBySymbol: Record<string, number>; withdrawalsBySymbol: Record<string, number>;
+    depositsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }>;
+    withdrawalsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }>;
     totalDepositCount: number; totalWithdrawalCount: number;
     allTimeDepositCount: number; allTimeWithdrawalCount: number;
   };
-}
-
-// Crypto symbol map for display
-const CRYPTO_SYMBOLS: Record<string, string> = {
-  BTC: '₿', ETH: 'Ξ', USDT: '$', BNB: 'BNB', SOL: 'SOL', XRP: 'XRP',
-  ADA: 'ADA', DOGE: 'Ð', DOT: 'DOT', LINK: 'LINK', AVAX: 'AVAX',
-  MATIC: 'MATIC', SHIB: 'SHIB', LTC: 'Ł', TRX: 'TRX', ATOM: 'ATOM',
-  APT: 'APT', SUI: 'SUI', ARB: 'ARB', OP: 'OP', PEPE: 'PEPE', INJ: 'INJ',
-};
-
-function getCryptoSymbol(name: string): string {
-  // name could be "BTC", "USDT", or display name like "Total"
-  const upper = name.toUpperCase();
-  return CRYPTO_SYMBOLS[upper] || upper;
-}
-
-function formatCryptoAmount(value: number, cryptoName: string): string {
-  const sym = getCryptoSymbol(cryptoName);
-  // For USD-like values (USDT, Total, Deposits, Withdrawals, Profit, etc.) use $ prefix
-  const usdNames = ['USDT', 'TOTAL', 'DEPOSITS', 'WITHDRAWALS', 'PROFIT', 'NET FLOW',
-    'DAILY NET FLOW', 'CUMULATIVE PROFIT', 'FUTURES REVENUE'];
-  if (usdNames.includes(cryptoName.toUpperCase()) || sym === '$') {
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
-  // For crypto values, show symbol after number
-  return `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${sym}`;
 }
 
 function formatCurrency(value: number): string {
@@ -248,6 +240,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showKYCModal, setShowKYCModal] = useState(false);
+  const [showDepositRequestsModal, setShowDepositRequestsModal] = useState(false);
+  const [showWithdrawRequestsModal, setShowWithdrawRequestsModal] = useState(false);
+  const [showWithdrawHistoryModal, setShowWithdrawHistoryModal] = useState(false);
+  const [showDepositHistoryModal, setShowDepositHistoryModal] = useState(false);
+  const [showLoanManagementModal, setShowLoanManagementModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { counts: pendingCounts } = useAdminPendingCounts(15000);
@@ -719,32 +717,87 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Primary Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <StatCard icon={<Users size={18} />} iconBg="bg-blue-500/10" iconColor="text-blue-400"
-                label="Total Users" value={formatNumber(stats.users.total)}
-                sub={`${stats.users.newToday} today`} trend={stats.users.newToday > stats.users.newYesterday ? 'up' : stats.users.newToday < stats.users.newYesterday ? 'down' : 'neutral'}
-                onClick={() => setLocation('/admin/users')} />
-              <StatCard icon={<Activity size={18} />} iconBg="bg-green-500/10" iconColor="text-green-400"
-                label="Active Users" value={formatNumber(stats.users.active)}
-                sub={`${stats.users.total > 0 ? ((stats.users.active / stats.users.total) * 100).toFixed(0) : 0}% of total`}
-                onClick={() => setLocation('/admin/users')} />
-              <StatCard icon={<DollarSign size={18} />} iconBg="bg-emerald-500/10" iconColor="text-emerald-400"
-                label="Platform Value" value={formatCurrency(stats.financial.totalPlatformValue)}
-                sub={`${stats.users.usersWithPortfolio} portfolios`}
-                onClick={() => setLocation('/admin/wallets')} />
-              <StatCard icon={<BarChart3 size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
-                label="Trade Volume" value={formatCurrency(stats.trading.totalVolume)}
-                sub={`${stats.trading.totalTrades} trades`} pendingBadge={pendingCounts.trades + pendingCounts.futures}
-                onClick={() => setActiveTab('pending-orders')} />
-              <StatCard icon={<MessageSquare size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
-                label="Support" value={String(stats.support.open + stats.support.inProgress)}
-                sub={unreadSupportSummary} pendingBadge={pendingCounts.support}
-                onClick={() => setLocation('/admin/support')} />
-              <StatCard icon={<FileCheck size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
-                label="KYC Pending" value={String(stats.kyc.pending)}
-                sub={`${stats.kyc.approved} approved`} pendingBadge={pendingCounts.kyc}
-                onClick={() => setLocation('/admin/users')} />
+            {/* User Management Actions */}
+            <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
+              <button
+                onClick={() => setShowDepositRequestsModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-emerald-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors text-emerald-400">
+                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  {pendingCounts.deposits > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                      {pendingCounts.deposits > 99 ? '99+' : pendingCounts.deposits}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-emerald-400 transition-colors text-center leading-tight">Deposit Requests</span>
+              </button>
+
+              <button
+                onClick={() => setShowWithdrawRequestsModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-blue-500/20 transition-colors text-blue-400">
+                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  {pendingCounts.withdrawals > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                      {pendingCounts.withdrawals > 99 ? '99+' : pendingCounts.withdrawals}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-blue-400 transition-colors text-center leading-tight">Withdraw Requests</span>
+              </button>
+
+              <button
+                onClick={() => setShowDepositHistoryModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-orange-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors text-orange-400">
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-orange-400 transition-colors text-center leading-tight">Deposit History</span>
+              </button>
+
+              <button
+                onClick={() => setShowWithdrawHistoryModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-purple-500/30 hover:bg-purple-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-purple-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-purple-500/20 transition-colors text-purple-400">
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-purple-400 transition-colors text-center leading-tight">Withdraw History</span>
+              </button>
+
+              <button
+                onClick={() => setShowKYCModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-indigo-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors text-indigo-400">
+                  <FileCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  {pendingCounts.kyc > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                      {pendingCounts.kyc > 99 ? '99+' : pendingCounts.kyc}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-indigo-400 transition-colors text-center leading-tight">KYC Mgmt</span>
+              </button>
+
+              <button
+                onClick={() => setShowLoanManagementModal(true)}
+                className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-teal-500/30 hover:bg-teal-500/10 transition-all duration-200"
+              >
+                <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-teal-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-teal-500/20 transition-colors text-teal-400">
+                  <Landmark className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  {pendingCounts.loans > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                      {pendingCounts.loans > 99 ? '99+' : pendingCounts.loans}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-teal-400 transition-colors text-center leading-tight">Loan Mgmt</span>
+              </button>
             </div>
 
             {/* Tabs */}
@@ -1150,12 +1203,7 @@ export default function AdminDashboard() {
                           <h3 className="text-sm font-semibold text-white">Deposit Tracking</h3>
                           <p className="text-[11px] text-gray-500">All deposits by amount, date & currency breakdown</p>
                         </div>
-                        <div className="flex items-center gap-3 text-[10px]">
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> USDT</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> BTC</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> ETH</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Other</span>
-                        </div>
+                        <div className="text-[10px] text-gray-500">Displayed in USDT equivalent</div>
                       </div>
                       <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1170,23 +1218,19 @@ export default function AdminDashboard() {
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
                               tickFormatter={(v) => formatChartDate(v)}
                               interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
-                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => formatCurrency(v)} />
                             <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null;
                               return (
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
                                   <p className="text-[10px] text-gray-400 mb-1">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
-                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCurrency(parseFloat(p.value || 0))}</p>
                                   ))}
                                 </div>
                               );
                             }} />
-                            <Bar dataKey="usdt" name="USDT" fill="#10b981" stackId="dep" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="btc" name="BTC" fill="#f97316" stackId="dep" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="eth" name="ETH" fill="#3b82f6" stackId="dep" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="other" name="Other" fill="#6b7280" stackId="dep" radius={[3, 3, 0, 0]} />
-                            <Line type="monotone" dataKey="amount" name="Total" stroke="#a78bfa" strokeWidth={2} dot={false} />
+                            <Bar dataKey="usdtAmount" name="Deposits (USDT)" fill="#10b981" radius={[3, 3, 0, 0]} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </div>
@@ -1199,11 +1243,7 @@ export default function AdminDashboard() {
                           <h3 className="text-sm font-semibold text-white">Withdrawal Tracking</h3>
                           <p className="text-[11px] text-gray-500">Withdrawal amounts processed by currency</p>
                         </div>
-                        <div className="flex items-center gap-3 text-[10px]">
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> USDT</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> BTC</span>
-                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> ETH</span>
-                        </div>
+                        <div className="text-[10px] text-gray-500">Displayed in USDT equivalent</div>
                       </div>
                       <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1218,23 +1258,19 @@ export default function AdminDashboard() {
                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#555' }}
                               tickFormatter={(v) => formatChartDate(v)}
                               interval={Math.floor(parseInt(analyticsPeriod) / 8)} />
-                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`} />
+                            <YAxis tick={{ fontSize: 9, fill: '#555' }} tickFormatter={(v) => formatCurrency(v)} />
                             <Tooltip content={({ active, payload, label }) => {
                               if (!active || !payload?.length) return null;
                               return (
                                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
                                   <p className="text-[10px] text-gray-400 mb-1">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
-                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}</p>
+                                    <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>{p.name}: {formatCurrency(parseFloat(p.value || 0))}</p>
                                   ))}
                                 </div>
                               );
                             }} />
-                            <Bar dataKey="usdt" name="USDT" fill="#ef4444" stackId="wd" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="btc" name="BTC" fill="#f97316" stackId="wd" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="eth" name="ETH" fill="#3b82f6" stackId="wd" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="other" name="Other" fill="#6b7280" stackId="wd" radius={[3, 3, 0, 0]} />
-                            <Line type="monotone" dataKey="amount" name="Total" stroke="#fb923c" strokeWidth={2} dot={false} />
+                            <Bar dataKey="usdtAmount" name="Withdrawals (USDT)" fill="#ef4444" radius={[3, 3, 0, 0]} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </div>
@@ -1275,7 +1311,7 @@ export default function AdminDashboard() {
                                   <p className="text-[10px] text-gray-400 mb-1.5">{formatChartDate(label)}</p>
                                   {payload.map((p: any, i: number) => (
                                     <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                      {p.name}: {formatCryptoAmount(Math.abs(p.value), p.name)}{p.value < 0 ? ' (loss)' : ''}
+                                      {p.name}: {formatCurrency(Math.abs(p.value || 0))}{p.value < 0 ? ' (loss)' : ''}
                                     </p>
                                   ))}
                                 </div>
@@ -1326,7 +1362,7 @@ export default function AdminDashboard() {
                                       <p className="text-[10px] text-gray-400 mb-1">{label}</p>
                                       {payload.sort((a: any, b: any) => (b.value || 0) - (a.value || 0)).map((p: any, i: number) => (
                                         <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                          {p.name}: {formatCryptoAmount(parseFloat(p.value || 0), p.name)}
+                                          {p.name}: {formatCurrency(parseFloat(p.value || 0))}
                                         </p>
                                       ))}
                                     </div>
@@ -1373,7 +1409,7 @@ export default function AdminDashboard() {
                                     <p className="text-[10px] text-gray-400 mb-1">{label}</p>
                                     {payload.map((p: any, i: number) => (
                                       <p key={i} className="text-[11px] font-medium" style={{ color: p.color }}>
-                                        {p.name}: {formatCryptoAmount(parseFloat(p.value), p.name)}
+                                        {p.name}: {formatCurrency(parseFloat(p.value || 0))}
                                       </p>
                                     ))}
                                   </div>
@@ -1391,7 +1427,7 @@ export default function AdminDashboard() {
                       <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
                         <div className="mb-4">
                           <h3 className="text-sm font-semibold text-white">Currency Breakdown</h3>
-                          <p className="text-[11px] text-gray-500">All-time deposit & withdrawal amounts by asset</p>
+                          <p className="text-[11px] text-gray-500">Original asset amounts with USDT equivalents</p>
                         </div>
                         <div className="space-y-4">
                           <div>
@@ -1399,16 +1435,19 @@ export default function AdminDashboard() {
                               <ArrowDownRight size={10} className="text-green-400" /> DEPOSIT BREAKDOWN
                             </p>
                             {Object.entries(analytics.summary.depositsBySymbol)
-                              .sort(([, a], [, b]) => b - a)
-                              .map(([symbol, amount]) => (
+                              .sort(([, a], [, b]) => b.usdtAmount - a.usdtAmount)
+                              .map(([symbol, amounts]) => (
                                 <div key={symbol} className="mb-2">
                                   <div className="flex items-center justify-between text-xs mb-1">
                                     <span className="text-gray-300 font-medium">{symbol}</span>
-                                    <span className="text-white font-semibold">{formatCryptoAmount(amount, symbol)}</span>
+                                    <span className="text-right">
+                                      <span className="block text-gray-300 font-medium">{amounts.originalAmount.toLocaleString('en-US', { maximumFractionDigits: 8 })} {symbol}</span>
+                                      <span className="block text-white font-semibold">{formatCurrency(amounts.usdtAmount)} USDT</span>
+                                    </span>
                                   </div>
                                   <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
                                     <div className="h-full bg-green-500 rounded-full transition-all duration-700"
-                                      style={{ width: `${Math.min(100, (amount / analytics.summary.totalDeposits) * 100)}%` }} />
+                                      style={{ width: `${Math.min(100, (amounts.usdtAmount / Math.max(analytics.summary.totalDeposits, 1)) * 100)}%` }} />
                                   </div>
                                 </div>
                               ))}
@@ -1418,16 +1457,19 @@ export default function AdminDashboard() {
                               <ArrowUpRight size={10} className="text-red-400" /> WITHDRAWAL BREAKDOWN
                             </p>
                             {Object.entries(analytics.summary.withdrawalsBySymbol)
-                              .sort(([, a], [, b]) => b - a)
-                              .map(([symbol, amount]) => (
+                              .sort(([, a], [, b]) => b.usdtAmount - a.usdtAmount)
+                              .map(([symbol, amounts]) => (
                                 <div key={symbol} className="mb-2">
                                   <div className="flex items-center justify-between text-xs mb-1">
                                     <span className="text-gray-300 font-medium">{symbol}</span>
-                                    <span className="text-white font-semibold">{formatCryptoAmount(amount, symbol)}</span>
+                                    <span className="text-right">
+                                      <span className="block text-gray-300 font-medium">{amounts.originalAmount.toLocaleString('en-US', { maximumFractionDigits: 8 })} {symbol}</span>
+                                      <span className="block text-white font-semibold">{formatCurrency(amounts.usdtAmount)} USDT</span>
+                                    </span>
                                   </div>
                                   <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
                                     <div className="h-full bg-red-500 rounded-full transition-all duration-700"
-                                      style={{ width: `${Math.min(100, (amount / analytics.summary.totalWithdrawals) * 100)}%` }} />
+                                      style={{ width: `${Math.min(100, (amounts.usdtAmount / Math.max(analytics.summary.totalWithdrawals, 1)) * 100)}%` }} />
                                   </div>
                                 </div>
                               ))}
@@ -1672,6 +1714,15 @@ export default function AdminDashboard() {
                 </div>
               </TabsContent>
             </Tabs>
+
+            <Suspense fallback={null}>
+              <AdminDepositRequestsModal isOpen={showDepositRequestsModal} onClose={() => setShowDepositRequestsModal(false)} />
+              <AdminWithdrawRequestsModal isOpen={showWithdrawRequestsModal} onClose={() => setShowWithdrawRequestsModal(false)} />
+              <AdminDepositHistoryModal isOpen={showDepositHistoryModal} onClose={() => setShowDepositHistoryModal(false)} />
+              <AdminWithdrawHistoryModal isOpen={showWithdrawHistoryModal} onClose={() => setShowWithdrawHistoryModal(false)} />
+              <AdminKYCManagementModal isOpen={showKYCModal} onClose={() => setShowKYCModal(false)} />
+              <AdminLoanManagementModal isOpen={showLoanManagementModal} onClose={() => setShowLoanManagementModal(false)} />
+            </Suspense>
           </>
         )}
       </div>

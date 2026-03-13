@@ -830,6 +830,16 @@ export default function registerAdminRoutes(app: Express) {
       const portfolios = portfoliosRes.data || [];
       const prices = pricesRes.data || [];
 
+      const priceMap = new Map(prices.map(p => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
+      const toUsdt = (amount: number, symbol?: string | null) => {
+        const safeAmount = Number.isFinite(amount) ? amount : 0;
+        const sym = (symbol || 'USDT').toUpperCase();
+        if (sym === 'USDT') return safeAmount;
+        const px = priceMap.get(sym) || 0;
+        return safeAmount * px;
+      };
+      const tradeBaseSymbol = (pair?: string | null) => (pair || '').split('/')[0]?.toUpperCase() || 'USDT';
+
       // === USER STATS ===
       const totalUsers = users.filter(u => u.role !== 'admin').length;
       const activeUsers = users.filter(u => u.is_active && u.role !== 'admin').length;
@@ -841,9 +851,13 @@ export default function registerAdminRoutes(app: Express) {
       const newUsersThisMonth = users.filter(u => u.role !== 'admin' && new Date(u.created_at) >= thirtyDaysAgo).length;
 
       // === FINANCIAL STATS ===
-      const totalDepositAmount = deposits.filter(d => d.status === 'approved').reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+      const totalDepositAmount = deposits
+        .filter(d => d.status === 'approved')
+        .reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
       const pendingDeposits = deposits.filter(d => d.status === 'pending').length;
-      const totalWithdrawalAmount = withdrawals.filter(w => w.status === 'approved').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+      const totalWithdrawalAmount = withdrawals
+        .filter(w => w.status === 'approved')
+        .reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
       const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').length;
 
       // === FEE STATS ===
@@ -851,19 +865,23 @@ export default function registerAdminRoutes(app: Express) {
       const approvedWithdrawalsWithFees = withdrawals.filter(w => w.status === 'approved');
       const completedTradesWithFees = trades.filter(t => ['completed', 'approved', 'executed', 'filled'].includes(t.status));
 
-      const depositFeesTotal = approvedDepositsWithFees.reduce((s, d) => s + parseFloat(d.fee_amount || '0'), 0);
-      const withdrawalFeesTotal = approvedWithdrawalsWithFees.reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
-      const tradingFeesTotal = completedTradesWithFees.reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+      const depositFeesTotal = approvedDepositsWithFees
+        .reduce((s, d) => s + toUsdt(parseFloat(d.fee_amount || '0'), d.fee_symbol || d.symbol), 0);
+      const withdrawalFeesTotal = approvedWithdrawalsWithFees
+        .reduce((s, w) => s + toUsdt(parseFloat(w.fee_amount || '0'), w.fee_symbol || w.symbol), 0);
+      const tradingFeesTotal = completedTradesWithFees
+        .reduce((s, t) => s + toUsdt(parseFloat(t.fee_amount || '0'), t.fee_symbol || 'USDT'), 0);
       const totalFeesCollected = depositFeesTotal + withdrawalFeesTotal + tradingFeesTotal;
 
       // === TRADING STATS ===
       const totalTrades = trades.length;
-      const pendingTrades = trades.filter(t => t.status === 'pending_approval').length;
+      const pendingTrades = trades.filter(t => ['pending_approval', 'pending'].includes(t.status)).length;
       const completedTrades = trades.filter(t => ['executed', 'filled'].includes(t.status)).length;
       const totalTradeVolume = trades.reduce((s, t) => {
         const amount = parseFloat(t.amount || '0');
         const price = parseFloat(t.price || '0');
-        return s + (price > 0 ? amount * price : amount);
+        if (price > 0) return s + (amount * price);
+        return s + toUsdt(amount, tradeBaseSymbol(t.symbol));
       }, 0);
 
       // === FUTURES STATS ===
@@ -894,16 +912,11 @@ export default function registerAdminRoutes(app: Express) {
       const rejectedKyc = kyc.filter(k => k.status === 'rejected').length;
 
       // === PLATFORM VALUE (total portfolios) ===
-      const priceMap = new Map(prices.map(p => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
       const uniqueUsers = new Set(portfolios.map(p => p.user_id));
       let totalPlatformValue = 0;
       portfolios.forEach(p => {
         const amount = parseFloat(p.available || '0') + parseFloat(p.frozen || '0');
-        if (p.symbol?.toUpperCase() === 'USDT') {
-          totalPlatformValue += amount;
-        } else {
-          totalPlatformValue += amount * (priceMap.get(p.symbol?.toUpperCase()) || 0);
-        }
+        totalPlatformValue += toUsdt(amount, p.symbol);
       });
 
       // === REGISTRATION TREND (last 30 days) ===
@@ -923,7 +936,12 @@ export default function registerAdminRoutes(app: Express) {
         const dateStr = d.toISOString().split('T')[0];
         const next = new Date(d.getTime() + 86400000);
         const dayTrades = trades.filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next);
-        const vol = dayTrades.reduce((s, t) => s + parseFloat(t.amount || '0'), 0);
+        const vol = dayTrades.reduce((s, t) => {
+          const amount = parseFloat(t.amount || '0');
+          const price = parseFloat(t.price || '0');
+          if (price > 0) return s + amount * price;
+          return s + toUsdt(amount, tradeBaseSymbol(t.symbol));
+        }, 0);
         volumeTrend.push({ date: dateStr, volume: vol, count: dayTrades.length });
       }
 
@@ -933,8 +951,12 @@ export default function registerAdminRoutes(app: Express) {
         const d = new Date(today.getTime() - i * 86400000);
         const dateStr = d.toISOString().split('T')[0];
         const next = new Date(d.getTime() + 86400000);
-        const dayDeposits = deposits.filter(dep => dep.status === 'approved' && new Date(dep.submitted_at) >= d && new Date(dep.submitted_at) < next).reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
-        const dayWithdrawals = withdrawals.filter(w => w.status === 'approved' && new Date(w.submitted_at) >= d && new Date(w.submitted_at) < next).reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const dayDeposits = deposits
+          .filter(dep => dep.status === 'approved' && new Date(dep.submitted_at) >= d && new Date(dep.submitted_at) < next)
+          .reduce((s, dep) => s + toUsdt(parseFloat(dep.amount || '0'), dep.symbol), 0);
+        const dayWithdrawals = withdrawals
+          .filter(w => w.status === 'approved' && new Date(w.submitted_at) >= d && new Date(w.submitted_at) < next)
+          .reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
         financialTrend.push({ date: dateStr, deposits: dayDeposits, withdrawals: dayWithdrawals });
       }
 
@@ -947,13 +969,13 @@ export default function registerAdminRoutes(app: Express) {
 
         const dayDepositFees = approvedDepositsWithFees
           .filter(dep => new Date(dep.submitted_at) >= d && new Date(dep.submitted_at) < next)
-          .reduce((s, dep) => s + parseFloat(dep.fee_amount || '0'), 0);
+          .reduce((s, dep) => s + toUsdt(parseFloat(dep.fee_amount || '0'), dep.fee_symbol || dep.symbol), 0);
         const dayWithdrawalFees = approvedWithdrawalsWithFees
           .filter(w => new Date(w.submitted_at) >= d && new Date(w.submitted_at) < next)
-          .reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
+          .reduce((s, w) => s + toUsdt(parseFloat(w.fee_amount || '0'), w.fee_symbol || w.symbol), 0);
         const dayTradingFees = completedTradesWithFees
           .filter(t => new Date(t.created_at) >= d && new Date(t.created_at) < next)
-          .reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+          .reduce((s, t) => s + toUsdt(parseFloat(t.fee_amount || '0'), t.fee_symbol || 'USDT'), 0);
         const dayTotal = dayDepositFees + dayWithdrawalFees + dayTradingFees;
 
         feeDailyTrend.push({
@@ -973,13 +995,13 @@ export default function registerAdminRoutes(app: Express) {
 
         const monthDepositFees = approvedDepositsWithFees
           .filter(dep => new Date(dep.submitted_at) >= monthStart && new Date(dep.submitted_at) < monthEnd)
-          .reduce((s, dep) => s + parseFloat(dep.fee_amount || '0'), 0);
+          .reduce((s, dep) => s + toUsdt(parseFloat(dep.fee_amount || '0'), dep.fee_symbol || dep.symbol), 0);
         const monthWithdrawalFees = approvedWithdrawalsWithFees
           .filter(w => new Date(w.submitted_at) >= monthStart && new Date(w.submitted_at) < monthEnd)
-          .reduce((s, w) => s + parseFloat(w.fee_amount || '0'), 0);
+          .reduce((s, w) => s + toUsdt(parseFloat(w.fee_amount || '0'), w.fee_symbol || w.symbol), 0);
         const monthTradingFees = completedTradesWithFees
           .filter(t => new Date(t.created_at) >= monthStart && new Date(t.created_at) < monthEnd)
-          .reduce((s, t) => s + parseFloat(t.fee_amount || '0'), 0);
+          .reduce((s, t) => s + toUsdt(parseFloat(t.fee_amount || '0'), t.fee_symbol || 'USDT'), 0);
 
         feeMonthlyTrend.push({
           month: monthLabel,
@@ -993,8 +1015,8 @@ export default function registerAdminRoutes(app: Express) {
       const feeByUserMap = new Map<string, { userId: string; username: string; email: string; totalFees: number; depositFees: number; withdrawalFees: number; tradingFees: number }>();
       const userLookup = new Map((users || []).map((u: any) => [u.id, u]));
 
-      const upsertUserFee = (userId: string, kind: 'deposit' | 'withdrawal' | 'trading', fee: number) => {
-        if (!userId || fee <= 0) return;
+      const upsertUserFee = (userId: string, kind: 'deposit' | 'withdrawal' | 'trading', feeUsdt: number) => {
+        if (!userId || feeUsdt <= 0) return;
         const user = userLookup.get(userId);
         const entry = feeByUserMap.get(userId) || {
           userId,
@@ -1005,16 +1027,16 @@ export default function registerAdminRoutes(app: Express) {
           withdrawalFees: 0,
           tradingFees: 0,
         };
-        entry.totalFees += fee;
-        if (kind === 'deposit') entry.depositFees += fee;
-        if (kind === 'withdrawal') entry.withdrawalFees += fee;
-        if (kind === 'trading') entry.tradingFees += fee;
+        entry.totalFees += feeUsdt;
+        if (kind === 'deposit') entry.depositFees += feeUsdt;
+        if (kind === 'withdrawal') entry.withdrawalFees += feeUsdt;
+        if (kind === 'trading') entry.tradingFees += feeUsdt;
         feeByUserMap.set(userId, entry);
       };
 
-      approvedDepositsWithFees.forEach((d: any) => upsertUserFee(d.user_id, 'deposit', parseFloat(d.fee_amount || '0')));
-      approvedWithdrawalsWithFees.forEach((w: any) => upsertUserFee(w.user_id, 'withdrawal', parseFloat(w.fee_amount || '0')));
-      completedTradesWithFees.forEach((t: any) => upsertUserFee(t.user_id, 'trading', parseFloat(t.fee_amount || '0')));
+      approvedDepositsWithFees.forEach((d: any) => upsertUserFee(d.user_id, 'deposit', toUsdt(parseFloat(d.fee_amount || '0'), d.fee_symbol || d.symbol)));
+      approvedWithdrawalsWithFees.forEach((w: any) => upsertUserFee(w.user_id, 'withdrawal', toUsdt(parseFloat(w.fee_amount || '0'), w.fee_symbol || w.symbol)));
+      completedTradesWithFees.forEach((t: any) => upsertUserFee(t.user_id, 'trading', toUsdt(parseFloat(t.fee_amount || '0'), t.fee_symbol || 'USDT')));
 
       const topUsersByFees = Array.from(feeByUserMap.values())
         .sort((a, b) => b.totalFees - a.totalFees)
@@ -1026,18 +1048,28 @@ export default function registerAdminRoutes(app: Express) {
       
       // Recent deposits
       deposits.slice(0, 5).forEach(d => {
+        const originalAmount = parseFloat(d.amount || '0');
+        const usdtAmount = toUsdt(originalAmount, d.symbol);
+        const symbol = (d.symbol || 'USDT').toUpperCase();
         recentActivity.push({
           type: 'deposit',
-          description: `Deposit of ${parseFloat(d.amount || '0').toFixed(2)} ${d.symbol || 'USDT'}`,
+          description: symbol === 'USDT'
+            ? `Deposit of ${originalAmount.toFixed(2)} USDT`
+            : `Deposit of ${originalAmount.toFixed(8)} ${symbol} (~${usdtAmount.toFixed(2)} USDT)`,
           time: d.submitted_at,
           status: d.status,
         });
       });
       // Recent withdrawals
       withdrawals.slice(0, 5).forEach(w => {
+        const originalAmount = parseFloat(w.amount || '0');
+        const usdtAmount = toUsdt(originalAmount, w.symbol);
+        const symbol = (w.symbol || 'USDT').toUpperCase();
         recentActivity.push({
           type: 'withdrawal',
-          description: `Withdrawal of ${parseFloat(w.amount || '0').toFixed(2)} ${w.symbol || 'USDT'}`,
+          description: symbol === 'USDT'
+            ? `Withdrawal of ${originalAmount.toFixed(2)} USDT`
+            : `Withdrawal of ${originalAmount.toFixed(8)} ${symbol} (~${usdtAmount.toFixed(2)} USDT)`,
           time: w.submitted_at,
           status: w.status,
         });
@@ -1153,20 +1185,31 @@ export default function registerAdminRoutes(app: Express) {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      // Fetch all approved deposits & withdrawals, plus futures results
-      const [depositsRes, withdrawalsRes, futuresRes] = await Promise.all([
+      // Fetch all approved deposits & withdrawals, plus futures results and prices for USDT conversion
+      const [depositsRes, withdrawalsRes, futuresRes, pricesRes] = await Promise.all([
         supabaseAdmin.from("deposit_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
         supabaseAdmin.from("withdraw_requests").select("id, amount, status, submitted_at, symbol, reviewed_at"),
         supabaseAdmin.from("futures_trades").select("id, amount, status, final_result, final_profit, created_at, completed_at"),
+        supabaseAdmin.from("crypto_prices").select("symbol, price"),
       ]);
 
       const allDeposits = depositsRes.data || [];
       const allWithdrawals = withdrawalsRes.data || [];
       const allFutures = futuresRes.data || [];
+      const prices = pricesRes.data || [];
 
       const approvedDeposits = allDeposits.filter(d => d.status === 'approved');
       const approvedWithdrawals = allWithdrawals.filter(w => w.status === 'approved');
       const completedFutures = allFutures.filter(f => f.status === 'completed');
+
+      const priceMap = new Map(prices.map((p: any) => [p.symbol?.toUpperCase(), parseFloat(p.price || '0')]));
+      const toUsdt = (amount: number, symbol?: string | null) => {
+        const safeAmount = Number.isFinite(amount) ? amount : 0;
+        const sym = (symbol || 'USDT').toUpperCase();
+        if (sym === 'USDT') return safeAmount;
+        const px = priceMap.get(sym) || 0;
+        return safeAmount * px;
+      };
 
       // Helper: get date string from timestamp
       const toDateStr = (ts: string) => new Date(ts).toISOString().split('T')[0];
@@ -1175,7 +1218,7 @@ export default function registerAdminRoutes(app: Express) {
       // ==================
       // 1) DEPOSIT TRACKING — daily breakdown (last 90 days)
       // ==================
-      const depositDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }> = [];
+      const depositDaily: Array<{ date: string; usdtAmount: number; count: number }> = [];
       for (let i = 89; i >= 0; i--) {
         const d = new Date(today.getTime() - i * 86400000);
         const dateStr = d.toISOString().split('T')[0];
@@ -1184,18 +1227,14 @@ export default function registerAdminRoutes(app: Express) {
           const t = new Date(dep.submitted_at || dep.reviewed_at);
           return t >= d && t < next;
         });
-        const amount = dayDeps.reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
-        const usdt = dayDeps.filter(dep => (dep.symbol || 'USDT').toUpperCase() === 'USDT').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
-        const btc = dayDeps.filter(dep => (dep.symbol || '').toUpperCase() === 'BTC').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
-        const eth = dayDeps.filter(dep => (dep.symbol || '').toUpperCase() === 'ETH').reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
-        const other = amount - usdt - btc - eth;
-        depositDaily.push({ date: dateStr, amount, count: dayDeps.length, usdt, btc, eth, other: Math.max(0, other) });
+        const usdtAmount = dayDeps.reduce((s, dep) => s + toUsdt(parseFloat(dep.amount || '0'), dep.symbol), 0);
+        depositDaily.push({ date: dateStr, usdtAmount, count: dayDeps.length });
       }
 
       // ==================
       // 2) WITHDRAWAL TRACKING — daily breakdown (last 90 days)
       // ==================
-      const withdrawalDaily: Array<{ date: string; amount: number; count: number; usdt: number; btc: number; eth: number; other: number }> = [];
+      const withdrawalDaily: Array<{ date: string; usdtAmount: number; count: number }> = [];
       for (let i = 89; i >= 0; i--) {
         const d = new Date(today.getTime() - i * 86400000);
         const dateStr = d.toISOString().split('T')[0];
@@ -1204,12 +1243,8 @@ export default function registerAdminRoutes(app: Express) {
           const t = new Date(w.submitted_at || w.reviewed_at);
           return t >= d && t < next;
         });
-        const amount = dayWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
-        const usdt = dayWds.filter(w => (w.symbol || 'USDT').toUpperCase() === 'USDT').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
-        const btc = dayWds.filter(w => (w.symbol || '').toUpperCase() === 'BTC').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
-        const eth = dayWds.filter(w => (w.symbol || '').toUpperCase() === 'ETH').reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
-        const other = amount - usdt - btc - eth;
-        withdrawalDaily.push({ date: dateStr, amount, count: dayWds.length, usdt, btc, eth, other: Math.max(0, other) });
+        const usdtAmount = dayWds.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
+        withdrawalDaily.push({ date: dateStr, usdtAmount, count: dayWds.length });
       }
 
       // ==================
@@ -1224,10 +1259,10 @@ export default function registerAdminRoutes(app: Express) {
 
         const dayDepAmt = approvedDeposits
           .filter(dep => { const t = new Date(dep.submitted_at || dep.reviewed_at); return t >= d && t < next; })
-          .reduce((s, dep) => s + parseFloat(dep.amount || '0'), 0);
+          .reduce((s, dep) => s + toUsdt(parseFloat(dep.amount || '0'), dep.symbol), 0);
         const dayWdAmt = approvedWithdrawals
           .filter(w => { const t = new Date(w.submitted_at || w.reviewed_at); return t >= d && t < next; })
-          .reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+          .reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
 
         // Futures revenue: platform earns from user losses
         const dayFuturesRevenue = completedFutures
@@ -1281,8 +1316,8 @@ export default function registerAdminRoutes(app: Express) {
           })
           .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
 
-        const mDepTotal = mDeps.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
-        const mWdTotal = mWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const mDepTotal = mDeps.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
+        const mWdTotal = mWds.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
 
         // Daily breakdown within the month (for overlay comparison)
         const daysInMonth = monthEnd.getDate();
@@ -1293,11 +1328,11 @@ export default function registerAdminRoutes(app: Express) {
           const dDep = mDeps.filter(dep => {
             const t = new Date(dep.submitted_at || dep.reviewed_at);
             return t >= dayStart && t < dayEnd;
-          }).reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
+          }).reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
           const dWd = mWds.filter(w => {
             const t = new Date(w.submitted_at || w.reviewed_at);
             return t >= dayStart && t < dayEnd;
-          }).reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+          }).reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
           dailyBreakdown.push({ day, deposits: dDep, withdrawals: dWd, net: dDep - dWd });
         }
 
@@ -1328,8 +1363,8 @@ export default function registerAdminRoutes(app: Express) {
           const t = new Date(w.submitted_at || w.reviewed_at);
           return t >= dayStart && t < dayEnd;
         });
-        const depTotal = dDeps.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
-        const wdTotal = dWds.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+        const depTotal = dDeps.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
+        const wdTotal = dWds.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
         return { deposits: depTotal, withdrawals: wdTotal, netFlow: depTotal - wdTotal, depositCount: dDeps.length, withdrawalCount: dWds.length };
       };
 
@@ -1342,22 +1377,34 @@ export default function registerAdminRoutes(app: Express) {
       // ==================
       // 6) SUMMARY TOTALS
       // ==================
-      const totalDeposits = approvedDeposits.reduce((s, d) => s + parseFloat(d.amount || '0'), 0);
-      const totalWithdrawals = approvedWithdrawals.reduce((s, w) => s + parseFloat(w.amount || '0'), 0);
+      const totalDeposits = approvedDeposits.reduce((s, d) => s + toUsdt(parseFloat(d.amount || '0'), d.symbol), 0);
+      const totalWithdrawals = approvedWithdrawals.reduce((s, w) => s + toUsdt(parseFloat(w.amount || '0'), w.symbol), 0);
       const totalFuturesRevenue = completedFutures
         .filter(f => f.final_result === 'loss')
         .reduce((s, f) => s + Math.abs(parseFloat(f.final_profit || f.amount || '0')), 0);
 
-      // Symbol breakdown
-      const depositsBySymbol: Record<string, number> = {};
+      // Symbol breakdown with original and USDT equivalent
+      const depositsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }> = {};
       approvedDeposits.forEach(d => {
         const sym = (d.symbol || 'USDT').toUpperCase();
-        depositsBySymbol[sym] = (depositsBySymbol[sym] || 0) + parseFloat(d.amount || '0');
+        const originalAmount = parseFloat(d.amount || '0');
+        const usdtAmount = toUsdt(originalAmount, sym);
+        const existing = depositsBySymbol[sym] || { originalAmount: 0, usdtAmount: 0 };
+        depositsBySymbol[sym] = {
+          originalAmount: existing.originalAmount + originalAmount,
+          usdtAmount: existing.usdtAmount + usdtAmount,
+        };
       });
-      const withdrawalsBySymbol: Record<string, number> = {};
+      const withdrawalsBySymbol: Record<string, { originalAmount: number; usdtAmount: number }> = {};
       approvedWithdrawals.forEach(w => {
         const sym = (w.symbol || 'USDT').toUpperCase();
-        withdrawalsBySymbol[sym] = (withdrawalsBySymbol[sym] || 0) + parseFloat(w.amount || '0');
+        const originalAmount = parseFloat(w.amount || '0');
+        const usdtAmount = toUsdt(originalAmount, sym);
+        const existing = withdrawalsBySymbol[sym] || { originalAmount: 0, usdtAmount: 0 };
+        withdrawalsBySymbol[sym] = {
+          originalAmount: existing.originalAmount + originalAmount,
+          usdtAmount: existing.usdtAmount + usdtAmount,
+        };
       });
 
       res.json({

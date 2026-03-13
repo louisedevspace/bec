@@ -2,6 +2,7 @@ import AdminLayout from "./admin-layout";
 import { formatDate as formatDateUtil, formatDateTime, formatShortDate as formatShortDateUtil, timeAgo as timeAgoUtil } from '@/lib/date-utils';
 import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,11 +51,12 @@ import { formatGenericCryptoBalance } from '../utils/format-utils';
 
 type SortField = 'name' | 'email' | 'date' | 'portfolio' | 'trades' | 'status';
 type SortDir = 'asc' | 'desc';
-type StatusFilter = 'all' | 'active' | 'inactive' | 'verified' | 'pending' | 'kyc_pending';
+type StatusFilter = 'all' | 'active' | 'inactive' | 'verified' | 'pending' | 'kyc_pending' | 'deleted';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function AdminUsers() {
+  const [, setLocation] = useLocation();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export default function AdminUsers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
+  const [deletedUsersCount, setDeletedUsersCount] = useState(0);
 
   const { counts: pendingCounts } = useAdminPendingCounts(15000);
 
@@ -116,6 +119,7 @@ export default function AdminUsers() {
           case 'verified': return u.email_confirmed_at && u.is_verified;
           case 'pending': return !u.email_confirmed_at || !u.is_verified;
           case 'kyc_pending': return u.kyc_status === 'pending';
+          case 'deleted': return false;
           default: return true;
         }
       });
@@ -238,6 +242,14 @@ export default function AdminUsers() {
       if (!res.ok) throw new Error('Failed to fetch users');
       const { users } = await res.json();
       setUsers(users || []);
+
+      const deletedRes = await fetch('/api/admin/deleted-users', {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (deletedRes.ok) {
+        const deletedData = await deletedRes.json();
+        setDeletedUsersCount(Array.isArray(deletedData?.deletedUsers) ? deletedData.deletedUsers.length : 0);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch users');
     } finally {
@@ -341,6 +353,7 @@ export default function AdminUsers() {
     { key: 'verified', label: 'Verified', icon: <UserCheck size={13} />, count: stats.verified },
     { key: 'pending', label: 'Pending', icon: <Clock size={13} />, count: stats.total - stats.verified },
     { key: 'kyc_pending', label: 'KYC Pending', icon: <FileText size={13} />, count: stats.kycPending },
+    { key: 'deleted', label: 'Deleted', icon: <Shield size={13} />, count: deletedUsersCount },
   ];
 
   // Sort options
@@ -430,7 +443,13 @@ export default function AdminUsers() {
               {filterTabs.map(tab => (
                 <button
                   key={tab.key}
-                  onClick={() => setStatusFilter(tab.key)}
+                  onClick={() => {
+                    if (tab.key === 'deleted') {
+                      setLocation('/admin/deleted-users');
+                      return;
+                    }
+                    setStatusFilter(tab.key);
+                  }}
                   className={`inline-flex items-center gap-1.5 rounded-t-lg text-xs font-medium px-3 py-2 border-b-2 transition-all
                     ${statusFilter === tab.key
                       ? 'border-blue-500 text-blue-400 bg-blue-500/5'
