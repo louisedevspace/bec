@@ -29,20 +29,18 @@ export default function registerAdminRoutes(app: Express) {
         return res.status(400).json({ message: "User ID is required" });
       }
 
-      if (action !== "delete-user") {
-        const { data: targetUser, error: targetUserError } = await supabaseAdmin
-          .from("users")
-          .select("id")
-          .eq("id", userId)
-          .maybeSingle();
+      const { data: targetUser, error: targetUserError } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
 
-        if (targetUserError) {
-          return res.status(500).json({ message: "Failed to validate target user" });
-        }
+      if (targetUserError) {
+        return res.status(500).json({ message: "Failed to validate target user" });
+      }
 
-        if (!targetUser) {
-          return res.status(404).json({ message: "User not found" });
-        }
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       if (!reason || reason.length < 6) {
@@ -501,73 +499,63 @@ export default function registerAdminRoutes(app: Express) {
   // POST /api/admin/edit-portfolio-balances
   app.post("/api/admin/edit-portfolio-balances", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { userId, btcBalance, usdtBalance } = req.body;
+      const { userId, balances, btcBalance, usdtBalance } = req.body;
 
-      if (!userId || typeof btcBalance !== "number" || typeof usdtBalance !== "number") {
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+
+      // Support both new format { balances: [{symbol, available}] } and legacy { btcBalance, usdtBalance }
+      const updates: Array<{ symbol: string; available: string }> = [];
+
+      if (Array.isArray(balances)) {
+        for (const b of balances) {
+          if (!b.symbol || b.available === undefined) continue;
+          const val = parseFloat(b.available);
+          if (isNaN(val) || val < 0) {
+            return res.status(400).json({ message: `Invalid balance for ${b.symbol}` });
+          }
+          updates.push({ symbol: b.symbol, available: b.available.toString() });
+        }
+      } else if (typeof btcBalance === "number" && typeof usdtBalance === "number") {
+        updates.push({ symbol: "BTC", available: btcBalance.toString() });
+        updates.push({ symbol: "USDT", available: usdtBalance.toString() });
+      } else {
         return res.status(400).json({ message: "Invalid input parameters" });
       }
 
-      // Update or create BTC balance
-      const { data: existingBtc, error: btcCheckError } = await supabaseAdmin
-        .from("portfolios")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("symbol", "BTC")
-        .single();
-
-      if (btcCheckError && btcCheckError.code !== "PGRST116") {
-        return res.status(500).json({ message: "Failed to check BTC portfolio" });
-      }
-
-      if (existingBtc) {
-        const { error } = await supabaseAdmin
+      for (const u of updates) {
+        const { data: existing, error: checkError } = await supabaseAdmin
           .from("portfolios")
-          .update({ available: btcBalance.toString(), updated_at: new Date().toISOString() })
+          .select("id")
           .eq("user_id", userId)
-          .eq("symbol", "BTC");
-        if (error) return res.status(500).json({ message: "Failed to update BTC balance" });
-      } else {
-        const { error } = await supabaseAdmin.from("portfolios").insert({
-          user_id: userId,
-          symbol: "BTC",
-          available: btcBalance.toString(),
-          frozen: "0",
-          updated_at: new Date().toISOString(),
-        });
-        if (error) return res.status(500).json({ message: "Failed to create BTC balance" });
+          .eq("symbol", u.symbol)
+          .maybeSingle();
+
+        if (checkError) {
+          return res.status(500).json({ message: `Failed to check ${u.symbol} portfolio` });
+        }
+
+        if (existing) {
+          const { error } = await supabaseAdmin
+            .from("portfolios")
+            .update({ available: u.available, updated_at: new Date().toISOString() })
+            .eq("user_id", userId)
+            .eq("symbol", u.symbol);
+          if (error) return res.status(500).json({ message: `Failed to update ${u.symbol} balance` });
+        } else {
+          const { error } = await supabaseAdmin.from("portfolios").insert({
+            user_id: userId,
+            symbol: u.symbol,
+            available: u.available,
+            frozen: "0",
+            updated_at: new Date().toISOString(),
+          });
+          if (error) return res.status(500).json({ message: `Failed to create ${u.symbol} balance` });
+        }
       }
 
-      // Update or create USDT balance
-      const { data: existingUsdt, error: usdtCheckError } = await supabaseAdmin
-        .from("portfolios")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("symbol", "USDT")
-        .single();
-
-      if (usdtCheckError && usdtCheckError.code !== "PGRST116") {
-        return res.status(500).json({ message: "Failed to check USDT portfolio" });
-      }
-
-      if (existingUsdt) {
-        const { error } = await supabaseAdmin
-          .from("portfolios")
-          .update({ available: usdtBalance.toString(), updated_at: new Date().toISOString() })
-          .eq("user_id", userId)
-          .eq("symbol", "USDT");
-        if (error) return res.status(500).json({ message: "Failed to update USDT balance" });
-      } else {
-        const { error } = await supabaseAdmin.from("portfolios").insert({
-          user_id: userId,
-          symbol: "USDT",
-          available: usdtBalance.toString(),
-          frozen: "0",
-          updated_at: new Date().toISOString(),
-        });
-        if (error) return res.status(500).json({ message: "Failed to create USDT balance" });
-      }
-
-      syncManager.syncPortfolioUpdated(userId, { btc: btcBalance, usdt: usdtBalance });
+      invalidateAdminUsersCache();
       res.json({ message: "Portfolio balances updated successfully" });
     } catch (error: any) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -579,23 +567,18 @@ export default function registerAdminRoutes(app: Express) {
     try {
       const { userId } = req.params;
 
-      const { data: btcPortfolio } = await supabaseAdmin
+      const { data: portfolios, error } = await supabaseAdmin
         .from("portfolios")
-        .select("available")
+        .select("symbol, available, frozen")
         .eq("user_id", userId)
-        .eq("symbol", "BTC")
-        .single();
+        .in("symbol", ["BTC", "ETH", "USDT"]);
 
-      const { data: usdtPortfolio } = await supabaseAdmin
-        .from("portfolios")
-        .select("available")
-        .eq("user_id", userId)
-        .eq("symbol", "USDT")
-        .single();
+      if (error) {
+        return res.status(500).json({ message: "Failed to fetch portfolio", error: error.message });
+      }
 
       res.json({
-        btc_balance: btcPortfolio?.available ? parseFloat(btcPortfolio.available) : 0,
-        usdt_balance: usdtPortfolio?.available ? parseFloat(usdtPortfolio.available) : 0,
+        balances: portfolios || [],
       });
     } catch (error: any) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -683,6 +666,36 @@ export default function registerAdminRoutes(app: Express) {
         message: "Failed to cleanup portfolio",
         error: error instanceof Error ? error.message : "Unknown error",
       });
+    }
+  });
+
+  // POST /api/admin/hide-transactions — hide deposit/withdraw transactions from user view
+  app.post("/api/admin/hide-transactions", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { type, ids } = req.body;
+
+      if (!type || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "type ('deposit' or 'withdraw') and ids array are required" });
+      }
+
+      if (type !== "deposit" && type !== "withdraw") {
+        return res.status(400).json({ message: "type must be 'deposit' or 'withdraw'" });
+      }
+
+      const table = type === "deposit" ? "deposit_requests" : "withdraw_requests";
+
+      const { error } = await supabaseAdmin
+        .from(table)
+        .update({ hidden_for_user: true })
+        .in("id", ids);
+
+      if (error) {
+        return res.status(500).json({ message: `Failed to hide ${type} transactions`, error: error.message });
+      }
+
+      res.json({ message: `${ids.length} ${type} transaction(s) hidden successfully` });
+    } catch (error: any) {
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   });
 

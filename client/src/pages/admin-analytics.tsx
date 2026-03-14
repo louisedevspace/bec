@@ -7,6 +7,7 @@ import {
   Download, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import AdminLayout from './admin-layout';
@@ -220,6 +221,24 @@ export default function AdminAnalyticsPage() {
     return new Intl.NumberFormat('en-US').format(value);
   };
 
+  const ChartTooltipContent = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
+        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <p key={i} className="text-xs font-medium" style={{ color: entry.color }}>
+            {entry.name}: {typeof entry.value === 'number' && entry.value > 100
+              ? formatCurrency(entry.value)
+              : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const renderLegendText = (value: string) => <span className="text-gray-400 text-xs">{value}</span>;
+
   const StatCard = ({
     title,
     value,
@@ -236,28 +255,42 @@ export default function AdminAnalyticsPage() {
     trend?: string;
     trendUp?: boolean;
     color: string;
-  }) => (
-    <Card className="bg-[#111] border-[#1e1e1e] hover:border-[#2a2a2a] transition-all">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-400">{title}</p>
-            <p className="text-2xl font-bold text-white mt-2">{value}</p>
-            {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
-            {trend && (
-              <div className={`flex items-center gap-1 mt-2 text-xs ${trendUp ? 'text-green-400' : 'text-red-400'}`}>
-                {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                <span>{trend}</span>
-              </div>
-            )}
+  }) => {
+    // Map solid colors to matching transparent bg + text color pairs
+    const colorMap: Record<string, { bg: string; text: string }> = {
+      'bg-blue-500': { bg: 'bg-blue-500/10', text: 'text-blue-400' },
+      'bg-green-500': { bg: 'bg-green-500/10', text: 'text-green-400' },
+      'bg-orange-500': { bg: 'bg-orange-500/10', text: 'text-orange-400' },
+      'bg-purple-500': { bg: 'bg-purple-500/10', text: 'text-purple-400' },
+      'bg-red-500': { bg: 'bg-red-500/10', text: 'text-red-400' },
+      'bg-cyan-500': { bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+      'bg-amber-500': { bg: 'bg-amber-500/10', text: 'text-amber-400' },
+    };
+    const mapped = colorMap[color] || { bg: `${color}/10`, text: 'text-white' };
+
+    return (
+      <Card className="bg-[#111] border-[#1e1e1e] hover:border-[#2a2a2a] transition-all">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-[11px] font-medium text-gray-400">{title}</p>
+              <p className="text-xl font-bold text-white mt-2">{value}</p>
+              {subtitle && <p className="text-[10px] text-gray-500 mt-1">{subtitle}</p>}
+              {trend && (
+                <div className={`flex items-center gap-1 mt-2 text-xs ${trendUp ? 'text-green-400' : 'text-red-400'}`}>
+                  {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                  <span>{trend}</span>
+                </div>
+              )}
+            </div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapped.bg} ${mapped.text}`}>
+              <Icon className="w-5 h-5" />
+            </div>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-            <Icon className="w-6 h-6 text-white" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <AdminLayout>
@@ -269,16 +302,17 @@ export default function AdminAnalyticsPage() {
             <p className="text-sm text-gray-500 mt-1">Platform performance and statistics</p>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="bg-[#111] border border-[#1e1e1e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="24h">Last 24 Hours</option>
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="90d">Last 90 Days</option>
-            </select>
+            <Select value={timeRange} onValueChange={(val) => setTimeRange(val)}>
+              <SelectTrigger className="w-[160px] bg-[#111] border-[#1e1e1e] text-white text-sm focus:border-blue-500">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#111] border-[#1e1e1e]">
+                <SelectItem value="24h" className="text-white hover:bg-[#1a1a1a]">Last 24 Hours</SelectItem>
+                <SelectItem value="7d" className="text-white hover:bg-[#1a1a1a]">Last 7 Days</SelectItem>
+                <SelectItem value="30d" className="text-white hover:bg-[#1a1a1a]">Last 30 Days</SelectItem>
+                <SelectItem value="90d" className="text-white hover:bg-[#1a1a1a]">Last 90 Days</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -371,8 +405,8 @@ export default function AdminAnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                     <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
                     <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend formatter={renderLegendText} />
                     <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} name="Total Users" />
                     <Line type="monotone" dataKey="newUsers" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} name="New Users" />
                   </LineChart>
@@ -434,8 +468,8 @@ export default function AdminAnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                     <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
                     <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend formatter={renderLegendText} />
                     <Bar dataKey="volume" fill="#8b5cf6" name="Volume ($)" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="trades" fill="#06b6d4" name="Number of Trades" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -453,13 +487,17 @@ export default function AdminAnalyticsPage() {
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie data={chartData.tradeStatus} cx="50%" cy="50%" labelLine={false}
-                        label={({ status, count, percent }) => `${status}: ${count} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ x, y, status, count, percent }) => (
+                          <text x={x} y={y} fill="#9ca3af" textAnchor="middle" dominantBaseline="central" fontSize={11}>
+                            {`${status}: ${count} (${(percent * 100).toFixed(0)}%)`}
+                          </text>
+                        )}
                         outerRadius={80} fill="#8884d8" dataKey="count">
                         {chartData.tradeStatus.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                      <Tooltip content={<ChartTooltipContent />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -505,8 +543,8 @@ export default function AdminAnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                     <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
                     <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend formatter={renderLegendText} />
                     <Area type="monotone" dataKey="deposits" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Deposits ($)" />
                     <Area type="monotone" dataKey="withdrawals" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Withdrawals ($)" />
                   </AreaChart>
@@ -582,8 +620,8 @@ export default function AdminAnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                 <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Tooltip content={<ChartTooltipContent />} />
+                <Legend formatter={renderLegendText} />
                 <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Total Users" />
                 <Area type="monotone" dataKey="volume" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Trading Volume ($)" />
                 <Area type="monotone" dataKey="deposits" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="Total Deposits ($)" />

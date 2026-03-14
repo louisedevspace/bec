@@ -823,7 +823,7 @@ export default function AdminDashboard() {
               <TabsList className="bg-[#111] border border-[#1e1e1e] rounded-xl p-1 h-auto flex flex-wrap gap-1">
                 {['overview', 'analytics', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => {
                   const badge = tabBadges[tab] || 0;
-                  const label = tab === 'pending-orders' ? 'Pending Orders' : tab === 'analytics' ? '📊 Analytics' : tab;
+                  const label = tab === 'pending-orders' ? 'Pending Orders' : tab;
                   return (
                     <TabsTrigger key={tab} value={tab}
                       className="relative rounded-lg data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400 text-xs px-3 py-1.5 capitalize">
@@ -840,6 +840,33 @@ export default function AdminDashboard() {
 
               {/* ===== OVERVIEW TAB ===== */}
               <TabsContent value="overview" className="space-y-5 mt-4">
+                {/* Top Stat Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <StatCard icon={<Users size={18} />} iconBg="bg-blue-500/10" iconColor="text-blue-400"
+                    label="Total Users" value={formatNumber(stats.users.total)}
+                    sub={`${stats.users.newToday} new today`} trend={stats.users.newToday > 0 ? 'up' : 'neutral'}
+                    onClick={() => setLocation('/admin/users')} />
+                  <StatCard icon={<ArrowDownRight size={18} />} iconBg="bg-green-500/10" iconColor="text-green-400"
+                    label="Total Deposits" value={formatCurrency(stats.financial.totalDeposits)}
+                    sub={`${stats.financial.totalDepositsCount} approved`} pendingBadge={stats.financial.pendingDeposits}
+                    onClick={() => setShowDepositRequestsModal(true)} />
+                  <StatCard icon={<ArrowUpRight size={18} />} iconBg="bg-red-500/10" iconColor="text-red-400"
+                    label="Total Withdrawals" value={formatCurrency(stats.financial.totalWithdrawals)}
+                    sub={`${stats.financial.totalWithdrawalsCount} processed`} pendingBadge={stats.financial.pendingWithdrawals}
+                    onClick={() => setShowWithdrawRequestsModal(true)} />
+                  <StatCard icon={<BarChart3 size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
+                    label="Total Trades" value={formatNumber(stats.trading.totalTrades)}
+                    sub={`${stats.trading.completedTrades} completed`} pendingBadge={stats.trading.pendingTrades}
+                    onClick={() => setActiveTab('pending-orders')} />
+                  <StatCard icon={<MessageSquare size={18} />} iconBg="bg-amber-500/10" iconColor="text-amber-400"
+                    label="Support" value={`${stats.support.open + stats.support.inProgress} open`}
+                    sub={unreadSupportSummary} pendingBadge={unreadSupportChats.length}
+                    onClick={() => setLocation('/admin/support')} />
+                  <StatCard icon={<DollarSign size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
+                    label="Platform AUM" value={formatCurrency(stats.financial.totalPlatformValue)}
+                    sub={`${stats.users.usersWithPortfolio} portfolios`} />
+                </div>
+
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* User Registration Trend */}
@@ -1388,7 +1415,7 @@ export default function AdminDashboard() {
                                     </div>
                                   );
                                 }} />
-                                <Legend iconType="line" wrapperStyle={{ fontSize: '10px', color: '#888' }} />
+                                <Legend iconType="line" wrapperStyle={{ fontSize: '10px' }} formatter={(value: string) => <span className="text-gray-400">{value}</span>} />
                                 {analytics.monthlyData.map((m, i) => (
                                   <Line key={m.month} type="monotone" dataKey={m.monthLabel}
                                     stroke={monthColors[i % monthColors.length]}

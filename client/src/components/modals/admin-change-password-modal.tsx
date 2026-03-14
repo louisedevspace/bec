@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,25 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset form state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+      setError(null);
+      setSuccess(null);
+    }
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,11 +78,8 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
 
       let result;
       try {
-        const responseText = await response.text();
-        console.log('Response text:', responseText);
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
+        result = await response.json();
+      } catch {
         throw new Error('Invalid response from server');
       }
 
@@ -72,13 +88,13 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
       }
 
       setSuccess(`Password updated successfully for ${user.email}!`);
-      
+
       // Clear form
       setNewPassword('');
       setConfirmPassword('');
-      
+
       // Close modal after 3 seconds
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         onClose();
         setSuccess(null);
       }, 3000);
@@ -196,4 +212,4 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
       </DialogContent>
     </Dialog>
   );
-} 
+}

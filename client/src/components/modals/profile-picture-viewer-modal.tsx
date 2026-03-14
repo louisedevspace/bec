@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Maximize2, Download } from 'lucide-react';
 import { buildImageViewerPath, getImageDisplayUrl } from '@/lib/image';
@@ -35,6 +35,9 @@ export function ProfilePictureViewerModal({
           <DialogTitle className="text-white flex items-center gap-2">
             Profile Picture - {userName}
           </DialogTitle>
+          <DialogDescription className="text-gray-400">
+            View and download user profile picture.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -61,7 +64,7 @@ export function ProfilePictureViewerModal({
           <div className="flex justify-center space-x-3">
             <Button
               variant="outline"
-              onClick={() => window.location.assign(viewerPath)}
+              onClick={() => window.open(viewerPath, '_blank')}
               className="flex items-center space-x-2 bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
             >
               <Maximize2 className="h-4 w-4" />

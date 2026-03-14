@@ -127,7 +127,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
       if (initialUserId) {
         // If an initialUserId is provided, fetch only that user from admin API
-        console.log(`🔍 Fetching initial user with ID: ${initialUserId}`);
         const response = await fetch(`/api/admin/users?refresh=true&t=${Date.now()}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -143,7 +142,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         setSelectedUser(user); // Set this user as the selected user
       } else {
         // Fetch all users from admin API
-        console.log('🔍 Fetching all users for admin panel');
         const response = await fetch(`/api/admin/users?refresh=true&t=${Date.now()}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -152,20 +150,10 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         });
         if (!response.ok) throw new Error('Failed to fetch users');
         const { users } = await response.json();
-        console.log('🔍 Admin management modal fetched:', users?.length || 0, 'users');
-        if (users && users.length > 0) {
-          console.log('🔍 Sample user in modal:', {
-            id: users[0].id,
-            email: users[0].email,
-            email_confirmed_at: users[0].email_confirmed_at,
-            kyc_status: users[0].kyc_status
-          });
-        }
         setUsers(users || []);
         setSelectedUser(null); // Ensure no user is selected initially if showing all
       }
     } catch (err: any) {
-      console.error('Error fetching users:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -226,7 +214,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       setEditingUserId(null);
       setEditingCreditScore('');
     } catch (err: any) {
-      console.error('Error updating credit score:', err);
       setError(err.message);
     } finally {
       setSaving(false);
@@ -260,7 +247,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       }
 
       const result = await response.json();
-      console.log('User status updated:', result);
 
       // Update local state
       setUsers(prev => prev.map(u => 
@@ -279,30 +265,24 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const handleDeleteUserHistory = async (user: User) => {
     try {
-      // Delete deposit requests
-      // Soft-hide deposits for user
-      const { error: depositError } = await supabase
-        .from('deposit_requests')
-        .update({ hidden_for_user: true })
-        .eq('user_id', user.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
 
-      if (depositError) throw depositError;
+      // Use server API to delete trades (soft-hide)
+      const response = await fetch(buildApiUrl('/admin/user-management/delete-trades'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
 
-      // Delete withdraw requests
-      const { error: withdrawError } = await supabase
-        .from('withdraw_requests')
-        .update({ hidden_for_user: true })
-        .eq('user_id', user.id);
-
-      if (withdrawError) throw withdrawError;
-
-      // Trades: mark as deleted_for_user
-      const { error: tradesError } = await supabase
-        .from('trades')
-        .update({ deleted_for_user: true })
-        .eq('user_id', user.id);
-
-      if (tradesError) throw tradesError;
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Failed to delete user history');
+      }
 
       setError(null);
     } catch (err: any) {
@@ -347,11 +327,24 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
   // Hide orders (soft delete for user view) - Exchange page orders
   const handleHideOrders = async (user: User) => {
     try {
-      const { error } = await supabase
-        .from('trades')
-        .update({ deleted_for_user: true })
-        .eq('user_id', user.id);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
+
+      const response = await fetch(buildApiUrl('/admin/user-management/delete-trades'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Failed to hide orders');
+      }
+
       setConfirmAction({ type: null, user: null });
     } catch (err: any) {
       setError(`Failed to hide orders: ${err.message}`);
@@ -384,11 +377,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         throw new Error(errorData.message || 'Failed to delete futures trade history');
       }
       setConfirmAction({ type: null, user: null });
-      
-      // Show success message
-      if (typeof window !== 'undefined' && window.alert) {
-        window.alert(`Successfully deleted futures trade history for ${user.email}`);
-      }
     } catch (err: any) {
       setError(`Failed to hide futures trades: ${err.message}`);
     }
@@ -397,56 +385,22 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
   // Reset verification (email/kyc flags)
   const handleResetVerification = async (user: User) => {
     try {
-      // Reset user verification status
-      const { error: userErr } = await supabase
-        .from('users')
-        .update({ is_verified: false })
-        .eq('id', user.id);
-      if (userErr) throw userErr;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
 
-      // Delete KYC record entirely so user needs to re-submit
-      console.log('Attempting to delete KYC record for user:', user.id);
-      
-      // First check if KYC record exists
-      const { data: existingKYC, error: checkError } = await supabase
-        .from('kyc_verifications')
-        .select('id, user_id, status')
-        .eq('user_id', user.id);
-      
-      console.log('Existing KYC records:', existingKYC);
-      if (checkError) {
-        console.error('Error checking KYC records:', checkError);
-        throw checkError;
-      }
+      const response = await fetch(buildApiUrl('/admin/user-management/reset-verification'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
 
-      if (existingKYC && existingKYC.length > 0) {
-        console.log('Found KYC records to delete:', existingKYC.length);
-        
-        // Use server-side API endpoint for admin operations
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        
-        if (!token) {
-          throw new Error('No authentication token available');
-        }
-
-        const response = await fetch(buildApiUrl('/admin/reset-kyc'), {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: user.id }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to reset KYC');
-        }
-
-        console.log('Successfully deleted KYC records for user:', user.id);
-      } else {
-        console.log('No KYC records found for user:', user.id);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reset verification');
       }
 
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_verified: false } : u));
@@ -466,14 +420,32 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       setManageTransactionsData([]);
       setSelectedTransactionIds(new Set());
 
-      const [{ data: deposits }, { data: withdraws }] = await Promise.all([
-        supabase.from('deposit_requests').select('*').eq('user_id', user.id).order('submitted_at', { ascending: false }),
-        supabase.from('withdraw_requests').select('*').eq('user_id', user.id).order('submitted_at', { ascending: false }),
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
+
+      const [depositsRes, withdrawsRes] = await Promise.all([
+        fetch(buildApiUrl('/admin/deposit-requests'), {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        }),
+        fetch(buildApiUrl('/admin/withdraw-requests'), {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        }),
       ]);
 
+      const depositsData = depositsRes.ok ? await depositsRes.json() : [];
+      const withdrawsData = withdrawsRes.ok ? await withdrawsRes.json() : [];
+
+      // Both endpoints return arrays directly
+      const allDeposits = Array.isArray(depositsData) ? depositsData : (depositsData.requests || []);
+      const allWithdraws = Array.isArray(withdrawsData) ? withdrawsData : (withdrawsData.requests || []);
+
+      const deposits = allDeposits.filter((d: any) => d.user_id === user.id);
+      const withdraws = allWithdraws.filter((w: any) => w.user_id === user.id);
+
       const mapped = [
-        ...(deposits || []).map((d: any) => ({ id: d.id as number, type: 'deposit' as const, symbol: d.symbol, amount: Number(d.amount), status: d.status, hidden_for_user: d.hidden_for_user })),
-        ...(withdraws || []).map((w: any) => ({ id: w.id as number, type: 'withdraw' as const, symbol: w.symbol, amount: Number(w.amount), status: w.status, hidden_for_user: w.hidden_for_user })),
+        ...deposits.map((d: any) => ({ id: d.id as number, type: 'deposit' as const, symbol: d.symbol, amount: Number(d.amount), status: d.status, hidden_for_user: d.hidden_for_user })),
+        ...withdraws.map((w: any) => ({ id: w.id as number, type: 'withdraw' as const, symbol: w.symbol, amount: Number(w.amount), status: w.status, hidden_for_user: w.hidden_for_user })),
       ];
       setManageTransactionsData(mapped);
     } catch (err: any) {
@@ -484,81 +456,44 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
   const applyHideSelectedTransactions = async () => {
     if (!selectedUser) return;
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
+
       const idsToHide = Array.from(selectedTransactionIds);
-      console.log('Attempting to hide transactions:', idsToHide);
-      
       const depositIds = idsToHide.filter((id) => manageTransactionsData.find(t => t.id === id)?.type === 'deposit');
       const withdrawIds = idsToHide.filter((id) => manageTransactionsData.find(t => t.id === id)?.type === 'withdraw');
 
-      console.log('Deposit IDs to hide:', depositIds);
-      console.log('Withdraw IDs to hide:', withdrawIds);
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
       if (depositIds.length) {
-        console.log('Updating deposit_requests with hidden_for_user=true for IDs:', depositIds);
-        try {
-          const { data, error } = await supabase
-            .from('deposit_requests')
-            .update({ hidden_for_user: true })
-            .in('id', depositIds)
-            .select('*');
-          
-          console.log('Deposit update result:', { data, error });
-          if (error) {
-            console.error('Deposit update error:', error);
-            // If the column doesn't exist, try a different approach - mark as rejected instead
-            if (error.message.includes('column') && error.message.includes('hidden_for_user')) {
-              console.log('hidden_for_user column not found, marking as rejected instead');
-              const { error: rejectError } = await supabase
-                .from('deposit_requests')
-                .update({ status: 'rejected', admin_notes: 'Hidden by admin' })
-                .in('id', depositIds);
-              if (rejectError) throw rejectError;
-            } else {
-              throw error;
-            }
-          }
-        } catch (updateError: any) {
-          console.error('Deposit update failed:', updateError);
-          throw updateError;
+        const res = await fetch(buildApiUrl('/admin/hide-transactions'), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'deposit', ids: depositIds }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Failed to hide deposit transactions');
         }
       }
 
       if (withdrawIds.length) {
-        console.log('Updating withdraw_requests with hidden_for_user=true for IDs:', withdrawIds);
-        try {
-          const { data, error } = await supabase
-            .from('withdraw_requests')
-            .update({ hidden_for_user: true })
-            .in('id', withdrawIds)
-            .select('*');
-          
-          console.log('Withdraw update result:', { data, error });
-          if (error) {
-            console.error('Withdraw update error:', error);
-            // If the column doesn't exist, try a different approach - mark as rejected instead
-            if (error.message.includes('column') && error.message.includes('hidden_for_user')) {
-              console.log('hidden_for_user column not found, marking as rejected instead');
-              const { error: rejectError } = await supabase
-                .from('withdraw_requests')
-                .update({ status: 'rejected', admin_notes: 'Hidden by admin' })
-                .in('id', withdrawIds);
-              if (rejectError) throw rejectError;
-            } else {
-              throw error;
-            }
-          }
-        } catch (updateError: any) {
-          console.error('Withdraw update failed:', updateError);
-          throw updateError;
+        const res = await fetch(buildApiUrl('/admin/hide-transactions'), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'withdraw', ids: withdrawIds }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Failed to hide withdraw transactions');
         }
       }
 
-      console.log('Successfully hid selected transactions');
       setShowManageTransactions(false);
       setSelectedTransactionIds(new Set());
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (err: any) {
-      console.error('Error in applyHideSelectedTransactions:', err);
       setError(`Failed to hide selected transactions: ${err.message}`);
     }
   };
@@ -567,15 +502,21 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
   const openPortfolioEditor = async (user: User) => {
     try {
       setSelectedUser(user);
-      // Load BTC, ETH, and USDT
-      const { data } = await supabase
-        .from('portfolios')
-        .select('*')
-        .eq('user_id', user.id)
-        .in('symbol', ['BTC', 'ETH', 'USDT']);
-      const btc = (data || []).find((p: any) => p.symbol === 'BTC');
-      const eth = (data || []).find((p: any) => p.symbol === 'ETH');
-      const usdt = (data || []).find((p: any) => p.symbol === 'USDT');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
+
+      const res = await fetch(buildApiUrl(`/admin/portfolio-balances/${user.id}`), {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) throw new Error('Failed to load portfolio');
+      const data = await res.json();
+      const balances = data.balances || [];
+
+      const btc = balances.find((p: any) => p.symbol === 'BTC');
+      const eth = balances.find((p: any) => p.symbol === 'ETH');
+      const usdt = balances.find((p: any) => p.symbol === 'USDT');
       setPortfolioBTC(btc?.available ?? '0');
       setPortfolioETH(eth?.available ?? '0');
       setPortfolioUSDT(usdt?.available ?? '0');
@@ -588,29 +529,39 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
   const savePortfolioEditor = async () => {
     if (!selectedUser) return;
     try {
-      // Upsert BTC, ETH, and USDT available amounts
-      const updates = [
-        { symbol: 'BTC', available: portfolioBTC },
-        { symbol: 'ETH', available: portfolioETH },
-        { symbol: 'USDT', available: portfolioUSDT },
-      ];
-      for (const u of updates) {
-        // Try update, if no row update then insert
-        const { data, error } = await supabase
-          .from('portfolios')
-          .update({ available: u.available })
-          .eq('user_id', selectedUser.id)
-          .eq('symbol', u.symbol)
-          .select('*');
-        if (error) throw error;
-        if (!data || data.length === 0) {
-          const { error: insertErr } = await supabase
-            .from('portfolios')
-            .insert({ user_id: selectedUser.id, symbol: u.symbol, available: u.available, frozen: 0 });
-          if (insertErr) throw insertErr;
-        }
+      // Validate numeric values
+      const btcVal = parseFloat(portfolioBTC);
+      const ethVal = parseFloat(portfolioETH);
+      const usdtVal = parseFloat(portfolioUSDT);
+
+      if (isNaN(btcVal) || btcVal < 0) { setError('BTC balance must be a valid non-negative number'); return; }
+      if (isNaN(ethVal) || ethVal < 0) { setError('ETH balance must be a valid non-negative number'); return; }
+      if (isNaN(usdtVal) || usdtVal < 0) { setError('USDT balance must be a valid non-negative number'); return; }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
+
+      const res = await fetch(buildApiUrl('/admin/edit-portfolio-balances'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          balances: [
+            { symbol: 'BTC', available: portfolioBTC },
+            { symbol: 'ETH', available: portfolioETH },
+            { symbol: 'USDT', available: portfolioUSDT },
+          ],
+        }),
+      });
+
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.message || 'Failed to save portfolio');
       }
+
       setShowPortfolioEditor(false);
+      setError(null);
     } catch (err: any) {
       setError(`Failed to save portfolio: ${err.message}`);
     }
@@ -618,30 +569,23 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const handleDeletePortfolioData = async (user: User) => {
     try {
-      // Delete ALL portfolio assets for the user (not just BTC and USDT)
-      const { error: deleteError } = await supabase
-        .from('portfolios')
-        .delete()
-        .eq('user_id', user.id);
-      if (deleteError) throw deleteError;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token available');
 
-      // Recreate only the main cryptocurrencies (BTC, ETH, USDT) with 0 balances
-      const mainCryptos = ['BTC', 'ETH', 'USDT'];
+      const res = await fetch(buildApiUrl('/admin/user-management/delete-portfolio'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ userId: user.id }),
+      });
 
-      const portfolioData = mainCryptos.map(symbol => ({
-        user_id: user.id,
-        symbol: symbol,
-        available: '0',
-        frozen: '0'
-      }));
-
-      const { error: createError } = await supabase
-        .from('portfolios')
-        .insert(portfolioData);
-      
-      if (createError) throw createError;
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.message || 'Failed to delete portfolio data');
+      }
 
       setConfirmAction({ type: null, user: null });
+      setError(null);
     } catch (err: any) {
       setError(`Failed to delete portfolio data: ${err.message}`);
     }
