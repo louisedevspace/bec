@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  TrendingUp, TrendingDown, Users, DollarSign, Activity, 
-  BarChart3, ArrowUpRight, ArrowDownRight, 
+import {
+  TrendingUp, TrendingDown, Users, DollarSign, Activity,
+  BarChart3, ArrowUpRight, ArrowDownRight,
   Download, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,8 @@ interface AnalyticsData {
   supportTickets: number;
   openTickets: number;
   resolvedTickets: number;
+  totalDepositCount: number;
+  totalFees: number;
 }
 
 interface ChartData {
@@ -71,6 +73,8 @@ export default function AdminAnalyticsPage() {
     supportTickets: 0,
     openTickets: 0,
     resolvedTickets: 0,
+    totalDepositCount: 0,
+    totalFees: 0,
   });
   const [chartData, setChartData] = useState<ChartData>({
     userGrowth: [],
@@ -83,268 +87,108 @@ export default function AdminAnalyticsPage() {
   const [timeRange, setTimeRange] = useState('7d');
   const { toast } = useToast();
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch users stats
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, created_at, is_active');
-      
-      if (usersError) throw usersError;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No authentication token');
 
-      // Fetch deposits
-      const { data: deposits, error: depositsError } = await supabase
-        .from('deposit_requests')
-        .select('id, amount, status, submitted_at');
-      
-      if (depositsError) throw depositsError;
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-      // Fetch withdrawals
-      const { data: withdrawals, error: withdrawalsError } = await supabase
-        .from('withdraw_requests')
-        .select('id, amount, status, submitted_at');
-      
-      if (withdrawalsError) throw withdrawalsError;
+      // Fetch from authenticated server API endpoints instead of direct Supabase queries
+      const [statsRes, advancedRes] = await Promise.all([
+        fetch('/api/admin/dashboard-stats', { headers }),
+        fetch('/api/admin/analytics', { headers }),
+      ]);
 
-      // Fetch trades
-      const { data: trades, error: tradesError } = await supabase
-        .from('trades')
-        .select('id, amount, status, created_at');
-      
-      if (tradesError) throw tradesError;
+      if (!statsRes.ok) throw new Error('Failed to fetch dashboard stats');
 
-      // Fetch support tickets
-      const { data: tickets, error: ticketsError } = await supabase
-        .from('support_conversations')
-        .select('id, status, created_at');
-      
-      if (ticketsError) throw ticketsError;
+      const stats = await statsRes.json();
+      const advanced = advancedRes.ok ? await advancedRes.json() : null;
 
-      // Calculate stats
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      const newUsersToday = users?.filter(u => new Date(u.created_at) >= today).length || 0;
-      const newUsersThisWeek = users?.filter(u => new Date(u.created_at) >= weekAgo).length || 0;
-      const activeUsers = users?.filter(u => u.is_active).length || 0;
-
-      const totalDeposits = deposits?.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) || 0;
-      const pendingDeposits = deposits?.filter(d => d.status === 'pending').length || 0;
-
-      const totalWithdrawals = withdrawals?.reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0) || 0;
-      const pendingWithdrawals = withdrawals?.filter(w => w.status === 'pending').length || 0;
-
-      const totalTrades = trades?.length || 0;
-      const pendingTrades = trades?.filter(t => t.status === 'pending_approval' || t.status === 'pending').length || 0;
-      const completedTrades = trades?.filter(t => t.status === 'executed' || t.status === 'filled').length || 0;
-      const totalVolume = trades?.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || 0;
-
-      const supportTickets = tickets?.length || 0;
-      const openTickets = tickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0;
-      const resolvedTickets = tickets?.filter(t => t.status === 'resolved' || t.status === 'closed').length || 0;
-
-      // Generate chart data from real database records
-      const generateChartData = async () => {
-        const days = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-        const chartData: ChartData = {
-          userGrowth: [],
-          tradingVolume: [],
-          depositWithdrawal: [],
-          tradeStatus: [],
-          cumulativeMetrics: []
-        };
-
-        // Calculate date range
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days + 1);
-
-        try {
-          // 1. User Growth Data - Get all users in date range and group by date
-          const { data: allUsers } = await supabase
-            .from('users')
-            .select('id, created_at')
-            .gte('created_at', startDate.toISOString())
-            .lt('created_at', endDate.toISOString())
-            .order('created_at', { ascending: true });
-
-          // Get total users count before start date for baseline
-          const { data: baselineUsers } = await supabase
-            .from('users')
-            .select('id')
-            .lt('created_at', startDate.toISOString());
-
-          const baselineCount = baselineUsers?.length || 0;
-          const userMap = new Map<string, number>();
-
-          // Group users by date
-          allUsers?.forEach(user => {
-            const date = new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            userMap.set(date, (userMap.get(date) || 0) + 1);
-          });
-
-          // Generate user growth data
-          let cumulativeCount = baselineCount;
-          for (let i = days - 1; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
-            const newUsers = userMap.get(dateStr) || 0;
-            cumulativeCount += newUsers;
-
-            chartData.userGrowth.push({
-              date: dateStr,
-              users: cumulativeCount,
-              newUsers: newUsers
-            });
-          }
-
-          // 2. Trading Volume Data - Get all trades in date range and group by date
-          const { data: allTrades } = await supabase
-            .from('trades')
-            .select('amount, created_at')
-            .gte('created_at', startDate.toISOString())
-            .lt('created_at', endDate.toISOString())
-            .order('created_at', { ascending: true });
-
-          const tradeMap = new Map<string, { volume: number; count: number }>();
-
-          // Group trades by date
-          allTrades?.forEach(trade => {
-            const date = new Date(trade.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            const existing = tradeMap.get(date) || { volume: 0, count: 0 };
-            tradeMap.set(date, {
-              volume: existing.volume + (parseFloat(trade.amount) || 0),
-              count: existing.count + 1
-            });
-          });
-
-          // Generate trading volume data
-          for (let i = days - 1; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
-            const dayData = tradeMap.get(dateStr) || { volume: 0, count: 0 };
-
-            chartData.tradingVolume.push({
-              date: dateStr,
-              volume: dayData.volume,
-              trades: dayData.count
-            });
-          }
-
-          // 3. Deposit/Withdrawal Data - Get all transactions in date range and group by date
-          const [{ data: allDeposits }, { data: allWithdrawals }] = await Promise.all([
-            supabase
-              .from('deposit_requests')
-              .select('amount, submitted_at')
-              .gte('submitted_at', startDate.toISOString())
-              .lt('submitted_at', endDate.toISOString())
-              .eq('status', 'approved')
-              .order('submitted_at', { ascending: true }),
-            supabase
-              .from('withdraw_requests')
-              .select('amount, submitted_at')
-              .gte('submitted_at', startDate.toISOString())
-              .lt('submitted_at', endDate.toISOString())
-              .eq('status', 'approved')
-              .order('submitted_at', { ascending: true })
-          ]);
-
-          const depositMap = new Map<string, number>();
-          const withdrawalMap = new Map<string, number>();
-
-          // Group deposits by date
-          allDeposits?.forEach(deposit => {
-            const date = new Date(deposit.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            depositMap.set(date, (depositMap.get(date) || 0) + (parseFloat(deposit.amount) || 0));
-          });
-
-          // Group withdrawals by date
-          allWithdrawals?.forEach(withdrawal => {
-            const date = new Date(withdrawal.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            withdrawalMap.set(date, (withdrawalMap.get(date) || 0) + (parseFloat(withdrawal.amount) || 0));
-          });
-
-          // Generate deposit/withdrawal data
-          for (let i = days - 1; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
-            chartData.depositWithdrawal.push({
-              date: dateStr,
-              deposits: depositMap.get(dateStr) || 0,
-              withdrawals: withdrawalMap.get(dateStr) || 0
-            });
-          }
-
-          // 4. Trade Status Distribution - Get actual trade statuses
-          const { data: statusTrades } = await supabase
-            .from('trades')
-            .select('status');
-
-          if (statusTrades) {
-            const statusCounts = statusTrades.reduce((acc, trade) => {
-              acc[trade.status] = (acc[trade.status] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>);
-
-            chartData.tradeStatus = [
-              { status: 'Completed', count: statusCounts['executed'] || statusCounts['filled'] || 0, color: '#10b981' },
-              { status: 'Pending', count: (statusCounts['pending_approval'] || 0) + (statusCounts['pending'] || 0), color: '#f59e0b' },
-              { status: 'Rejected', count: statusCounts['rejected'] || 0, color: '#ef4444' }
-            ];
-          }
-
-          // 5. Cumulative Metrics - Calculate running totals
-          let cumulativeVolume = 0;
-          let cumulativeDeposits = 0;
-
-          for (let i = 0; i < chartData.userGrowth.length; i++) {
-            cumulativeVolume += chartData.tradingVolume[i]?.volume || 0;
-            cumulativeDeposits += chartData.depositWithdrawal[i]?.deposits || 0;
-
-            chartData.cumulativeMetrics.push({
-              date: chartData.userGrowth[i].date,
-              users: chartData.userGrowth[i].users,
-              volume: cumulativeVolume,
-              deposits: cumulativeDeposits
-            });
-          }
-
-        } catch (error) {
-          console.error('Error generating chart data:', error);
-          // Fallback to empty data if queries fail
-        }
-
-        return chartData;
-      };
+      // Map server response to analytics state (server already filters approved-only for financials)
+      const completedTrades = stats.trading.completedTrades || 0;
+      const pendingTrades = stats.trading.pendingTrades || 0;
 
       setAnalytics({
-        totalUsers: users?.length || 0,
-        activeUsers,
-        newUsersToday,
-        newUsersThisWeek,
-        totalDeposits,
-        totalWithdrawals,
-        pendingDeposits,
-        pendingWithdrawals,
-        totalTrades,
+        totalUsers: stats.users.total,
+        activeUsers: stats.users.active,
+        newUsersToday: stats.users.newToday,
+        newUsersThisWeek: stats.users.newThisWeek,
+        totalDeposits: stats.financial.totalDeposits,
+        totalWithdrawals: stats.financial.totalWithdrawals,
+        pendingDeposits: stats.financial.pendingDeposits,
+        pendingWithdrawals: stats.financial.pendingWithdrawals,
+        totalTrades: stats.trading.totalTrades,
         pendingTrades,
         completedTrades,
-        totalVolume,
-        supportTickets,
-        openTickets,
-        resolvedTickets,
+        totalVolume: stats.trading.totalVolume,
+        supportTickets: stats.support.total,
+        openTickets: stats.support.open + stats.support.inProgress,
+        resolvedTickets: stats.support.resolved,
+        totalDepositCount: advanced?.summary?.totalDepositCount || 0,
+        totalFees: stats.financial.fees?.total || 0,
       });
 
-      const chartData = await generateChartData();
-      setChartData(chartData);
+      // Build chart data from server responses
+      const days = timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const newChartData: ChartData = {
+        userGrowth: [],
+        tradingVolume: [],
+        depositWithdrawal: [],
+        tradeStatus: [],
+        cumulativeMetrics: [],
+      };
+
+      // User growth from registration trend (server provides 30-day data)
+      const regTrend = stats.charts?.registrationTrend || [];
+      const slicedReg = regTrend.slice(Math.max(0, regTrend.length - days));
+      let cumulativeUsers = stats.users.total - slicedReg.reduce((s: number, d: any) => s + d.count, 0);
+      slicedReg.forEach((d: any) => {
+        cumulativeUsers += d.count;
+        const dateStr = new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        newChartData.userGrowth.push({ date: dateStr, users: cumulativeUsers, newUsers: d.count });
+      });
+
+      // Trading volume from server volume trend
+      const volTrend = stats.charts?.volumeTrend || [];
+      const slicedVol = volTrend.slice(Math.max(0, volTrend.length - days));
+      slicedVol.forEach((d: any) => {
+        const dateStr = new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        newChartData.tradingVolume.push({ date: dateStr, volume: d.volume, trades: d.count });
+      });
+
+      // Deposit/withdrawal flow from server financial trend (already filtered to approved)
+      const finTrend = stats.charts?.financialTrend || [];
+      const slicedFin = finTrend.slice(Math.max(0, finTrend.length - days));
+      slicedFin.forEach((d: any) => {
+        const dateStr = new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        newChartData.depositWithdrawal.push({ date: dateStr, deposits: d.deposits, withdrawals: d.withdrawals });
+      });
+
+      // Trade status distribution (properly summing executed + filled)
+      newChartData.tradeStatus = [
+        { status: 'Completed', count: completedTrades, color: '#10b981' },
+        { status: 'Pending', count: pendingTrades, color: '#f59e0b' },
+        { status: 'Rejected', count: Math.max(0, stats.trading.totalTrades - completedTrades - pendingTrades), color: '#ef4444' }
+      ];
+
+      // Cumulative metrics
+      let cumVolume = 0;
+      let cumDeposits = 0;
+      for (let i = 0; i < newChartData.userGrowth.length; i++) {
+        cumVolume += newChartData.tradingVolume[i]?.volume || 0;
+        cumDeposits += newChartData.depositWithdrawal[i]?.deposits || 0;
+        newChartData.cumulativeMetrics.push({
+          date: newChartData.userGrowth[i].date,
+          users: newChartData.userGrowth[i].users,
+          volume: cumVolume,
+          deposits: cumDeposits,
+        });
+      }
+
+      setChartData(newChartData);
     } catch (error: any) {
       console.error('Error fetching analytics:', error);
       toast({
@@ -355,13 +199,13 @@ export default function AdminAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, toast]);
 
   useEffect(() => {
     fetchAnalytics();
     const interval = setInterval(fetchAnalytics, 30000);
     return () => clearInterval(interval);
-  }, [timeRange]);
+  }, [fetchAnalytics]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -376,17 +220,17 @@ export default function AdminAnalyticsPage() {
     return new Intl.NumberFormat('en-US').format(value);
   };
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    subtitle, 
-    icon: Icon, 
+  const StatCard = ({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
     trend,
     trendUp,
-    color 
-  }: { 
-    title: string; 
-    value: string; 
+    color
+  }: {
+    title: string;
+    value: string;
     subtitle?: string;
     icon: any;
     trend?: string;
@@ -469,8 +313,8 @@ export default function AdminAnalyticsPage() {
             value={formatNumber(analytics.totalUsers)}
             subtitle={`${formatNumber(analytics.newUsersToday)} new today`}
             icon={Users}
-            trend={`+${analytics.newUsersThisWeek} this week`}
-            trendUp={true}
+            trend={analytics.newUsersThisWeek > 0 ? `+${analytics.newUsersThisWeek} this week` : 'No new users this week'}
+            trendUp={analytics.newUsersThisWeek > 0}
             color="bg-blue-500"
           />
           <StatCard
@@ -493,7 +337,7 @@ export default function AdminAnalyticsPage() {
             subtitle={`${analytics.pendingTrades} pending approval`}
             icon={Activity}
             trend={`${analytics.completedTrades} completed`}
-            trendUp={true}
+            trendUp={analytics.completedTrades > 0}
             color="bg-purple-500"
           />
         </div>
@@ -516,7 +360,6 @@ export default function AdminAnalyticsPage() {
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
-            {/* User Growth Chart */}
             <Card className="bg-[#111] border-[#1e1e1e]">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-white">User Growth Trend</CardTitle>
@@ -526,51 +369,17 @@ export default function AdminAnalyticsPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.userGrowth}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#111', 
-                        border: '1px solid #1e1e1e',
-                        borderRadius: '8px'
-                      }}
-                      labelStyle={{ color: '#fff' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ color: '#fff' }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="users" 
-                      stroke="#3b82f6" 
-                      strokeWidth={2}
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="Total Users"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="newUsers" 
-                      stroke="#10b981" 
-                      strokeWidth={2}
-                      dot={{ fill: '#10b981', r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="New Users"
-                    />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} name="Total Users" />
+                    <Line type="monotone" dataKey="newUsers" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} name="New Users" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            {/* User Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-[#111] border-[#1e1e1e]">
                 <CardHeader className="pb-2">
@@ -580,10 +389,7 @@ export default function AdminAnalyticsPage() {
                   <div className="text-3xl font-bold text-white">{formatNumber(analytics.newUsersThisWeek)}</div>
                   <p className="text-xs text-gray-500 mt-1">New users this week</p>
                   <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${Math.min((analytics.newUsersThisWeek / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }}
-                    />
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((analytics.newUsersThisWeek / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
                   </div>
                 </CardContent>
               </Card>
@@ -595,10 +401,7 @@ export default function AdminAnalyticsPage() {
                   <div className="text-3xl font-bold text-white">{formatNumber(analytics.activeUsers)}</div>
                   <p className="text-xs text-gray-500 mt-1">Currently active accounts</p>
                   <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full"
-                      style={{ width: `${Math.min((analytics.activeUsers / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }}
-                    />
+                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min((analytics.activeUsers / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
                   </div>
                 </CardContent>
               </Card>
@@ -612,10 +415,7 @@ export default function AdminAnalyticsPage() {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Of total users are active</p>
                   <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-purple-500 rounded-full"
-                      style={{ width: `${analytics.totalUsers > 0 ? (analytics.activeUsers / analytics.totalUsers) * 100 : 0}%` }}
-                    />
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${analytics.totalUsers > 0 ? (analytics.activeUsers / analytics.totalUsers) * 100 : 0}%` }} />
                   </div>
                 </CardContent>
               </Card>
@@ -623,7 +423,6 @@ export default function AdminAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="trading" className="space-y-4">
-            {/* Trading Volume Chart */}
             <Card className="bg-[#111] border-[#1e1e1e]">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-white">Trading Volume & Activity</CardTitle>
@@ -633,45 +432,17 @@ export default function AdminAnalyticsPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData.tradingVolume}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#111', 
-                        border: '1px solid #1e1e1e',
-                        borderRadius: '8px'
-                      }}
-                      labelStyle={{ color: '#fff' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ color: '#fff' }}
-                    />
-                    <Bar 
-                      dataKey="volume" 
-                      fill="#8b5cf6"
-                      name="Volume ($)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar 
-                      dataKey="trades" 
-                      fill="#06b6d4"
-                      name="Number of Trades"
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Bar dataKey="volume" fill="#8b5cf6" name="Volume ($)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="trades" fill="#06b6d4" name="Number of Trades" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            {/* Trade Status Distribution Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card className="bg-[#111] border-[#1e1e1e]">
                 <CardHeader>
@@ -681,58 +452,36 @@ export default function AdminAnalyticsPage() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
-                      <Pie
-                        data={chartData.tradeStatus}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
+                      <Pie data={chartData.tradeStatus} cx="50%" cy="50%" labelLine={false}
                         label={({ status, count, percent }) => `${status}: ${count} (${(percent * 100).toFixed(0)}%)`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="count"
-                      >
+                        outerRadius={80} fill="#8884d8" dataKey="count">
                         {chartData.tradeStatus.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#111', 
-                          border: '1px solid #1e1e1e',
-                          borderRadius: '8px'
-                        }}
-                        labelStyle={{ color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
 
-              {/* Trading Stats Cards */}
               <div className="space-y-4">
                 <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-400">Trading Volume</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Trading Volume</CardTitle></CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-white">{formatCurrency(analytics.totalVolume)}</div>
                     <p className="text-xs text-gray-500 mt-1">Total trading volume</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-400">Pending Orders</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Orders</CardTitle></CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-white">{formatNumber(analytics.pendingTrades)}</div>
                     <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-400">Completion Rate</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Completion Rate</CardTitle></CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-white">
                       {analytics.totalTrades > 0 ? Math.round((analytics.completedTrades / analytics.totalTrades) * 100) : 0}%
@@ -745,66 +494,29 @@ export default function AdminAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="finance" className="space-y-4">
-            {/* Deposit/Withdrawal Flow Chart */}
             <Card className="bg-[#111] border-[#1e1e1e]">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-white">Deposit & Withdrawal Flow</CardTitle>
-                <p className="text-sm text-gray-500">Daily deposits and withdrawals comparison</p>
+                <p className="text-sm text-gray-500">Daily approved deposits and withdrawals comparison</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={chartData.depositWithdrawal}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="#6b7280"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#111', 
-                        border: '1px solid #1e1e1e',
-                        borderRadius: '8px'
-                      }}
-                      labelStyle={{ color: '#fff' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ color: '#fff' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="deposits" 
-                      stackId="1"
-                      stroke="#10b981" 
-                      fill="#10b981"
-                      fillOpacity={0.6}
-                      name="Deposits ($)"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="withdrawals" 
-                      stackId="2"
-                      stroke="#ef4444" 
-                      fill="#ef4444"
-                      fillOpacity={0.6}
-                      name="Withdrawals ($)"
-                    />
+                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <Area type="monotone" dataKey="deposits" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Deposits ($)" />
+                    <Area type="monotone" dataKey="withdrawals" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Withdrawals ($)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            {/* Finance Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Net Flow</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Net Flow</CardTitle></CardHeader>
                 <CardContent>
                   <div className={`text-3xl font-bold ${analytics.totalDeposits - analytics.totalWithdrawals >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {formatCurrency(analytics.totalDeposits - analytics.totalWithdrawals)}
@@ -813,18 +525,14 @@ export default function AdminAnalyticsPage() {
                 </CardContent>
               </Card>
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Pending Deposits</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Deposits</CardTitle></CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-white">{analytics.pendingDeposits}</div>
                   <p className="text-xs text-gray-500 mt-1">Awaiting confirmation</p>
                 </CardContent>
               </Card>
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Pending Withdrawals</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Withdrawals</CardTitle></CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-white">{analytics.pendingWithdrawals}</div>
                   <p className="text-xs text-gray-500 mt-1">Awaiting processing</p>
@@ -836,27 +544,21 @@ export default function AdminAnalyticsPage() {
           <TabsContent value="support" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Total Tickets</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Total Tickets</CardTitle></CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-white">{formatNumber(analytics.supportTickets)}</div>
                   <p className="text-xs text-gray-500 mt-1">All support conversations</p>
                 </CardContent>
               </Card>
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Open Tickets</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Open Tickets</CardTitle></CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-orange-400">{formatNumber(analytics.openTickets)}</div>
                   <p className="text-xs text-gray-500 mt-1">Need attention</p>
                 </CardContent>
               </Card>
               <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Resolution Rate</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Resolution Rate</CardTitle></CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-green-400">
                     {analytics.supportTickets > 0 ? Math.round((analytics.resolvedTickets / analytics.supportTickets) * 100) : 0}%
@@ -878,51 +580,13 @@ export default function AdminAnalyticsPage() {
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData.cumulativeMetrics}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6b7280"
-                  fontSize={12}
-                />
-                <YAxis 
-                  stroke="#6b7280"
-                  fontSize={12}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#111', 
-                    border: '1px solid #1e1e1e',
-                    borderRadius: '8px'
-                  }}
-                  labelStyle={{ color: '#fff' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Legend 
-                  wrapperStyle={{ color: '#fff' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke="#3b82f6" 
-                  fill="#3b82f6"
-                  fillOpacity={0.3}
-                  name="Total Users"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="volume" 
-                  stroke="#8b5cf6" 
-                  fill="#8b5cf6"
-                  fillOpacity={0.3}
-                  name="Trading Volume ($)"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="deposits" 
-                  stroke="#10b981" 
-                  fill="#10b981"
-                  fillOpacity={0.3}
-                  name="Total Deposits ($)"
-                />
+                <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                <YAxis stroke="#6b7280" fontSize={12} />
+                <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #1e1e1e', borderRadius: '8px' }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Total Users" />
+                <Area type="monotone" dataKey="volume" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Trading Volume ($)" />
+                <Area type="monotone" dataKey="deposits" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="Total Deposits ($)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -941,7 +605,7 @@ export default function AdminAnalyticsPage() {
                   <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
                     <p className="text-xs text-gray-500">Avg. Deposit</p>
                     <p className="text-lg font-semibold text-white">
-                      {analytics.totalUsers > 0 ? formatCurrency(analytics.totalDeposits / analytics.totalUsers) : formatCurrency(0)}
+                      {analytics.totalDepositCount > 0 ? formatCurrency(analytics.totalDeposits / analytics.totalDepositCount) : formatCurrency(0)}
                     </p>
                   </div>
                   <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
@@ -951,16 +615,17 @@ export default function AdminAnalyticsPage() {
                     </p>
                   </div>
                   <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
+                    <p className="text-xs text-gray-500">Total Fees Collected</p>
+                    <p className="text-lg font-semibold text-white">
+                      {formatCurrency(analytics.totalFees)}
+                    </p>
+                  </div>
+                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
                     <p className="text-xs text-gray-500">Support Load</p>
                     <p className="text-lg font-semibold text-white">
                       {analytics.totalUsers > 0 ? (analytics.supportTickets / analytics.totalUsers).toFixed(2) : '0.00'}
                     </p>
                     <p className="text-xs text-gray-500">tickets per user</p>
-                  </div>
-                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500">Platform Health</p>
-                    <p className="text-lg font-semibold text-green-400">Good</p>
-                    <p className="text-xs text-gray-500">All systems operational</p>
                   </div>
                 </div>
               </div>

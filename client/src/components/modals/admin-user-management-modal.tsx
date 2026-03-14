@@ -1002,7 +1002,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                   <div>
                     <Label className="text-gray-500 text-xs">Credit Score</Label>
                     <div className="mt-1">
-                      <CreditScoreBadge creditScore={selectedUser.credit_score || 0.60} size="md" />
+                      <CreditScoreBadge creditScore={selectedUser.credit_score || 60} size="md" />
                     </div>
                   </div>
 

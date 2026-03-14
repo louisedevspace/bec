@@ -54,5 +54,5 @@ export function openImageViewer(source?: string | null, title?: string) {
     return;
   }
 
-  window.location.assign(buildImageViewerPath(source, title));
+  window.open(buildImageViewerPath(source, title), '_blank');
 }

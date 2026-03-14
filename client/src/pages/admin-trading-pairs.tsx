@@ -253,7 +253,8 @@ export default function AdminTradingPairs() {
       const response = await fetch('/api/admin/users', { headers });
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.map((u: any) => ({ id: u.id, email: u.email, username: u.username })));
+        const usersList = Array.isArray(data) ? data : (data.users || []);
+        setUsers(usersList.map((u: any) => ({ id: u.id, email: u.email, username: u.username })));
       }
     } catch { /* ignore */ }
   };

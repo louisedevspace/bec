@@ -100,11 +100,22 @@ export default function AdminSettings() {
   }, []);
 
   const toggleUser = async (user: User) => {
-    const updated = { ...user, is_active: !user.is_active };
-    // Update on server
-    await fetch(`/api/users/${user.id}/toggle`, { method: 'POST' });
-    // Update locally
-    setUsers(users => users.map(u => u.id === user.id ? updated : u));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const res = await fetch('/api/admin/toggle-user-status', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isActive: !user.is_active }),
+      });
+      if (res.ok) {
+        setUsers(users => users.map(u => u.id === user.id ? { ...u, is_active: !u.is_active } : u));
+      }
+    } catch (err) {
+      console.error('Failed to toggle user status:', err);
+    }
   };
 
   const startEditingAddress = (address: DepositAddress) => {
@@ -266,7 +277,12 @@ export default function AdminSettings() {
   if (error) return (
     <AdminLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="bg-red-50 text-red-700 rounded-2xl p-6 text-sm">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl p-6 text-sm flex flex-col items-center gap-3">
+          <span>{error}</span>
+          <Button size="sm" variant="outline" className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={() => { setError(null); setLoading(true); window.location.reload(); }}>
+            Retry
+          </Button>
+        </div>
       </div>
     </AdminLayout>
   );
@@ -473,7 +489,7 @@ export default function AdminSettings() {
                             <span className="text-[10px] text-gray-400 uppercase font-medium">Address</span>
                             <button
                               onClick={() => handleCopyAddress(address.address, address.asset_symbol)}
-                              className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+                              className="p-0.5 hover:bg-[#1a1a1a] rounded transition-colors"
                             >
                               {copied ? (
                                 <CheckCircle size={12} className="text-green-500" />
@@ -483,7 +499,7 @@ export default function AdminSettings() {
                             </button>
                           </div>
                           <p 
-                            className="font-mono text-xs text-gray-700 break-all cursor-pointer hover:text-blue-600 transition-colors bg-white px-2.5 py-1.5 rounded-lg border border-gray-100"
+                            className="font-mono text-xs text-gray-300 break-all cursor-pointer hover:text-blue-400 transition-colors bg-[#0d0d0d] px-2.5 py-1.5 rounded-lg border border-[#1e1e1e]"
                             onClick={() => handleCopyAddress(address.address, address.asset_symbol)}
                           >
                             {address.address}
@@ -492,7 +508,7 @@ export default function AdminSettings() {
                         <div className="flex items-center justify-between text-xs">
                           <div>
                             <span className="text-gray-400">Network: </span>
-                            <span className="text-gray-700 font-medium">{address.network}</span>
+                            <span className="text-gray-300 font-medium">{address.network}</span>
                           </div>
                           <span className="text-[10px] text-gray-400">{formatDate(address.updated_at)}</span>
                         </div>
@@ -522,15 +538,15 @@ export default function AdminSettings() {
         </div>
 
         {/* User Management Section */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
           <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <h2 className="font-semibold text-gray-900 text-sm">User Management</h2>
-                <p className="text-[11px] text-gray-400">View and manage all user accounts</p>
+                <h2 className="font-semibold text-white text-sm">User Management</h2>
+                <p className="text-[11px] text-gray-500">View and manage all user accounts</p>
               </div>
             </div>
             <Button 

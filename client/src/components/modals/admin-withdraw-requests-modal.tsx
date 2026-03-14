@@ -126,6 +126,11 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   const handleReview = (request: WithdrawRequest, reviewAction: 'approve' | 'reject') => {
     setSelectedRequest(request);
     setAction(reviewAction);
+    setAdminNotes('');
+    setRejectionReason('');
+    setRequireReverification(false);
+    setScreenshotFile(null);
+    setScreenshotPreview('');
     setShowReviewModal(true);
   };
 
@@ -152,7 +157,9 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
     const formData = new FormData();
     formData.append('action', action);
     formData.append('adminNotes', adminNotes);
-    formData.append('rejectionReason', rejectionReason);
+    if (action === 'reject') {
+      formData.append('rejectionReason', rejectionReason);
+    }
     formData.append('requireReverification', requireReverification.toString());
     
     if (screenshotFile) {
@@ -373,7 +380,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
               <div className="flex space-x-2">
                 <Button
                   onClick={handleSubmitReview}
-                  disabled={reviewMutation.isPending}
+                  disabled={reviewMutation.isPending || (action === 'reject' && !rejectionReason.trim())}
                   className={action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                 >
                   {reviewMutation.isPending ? 'Processing...' : action === 'approve' ? 'Approve' : 'Reject'}

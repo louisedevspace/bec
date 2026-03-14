@@ -326,7 +326,7 @@ export default function AdminStakingPage() {
         )}
 
         {/* Tabs */}
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <Tabs value={tab} onValueChange={(newTab) => { setTab(newTab); setStatusFilter("all"); }} className="w-full">
           <TabsList className="bg-[#111] border border-[#1e1e1e] h-10 p-1 w-full md:w-auto">
             <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 text-xs md:text-sm">
               <BarChart3 size={14} className="mr-1.5" /> All Positions

@@ -464,13 +464,21 @@ export default function AdminUsers() {
           {[
             { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
             { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
-          ].map((btn, i) => (
+          ].map((btn, i) => {
+            const colorClasses = btn.color === 'emerald' ? {
+              hoverBorder: 'hover:border-emerald-500/30', hoverBg: 'hover:bg-emerald-500/10',
+              bg: 'bg-emerald-500/10', groupHoverBg: 'group-hover:bg-emerald-500/20', text: 'text-emerald-400', groupHoverText: 'group-hover:text-emerald-400',
+            } : {
+              hoverBorder: 'hover:border-blue-500/30', hoverBg: 'hover:bg-blue-500/10',
+              bg: 'bg-blue-500/10', groupHoverBg: 'group-hover:bg-blue-500/20', text: 'text-blue-400', groupHoverText: 'group-hover:text-blue-400',
+            };
+            return (
             <button
               key={i}
               onClick={btn.onClick}
-              className={`group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-${btn.color}-500/30 hover:bg-${btn.color}-500/10 transition-all duration-200`}
+              className={`group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 ${colorClasses.hoverBorder} ${colorClasses.hoverBg} transition-all duration-200`}
             >
-              <div className={`relative w-7 h-7 sm:w-9 sm:h-9 bg-${btn.color}-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-${btn.color}-500/20 transition-colors text-${btn.color}-400`}>
+              <div className={`relative w-7 h-7 sm:w-9 sm:h-9 ${colorClasses.bg} rounded-lg sm:rounded-xl flex items-center justify-center ${colorClasses.groupHoverBg} transition-colors ${colorClasses.text}`}>
                 {btn.icon}
                 {btn.badge > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
@@ -478,11 +486,12 @@ export default function AdminUsers() {
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-${btn.color}-400 transition-colors text-center leading-tight`}>
+              <span className={`text-[10px] sm:text-[11px] font-medium text-gray-400 ${colorClasses.groupHoverText} transition-colors text-center leading-tight`}>
                 {btn.label}
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* ---- Filter & Search Bar ---- */}
@@ -711,7 +720,7 @@ export default function AdminUsers() {
                         <td className="px-3 py-2.5 text-gray-400">{user.trade_count || 0}</td>
                         <td className="px-3 py-2.5 text-gray-500">{timeAgo(user.created_at)}</td>
                         <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                             <button onClick={() => handleChangePassword(user)}
                               className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Change Password">
                               <Key size={12} />
@@ -847,7 +856,12 @@ export default function AdminUsers() {
                                 {user.portfolio.slice(0, 5).map((asset: any, index: number) => (
                                   <div key={index} className="flex justify-between text-[11px]">
                                     <span className="font-semibold text-gray-300 flex items-center gap-1.5"><CryptoIcon symbol={asset.symbol} size="xs" />{asset.symbol}</span>
-                                    <span className="text-gray-500">{formatGenericCryptoBalance(asset.available || '0', asset.symbol)}</span>
+                                    <span className="text-gray-500">
+                                      {formatGenericCryptoBalance(asset.available || '0', asset.symbol)}
+                                      {parseFloat(asset.frozen || '0') > 0 && (
+                                        <span className="text-amber-500/70 ml-1">(+{formatGenericCryptoBalance(asset.frozen, asset.symbol)} frozen)</span>
+                                      )}
+                                    </span>
                                   </div>
                                 ))}
                                 {user.portfolio.length > 5 && (

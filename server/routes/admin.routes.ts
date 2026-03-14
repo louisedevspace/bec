@@ -199,7 +199,8 @@ export default function registerAdminRoutes(app: Express) {
           } else if (priceData?.price) {
             return total + totalAmount * parseFloat(priceData.price);
           }
-          return total + totalAmount;
+          // Skip assets with no price data rather than adding raw token quantity as USD
+          return total;
         }, 0);
 
         const totalLoanAmount = userLoans.reduce((total, loan) => total + parseFloat(loan.amount || "0"), 0);
@@ -229,8 +230,8 @@ export default function registerAdminRoutes(app: Express) {
           user_metadata: authUser?.user_metadata,
           portfolio: userPortfolio,
           total_portfolio_value: totalPortfolioValue,
-          trade_count: userTrades.length,
-          assets_count: userPortfolio.length,
+          trade_count: userTrades.filter((t: any) => ['approved', 'executed', 'filled', 'completed'].includes(t.status)).length,
+          assets_count: userPortfolio.filter((p: any) => parseFloat(p.available || '0') + parseFloat(p.frozen || '0') > 0).length,
           kyc_status: userKyc?.status || "not_submitted",
           kyc_submitted_at: userKyc?.submitted_at,
           kyc_reviewed_at: userKyc?.reviewed_at,

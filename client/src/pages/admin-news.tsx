@@ -762,7 +762,7 @@ export default function AdminNews() {
                           id="popup_delay"
                           type="number"
                           value={formData.popup_delay}
-                          onChange={(e) => setFormData(prev => ({ ...prev, popup_delay: parseInt(e.target.value) }))}
+                          onChange={(e) => setFormData(prev => ({ ...prev, popup_delay: parseInt(e.target.value) || 0 }))}
                           placeholder="2000"
                           className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-500 focus:border-blue-500"
                         />
@@ -773,7 +773,7 @@ export default function AdminNews() {
                           id="auto_close"
                           type="number"
                           value={formData.auto_close}
-                          onChange={(e) => setFormData(prev => ({ ...prev, auto_close: parseInt(e.target.value) }))}
+                          onChange={(e) => setFormData(prev => ({ ...prev, auto_close: parseInt(e.target.value) || 0 }))}
                           placeholder="0 = manual"
                           className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-500 focus:border-blue-500"
                         />
