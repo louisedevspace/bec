@@ -842,6 +842,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
+CREATE INDEX IF NOT EXISTS idx_notification_templates_name ON notification_templates(name);
 
 -- ----------------------------------------------------------
 -- 3.5 Broadcast Notifications (Streamlined System)
@@ -850,7 +851,8 @@ CREATE TABLE IF NOT EXISTS broadcast_notifications (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
-  target_role TEXT,                   -- 'all', 'user', 'admin', etc.
+  deeplink_url TEXT,                   -- deep-link URL for notification click action
+  target_role TEXT,                    -- 'all', 'user', 'admin', etc.
   total_users INTEGER NOT NULL DEFAULT 0,
   sent_count INTEGER NOT NULL DEFAULT 0,
   failed_count INTEGER NOT NULL DEFAULT 0,
@@ -1428,7 +1430,32 @@ CREATE POLICY "admin_notifications_delete_policy" ON admin_notifications
   FOR DELETE USING (public.is_admin());
 
 -- ----------------------------------------------------------
--- 4.21 Platform Fees
+-- 4.21 Notification Templates
+-- ----------------------------------------------------------
+ALTER TABLE notification_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage templates" ON notification_templates;
+
+CREATE POLICY "Admins can manage templates" ON notification_templates
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.22 Push Subscriptions
+-- ----------------------------------------------------------
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage own push subscriptions" ON push_subscriptions;
+DROP POLICY IF EXISTS "Admins read all push subscriptions" ON push_subscriptions;
+
+CREATE POLICY "Users manage own push subscriptions" ON push_subscriptions
+  FOR ALL USING (user_id::text = auth.uid()::text)
+  WITH CHECK (user_id::text = auth.uid()::text);
+
+CREATE POLICY "Admins read all push subscriptions" ON push_subscriptions
+  FOR SELECT USING (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.23 Platform Fees
 -- ----------------------------------------------------------
 ALTER TABLE platform_fees ENABLE ROW LEVEL SECURITY;
 
@@ -1735,5 +1762,11 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 -- Version: 2.3.0
 -- Last Updated: 2025-06-14
 -- Compatible with: Supabase PostgreSQL 15+
--- 
+--
 -- ************************************************************
+
+-- ************************************************************
+-- MIGRATION HELPERS (safe to re-run)
+-- ************************************************************
+-- Add deeplink_url to broadcast_notifications if missing
+ALTER TABLE broadcast_notifications ADD COLUMN IF NOT EXISTS deeplink_url TEXT;
