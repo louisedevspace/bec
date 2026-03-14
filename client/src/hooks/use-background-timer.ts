@@ -194,10 +194,45 @@ export function useBackgroundTimer() {
 
     } catch (error) {
       console.error('Error completing trade in background:', error);
+
+      // Before showing error, check if the trade was actually completed by the server
+      try {
+        const { data: { session: retrySession } } = await supabase.auth.getSession();
+        if (retrySession) {
+          const checkRes = await fetch('/api/future-trades', {
+            headers: {
+              'Authorization': `Bearer ${retrySession.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (checkRes.ok) {
+            const trades = await checkRes.json();
+            const completedTrade = trades.find((t: any) => t.id === tradeId && t.status === 'completed');
+            if (completedTrade) {
+              const isWin = completedTrade.profit_loss > 0;
+              const finalProfitLoss = completedTrade.profit_loss;
+              toast({
+                title: 'Trade Complete',
+                description: isWin
+                  ? `Profit: +${formatUsdNumber(finalProfitLoss)} USDT`
+                  : `Loss: -${formatUsdNumber(Math.abs(finalProfitLoss))} USDT`,
+                variant: isWin ? 'default' : 'destructive',
+                duration: 5000,
+              });
+              globalTimers.delete(tradeId);
+              setTimers(new Map(globalTimers));
+              return;
+            }
+          }
+        }
+      } catch {
+        // Fallback to generic message below
+      }
+
       toast({
-        title: 'Error',
-        description: 'Failed to process trade completion. Please contact support.',
-        variant: 'destructive',
+        title: 'Trade Processing',
+        description: 'Your trade is being processed. Please check your balance shortly.',
+        variant: 'default',
       });
     }
   };

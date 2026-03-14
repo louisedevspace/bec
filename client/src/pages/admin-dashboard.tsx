@@ -310,7 +310,6 @@ export default function AdminDashboard() {
     'overview': 0,
     'analytics': 0,
     'financial': pendingCounts.deposits + pendingCounts.withdrawals,
-    'trading': pendingCounts.trades + pendingCounts.futures,
     'orders': 0,
     'pending-orders': pendingCounts.trades,
     'activity': 0,
@@ -821,7 +820,7 @@ export default function AdminDashboard() {
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-[#111] border border-[#1e1e1e] rounded-xl p-1 h-auto flex flex-wrap gap-1">
-                {['overview', 'analytics', 'financial', 'trading', 'orders', 'pending-orders', 'activity'].map(tab => {
+                {['overview', 'analytics', 'financial', 'orders', 'pending-orders', 'activity'].map(tab => {
                   const badge = tabBadges[tab] || 0;
                   const label = tab === 'pending-orders' ? 'Pending Orders' : tab;
                   return (
@@ -1658,34 +1657,6 @@ export default function AdminDashboard() {
                   ) : (
                     <p className="text-xs text-gray-500">No fee data available yet.</p>
                   )}
-                </div>
-              </TabsContent>
-
-              {/* ===== TRADING TAB ===== */}
-              <TabsContent value="trading" className="space-y-5 mt-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <StatCard icon={<BarChart3 size={18} />} iconBg="bg-blue-500/10" iconColor="text-blue-400"
-                    label="Total Trades" value={formatNumber(stats.trading.totalTrades)} sub={`${stats.trading.completedTrades} completed`} />
-                  <StatCard icon={<DollarSign size={18} />} iconBg="bg-green-500/10" iconColor="text-green-400"
-                    label="Trade Volume" value={formatCurrency(stats.trading.totalVolume)} sub="All time" />
-                  <StatCard icon={<Zap size={18} />} iconBg="bg-purple-500/10" iconColor="text-purple-400"
-                    label="Futures Trades" value={formatNumber(stats.trading.totalFutures)} sub={`${stats.trading.activeFutures} active`} />
-                  <StatCard icon={<TrendingUp size={18} />} iconBg="bg-cyan-500/10" iconColor="text-cyan-400"
-                    label="Win Rate" value={`${stats.trading.futuresWinRate}%`} sub={`${stats.trading.futuresWins}W / ${stats.trading.futuresLosses}L`} />
-                </div>
-                <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4">Trading Volume (30 days)</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartVolTrend}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} interval="preserveStartEnd" />
-                        <YAxis tick={{ fontSize: 10, fill: '#666' }} />
-                        <Tooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="Volume" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
                 </div>
               </TabsContent>
 

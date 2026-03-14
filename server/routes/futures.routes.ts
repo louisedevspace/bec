@@ -523,6 +523,7 @@ export default function registerFuturesRoutes(app: Express) {
           profit_loss: netProfitLoss.toString(),
           fee_amount: feeAmount.toFixed(8),
           fee_rate: feeRate.toString(),
+          trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
         })
         .eq("id", tradeId);
 
@@ -537,6 +538,8 @@ export default function registerFuturesRoutes(app: Express) {
         exitPrice: currentPrice,
         feeAmount,
         feeRate,
+        balanceBefore: availableBalance,
+        balanceAfter: newBalance,
       });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -682,6 +685,7 @@ export default function registerFuturesRoutes(app: Express) {
               profit_loss: netProfitLoss,
               fee_amount: feeAmount.toFixed(8),
               fee_rate: feeRate.toString(),
+              trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
             })
             .eq("id", trade.id);
 

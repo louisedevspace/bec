@@ -31,6 +31,7 @@ interface FuturesTrade {
   profit_loss?: number;
   fee_amount?: string;
   fee_rate?: string;
+  trade_intervals?: { balance_before?: number; balance_after?: number };
   created_at: string;
   expires_at?: string;
 }
@@ -882,6 +883,7 @@ export default function FuturesPage() {
                   </div>
 
                   {/* Balance Impact */}
+                  {selectedTrade.trade_intervals?.balance_before != null && (
                   <div className={`rounded-xl p-3 border ${
                     selectedTrade.profit_loss >= 0
                       ? 'bg-green-500/5 border-green-500/20'
@@ -891,7 +893,7 @@ export default function FuturesPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider">Balance Before</span>
                         <span className="text-xs text-gray-300 tabular-nums">
-                          {formatUsdNumber(selectedTrade.amount - selectedTrade.profit_loss)} USDT
+                          {formatUsdNumber(selectedTrade.trade_intervals.balance_before!)} USDT
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -906,11 +908,12 @@ export default function FuturesPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance After</span>
                         <span className="text-sm text-white font-bold tabular-nums">
-                          {formatUsdNumber(selectedTrade.amount)} USDT
+                          {formatUsdNumber(selectedTrade.trade_intervals.balance_after ?? (selectedTrade.trade_intervals.balance_before! + selectedTrade.profit_loss))} USDT
                         </span>
                       </div>
                     </div>
                   </div>
+                  )}
                 </>
               )}
 
