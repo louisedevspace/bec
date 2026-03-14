@@ -97,19 +97,22 @@ export default function registerWalletRoutes(app: Express) {
         };
       });
 
-      // Calculate total deposits (all approved — from aggregate query)
+      // Calculate total deposits (all approved — use NET amount actually credited to portfolio)
       const totalDeposited = allApprovedDeposits
         .reduce((sum: number, d: any) => {
           const sym = (d.symbol || "USDT").toUpperCase();
           const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-          return sum + parseFloat(d.amount || "0") * price;
+          // Use net_amount (after fee) since that's what was actually credited
+          const amt = parseFloat(d.net_amount || d.amount || "0");
+          return sum + amt * price;
         }, 0);
 
-      // Calculate total withdrawals (all approved — from aggregate query)
+      // Calculate total withdrawals (all approved — use GROSS amount deducted from portfolio)
       const totalWithdrawn = allApprovedWithdrawals
         .reduce((sum: number, w: any) => {
           const sym = (w.symbol || "USDT").toUpperCase();
           const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+          // Use full amount since that's what was deducted from portfolio
           return sum + parseFloat(w.amount || "0") * price;
         }, 0);
 
@@ -380,7 +383,7 @@ export default function registerWalletRoutes(app: Express) {
       const [usersRes, portfoliosRes, depositsRes, withdrawalsRes, tradesRes, futuresRes, pricesRes] = await Promise.all([
         supabaseAdmin.from("users").select("*").neq("role", "admin").order("created_at", { ascending: false }),
         supabaseAdmin.from("portfolios").select("user_id, symbol, available, frozen"),
-        supabaseAdmin.from("deposit_requests").select("user_id, symbol, amount, status"),
+        supabaseAdmin.from("deposit_requests").select("user_id, symbol, amount, net_amount, status"),
         supabaseAdmin.from("withdraw_requests").select("user_id, symbol, amount, status"),
         supabaseAdmin.from("trades").select("user_id, symbol, side, amount, price, status"),
         supabaseAdmin.from("futures_trades").select("user_id, symbol, amount, status, final_result"),
@@ -427,13 +430,14 @@ export default function registerWalletRoutes(app: Express) {
           return { symbol: asset.symbol, available, frozen, total, usdValue };
         });
 
-        // Total deposited (approved)
+        // Total deposited (approved — use net amount credited)
         const totalDeposited = userDeposits
           .filter((d: any) => d.status === "approved")
           .reduce((sum: number, d: any) => {
             const sym = (d.symbol || "USDT").toUpperCase();
             const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-            return sum + parseFloat(d.amount || "0") * price;
+            const amt = parseFloat(d.net_amount || d.amount || "0");
+            return sum + amt * price;
           }, 0);
 
         // Total withdrawn (approved)
@@ -558,7 +562,8 @@ export default function registerWalletRoutes(app: Express) {
         .reduce((sum: number, d: any) => {
           const sym = (d.symbol || "USDT").toUpperCase();
           const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-          return sum + parseFloat(d.amount || "0") * price;
+          const amt = parseFloat(d.net_amount || d.amount || "0");
+          return sum + amt * price;
         }, 0);
 
       const totalWithdrawn = withdrawals
