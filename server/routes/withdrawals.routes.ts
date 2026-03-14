@@ -30,16 +30,17 @@ export default function registerWithdrawalsRoutes(app: Express) {
       }
 
       // Check balance
-      const { data: portfolio, error: portfolioError } = await supabaseAdmin
+      const { data: portfolioRows, error: portfolioError } = await supabaseAdmin
         .from("portfolios")
         .select("available")
         .eq("user_id", userId)
-        .eq("symbol", symbol)
-        .single();
+        .eq("symbol", symbol);
 
       if (portfolioError) {
         return res.status(500).json({ message: "Failed to fetch portfolio" });
       }
+
+      const portfolio = portfolioRows && portfolioRows.length > 0 ? portfolioRows[0] : null;
 
       const availableBalance = portfolio ? parseFloat(portfolio.available) : 0;
       if (amountNum > availableBalance) {
@@ -48,27 +49,59 @@ export default function registerWithdrawalsRoutes(app: Express) {
         });
       }
 
-      const feeRate = getServerConfig().withdrawalFeeRate;
+      // Get per-asset fee rate from deposit_addresses, fallback to global config
+      let feeRate = getServerConfig().withdrawalFeeRate;
+      const { data: assetConfig } = await supabaseAdmin
+        .from("deposit_addresses")
+        .select("withdrawal_fee_rate")
+        .eq("asset_symbol", symbol.toUpperCase())
+        .maybeSingle();
+      if (assetConfig && assetConfig.withdrawal_fee_rate != null && parseFloat(assetConfig.withdrawal_fee_rate) > 0) {
+        feeRate = parseFloat(assetConfig.withdrawal_fee_rate);
+      }
+
       const feeAmount = Math.max(0, amountNum * feeRate);
       const netAmount = Math.max(0, amountNum - feeAmount);
 
-      const withdrawData = {
+      const withdrawData: any = {
         user_id: userId,
         symbol: symbol.toUpperCase(),
         amount: amountNum.toString(),
-        fee_amount: feeAmount.toFixed(8),
-        fee_symbol: symbol.toUpperCase(),
-        fee_rate: feeRate.toFixed(8),
-        net_amount: netAmount.toFixed(8),
         wallet_address: walletAddress.trim(),
         status: "pending",
       };
 
-      let { data: withdrawRequest, error: insertError } = await supabaseAdmin
+      const withdrawDataWithFees: any = {
+        ...withdrawData,
+        fee_amount: feeAmount.toFixed(8),
+        fee_symbol: symbol.toUpperCase(),
+        fee_rate: feeRate.toFixed(8),
+        net_amount: netAmount.toFixed(8),
+      };
+
+      let withdrawRequest: any = null;
+      let insertError: any = null;
+
+      // Try insert with fee columns first
+      const result1 = await supabaseAdmin
         .from("withdraw_requests")
-        .insert(withdrawData)
+        .insert(withdrawDataWithFees)
         .select()
         .single();
+
+      if (result1.error) {
+        // Fallback: insert without fee columns
+        const result2 = await supabaseAdmin
+          .from("withdraw_requests")
+          .insert(withdrawData)
+          .select()
+          .single();
+        withdrawRequest = result2.data;
+        insertError = result2.error;
+      } else {
+        withdrawRequest = result1.data;
+        insertError = result1.error;
+      }
 
       // Handle duplicate key
       if (insertError && insertError.code === "23505") {
@@ -276,8 +309,9 @@ export default function registerWithdrawalsRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to update portfolio" });
           }
 
-          // Transaction record
-          const { error: transactionError } = await supabaseAdmin
+          // Transaction record — try with fee columns first, fallback without
+          let transactionError: any = null;
+          const txResult = await supabaseAdmin
             .from("transactions")
             .insert({
               user_id: withdrawRequest.user_id,
@@ -291,6 +325,20 @@ export default function registerWithdrawalsRoutes(app: Express) {
               status: "completed",
               address: "Manual withdrawal",
             });
+
+          if (txResult.error) {
+            const txBasic = await supabaseAdmin
+              .from("transactions")
+              .insert({
+                user_id: withdrawRequest.user_id,
+                type: "withdraw",
+                symbol: withdrawRequest.symbol,
+                amount: withdrawRequest.amount,
+                status: "completed",
+                address: "Manual withdrawal",
+              });
+            transactionError = txBasic.error;
+          }
 
           if (transactionError) {
             return res.status(500).json({ message: "Failed to create transaction" });

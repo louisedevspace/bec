@@ -24,6 +24,8 @@ interface DepositAddress {
   is_active: boolean;
   min_deposit: number | null;
   max_deposit: number | null;
+  deposit_fee_rate: number | null;
+  withdrawal_fee_rate: number | null;
   created_at: string;
   updated_at: string;
   updated_by?: string;
@@ -36,8 +38,8 @@ export default function AdminSettings() {
   const [error, setError] = useState<string | null>(null);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ address: '', network: '', min_deposit: '', max_deposit: '' });
-  const [newAddressForm, setNewAddressForm] = useState({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '' });
+  const [editForm, setEditForm] = useState({ address: '', network: '', min_deposit: '', max_deposit: '', deposit_fee_rate: '', withdrawal_fee_rate: '' });
+  const [newAddressForm, setNewAddressForm] = useState({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '', deposit_fee_rate: '', withdrawal_fee_rate: '' });
   const { copied, copyToClipboard } = useCopyToClipboard();
 
   const refreshDepositAddresses = async () => {
@@ -125,12 +127,14 @@ export default function AdminSettings() {
       network: address.network,
       min_deposit: address.min_deposit != null ? String(address.min_deposit) : '',
       max_deposit: address.max_deposit != null ? String(address.max_deposit) : '',
+      deposit_fee_rate: address.deposit_fee_rate != null && address.deposit_fee_rate > 0 ? String(address.deposit_fee_rate * 100) : '',
+      withdrawal_fee_rate: address.withdrawal_fee_rate != null && address.withdrawal_fee_rate > 0 ? String(address.withdrawal_fee_rate * 100) : '',
     });
   };
 
   const cancelEditing = () => {
     setEditingAddress(null);
-    setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '' });
+    setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '', deposit_fee_rate: '', withdrawal_fee_rate: '' });
   };
 
   const handleCopyAddress = async (address: string, assetSymbol: string) => {
@@ -157,27 +161,31 @@ export default function AdminSettings() {
           network: editForm.network,
           min_deposit: editForm.min_deposit || null,
           max_deposit: editForm.max_deposit || null,
+          deposit_fee_rate: editForm.deposit_fee_rate ? parseFloat(editForm.deposit_fee_rate) / 100 : 0,
+          withdrawal_fee_rate: editForm.withdrawal_fee_rate ? parseFloat(editForm.withdrawal_fee_rate) / 100 : 0,
         })
       });
 
       if (response.ok) {
         const result = await response.json();
-        setDepositAddresses(addresses => 
-          addresses.map(addr => 
-            addr.asset_symbol === assetSymbol 
+        setDepositAddresses(addresses =>
+          addresses.map(addr =>
+            addr.asset_symbol === assetSymbol
               ? {
                   ...addr,
                   address: editForm.address,
                   network: editForm.network,
                   min_deposit: editForm.min_deposit ? parseFloat(editForm.min_deposit) : null,
                   max_deposit: editForm.max_deposit ? parseFloat(editForm.max_deposit) : null,
+                  deposit_fee_rate: editForm.deposit_fee_rate ? parseFloat(editForm.deposit_fee_rate) / 100 : 0,
+                  withdrawal_fee_rate: editForm.withdrawal_fee_rate ? parseFloat(editForm.withdrawal_fee_rate) / 100 : 0,
                   updated_at: new Date().toISOString()
                 }
               : addr
           )
         );
         setEditingAddress(null);
-        setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '' });
+        setEditForm({ address: '', network: '', min_deposit: '', max_deposit: '', deposit_fee_rate: '', withdrawal_fee_rate: '' });
       } else {
         const error = await response.json();
         setError(error.message || 'Failed to update address');
@@ -201,6 +209,8 @@ export default function AdminSettings() {
         network: newAddressForm.network.trim(),
         min_deposit: newAddressForm.min_deposit || null,
         max_deposit: newAddressForm.max_deposit || null,
+        deposit_fee_rate: newAddressForm.deposit_fee_rate ? parseFloat(newAddressForm.deposit_fee_rate) / 100 : 0,
+        withdrawal_fee_rate: newAddressForm.withdrawal_fee_rate ? parseFloat(newAddressForm.withdrawal_fee_rate) / 100 : 0,
       };
 
       const response = await fetch(`/api/admin/deposit-addresses/${assetSymbol}`, {
@@ -231,7 +241,7 @@ export default function AdminSettings() {
         return [...addresses, result.address];
       });
 
-      setNewAddressForm({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '' });
+      setNewAddressForm({ asset_symbol: '', address: '', network: '', min_deposit: '', max_deposit: '', deposit_fee_rate: '', withdrawal_fee_rate: '' });
     } catch {
       setError('Failed to create address');
     }
@@ -376,6 +386,36 @@ export default function AdminSettings() {
                   />
                 </div>
                 <div className="flex items-end">
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div>
+                  <Label className="text-xs text-gray-500 mb-1 block">Deposit Fee (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={newAddressForm.deposit_fee_rate}
+                    onChange={(e) => setNewAddressForm({ ...newAddressForm, deposit_fee_rate: e.target.value })}
+                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    placeholder="e.g., 1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500 mb-1 block">Withdrawal Fee (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={newAddressForm.withdrawal_fee_rate}
+                    onChange={(e) => setNewAddressForm({ ...newAddressForm, withdrawal_fee_rate: e.target.value })}
+                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    placeholder="e.g., 0.5"
+                  />
+                </div>
+                <div className="flex items-end">
                   <Button
                     size="sm"
                     className="h-9 rounded-lg bg-orange-500 hover:bg-orange-600 w-full md:w-auto"
@@ -481,6 +521,34 @@ export default function AdminSettings() {
                             />
                           </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">Deposit Fee (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              value={editForm.deposit_fee_rate}
+                              onChange={(e) => setEditForm({ ...editForm, deposit_fee_rate: e.target.value })}
+                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              placeholder="e.g., 1.5"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">Withdrawal Fee (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              value={editForm.withdrawal_fee_rate}
+                              onChange={(e) => setEditForm({ ...editForm, withdrawal_fee_rate: e.target.value })}
+                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              placeholder="e.g., 0.5"
+                            />
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -524,6 +592,22 @@ export default function AdminSettings() {
                               <div>
                                 <span className="text-gray-400">Max: </span>
                                 <span className="text-orange-400 font-medium">{address.max_deposit} {address.asset_symbol}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {((address.deposit_fee_rate != null && address.deposit_fee_rate > 0) || (address.withdrawal_fee_rate != null && address.withdrawal_fee_rate > 0)) && (
+                          <div className="flex items-center gap-3 text-xs mt-1 pt-1 border-t border-[#1e1e1e]">
+                            {address.deposit_fee_rate != null && address.deposit_fee_rate > 0 && (
+                              <div>
+                                <span className="text-gray-400">Deposit Fee: </span>
+                                <span className="text-amber-400 font-medium">{(address.deposit_fee_rate * 100).toFixed(2)}%</span>
+                              </div>
+                            )}
+                            {address.withdrawal_fee_rate != null && address.withdrawal_fee_rate > 0 && (
+                              <div>
+                                <span className="text-gray-400">Withdrawal Fee: </span>
+                                <span className="text-amber-400 font-medium">{(address.withdrawal_fee_rate * 100).toFixed(2)}%</span>
                               </div>
                             )}
                           </div>

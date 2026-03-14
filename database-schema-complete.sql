@@ -104,12 +104,14 @@ CREATE TABLE IF NOT EXISTS deposit_addresses (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   min_deposit DECIMAL(20,8) DEFAULT NULL,
   max_deposit DECIMAL(20,8) DEFAULT NULL,
+  deposit_fee_rate DECIMAL(10,8) DEFAULT 0,
+  withdrawal_fee_rate DECIMAL(10,8) DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by TEXT
 );
 
--- Add min/max deposit columns if they don't exist
+-- Add columns that may not exist in older databases
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='min_deposit') THEN
@@ -117,6 +119,12 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='max_deposit') THEN
     ALTER TABLE deposit_addresses ADD COLUMN max_deposit DECIMAL(20,8) DEFAULT NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='deposit_fee_rate') THEN
+    ALTER TABLE deposit_addresses ADD COLUMN deposit_fee_rate DECIMAL(10,8) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_addresses' AND column_name='withdrawal_fee_rate') THEN
+    ALTER TABLE deposit_addresses ADD COLUMN withdrawal_fee_rate DECIMAL(10,8) DEFAULT 0;
   END IF;
 END $$;
 
@@ -168,6 +176,23 @@ CREATE TABLE IF NOT EXISTS transactions (
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add fee columns that may not exist in older databases
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='fee_amount') THEN
+    ALTER TABLE transactions ADD COLUMN fee_amount DECIMAL(20,8) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='fee_symbol') THEN
+    ALTER TABLE transactions ADD COLUMN fee_symbol TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='fee_rate') THEN
+    ALTER TABLE transactions ADD COLUMN fee_rate DECIMAL(10,8);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='net_amount') THEN
+    ALTER TABLE transactions ADD COLUMN net_amount DECIMAL(20,8);
+  END IF;
+END $$;
 
 -- Performance indexes for transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
@@ -460,6 +485,18 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='is_new') THEN
     ALTER TABLE deposit_requests ADD COLUMN is_new BOOLEAN DEFAULT TRUE;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='fee_amount') THEN
+    ALTER TABLE deposit_requests ADD COLUMN fee_amount DECIMAL(20,8) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='fee_symbol') THEN
+    ALTER TABLE deposit_requests ADD COLUMN fee_symbol TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='fee_rate') THEN
+    ALTER TABLE deposit_requests ADD COLUMN fee_rate DECIMAL(10,8);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='net_amount') THEN
+    ALTER TABLE deposit_requests ADD COLUMN net_amount DECIMAL(20,8);
+  END IF;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_user ON deposit_requests(user_id);
@@ -505,6 +542,18 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='is_new') THEN
     ALTER TABLE withdraw_requests ADD COLUMN is_new BOOLEAN DEFAULT TRUE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='fee_amount') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN fee_amount DECIMAL(20,8) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='fee_symbol') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN fee_symbol TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='fee_rate') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN fee_rate DECIMAL(10,8);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdraw_requests' AND column_name='net_amount') THEN
+    ALTER TABLE withdraw_requests ADD COLUMN net_amount DECIMAL(20,8);
   END IF;
 END $$;
 

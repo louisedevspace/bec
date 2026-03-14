@@ -13,7 +13,7 @@ import {
   RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, CreditCard, Snowflake, BarChart3, Activity,
-  DollarSign, Target, Award, Percent, ArrowDown, ArrowUp
+  DollarSign, Target, Award, Percent, ArrowDown, ArrowUp, Info, X
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -835,6 +835,8 @@ export default function WalletPage() {
 }
 
 function TransactionList({ transactions, hideBalances }: { transactions: WalletTransaction[]; hideBalances: boolean }) {
+  const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
+
   if (transactions.length === 0) {
     return <p className="text-gray-600 text-sm text-center py-6">No transactions found</p>;
   }
@@ -864,54 +866,179 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
   };
 
   return (
-    <div className="space-y-2">
-      {transactions.map(tx => {
-        const config = getTypeConfig(tx);
-        const Icon = config.icon;
-        return (
-          <div key={tx.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#1a1a1a]/50 transition-colors">
-            <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
-              <Icon size={16} className={config.color} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white">{config.label}</span>
-                <CryptoIcon symbol={tx.symbol?.split("/")[0] || tx.symbol} size="xs" />
-                <span className="text-xs text-gray-500">{tx.symbol}</span>
+    <>
+      <div className="space-y-2">
+        {transactions.map(tx => {
+          const config = getTypeConfig(tx);
+          const Icon = config.icon;
+          return (
+            <div key={tx.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#1a1a1a]/50 transition-colors">
+              <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                <Icon size={16} className={config.color} />
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-gray-600">
-                  {formatDateTime(tx.date)}
-                </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusColor(tx.status)}`}>
-                  {tx.status}
-                </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-white">{config.label}</span>
+                  <CryptoIcon symbol={tx.symbol?.split("/")[0] || tx.symbol} size="xs" />
+                  <span className="text-xs text-gray-500">{tx.symbol}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-gray-600">
+                    {formatDateTime(tx.date)}
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusColor(tx.status)}`}>
+                    {tx.status}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 flex items-center gap-2">
+                <div>
+                  <p className={`text-sm font-medium tabular-nums ${
+                    tx.type === "deposit" ? "text-green-400" :
+                    tx.type === "withdrawal" ? "text-red-400" : "text-white"
+                  }`}>
+                    {hideBalances ? "••••" : `${tx.type === "deposit" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
+                  </p>
+                  {!hideBalances && typeof tx.feeAmount === "number" && tx.feeAmount > 0 && (
+                    <p className="text-[10px] text-amber-400">
+                      Fee: {formatCryptoNumber(tx.feeAmount)} {tx.feeSymbol || tx.symbol}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedTx(tx)}
+                  className="w-6 h-6 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#222] transition-colors flex-shrink-0"
+                >
+                  <Info size={12} className="text-gray-400" />
+                </button>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <p className={`text-sm font-medium tabular-nums ${
-                tx.type === "deposit" ? "text-green-400" :
-                tx.type === "withdrawal" ? "text-red-400" : "text-white"
-              }`}>
-                {hideBalances ? "••••" : `${tx.type === "deposit" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
-              </p>
-              {!hideBalances && typeof tx.feeAmount === "number" && tx.feeAmount > 0 && (
-                <p className="text-[10px] text-amber-400">
-                  Fee: {formatCryptoNumber(tx.feeAmount)} {tx.feeSymbol || tx.symbol}
-                </p>
+          );
+        })}
+      </div>
+
+      {/* Transaction Detail Modal */}
+      {selectedTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setSelectedTx(null)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative bg-[#111] border border-[#1e1e1e] rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#1e1e1e]">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl ${getTypeConfig(selectedTx).bg} flex items-center justify-center`}>
+                  {(() => { const Ic = getTypeConfig(selectedTx).icon; return <Ic size={18} className={getTypeConfig(selectedTx).color} />; })()}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">{getTypeConfig(selectedTx).label}</h3>
+                  <p className="text-[10px] text-gray-500">ID: #{selectedTx.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedTx(null)} className="w-7 h-7 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#222] transition-colors">
+                <X size={14} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              {/* Status & Date */}
+              <div className="flex items-center justify-between">
+                <span className={`text-xs px-2 py-1 rounded-lg font-medium ${getStatusColor(selectedTx.status)}`}>
+                  {selectedTx.status}
+                </span>
+                <span className="text-xs text-gray-500">{formatDateTime(selectedTx.date)}</span>
+              </div>
+
+              {/* Asset Info */}
+              <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <CryptoIcon symbol={selectedTx.symbol?.split("/")[0] || selectedTx.symbol} size="sm" />
+                  <span className="text-sm font-medium text-white">{selectedTx.symbol}</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Amount</span>
+                    <span className={`font-medium ${selectedTx.type === "deposit" ? "text-green-400" : selectedTx.type === "withdrawal" ? "text-red-400" : "text-white"}`}>
+                      {selectedTx.type === "deposit" ? "+" : selectedTx.type === "withdrawal" ? "-" : ""}{formatCryptoNumber(selectedTx.amount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}
+                    </span>
+                  </div>
+                  {selectedTx.price != null && selectedTx.price > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Price</span>
+                      <span className="text-white">${formatUsdNumber(selectedTx.price)}</span>
+                    </div>
+                  )}
+                  {selectedTx.price != null && selectedTx.price > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Total Value</span>
+                      <span className="text-white">${formatUsdNumber(selectedTx.amount * selectedTx.price)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fee Breakdown */}
+              {typeof selectedTx.feeAmount === "number" && selectedTx.feeAmount > 0 && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Fee Breakdown</p>
+                  <div className="space-y-2">
+                    {selectedTx.feeRate != null && selectedTx.feeRate > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Fee Rate</span>
+                        <span className="text-amber-400">{(selectedTx.feeRate * 100).toFixed(2)}%</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Fee Amount</span>
+                      <span className="text-amber-400">-{formatCryptoNumber(selectedTx.feeAmount)} {selectedTx.feeSymbol || selectedTx.symbol}</span>
+                    </div>
+                    {typeof selectedTx.netAmount === "number" && selectedTx.netAmount > 0 && (
+                      <div className="flex justify-between text-xs pt-2 border-t border-[#1e1e1e]">
+                        <span className="text-gray-500">Net Amount</span>
+                        <span className="text-white font-medium">{formatCryptoNumber(selectedTx.netAmount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-              {!hideBalances && typeof tx.netAmount === "number" && tx.netAmount > 0 && ["deposit", "withdrawal"].includes(tx.type) && (
-                <p className="text-[10px] text-gray-500">
-                  Net: {formatCryptoNumber(tx.netAmount)} {tx.symbol}
-                </p>
+
+              {/* No Fee Info */}
+              {(selectedTx.feeAmount == null || selectedTx.feeAmount === 0) && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Fee Info</p>
+                  <p className="text-xs text-green-400">No fee applied to this transaction</p>
+                </div>
               )}
-              {tx.price && !hideBalances && (
-                <p className="text-[10px] text-gray-600">@${formatUsdNumber(tx.price)}</p>
+
+              {/* Additional Info */}
+              {(selectedTx.walletAddress || selectedTx.result || selectedTx.side) && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Additional Details</p>
+                  <div className="space-y-2">
+                    {selectedTx.side && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Side</span>
+                        <span className="text-white">{selectedTx.side.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {selectedTx.result && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Result</span>
+                        <span className={selectedTx.result === "win" ? "text-green-400" : "text-red-400"}>{selectedTx.result.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {selectedTx.walletAddress && (
+                      <div className="text-xs">
+                        <span className="text-gray-500 block mb-1">Wallet Address</span>
+                        <span className="text-gray-300 font-mono text-[10px] break-all bg-[#0d0d0d] px-2 py-1 rounded-lg border border-[#1e1e1e] block">{selectedTx.walletAddress}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -218,7 +218,17 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(400).json({ message: "Deposit request has already been reviewed" });
       }
 
-      const feeRate = getServerConfig().depositFeeRate;
+      // Get per-asset fee rate from deposit_addresses, fallback to global config
+      let feeRate = getServerConfig().depositFeeRate;
+      const { data: assetConfig } = await supabaseAdmin
+        .from("deposit_addresses")
+        .select("deposit_fee_rate")
+        .eq("asset_symbol", depositRequest.symbol)
+        .maybeSingle();
+      if (assetConfig && assetConfig.deposit_fee_rate != null && parseFloat(assetConfig.deposit_fee_rate) > 0) {
+        feeRate = parseFloat(assetConfig.deposit_fee_rate);
+      }
+
       const grossAmount = parseFloat(depositRequest.amount || "0");
       const feeAmount = action === "approve" ? Math.max(0, grossAmount * feeRate) : 0;
       const netAmount = action === "approve" ? Math.max(0, grossAmount - feeAmount) : grossAmount;
@@ -228,10 +238,6 @@ export default function registerDepositsRoutes(app: Express) {
         admin_notes: adminNotes,
         reviewed_at: new Date().toISOString(),
         reviewed_by: currentUserId,
-        fee_amount: feeAmount.toFixed(8),
-        fee_symbol: depositRequest.symbol,
-        fee_rate: feeRate.toFixed(8),
-        net_amount: netAmount.toFixed(8),
       };
 
       if (action === "reject") {
@@ -239,12 +245,40 @@ export default function registerDepositsRoutes(app: Express) {
         updateData.require_reverification = requireReverification || false;
       }
 
-      const { data: updatedRequest, error: updateError } = await supabaseAdmin
+      // Try to include fee columns (may not exist in older databases)
+      const feeUpdateData: any = {
+        ...updateData,
+        fee_amount: feeAmount.toFixed(8),
+        fee_symbol: depositRequest.symbol,
+        fee_rate: feeRate.toFixed(8),
+        net_amount: netAmount.toFixed(8),
+      };
+
+      let updatedRequest: any = null;
+      let updateError: any = null;
+
+      // Attempt update with fee columns first
+      const result1 = await supabaseAdmin
         .from("deposit_requests")
-        .update(updateData)
+        .update(feeUpdateData)
         .eq("id", requestId)
         .select()
         .single();
+
+      if (result1.error) {
+        // Fallback: update without fee columns (columns may not exist yet)
+        const result2 = await supabaseAdmin
+          .from("deposit_requests")
+          .update(updateData)
+          .eq("id", requestId)
+          .select()
+          .single();
+        updatedRequest = result2.data;
+        updateError = result2.error;
+      } else {
+        updatedRequest = result1.data;
+        updateError = result1.error;
+      }
 
       if (updateError) {
         return res.status(500).json({ message: "Failed to update deposit request" });
@@ -288,8 +322,9 @@ export default function registerDepositsRoutes(app: Express) {
           return res.status(500).json({ message: "Failed to update portfolio", error: portfolioError.message });
         }
 
-        // Transaction record
-        const { error: transactionError } = await supabaseAdmin
+        // Transaction record — try with fee columns first, fallback without
+        let transactionError: any = null;
+        const txWithFees = await supabaseAdmin
           .from("transactions")
           .insert({
             user_id: depositRequest.user_id,
@@ -303,6 +338,21 @@ export default function registerDepositsRoutes(app: Express) {
             status: "completed",
             address: "Manual approval",
           });
+
+        if (txWithFees.error) {
+          // Fallback: insert without fee columns
+          const txBasic = await supabaseAdmin
+            .from("transactions")
+            .insert({
+              user_id: depositRequest.user_id,
+              type: "deposit",
+              symbol: depositRequest.symbol,
+              amount: grossAmount.toFixed(8),
+              status: "completed",
+              address: "Manual approval",
+            });
+          transactionError = txBasic.error;
+        }
 
         if (transactionError) {
           return res.status(500).json({ message: "Failed to create transaction" });
@@ -392,7 +442,7 @@ export default function registerDepositsRoutes(app: Express) {
   app.put("/api/admin/deposit-addresses/:asset", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { asset } = req.params;
-      const { address, network, min_deposit, max_deposit } = req.body;
+      const { address, network, min_deposit, max_deposit, deposit_fee_rate, withdrawal_fee_rate } = req.body;
       const assetSymbol = asset.toUpperCase();
 
       const validationError = validateDepositAddress(assetSymbol, address, network);
@@ -414,6 +464,16 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(400).json({ message: "Minimum deposit must be less than maximum deposit" });
       }
 
+      const depFeeRate = deposit_fee_rate !== undefined && deposit_fee_rate !== null && deposit_fee_rate !== '' ? parseFloat(deposit_fee_rate) : 0;
+      const wdFeeRate = withdrawal_fee_rate !== undefined && withdrawal_fee_rate !== null && withdrawal_fee_rate !== '' ? parseFloat(withdrawal_fee_rate) : 0;
+
+      if (isNaN(depFeeRate) || depFeeRate < 0 || depFeeRate > 1) {
+        return res.status(400).json({ message: "Deposit fee rate must be between 0 and 1 (e.g., 0.01 = 1%)" });
+      }
+      if (isNaN(wdFeeRate) || wdFeeRate < 0 || wdFeeRate > 1) {
+        return res.status(400).json({ message: "Withdrawal fee rate must be between 0 and 1 (e.g., 0.01 = 1%)" });
+      }
+
       const { data: existing, error: existingError } = await supabaseAdmin
         .from("deposit_addresses")
         .select("*")
@@ -433,6 +493,8 @@ export default function registerDepositsRoutes(app: Express) {
             network,
             min_deposit: minDep,
             max_deposit: maxDep,
+            deposit_fee_rate: depFeeRate,
+            withdrawal_fee_rate: wdFeeRate,
             updated_at: new Date().toISOString(),
             updated_by: req.user.id,
           },
