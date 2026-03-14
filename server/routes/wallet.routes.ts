@@ -20,6 +20,10 @@ export default function registerWalletRoutes(app: Express) {
         portfolioRes, pricesRes, stakingRes,
         // Aggregate queries — ALL matching records for accurate totals
         allApprovedDepositsRes, allApprovedWithdrawalsRes, allCompletedTradesRes, allCompletedFuturesRes,
+        // All trades/futures (any status) for analytics
+        allTradesAnyStatusRes, allFuturesAnyStatusRes,
+        // Fee records from platform_fees
+        platformFeesRes,
         // Transaction list queries — limited for display
         recentDepositsRes, recentWithdrawalsRes, recentTradesRes, recentFuturesRes,
       ] = await Promise.all([
@@ -29,8 +33,13 @@ export default function registerWalletRoutes(app: Express) {
         // Aggregates: only columns needed for math, status-filtered, no limit
         supabaseAdmin.from("deposit_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved"),
         supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved"),
-        supabaseAdmin.from("trades").select("side, amount, price").eq("user_id", userId).in("status", ["completed", "approved"]),
-        supabaseAdmin.from("futures_trades").select("final_result").eq("user_id", userId).in("status", ["completed", "closed"]),
+        supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]),
+        supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]),
+        // All trades/futures regardless of status for total counts
+        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId),
+        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId),
+        // Platform fees for this user
+        supabaseAdmin.from("platform_fees").select("trade_type, fee_amount, fee_symbol, created_at").eq("user_id", userId),
         // Transaction list: full columns, limited for display
         supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
         supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
@@ -50,6 +59,10 @@ export default function registerWalletRoutes(app: Express) {
       const allApprovedWithdrawals = allApprovedWithdrawalsRes.data || [];
       const allCompletedTrades = allCompletedTradesRes.data || [];
       const allCompletedFutures = allCompletedFuturesRes.data || [];
+      // All trades/futures for analytics
+      const allTradesAny = allTradesAnyStatusRes.data || [];
+      const allFuturesAny = allFuturesAnyStatusRes.data || [];
+      const platformFees = platformFeesRes.data || [];
       // Recent transactions for display
       const deposits = recentDepositsRes.data || [];
       const withdrawals = recentWithdrawalsRes.data || [];
@@ -188,6 +201,143 @@ export default function registerWalletRoutes(app: Express) {
         .eq("id", userId)
         .maybeSingle();
 
+      // ===== ANALYTICS COMPUTATION =====
+
+      // --- Fee Summary ---
+      let totalTradingFees = 0, totalDepositFees = 0, totalWithdrawalFees = 0;
+      for (const f of platformFees) {
+        const amt = parseFloat(f.fee_amount || "0");
+        if (f.trade_type === "spot") totalTradingFees += amt;
+        else if (f.trade_type === "deposit") totalDepositFees += amt;
+        else if (f.trade_type === "withdrawal") totalWithdrawalFees += amt;
+      }
+      // Also sum from source tables as fallback (platform_fees might be incomplete for older records)
+      if (totalTradingFees === 0) {
+        totalTradingFees = allCompletedTrades.reduce((s: number, t: any) => s + parseFloat(t.fee_amount || "0"), 0);
+      }
+      if (totalDepositFees === 0) {
+        totalDepositFees = allApprovedDeposits.reduce((s: number, d: any) => s + parseFloat(d.fee_amount || "0"), 0);
+      }
+      if (totalWithdrawalFees === 0) {
+        totalWithdrawalFees = allApprovedWithdrawals.reduce((s: number, w: any) => s + parseFloat(w.fee_amount || "0"), 0);
+      }
+      const totalFeesAll = totalTradingFees + totalDepositFees + totalWithdrawalFees;
+
+      // --- Trade Analytics ---
+      const executedTrades = allTradesAny.filter((t: any) => ["completed", "approved", "executed", "filled"].includes(t.status));
+      const buyTrades = executedTrades.filter((t: any) => t.side === "buy");
+      const sellTrades = executedTrades.filter((t: any) => t.side === "sell");
+
+      let totalBuyVolume = 0, totalSellVolume = 0;
+      for (const t of buyTrades) {
+        totalBuyVolume += parseFloat(t.amount || "0") * parseFloat(t.price || "0");
+      }
+      for (const t of sellTrades) {
+        totalSellVolume += parseFloat(t.amount || "0") * parseFloat(t.price || "0");
+      }
+
+      // Profitable vs unprofitable sell trades (compare sell value vs average buy cost)
+      const profitableTrades = sellTrades.filter((t: any) => {
+        const sellValue = parseFloat(t.amount || "0") * parseFloat(t.price || "0");
+        const fee = parseFloat(t.fee_amount || "0");
+        return (sellValue - fee) > 0;
+      }).length;
+
+      // Average trade size
+      const avgTradeSize = executedTrades.length > 0
+        ? executedTrades.reduce((s: number, t: any) => s + parseFloat(t.amount || "0") * parseFloat(t.price || "0"), 0) / executedTrades.length
+        : 0;
+
+      // Most traded symbols
+      const symbolCounts: Record<string, { count: number; volume: number }> = {};
+      for (const t of executedTrades) {
+        const sym = t.symbol || "Unknown";
+        if (!symbolCounts[sym]) symbolCounts[sym] = { count: 0, volume: 0 };
+        symbolCounts[sym].count++;
+        symbolCounts[sym].volume += parseFloat(t.amount || "0") * parseFloat(t.price || "0");
+      }
+      const topTradedPairs = Object.entries(symbolCounts)
+        .map(([symbol, data]) => ({ symbol, count: data.count, volume: data.volume }))
+        .sort((a, b) => b.volume - a.volume)
+        .slice(0, 5);
+
+      // --- Futures Analytics ---
+      const completedFutures = allFuturesAny.filter((f: any) => ["completed", "closed"].includes(f.status));
+      const futuresWins = completedFutures.filter((f: any) => parseFloat(f.final_result || "0") > 0).length;
+      const futuresLosses = completedFutures.filter((f: any) => parseFloat(f.final_result || "0") < 0).length;
+      const futuresVolume = completedFutures.reduce((s: number, f: any) => s + parseFloat(f.amount || "0"), 0);
+      const biggestWin = completedFutures.reduce((max: number, f: any) => Math.max(max, parseFloat(f.final_result || "0")), 0);
+      const biggestLoss = completedFutures.reduce((min: number, f: any) => Math.min(min, parseFloat(f.final_result || "0")), 0);
+
+      // --- Monthly Performance (last 6 months) ---
+      const now = new Date();
+      const monthlyPerformance: { month: string; trades: number; volume: number; pnl: number; fees: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = d.toISOString();
+        const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+        const label = d.toLocaleString("default", { month: "short", year: "2-digit" });
+
+        const monthTrades = executedTrades.filter((t: any) => t.created_at >= monthStart && t.created_at < monthEnd);
+        const monthVolume = monthTrades.reduce((s: number, t: any) => s + parseFloat(t.amount || "0") * parseFloat(t.price || "0"), 0);
+        const monthPnl = monthTrades.reduce((s: number, t: any) => {
+          const val = parseFloat(t.amount || "0") * parseFloat(t.price || "0");
+          return s + (t.side === "sell" ? val : -val);
+        }, 0);
+        const monthFees = monthTrades.reduce((s: number, t: any) => s + parseFloat(t.fee_amount || "0"), 0);
+
+        monthlyPerformance.push({ month: label, trades: monthTrades.length, volume: monthVolume, pnl: monthPnl, fees: monthFees });
+      }
+
+      // --- Counts (all statuses) ---
+      const totalTradesAll = allTradesAny.length;
+      const totalFuturesAll = allFuturesAny.length;
+      const pendingTradesCount = allTradesAny.filter((t: any) => ["pending", "pending_approval"].includes(t.status)).length;
+      const cancelledTradesCount = allTradesAny.filter((t: any) => ["cancelled", "rejected"].includes(t.status)).length;
+
+      // Build analytics object
+      const analytics = {
+        fees: {
+          total: totalFeesAll,
+          trading: totalTradingFees,
+          deposit: totalDepositFees,
+          withdrawal: totalWithdrawalFees,
+        },
+        trading: {
+          totalTrades: totalTradesAll,
+          executedTrades: executedTrades.length,
+          pendingTrades: pendingTradesCount,
+          cancelledTrades: cancelledTradesCount,
+          buyCount: buyTrades.length,
+          sellCount: sellTrades.length,
+          buyVolume: totalBuyVolume,
+          sellVolume: totalSellVolume,
+          totalVolume: totalBuyVolume + totalSellVolume,
+          avgTradeSize,
+          profitableTrades,
+          topTradedPairs,
+        },
+        futures: {
+          totalFutures: totalFuturesAll,
+          completedFutures: completedFutures.length,
+          wins: futuresWins,
+          losses: futuresLosses,
+          winRate: completedFutures.length > 0 ? (futuresWins / completedFutures.length) * 100 : 0,
+          totalVolume: futuresVolume,
+          pnl: futuresPnl,
+          biggestWin,
+          biggestLoss,
+        },
+        portfolio: {
+          totalAssets: assets.filter((a: any) => a.total > 0).length,
+          totalValue,
+          totalDeposited,
+          totalWithdrawn,
+          netFlow: totalDeposited - totalWithdrawn,
+        },
+        monthlyPerformance,
+      };
+
       res.json({
         assets: assets.sort((a: any, b: any) => b.usdValue - a.usdValue),
         totalValue,
@@ -210,6 +360,7 @@ export default function registerWalletRoutes(app: Express) {
           trades: trades.length,
           futures: futures.length,
         },
+        analytics,
       });
     } catch (err) {
       console.error("Wallet summary error:", err);
