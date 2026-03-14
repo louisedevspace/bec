@@ -44,6 +44,9 @@ export interface Trade {
   amount: string;
   price?: string;
   status: 'pending' | 'pending_approval' | 'approved' | 'rejected' | 'filled' | 'cancelled' | 'executed';
+  fee_amount?: string;
+  fee_rate?: string;
+  fee_symbol?: string;
   createdAt: string;
   userDetails?: UserDetails;
 }

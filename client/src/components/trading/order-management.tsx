@@ -138,6 +138,27 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     return formatPriceUtil(price);
   };
 
+  const formatFee = (order: Trade) => {
+    const feeAmount = parseFloat((order as any).fee_amount || '0');
+    if (!feeAmount || feeAmount <= 0) return null;
+    const feeSymbol = (order as any).fee_symbol || 'USDT';
+    return `${formatCryptoNumber(feeAmount)} ${feeSymbol}`;
+  };
+
+  const getTradeTotal = (order: Trade) => {
+    const amount = parseFloat(order.amount || '0');
+    const price = parseFloat(order.price || '0');
+    if (!amount || !price) return null;
+    const total = amount * price;
+    const feeAmount = parseFloat((order as any).fee_amount || '0');
+    if (order.side === 'buy' && feeAmount > 0) {
+      return `${formatCryptoNumber(total + feeAmount)} USDT`;
+    } else if (order.side === 'sell' && feeAmount > 0) {
+      return `${formatCryptoNumber(total - feeAmount)} USDT`;
+    }
+    return `${formatCryptoNumber(total)} USDT`;
+  };
+
   const handleCancelOrder = async (orderId: number) => {
     try {
       await cryptoApi.cancelTrade(orderId);
@@ -191,8 +212,8 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                  order.side === "buy" || order.side === "long" 
-                    ? "bg-green-500/10" 
+                  order.side === "buy" || order.side === "long"
+                    ? "bg-green-500/10"
                     : "bg-red-500/10"
                 }`}>
                   {getSideIcon(order.side)}
@@ -212,6 +233,19 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                   <div className="text-[11px] text-gray-500 mt-0.5">
                     {formatAmount(order.amount, order.symbol)} @ {formatPrice(order.price)}
                   </div>
+                  {/* Fee info for executed/completed trades */}
+                  {(order.status === "executed" || order.status === "filled") && formatFee(order) && (
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] text-amber-400/80">
+                        Fee: {formatFee(order)}
+                      </span>
+                      {getTradeTotal(order) && (
+                        <span className="text-[10px] text-gray-500">
+                          {order.side === "buy" ? "Total paid" : "Net received"}: {getTradeTotal(order)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

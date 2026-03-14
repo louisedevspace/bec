@@ -308,6 +308,21 @@ export default function registerDepositsRoutes(app: Express) {
           return res.status(500).json({ message: "Failed to create transaction" });
         }
 
+        // Record deposit fee as platform revenue
+        if (feeAmount > 0) {
+          await supabaseAdmin.from('platform_fees').insert({
+            user_id: depositRequest.user_id,
+            trade_id: parseInt(requestId, 10),
+            trade_type: 'deposit',
+            symbol: depositRequest.symbol,
+            fee_amount: feeAmount.toFixed(8),
+            fee_symbol: depositRequest.symbol,
+            fee_rate: feeRate.toFixed(8),
+          }).then(() => {}).catch(() => {
+            // Non-critical: don't fail the deposit if fee logging fails
+          });
+        }
+
         syncManager.syncPortfolioUpdated(depositRequest.user_id, {
           symbol: depositRequest.symbol,
           amount: depositAmount,
