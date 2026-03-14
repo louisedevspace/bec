@@ -29,6 +29,8 @@ interface FuturesTrade {
   is_loss?: boolean;
   loss_amount?: number;
   profit_loss?: number;
+  fee_amount?: string;
+  fee_rate?: string;
   created_at: string;
   expires_at?: string;
 }
@@ -754,97 +756,169 @@ export default function FuturesPage() {
                 ×
               </button>
             </div>
-            
+
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Trade ID</label>
-                  <div className="text-white font-medium text-sm mt-0.5">#{selectedTrade.id}</div>
+              {/* Trade Header */}
+              <div className="flex items-center gap-3 bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                <CryptoIcon symbol={selectedTrade.symbol.split('/')[0]} size="sm" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-semibold text-sm">{selectedTrade.symbol}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      selectedTrade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                    }`}>
+                      {selectedTrade.side.toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-gray-500">Trade #{selectedTrade.id}</span>
                 </div>
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Symbol</label>
-                  <div className="text-white font-medium text-sm mt-0.5">{selectedTrade.symbol}</div>
+                <div className={`text-xs font-medium px-2 py-1 rounded ${
+                  selectedTrade.status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                  selectedTrade.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                  selectedTrade.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-blue-500/10 text-blue-400'
+                }`}>
+                  {selectedTrade.status.charAt(0).toUpperCase() + selectedTrade.status.slice(1)}
                 </div>
               </div>
 
+              {/* Timestamps */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Side</label>
-                  <div className={`font-medium text-sm mt-0.5 ${selectedTrade.side === 'long' ? 'text-green-400' : 'text-red-400'}`}>
-                    {selectedTrade.side.toUpperCase()}
-                  </div>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.amount ? formatUsdNumber(selectedTrade.amount) : '0.00'} USDT
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Duration</label>
-                  <div className="text-white font-medium text-sm mt-0.5">{selectedTrade.duration || 0}s</div>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Profit Ratio</label>
-                  <div className="text-green-400 font-medium text-sm mt-0.5">{selectedTrade.profit_ratio || 0}%</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Price</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.entry_price ? formatUsdNumber(selectedTrade.entry_price) : 'N/A'}
-                  </div>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Exit Price</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
-                    {selectedTrade.exit_price ? formatUsdNumber(selectedTrade.exit_price) : 'N/A'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Start Time</label>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Opened</label>
                   <div className="text-white text-xs mt-0.5">
                     {formatDateTime(selectedTrade.created_at)}
                   </div>
                 </div>
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">End Time</label>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Closed</label>
                   <div className="text-white text-xs mt-0.5">
                     {formatDateTime(selectedTrade.expires_at)}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                <label className="text-[10px] text-gray-500 uppercase tracking-wider">Status</label>
-                <div className={`font-medium text-sm mt-0.5 ${
-                  selectedTrade.status === 'completed' ? 'text-green-400' : 
-                  selectedTrade.status === 'rejected' ? 'text-red-400' : 
-                  selectedTrade.status === 'pending' ? 'text-yellow-400' : 'text-blue-400'
-                }`}>
-                  {selectedTrade.status ? selectedTrade.status.charAt(0).toUpperCase() + selectedTrade.status.slice(1) : 'Unknown'}
+              {/* Trade Parameters */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
+                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
+                    {formatUsdNumber(selectedTrade.amount)}
+                  </div>
+                  <span className="text-[10px] text-gray-600">USDT</span>
+                </div>
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Duration</label>
+                  <div className="text-white font-semibold text-sm mt-0.5">{selectedTrade.duration || 0}s</div>
+                </div>
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Profit Ratio</label>
+                  <div className="text-green-400 font-semibold text-sm mt-0.5">{selectedTrade.profit_ratio || 0}%</div>
                 </div>
               </div>
 
-              {selectedTrade.final_amount !== undefined && selectedTrade.final_amount !== null && (
+              {/* Price Info */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Final Amount</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">{formatUsdNumber(selectedTrade.final_amount)} USDT</div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Price</label>
+                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
+                    ${selectedTrade.entry_price ? formatUsdNumber(selectedTrade.entry_price) : 'N/A'}
+                  </div>
                 </div>
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Exit Price</label>
+                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
+                    ${selectedTrade.exit_price ? formatUsdNumber(selectedTrade.exit_price) : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* P&L Breakdown - only for completed trades */}
+              {selectedTrade.status === 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
+                <>
+                  <div className="border-t border-[#1e1e1e] my-2" />
+                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#1e1e1e]">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">P&L Breakdown</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {/* Trade Cost */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Trade Amount</span>
+                        <span className="text-xs text-white tabular-nums">{formatUsdNumber(selectedTrade.amount)} USDT</span>
+                      </div>
+
+                      {/* Gross P&L (before fee) */}
+                      {(() => {
+                        const feeAmt = parseFloat(selectedTrade.fee_amount || '0');
+                        const grossPnl = selectedTrade.profit_loss + feeAmt;
+                        return (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">Gross P&L</span>
+                            <span className={`text-xs tabular-nums font-medium ${grossPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {grossPnl >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(grossPnl))} USDT
+                            </span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Fee */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Trading Fee {selectedTrade.fee_rate ? `(${(parseFloat(selectedTrade.fee_rate) * 100).toFixed(2)}%)` : ''}</span>
+                        <span className="text-xs text-amber-400 tabular-nums">
+                          -{formatUsdNumber(parseFloat(selectedTrade.fee_amount || '0'))} USDT
+                        </span>
+                      </div>
+
+                      <div className="border-t border-[#1e1e1e] my-1" />
+
+                      {/* Net P&L */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400 font-semibold">Net P&L</span>
+                        <span className={`text-sm tabular-nums font-bold ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Balance Impact */}
+                  <div className={`rounded-xl p-3 border ${
+                    selectedTrade.profit_loss >= 0
+                      ? 'bg-green-500/5 border-green-500/20'
+                      : 'bg-red-500/5 border-red-500/20'
+                  }`}>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Balance Before</span>
+                        <span className="text-xs text-gray-300 tabular-nums">
+                          {formatUsdNumber(selectedTrade.amount - selectedTrade.profit_loss)} USDT
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                          {selectedTrade.profit_loss >= 0 ? 'Profit (after fee)' : 'Loss (incl. fee)'}
+                        </span>
+                        <span className={`text-xs font-medium tabular-nums ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
+                        </span>
+                      </div>
+                      <div className="border-t border-[#1e1e1e] my-1" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance After</span>
+                        <span className="text-sm text-white font-bold tabular-nums">
+                          {formatUsdNumber(selectedTrade.amount)} USDT
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
+              {/* Simple P&L for non-completed or trades without breakdown */}
+              {selectedTrade.status !== 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
                 <div className={`rounded-xl p-3 border ${
-                  selectedTrade.profit_loss >= 0 
-                    ? 'bg-green-500/5 border-green-500/20' 
+                  selectedTrade.profit_loss >= 0
+                    ? 'bg-green-500/5 border-green-500/20'
                     : 'bg-red-500/5 border-red-500/20'
                 }`}>
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Profit/Loss</label>

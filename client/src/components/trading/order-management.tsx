@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserDataSync } from "@/hooks/use-data-sync";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { cryptoApi } from "@/services/crypto-api";
 import { formatCryptoNumber, formatPrice as formatPriceUtil } from "@/utils/format-utils";
@@ -16,6 +16,7 @@ interface OrderManagementProps {
 export function OrderManagement({ className = "" }: OrderManagementProps) {
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Trade | null>(null);
 
   // Get current user ID
   useEffect(() => {
@@ -259,6 +260,13 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                     {order.status.toUpperCase().replace('_', ' ')}
                   </span>
                 </div>
+                <button
+                  onClick={() => setSelectedOrder(order)}
+                  className="p-1 rounded-lg hover:bg-[#222] transition-colors"
+                  title="Trade details"
+                >
+                  <Info className="h-3.5 w-3.5 text-gray-500" />
+                </button>
                 {activeTab === "current" && order.status === "pending_approval" && (
                   <button
                     onClick={() => handleCancelOrder(order.id)}
@@ -305,11 +313,146 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
         </div>
       </div>
       <div className="px-4 pb-4">
-        {activeTab === "current" 
+        {activeTab === "current"
           ? renderOrderList(currentOrders, currentLoading, "No current orders found")
           : renderOrderList(orderHistory, historyLoading, "No order history found")
         }
       </div>
+
+      {/* Trade Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-5 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-base font-semibold text-white">Trade Details</h3>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-gray-400 transition-colors text-lg"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Trade Header */}
+              <div className="flex items-center gap-3 bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                <CryptoIcon symbol={selectedOrder.symbol?.split('/')[0] || selectedOrder.symbol} size="sm" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-semibold text-sm">{selectedOrder.symbol}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      selectedOrder.side === 'buy' || selectedOrder.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                    }`}>
+                      {selectedOrder.side.toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-gray-500">Order #{selectedOrder.id}</span>
+                </div>
+                <div className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(selectedOrder.status)}`}>
+                  {selectedOrder.status.toUpperCase().replace('_', ' ')}
+                </div>
+              </div>
+
+              {/* Timestamp */}
+              <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                <label className="text-[10px] text-gray-500 uppercase tracking-wider">Time Placed</label>
+                <div className="text-white text-xs mt-0.5">
+                  {formatDate((selectedOrder as any).created_at || selectedOrder.createdAt)}
+                </div>
+              </div>
+
+              {/* Trade Parameters */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
+                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
+                    {formatAmount(selectedOrder.amount, selectedOrder.symbol)}
+                  </div>
+                </div>
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Price</label>
+                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
+                    {formatPrice(selectedOrder.price)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cost / Value */}
+              {selectedOrder.price && (
+                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Trade Value</label>
+                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
+                    {formatCryptoNumber(parseFloat(selectedOrder.amount) * parseFloat(selectedOrder.price))} USDT
+                  </div>
+                </div>
+              )}
+
+              {/* Fee & Total Breakdown for executed trades */}
+              {(selectedOrder.status === "executed" || selectedOrder.status === "filled") && (
+                <>
+                  <div className="border-t border-[#1e1e1e] my-2" />
+                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#1e1e1e]">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Fee Breakdown</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {/* Trade Value */}
+                      {selectedOrder.price && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400">Trade Value</span>
+                          <span className="text-xs text-white tabular-nums">
+                            {formatCryptoNumber(parseFloat(selectedOrder.amount) * parseFloat(selectedOrder.price))} USDT
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Fee */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">
+                          Trading Fee {(selectedOrder as any).fee_rate ? `(${(parseFloat((selectedOrder as any).fee_rate) * 100).toFixed(2)}%)` : ''}
+                        </span>
+                        <span className="text-xs text-amber-400 tabular-nums">
+                          {formatFee(selectedOrder) ? `-${formatFee(selectedOrder)}` : '$0.00'}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-[#1e1e1e] my-1" />
+
+                      {/* Total */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400 font-semibold">
+                          {selectedOrder.side === 'buy' ? 'Total Paid' : 'Net Received'}
+                        </span>
+                        <span className="text-sm text-white font-bold tabular-nums">
+                          {getTradeTotal(selectedOrder) || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Pending status info */}
+              {(selectedOrder.status === "pending" || selectedOrder.status === "pending_approval") && (
+                <div className="bg-yellow-500/5 rounded-xl p-3 border border-yellow-500/10">
+                  <div className="text-xs text-yellow-400">
+                    This order is awaiting admin approval. Fees will be applied when the trade is executed.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5">
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="w-full bg-[#1e1e1e] hover:bg-[#2a2a2a] text-white rounded-xl py-2.5 text-sm border border-[#2a2a2a] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

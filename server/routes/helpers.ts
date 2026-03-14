@@ -1,7 +1,7 @@
 import { supabaseAdmin } from './middleware';
 import LiveCryptoService from '../services/live-crypto-service';
 
-async function getTradingFeeRate(symbol: string): Promise<number> {
+export async function getTradingFeeRate(symbol: string): Promise<number> {
   const { data: pairData } = await supabaseAdmin
     .from('trading_pairs')
     .select('trading_fee')

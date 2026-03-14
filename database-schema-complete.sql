@@ -231,6 +231,8 @@ CREATE TABLE IF NOT EXISTS futures_trades (
   entry_price DECIMAL(20,8),
   exit_price DECIMAL(20,8),
   profit_loss DECIMAL(20,8),
+  fee_amount DECIMAL(20,8) DEFAULT 0,
+  fee_rate DECIMAL(10,8),
   deleted_for_user BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   approved_at TIMESTAMPTZ,
@@ -255,6 +257,12 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='trade_intervals') THEN
     ALTER TABLE futures_trades ADD COLUMN trade_intervals JSONB;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='fee_amount') THEN
+    ALTER TABLE futures_trades ADD COLUMN fee_amount DECIMAL(20,8) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='futures_trades' AND column_name='fee_rate') THEN
+    ALTER TABLE futures_trades ADD COLUMN fee_rate DECIMAL(10,8);
   END IF;
 END $$;
 

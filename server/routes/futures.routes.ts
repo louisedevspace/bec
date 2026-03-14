@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, requireInternalTask, requireUnlockedWallet, requireVerifiedUser, supabaseAdmin } from "./middleware";
-import { updatePortfolioBalance } from "./helpers";
+import { updatePortfolioBalance, getTradingFeeRate } from "./helpers";
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 
@@ -59,12 +59,19 @@ export default function registerFuturesRoutes(app: Express) {
           ? currentPrice * (1 + parseFloat(futureTrade.profit_ratio) / 100)
           : currentPrice * (1 - parseFloat(futureTrade.profit_ratio) / 100);
 
+      // Apply trading fee
+      const feeRate = await getTradingFeeRate(futureTrade.symbol);
+      const feeAmount = parseFloat(futureTrade.amount) * feeRate;
+      const netProfit = profitAmount - feeAmount;
+
       const { data: updatedTrade, error: updateError } = await supabaseAdmin
         .from("futures_trades")
         .update({
           status: "completed",
           exit_price: exitPrice.toString(),
-          profit_loss: profitAmount.toString(),
+          profit_loss: netProfit.toString(),
+          fee_amount: feeAmount.toFixed(8),
+          fee_rate: feeRate.toString(),
           is_admin_approved: true,
         })
         .eq("id", tradeId)
@@ -99,7 +106,7 @@ export default function registerFuturesRoutes(app: Express) {
         }
       }
 
-      const newBalance = currentBalance + profitAmount;
+      const newBalance = currentBalance + netProfit;
       if (existingPortfolioId) {
         await supabaseAdmin
           .from("portfolios")
@@ -112,6 +119,19 @@ export default function registerFuturesRoutes(app: Express) {
           available: newBalance.toString(),
           frozen: "0",
         });
+      }
+
+      // Record fee in platform_fees
+      if (feeAmount > 0) {
+        await supabaseAdmin.from('platform_fees').insert({
+          user_id: futureTrade.user_id,
+          trade_id: tradeId,
+          trade_type: 'futures',
+          symbol: futureTrade.symbol,
+          fee_amount: feeAmount.toFixed(8),
+          fee_symbol: 'USDT',
+          fee_rate: feeRate.toString(),
+        }).catch(() => {});
       }
 
       res.json(updatedTrade);
@@ -474,15 +494,35 @@ export default function registerFuturesRoutes(app: Express) {
             : currentPrice * (1 - Math.abs(priceChange));
       }
 
-      const newBalance = availableBalance + profitLoss;
+      // Apply trading fee
+      const feeRate = await getTradingFeeRate(trade.symbol);
+      const feeAmount = tradeAmount * feeRate;
+      const netProfitLoss = profitLoss - feeAmount;
+
+      const newBalance = availableBalance + netProfitLoss;
       await updatePortfolioBalance(userId, "USDT", newBalance.toString());
+
+      // Record fee in platform_fees
+      if (feeAmount > 0) {
+        await supabaseAdmin.from('platform_fees').insert({
+          user_id: userId,
+          trade_id: trade.id,
+          trade_type: 'futures',
+          symbol: trade.symbol,
+          fee_amount: feeAmount.toFixed(8),
+          fee_symbol: 'USDT',
+          fee_rate: feeRate.toString(),
+        }).catch(() => {});
+      }
 
       const { error: updateError } = await supabaseAdmin
         .from("futures_trades")
         .update({
           status: "completed",
           exit_price: exitPrice.toString(),
-          profit_loss: profitLoss.toString(),
+          profit_loss: netProfitLoss.toString(),
+          fee_amount: feeAmount.toFixed(8),
+          fee_rate: feeRate.toString(),
         })
         .eq("id", tradeId);
 
@@ -493,8 +533,10 @@ export default function registerFuturesRoutes(app: Express) {
       res.json({
         message: "Trade completed successfully",
         isWin,
-        finalProfitLoss: profitLoss,
+        finalProfitLoss: netProfitLoss,
         exitPrice: currentPrice,
+        feeAmount,
+        feeRate,
       });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -611,12 +653,36 @@ export default function registerFuturesRoutes(app: Express) {
                 : currentPrice * (1 - Math.abs(priceChange));
           }
 
-          const newBalance = availableBalance + profitLoss;
+          // Apply trading fee
+          const feeRate = await getTradingFeeRate(trade.symbol);
+          const feeAmount = trade.amount * feeRate;
+          const netProfitLoss = profitLoss - feeAmount;
+
+          const newBalance = availableBalance + netProfitLoss;
           await updatePortfolioBalance(trade.user_id, "USDT", newBalance.toString());
+
+          // Record fee in platform_fees
+          if (feeAmount > 0) {
+            await supabaseAdmin.from('platform_fees').insert({
+              user_id: trade.user_id,
+              trade_id: trade.id,
+              trade_type: 'futures',
+              symbol: trade.symbol,
+              fee_amount: feeAmount.toFixed(8),
+              fee_symbol: 'USDT',
+              fee_rate: feeRate.toString(),
+            }).catch(() => {});
+          }
 
           await supabaseAdmin
             .from("futures_trades")
-            .update({ status: "completed", exit_price: exitPrice, profit_loss: profitLoss })
+            .update({
+              status: "completed",
+              exit_price: exitPrice,
+              profit_loss: netProfitLoss,
+              fee_amount: feeAmount.toFixed(8),
+              fee_rate: feeRate.toString(),
+            })
             .eq("id", trade.id);
 
           processedCount++;
