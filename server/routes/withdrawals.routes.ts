@@ -49,8 +49,8 @@ export default function registerWithdrawalsRoutes(app: Express) {
         });
       }
 
-      // Get per-asset fee rate from deposit_addresses, fallback to global config
-      let feeRate = getServerConfig().withdrawalFeeRate;
+      // Get per-asset fee rate ONLY from deposit_addresses settings
+      let feeRate = 0;
       const { data: assetConfig } = await supabaseAdmin
         .from("deposit_addresses")
         .select("withdrawal_fee_rate")

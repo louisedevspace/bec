@@ -33,6 +33,12 @@ interface DepositRequest {
   };
 }
 
+interface DepositAddressFee {
+  asset_symbol: string;
+  deposit_fee_rate: number | null;
+  withdrawal_fee_rate: number | null;
+}
+
 interface AdminDepositRequestsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,7 +59,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
+
       if (!token) throw new Error('No authentication token available');
 
       const response = await fetch(buildApiUrl('/admin/deposit-requests'), {
@@ -65,6 +71,29 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
     },
     enabled: isOpen
   });
+
+  // Fetch deposit address fee configs
+  const { data: feeConfigs } = useQuery({
+    queryKey: ['/api/admin/deposit-addresses/fees'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return [];
+      const response = await fetch(buildApiUrl('/admin/deposit-addresses'), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return (data.addresses || []) as DepositAddressFee[];
+    },
+    enabled: isOpen
+  });
+
+  const getFeeRate = (symbol: string): number => {
+    if (!feeConfigs) return 0;
+    const config = feeConfigs.find((c: DepositAddressFee) => c.asset_symbol === symbol);
+    return config?.deposit_fee_rate && config.deposit_fee_rate > 0 ? config.deposit_fee_rate : 0;
+  };
 
   const handleReview = (request: DepositRequest, reviewAction: 'approve' | 'reject') => {
     setSelectedRequest(request);
@@ -169,8 +198,14 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                           </h3>
                           {getStatusBadge(request.status)}
                         </div>
+                        {getFeeRate(request.symbol) > 0 && (
+                          <div className="flex items-center gap-3 text-xs mb-1">
+                            <span className="text-amber-400">Fee: {(getFeeRate(request.symbol) * 100).toFixed(2)}% ({(parseFloat(request.amount) * getFeeRate(request.symbol)).toFixed(4)} {request.symbol})</span>
+                            <span className="text-green-400">Net credit: {(parseFloat(request.amount) * (1 - getFeeRate(request.symbol))).toFixed(4)} {request.symbol}</span>
+                          </div>
+                        )}
                         <p className="text-sm text-gray-400">
-                          User: {request.users?.full_name || request.users?.email || (request.users?.display_id || request.user_id.substring(0, 8))} | 
+                          User: {request.users?.full_name || request.users?.email || (request.users?.display_id || request.user_id.substring(0, 8))} |
                           Submitted: {formatDateTime(request.submitted_at)}
                         </p>
                       </div>
@@ -242,7 +277,28 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                   <CryptoIcon symbol={selectedRequest.symbol} size="xs" />
                   Amount: {parseFloat(selectedRequest.amount).toFixed(8)} {selectedRequest.symbol}
                 </p>
-                <p className="text-base text-gray-400">
+                {action === 'approve' && getFeeRate(selectedRequest.symbol) > 0 && (() => {
+                  const gross = parseFloat(selectedRequest.amount);
+                  const rate = getFeeRate(selectedRequest.symbol);
+                  const fee = gross * rate;
+                  const net = gross - fee;
+                  return (
+                    <div className="space-y-1 mt-2 pt-2 border-t border-[#1e1e1e]">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Fee ({(rate * 100).toFixed(2)}%)</span>
+                        <span className="text-amber-400">-{fee.toFixed(4)} {selectedRequest.symbol}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium">
+                        <span className="text-gray-300">User will receive</span>
+                        <span className="text-green-400">{net.toFixed(4)} {selectedRequest.symbol}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {action === 'approve' && getFeeRate(selectedRequest.symbol) === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">No deposit fee configured for {selectedRequest.symbol}</p>
+                )}
+                <p className="text-base text-gray-400 mt-2">
                   User: {selectedRequest.users?.full_name || selectedRequest.users?.email || selectedRequest.user_id}
                 </p>
               </div>

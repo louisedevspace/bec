@@ -218,8 +218,8 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(400).json({ message: "Deposit request has already been reviewed" });
       }
 
-      // Get per-asset fee rate from deposit_addresses, fallback to global config
-      let feeRate = getServerConfig().depositFeeRate;
+      // Get per-asset fee rate ONLY from deposit_addresses settings
+      let feeRate = 0;
       const { data: assetConfig } = await supabaseAdmin
         .from("deposit_addresses")
         .select("deposit_fee_rate")
