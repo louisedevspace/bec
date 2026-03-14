@@ -712,7 +712,7 @@ CREATE TABLE IF NOT EXISTS news (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  type TEXT NOT NULL DEFAULT 'announcement', -- 'announcement', 'update', 'maintenance', 'feature'
+  type TEXT NOT NULL DEFAULT 'announcement', -- 'announcement', 'update', 'maintenance', 'feature', 'promotion', 'alert'
   priority TEXT NOT NULL DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
   image_url TEXT,
   background_color TEXT DEFAULT '#111111', -- Dark theme background
@@ -723,10 +723,47 @@ CREATE TABLE IF NOT EXISTS news (
   show_popup BOOLEAN DEFAULT TRUE,
   popup_delay INTEGER DEFAULT 2000, -- Delay in ms before showing popup
   auto_close INTEGER DEFAULT 0, -- Auto close after seconds, 0 = manual close only
-  target_users TEXT DEFAULT 'all', -- 'all', 'verified', 'unverified', 'traders', 'inactive'
+  target_users TEXT DEFAULT 'all', -- 'all', 'verified', 'unverified', 'traders', 'inactive', 'admins'
   start_date TIMESTAMPTZ DEFAULT NOW(),
   end_date TIMESTAMPTZ, -- NULL = no end date
+  category TEXT DEFAULT 'general', -- news category slug
+  tags TEXT[] DEFAULT '{}', -- array of tag strings
+  template_id INTEGER, -- FK to news_templates, NULL if not from template
+  view_count INTEGER DEFAULT 0, -- total impressions
+  click_count INTEGER DEFAULT 0, -- button/CTA clicks
+  dismiss_count INTEGER DEFAULT 0, -- manual dismissals
+  ab_variant TEXT, -- NULL or 'A'/'B' for A/B testing
+  ab_group_id TEXT, -- shared ID linking A/B variants
+  is_pinned BOOLEAN DEFAULT FALSE, -- pinned news stay at top
   created_by TEXT REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- News categories for organization
+CREATE TABLE IF NOT EXISTS news_categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  color TEXT DEFAULT '#3b82f6',
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- News templates for reusable layouts
+CREATE TABLE IF NOT EXISTS news_templates (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL DEFAULT 'announcement',
+  background_color TEXT DEFAULT '#111111',
+  text_color TEXT DEFAULT '#ffffff',
+  button_text TEXT DEFAULT 'Got it',
+  button_color TEXT DEFAULT '#3b82f6',
+  image_url TEXT,
+  category TEXT DEFAULT 'general',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -740,10 +777,26 @@ CREATE TABLE IF NOT EXISTS user_news_seen (
   UNIQUE(user_id, news_id)
 );
 
+-- News interaction events for analytics
+CREATE TABLE IF NOT EXISTS news_events (
+  id SERIAL PRIMARY KEY,
+  news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(id),
+  event_type TEXT NOT NULL, -- 'view', 'click', 'dismiss', 'auto_close'
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_news_active ON news(is_active, show_popup);
 CREATE INDEX IF NOT EXISTS idx_news_dates ON news(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_news_category ON news(category);
+CREATE INDEX IF NOT EXISTS idx_news_pinned ON news(is_pinned, priority);
+CREATE INDEX IF NOT EXISTS idx_news_ab_group ON news(ab_group_id) WHERE ab_group_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_user_news_seen ON user_news_seen(user_id, news_id);
+CREATE INDEX IF NOT EXISTS idx_news_events_news ON news_events(news_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_news_events_created ON news_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_news_categories_slug ON news_categories(slug);
+CREATE INDEX IF NOT EXISTS idx_news_templates_name ON news_templates(name);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_news_updated_at()
@@ -1306,18 +1359,74 @@ DROP POLICY IF EXISTS "Everyone can view active news" ON news;
 
 CREATE POLICY "Admins can manage news" ON news
   FOR ALL USING (
-    auth.role() = 'authenticated' AND 
+    auth.role() = 'authenticated' AND
     EXISTS (
-      SELECT 1 FROM users 
+      SELECT 1 FROM users
       WHERE users.id::text = auth.uid()::text AND users.role = 'admin'
     )
   );
 
 CREATE POLICY "Everyone can view active news" ON news
   FOR SELECT USING (
-    is_active = TRUE AND 
+    is_active = TRUE AND
     (end_date IS NULL OR end_date > NOW())
   );
+
+-- ----------------------------------------------------------
+-- 4.15a News Categories
+-- ----------------------------------------------------------
+ALTER TABLE news_categories ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage news categories" ON news_categories;
+DROP POLICY IF EXISTS "Everyone can view news categories" ON news_categories;
+
+CREATE POLICY "Admins can manage news categories" ON news_categories
+  FOR ALL USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id::text = auth.uid()::text AND users.role = 'admin'
+    )
+  );
+
+CREATE POLICY "Everyone can view news categories" ON news_categories
+  FOR SELECT USING (true);
+
+-- ----------------------------------------------------------
+-- 4.15b News Templates
+-- ----------------------------------------------------------
+ALTER TABLE news_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage news templates" ON news_templates;
+
+CREATE POLICY "Admins can manage news templates" ON news_templates
+  FOR ALL USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id::text = auth.uid()::text AND users.role = 'admin'
+    )
+  );
+
+-- ----------------------------------------------------------
+-- 4.15c News Events
+-- ----------------------------------------------------------
+ALTER TABLE news_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can view all news events" ON news_events;
+DROP POLICY IF EXISTS "Authenticated can insert news events" ON news_events;
+
+CREATE POLICY "Admins can view all news events" ON news_events
+  FOR SELECT USING (
+    auth.role() = 'authenticated' AND
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id::text = auth.uid()::text AND users.role = 'admin'
+    )
+  );
+
+CREATE POLICY "Authenticated can insert news events" ON news_events
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- ----------------------------------------------------------
 -- 4.16 User News Seen
@@ -1744,7 +1853,7 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - support_conversations, support_messages
 --   - audit_logs, platform_fees, admin_notifications
 --   - trading_pairs, user_trading_limits
---   - news, user_news_seen
+--   - news, user_news_seen, news_categories, news_templates, news_events
 --   - notification_templates, notification_campaigns, notification_logs
 --   - push_subscriptions
 --   - broadcast_notifications, broadcast_delivery_logs
@@ -1770,3 +1879,66 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 -- ************************************************************
 -- Add deeplink_url to broadcast_notifications if missing
 ALTER TABLE broadcast_notifications ADD COLUMN IF NOT EXISTS deeplink_url TEXT;
+
+-- News system migration helpers (safe to re-run)
+ALTER TABLE news ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'general';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS template_id INTEGER;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS click_count INTEGER DEFAULT 0;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS dismiss_count INTEGER DEFAULT 0;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS ab_variant TEXT;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS ab_group_id TEXT;
+ALTER TABLE news ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS news_categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  color TEXT DEFAULT '#3b82f6',
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS news_templates (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL DEFAULT 'announcement',
+  background_color TEXT DEFAULT '#111111',
+  text_color TEXT DEFAULT '#ffffff',
+  button_text TEXT DEFAULT 'Got it',
+  button_color TEXT DEFAULT '#3b82f6',
+  image_url TEXT,
+  category TEXT DEFAULT 'general',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS news_events (
+  id SERIAL PRIMARY KEY,
+  news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(id),
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_category ON news(category);
+CREATE INDEX IF NOT EXISTS idx_news_pinned ON news(is_pinned, priority);
+CREATE INDEX IF NOT EXISTS idx_news_ab_group ON news(ab_group_id) WHERE ab_group_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_news_events_news ON news_events(news_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_news_events_created ON news_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_news_categories_slug ON news_categories(slug);
+CREATE INDEX IF NOT EXISTS idx_news_templates_name ON news_templates(name);
+
+-- Insert default news categories
+INSERT INTO news_categories (name, slug, description, color, sort_order)
+VALUES
+  ('General', 'general', 'General announcements', '#3b82f6', 0),
+  ('Platform Updates', 'updates', 'Platform feature updates', '#8b5cf6', 1),
+  ('Maintenance', 'maintenance', 'Scheduled maintenance notices', '#f59e0b', 2),
+  ('Promotions', 'promotions', 'Special offers and promotions', '#10b981', 3),
+  ('Security', 'security', 'Security advisories', '#ef4444', 4)
+ON CONFLICT (slug) DO NOTHING;
