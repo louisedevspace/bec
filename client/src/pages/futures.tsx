@@ -75,6 +75,7 @@ export default function FuturesPage() {
   // Trade details modal state
   const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<FuturesTrade | null>(null);
+  const [selectedTradeNumber, setSelectedTradeNumber] = useState<number>(0);
 
   // Dynamic pair state
   const [futuresPairs, setFuturesPairs] = useState<FuturesPairOption[]>([]);
@@ -254,8 +255,9 @@ export default function FuturesPage() {
     fetchBalance();
   };
 
-  const handleShowTradeDetails = (trade: FuturesTrade) => {
+  const handleShowTradeDetails = (trade: FuturesTrade, tradeNumber: number) => {
     setSelectedTrade(trade);
+    setSelectedTradeNumber(tradeNumber);
     setShowTradeDetailsModal(true);
   };
 
@@ -651,7 +653,7 @@ export default function FuturesPage() {
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-xs text-yellow-500 font-medium bg-yellow-500/10 px-2 py-0.5 rounded">Pending</span>
                             <button
-                              onClick={() => handleShowTradeDetails(trade)}
+                              onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
                               className="p-1 rounded-lg hover:bg-[#222] transition-colors"
                             >
                               <Info className="h-3.5 w-3.5 text-gray-500" />
@@ -711,7 +713,7 @@ export default function FuturesPage() {
                               {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
                             </span>
                             <button
-                              onClick={() => handleShowTradeDetails(trade)}
+                              onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
                               className="p-1 rounded-lg hover:bg-[#222] transition-colors"
                             >
                               <Info className="h-3.5 w-3.5 text-gray-500" />
@@ -771,7 +773,7 @@ export default function FuturesPage() {
                       {selectedTrade.side.toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-[10px] text-gray-500">Trade #{selectedTrade.id}</span>
+                  <span className="text-[10px] text-gray-500">Trade #{selectedTradeNumber}</span>
                 </div>
                 <div className={`text-xs font-medium px-2 py-1 rounded ${
                   selectedTrade.status === 'completed' ? 'bg-green-500/10 text-green-400' :

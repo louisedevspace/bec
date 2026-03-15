@@ -17,6 +17,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Trade | null>(null);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState<number>(0);
 
   // Get current user ID
   useEffect(() => {
@@ -32,6 +33,14 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   // Use the comprehensive data sync hook
   useUserDataSync(userId || '', {
     enabled: !!userId
+  });
+
+  // Fetch all trades (for per-user numbering)
+  const { data: allOrders } = useQuery({
+    queryKey: ["/api/trades", userId, "all"],
+    queryFn: () => userId ? cryptoApi.getTrades(userId) : Promise.resolve([]),
+    enabled: !!userId,
+    refetchInterval: 10000,
   });
 
   // Fetch current orders (pending and pending_approval status)
@@ -106,6 +115,19 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     ) : (
       <TrendingDown size={14} className="text-red-500" />
     );
+  };
+
+  // Compute per-user order number (allOrders is sorted by created_at desc, so last = #1)
+  const getOrderNumber = (order: Trade): number => {
+    if (!allOrders || allOrders.length === 0) return order.id;
+    const idx = allOrders.findIndex(o => o.id === order.id);
+    if (idx === -1) return order.id;
+    return allOrders.length - idx;
+  };
+
+  const handleSelectOrder = (order: Trade) => {
+    setSelectedOrder(order);
+    setSelectedOrderNumber(getOrderNumber(order));
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -261,7 +283,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                   </span>
                 </div>
                 <button
-                  onClick={() => setSelectedOrder(order)}
+                  onClick={() => handleSelectOrder(order)}
                   className="p-1 rounded-lg hover:bg-[#222] transition-colors"
                   title="Trade details"
                 >
@@ -346,7 +368,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                       {selectedOrder.side.toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-[10px] text-gray-500">Order #{selectedOrder.id}</span>
+                  <span className="text-[10px] text-gray-500">Order #{selectedOrderNumber}</span>
                 </div>
                 <div className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(selectedOrder.status)}`}>
                   {selectedOrder.status.toUpperCase().replace('_', ' ')}

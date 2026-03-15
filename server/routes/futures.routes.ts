@@ -64,22 +64,42 @@ export default function registerFuturesRoutes(app: Express) {
       const feeAmount = parseFloat(futureTrade.amount) * feeRate;
       const netProfit = profitAmount - feeAmount;
 
-      const { data: updatedTrade, error: updateError } = await supabaseAdmin
-        .from("futures_trades")
-        .update({
-          status: "completed",
-          exit_price: exitPrice.toString(),
-          profit_loss: netProfit.toString(),
-          fee_amount: feeAmount.toFixed(8),
-          fee_rate: feeRate.toString(),
-          is_admin_approved: true,
-        })
-        .eq("id", tradeId)
-        .select()
-        .single();
+      // Try update with fee columns, fall back to basic update if columns don't exist
+      let updatedTrade: any = null;
+      try {
+        const { data, error } = await supabaseAdmin
+          .from("futures_trades")
+          .update({
+            status: "completed",
+            exit_price: exitPrice.toString(),
+            profit_loss: netProfit.toString(),
+            fee_amount: feeAmount.toFixed(8),
+            fee_rate: feeRate.toString(),
+            is_admin_approved: true,
+          })
+          .eq("id", tradeId)
+          .select()
+          .single();
 
-      if (updateError) {
-        return res.status(500).json({ message: "Failed to update future trade" });
+        if (error) throw error;
+        updatedTrade = data;
+      } catch {
+        const { data, error: fallbackError } = await supabaseAdmin
+          .from("futures_trades")
+          .update({
+            status: "completed",
+            exit_price: exitPrice.toString(),
+            profit_loss: netProfit.toString(),
+            is_admin_approved: true,
+          })
+          .eq("id", tradeId)
+          .select()
+          .single();
+
+        if (fallbackError) {
+          return res.status(500).json({ message: "Failed to update future trade" });
+        }
+        updatedTrade = data;
       }
 
       // Get and consolidate USDT portfolio
@@ -515,20 +535,39 @@ export default function registerFuturesRoutes(app: Express) {
         }).catch(() => {});
       }
 
-      const { error: updateError } = await supabaseAdmin
-        .from("futures_trades")
-        .update({
-          status: "completed",
-          exit_price: exitPrice.toString(),
-          profit_loss: netProfitLoss.toString(),
-          fee_amount: feeAmount.toFixed(8),
-          fee_rate: feeRate.toString(),
-          trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
-        })
-        .eq("id", tradeId);
+      // Try update with fee columns, fall back to basic update if columns don't exist
+      let updateError: any = null;
+      try {
+        const { error } = await supabaseAdmin
+          .from("futures_trades")
+          .update({
+            status: "completed",
+            exit_price: exitPrice.toString(),
+            profit_loss: netProfitLoss.toString(),
+            fee_amount: feeAmount.toFixed(8),
+            fee_rate: feeRate.toString(),
+            trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
+          })
+          .eq("id", tradeId);
+        updateError = error;
+      } catch {
+        updateError = { message: "columns_missing" };
+      }
 
+      // Fallback: update without fee/intervals columns if they don't exist
       if (updateError) {
-        return res.status(500).json({ message: "Failed to complete trade" });
+        const { error: fallbackError } = await supabaseAdmin
+          .from("futures_trades")
+          .update({
+            status: "completed",
+            exit_price: exitPrice.toString(),
+            profit_loss: netProfitLoss.toString(),
+          })
+          .eq("id", tradeId);
+
+        if (fallbackError) {
+          return res.status(500).json({ message: "Failed to complete trade" });
+        }
       }
 
       res.json({
@@ -677,17 +716,29 @@ export default function registerFuturesRoutes(app: Express) {
             }).catch(() => {});
           }
 
-          await supabaseAdmin
-            .from("futures_trades")
-            .update({
-              status: "completed",
-              exit_price: exitPrice,
-              profit_loss: netProfitLoss,
-              fee_amount: feeAmount.toFixed(8),
-              fee_rate: feeRate.toString(),
-              trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
-            })
-            .eq("id", trade.id);
+          // Try update with fee columns, fall back to basic update
+          try {
+            await supabaseAdmin
+              .from("futures_trades")
+              .update({
+                status: "completed",
+                exit_price: exitPrice,
+                profit_loss: netProfitLoss,
+                fee_amount: feeAmount.toFixed(8),
+                fee_rate: feeRate.toString(),
+                trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
+              })
+              .eq("id", trade.id);
+          } catch {
+            await supabaseAdmin
+              .from("futures_trades")
+              .update({
+                status: "completed",
+                exit_price: exitPrice,
+                profit_loss: netProfitLoss,
+              })
+              .eq("id", trade.id);
+          }
 
           processedCount++;
         } catch {
