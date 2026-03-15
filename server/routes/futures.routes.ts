@@ -535,6 +535,9 @@ export default function registerFuturesRoutes(app: Express) {
       const returnAmount = tradeAmount + netProfitLoss;
       const newBalance = Math.max(0, availableBalance + returnAmount);
 
+      // For display: balance_before should show what user had BEFORE placing the trade
+      const balanceBeforeTrade = availableBalance + tradeAmount;
+
       // CRITICAL: Update trade status FIRST, before touching balance.
       // This prevents double-deduction if the request is retried (trade won't be "pending" anymore).
       let statusUpdateSuccess = false;
@@ -547,10 +550,10 @@ export default function registerFuturesRoutes(app: Express) {
             profit_loss: netProfitLoss.toString(),
             fee_amount: feeAmount.toFixed(8),
             fee_rate: feeRate.toString(),
-            trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
+            trade_intervals: { balance_before: balanceBeforeTrade, balance_after: newBalance },
           })
           .eq("id", tradeId)
-          .eq("status", "pending"); // Only update if still pending (prevents race conditions)
+          .eq("status", "pending");
         if (!error) statusUpdateSuccess = true;
       } catch {
         // columns might not exist
@@ -596,7 +599,7 @@ export default function registerFuturesRoutes(app: Express) {
         exitPrice: currentPrice,
         feeAmount,
         feeRate,
-        balanceBefore: availableBalance,
+        balanceBefore: balanceBeforeTrade,
         balanceAfter: newBalance,
       });
     } catch (error) {
@@ -724,6 +727,9 @@ export default function registerFuturesRoutes(app: Express) {
           const returnAmount = trade.amount + netProfitLoss;
           const newBalance = Math.max(0, availableBalance + returnAmount);
 
+          // For display: balance_before should show what user had BEFORE placing the trade
+          const balanceBeforeTrade = availableBalance + trade.amount;
+
           // CRITICAL: Update trade status FIRST to prevent double-deduction on retry
           let statusOk = false;
           try {
@@ -735,7 +741,7 @@ export default function registerFuturesRoutes(app: Express) {
                 profit_loss: netProfitLoss,
                 fee_amount: feeAmount.toFixed(8),
                 fee_rate: feeRate.toString(),
-                trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
+                trade_intervals: { balance_before: balanceBeforeTrade, balance_after: newBalance },
               })
               .eq("id", trade.id)
               .eq("status", "pending");
