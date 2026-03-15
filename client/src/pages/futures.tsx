@@ -835,62 +835,40 @@ export default function FuturesPage() {
                 </div>
               </div>
 
-              {/* P&L Breakdown - only for completed trades */}
+              {/* Trade Result - only for completed trades */}
               {selectedTrade.status === 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
                 <>
                   <div className="border-t border-[#1e1e1e] my-2" />
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
-                    <div className="px-3 py-2 border-b border-[#1e1e1e]">
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">P&L Breakdown</span>
-                    </div>
-                    <div className="p-3 space-y-2">
-                      {/* Trade Cost */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Trade Amount</span>
-                        <span className="text-xs text-white tabular-nums">{formatUsdNumber(selectedTrade.amount)} USDT</span>
-                      </div>
 
-                      {/* Gross P&L (before fee) */}
-                      {(() => {
-                        const feeAmt = parseFloat(selectedTrade.fee_amount || '0');
-                        const grossPnl = selectedTrade.profit_loss + feeAmt;
-                        return (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-400">Gross P&L</span>
-                            <span className={`text-xs tabular-nums font-medium ${grossPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {grossPnl >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(grossPnl))} USDT
-                            </span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Fee */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Trading Fee {selectedTrade.fee_rate ? `(${(parseFloat(selectedTrade.fee_rate) * 100).toFixed(2)}%)` : ''}</span>
-                        <span className="text-xs text-amber-400 tabular-nums">
-                          -{formatUsdNumber(parseFloat(selectedTrade.fee_amount || '0'))} USDT
-                        </span>
-                      </div>
-
-                      <div className="border-t border-[#1e1e1e] my-1" />
-
-                      {/* Net P&L */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400 font-semibold">Net P&L</span>
-                        <span className={`text-sm tabular-nums font-bold ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Balance Impact */}
-                  {selectedTrade.trade_intervals?.balance_before != null && (
+                  {/* Result Card */}
                   <div className={`rounded-xl p-3 border ${
                     selectedTrade.profit_loss >= 0
                       ? 'bg-green-500/5 border-green-500/20'
                       : 'bg-red-500/5 border-red-500/20'
                   }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                        {selectedTrade.profit_loss >= 0 ? 'Profit' : 'Loss'}
+                      </span>
+                      <span className={`text-base tabular-nums font-bold ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(selectedTrade.profit_loss)} USDT
+                      </span>
+                    </div>
+
+                    {/* Fee info (subtle) */}
+                    {parseFloat(selectedTrade.fee_amount || '0') > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500">Fee {selectedTrade.fee_rate ? `(${(parseFloat(selectedTrade.fee_rate) * 100).toFixed(2)}%)` : ''}</span>
+                        <span className="text-[10px] text-gray-500 tabular-nums">
+                          -{formatUsdNumber(parseFloat(selectedTrade.fee_amount || '0'))} USDT
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Balance Impact */}
+                  {selectedTrade.trade_intervals?.balance_before != null && (
+                  <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider">Balance Before</span>
@@ -898,15 +876,6 @@ export default function FuturesPage() {
                           {formatUsdNumber(selectedTrade.trade_intervals.balance_before!)} USDT
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-                          {selectedTrade.profit_loss >= 0 ? 'Profit (after fee)' : 'Loss (incl. fee)'}
-                        </span>
-                        <span className={`text-xs font-medium tabular-nums ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
-                        </span>
-                      </div>
-                      <div className="border-t border-[#1e1e1e] my-1" />
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance After</span>
                         <span className="text-sm text-white font-bold tabular-nums">
