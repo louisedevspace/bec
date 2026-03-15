@@ -78,6 +78,7 @@ export default function registerFuturesRoutes(app: Express) {
             is_admin_approved: true,
           })
           .eq("id", tradeId)
+          .eq("status", "pending")
           .select()
           .single();
 
@@ -93,6 +94,7 @@ export default function registerFuturesRoutes(app: Express) {
             is_admin_approved: true,
           })
           .eq("id", tradeId)
+          .eq("status", "pending")
           .select()
           .single();
 
@@ -126,7 +128,10 @@ export default function registerFuturesRoutes(app: Express) {
         }
       }
 
-      const newBalance = currentBalance + netProfit;
+      // Balance was already reduced by trade amount at submission (locked funds)
+      // Return: tradeAmount (original stake) + netProfit (profit minus fee)
+      const returnAmount = parseFloat(futureTrade.amount) + netProfit;
+      const newBalance = Math.max(0, currentBalance + returnAmount);
       if (existingPortfolioId) {
         await supabaseAdmin
           .from("portfolios")
@@ -352,6 +357,11 @@ export default function registerFuturesRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to submit future trade", error: error.message });
       }
 
+      // Lock trade amount by deducting from balance at submission time
+      // This prevents over-commitment when multiple trades are placed
+      const lockedBalance = availableBalance - parseFloat(amount);
+      await updatePortfolioBalance(userId, "USDT", Math.max(0, lockedBalance).toString());
+
       // Log successful futures trade submission
       await logFinancialOperation({
         userId,
@@ -519,24 +529,14 @@ export default function registerFuturesRoutes(app: Express) {
       const feeAmount = tradeAmount * feeRate;
       const netProfitLoss = profitLoss - feeAmount;
 
-      const newBalance = availableBalance + netProfitLoss;
-      await updatePortfolioBalance(userId, "USDT", newBalance.toString());
+      // Balance was already reduced by tradeAmount at submission time (locked funds).
+      // Now return: tradeAmount (original stake) + netProfitLoss (profit minus fee, or negative for loss)
+      const returnAmount = tradeAmount + netProfitLoss;
+      const newBalance = Math.max(0, availableBalance + returnAmount);
 
-      // Record fee in platform_fees
-      if (feeAmount > 0) {
-        await supabaseAdmin.from('platform_fees').insert({
-          user_id: userId,
-          trade_id: trade.id,
-          trade_type: 'futures',
-          symbol: trade.symbol,
-          fee_amount: feeAmount.toFixed(8),
-          fee_symbol: 'USDT',
-          fee_rate: feeRate.toString(),
-        }).catch(() => {});
-      }
-
-      // Try update with fee columns, fall back to basic update if columns don't exist
-      let updateError: any = null;
+      // CRITICAL: Update trade status FIRST, before touching balance.
+      // This prevents double-deduction if the request is retried (trade won't be "pending" anymore).
+      let statusUpdateSuccess = false;
       try {
         const { error } = await supabaseAdmin
           .from("futures_trades")
@@ -548,14 +548,15 @@ export default function registerFuturesRoutes(app: Express) {
             fee_rate: feeRate.toString(),
             trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
           })
-          .eq("id", tradeId);
-        updateError = error;
+          .eq("id", tradeId)
+          .eq("status", "pending"); // Only update if still pending (prevents race conditions)
+        if (!error) statusUpdateSuccess = true;
       } catch {
-        updateError = { message: "columns_missing" };
+        // columns might not exist
       }
 
       // Fallback: update without fee/intervals columns if they don't exist
-      if (updateError) {
+      if (!statusUpdateSuccess) {
         const { error: fallbackError } = await supabaseAdmin
           .from("futures_trades")
           .update({
@@ -563,11 +564,28 @@ export default function registerFuturesRoutes(app: Express) {
             exit_price: exitPrice.toString(),
             profit_loss: netProfitLoss.toString(),
           })
-          .eq("id", tradeId);
+          .eq("id", tradeId)
+          .eq("status", "pending"); // Only update if still pending
 
         if (fallbackError) {
           return res.status(500).json({ message: "Failed to complete trade" });
         }
+      }
+
+      // Now that trade is marked completed, safely update balance
+      await updatePortfolioBalance(userId, "USDT", newBalance.toString());
+
+      // Record fee in platform_fees (non-critical, catch errors)
+      if (feeAmount > 0) {
+        await supabaseAdmin.from('platform_fees').insert({
+          user_id: userId,
+          trade_id: trade.id,
+          trade_type: 'futures',
+          symbol: trade.symbol,
+          fee_amount: feeAmount.toFixed(8),
+          fee_symbol: 'USDT',
+          fee_rate: feeRate.toString(),
+        }).catch(() => {});
       }
 
       res.json({
@@ -700,10 +718,46 @@ export default function registerFuturesRoutes(app: Express) {
           const feeAmount = trade.amount * feeRate;
           const netProfitLoss = profitLoss - feeAmount;
 
-          const newBalance = availableBalance + netProfitLoss;
+          // Balance was already reduced by trade.amount at submission (locked funds)
+          const returnAmount = trade.amount + netProfitLoss;
+          const newBalance = Math.max(0, availableBalance + returnAmount);
+
+          // CRITICAL: Update trade status FIRST to prevent double-deduction on retry
+          let statusOk = false;
+          try {
+            const { error } = await supabaseAdmin
+              .from("futures_trades")
+              .update({
+                status: "completed",
+                exit_price: exitPrice,
+                profit_loss: netProfitLoss,
+                fee_amount: feeAmount.toFixed(8),
+                fee_rate: feeRate.toString(),
+                trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
+              })
+              .eq("id", trade.id)
+              .eq("status", "pending");
+            if (!error) statusOk = true;
+          } catch {
+            // fallback without fee columns
+          }
+
+          if (!statusOk) {
+            await supabaseAdmin
+              .from("futures_trades")
+              .update({
+                status: "completed",
+                exit_price: exitPrice,
+                profit_loss: netProfitLoss,
+              })
+              .eq("id", trade.id)
+              .eq("status", "pending");
+          }
+
+          // Now safely update balance after trade is marked completed
           await updatePortfolioBalance(trade.user_id, "USDT", newBalance.toString());
 
-          // Record fee in platform_fees
+          // Record fee in platform_fees (non-critical)
           if (feeAmount > 0) {
             await supabaseAdmin.from('platform_fees').insert({
               user_id: trade.user_id,
@@ -714,30 +768,6 @@ export default function registerFuturesRoutes(app: Express) {
               fee_symbol: 'USDT',
               fee_rate: feeRate.toString(),
             }).catch(() => {});
-          }
-
-          // Try update with fee columns, fall back to basic update
-          try {
-            await supabaseAdmin
-              .from("futures_trades")
-              .update({
-                status: "completed",
-                exit_price: exitPrice,
-                profit_loss: netProfitLoss,
-                fee_amount: feeAmount.toFixed(8),
-                fee_rate: feeRate.toString(),
-                trade_intervals: { balance_before: availableBalance, balance_after: newBalance },
-              })
-              .eq("id", trade.id);
-          } catch {
-            await supabaseAdmin
-              .from("futures_trades")
-              .update({
-                status: "completed",
-                exit_price: exitPrice,
-                profit_loss: netProfitLoss,
-              })
-              .eq("id", trade.id);
           }
 
           processedCount++;
