@@ -295,6 +295,7 @@ export default function registerAdminRoutes(app: Express) {
           if (verificationError) return res.status(500).json({ message: "Failed to reset verification status" });
 
           await supabaseAdmin.from("kyc_verifications").delete().eq("user_id", userId);
+          syncManager.syncUserUpdated({ id: userId });
           message = "Verification status reset successfully. User will need to re-verify email and submit KYC again.";
           break;
         }
@@ -309,6 +310,7 @@ export default function registerAdminRoutes(app: Express) {
         case "delete-portfolio": {
           const { error } = await supabaseAdmin.from("portfolios").delete().eq("user_id", userId);
           if (error) return res.status(500).json({ message: "Failed to delete portfolio data" });
+          syncManager.syncPortfolioDeleted(userId);
           message = "Portfolio data deleted successfully";
           break;
         }
@@ -421,6 +423,7 @@ export default function registerAdminRoutes(app: Express) {
           if (error) {
             return res.status(500).json({ message: "Failed to update credit score", error: error.message });
           }
+          syncManager.syncUserUpdated({ id: userId });
           message = `Credit score updated to ${creditScoreValue}`;
           break;
         }
@@ -556,6 +559,7 @@ export default function registerAdminRoutes(app: Express) {
       }
 
       invalidateAdminUsersCache();
+      syncManager.syncPortfolioUpdated(userId, {});
       res.json({ message: "Portfolio balances updated successfully" });
     } catch (error: any) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -672,7 +676,7 @@ export default function registerAdminRoutes(app: Express) {
   // POST /api/admin/hide-transactions — hide deposit/withdraw transactions from user view
   app.post("/api/admin/hide-transactions", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { type, ids } = req.body;
+      const { type, ids, userId } = req.body;
 
       if (!type || !Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: "type ('deposit' or 'withdraw') and ids array are required" });
@@ -691,6 +695,15 @@ export default function registerAdminRoutes(app: Express) {
 
       if (error) {
         return res.status(500).json({ message: `Failed to hide ${type} transactions`, error: error.message });
+      }
+
+      // Broadcast sync events so user's wallet updates in real-time
+      if (userId) {
+        if (type === "deposit") {
+          syncManager.syncDepositRequestUpdated({ user_id: userId });
+        } else {
+          syncManager.syncWithdrawRequestUpdated({ user_id: userId });
+        }
       }
 
       res.json({ message: `${ids.length} ${type} transaction(s) hidden successfully` });

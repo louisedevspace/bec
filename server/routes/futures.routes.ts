@@ -3,6 +3,7 @@ import { requireAuth, requireAdmin, requireInternalTask, requireUnlockedWallet, 
 import { updatePortfolioBalance, getTradingFeeRate } from "./helpers";
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import { syncManager } from "../sync-manager";
 
 export default function registerFuturesRoutes(app: Express) {
   // GET /api/futures-settings — get current user's futures min amount
@@ -620,6 +621,7 @@ export default function registerFuturesRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to delete futures trade history" });
       }
 
+      syncManager.syncTradesDeleted(userId);
       res.json({ message: "Futures trade history deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });

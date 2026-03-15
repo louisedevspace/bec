@@ -31,20 +31,21 @@ export default function registerWalletRoutes(app: Express) {
         supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
         supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
         // Aggregates: only columns needed for math, status-filtered, no limit
-        supabaseAdmin.from("deposit_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved"),
-        supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved"),
-        supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]),
-        supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]),
+        // Filter out admin-hidden/deleted records so wallet totals are accurate
+        supabaseAdmin.from("deposit_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
+        supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
+        supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+        supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
         // All trades/futures regardless of status for total counts
-        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId),
-        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId),
+        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
         // Platform fees for this user
         supabaseAdmin.from("platform_fees").select("trade_type, fee_amount, fee_symbol, created_at").eq("user_id", userId),
         // Transaction list: full columns, limited for display
-        supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).order("submitted_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at, fee_amount, fee_symbol, fee_rate").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at, fee_amount, fee_symbol, fee_rate").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
+        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
       ]);
 
       if (portfolioRes.error) {

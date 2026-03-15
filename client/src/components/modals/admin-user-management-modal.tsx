@@ -16,6 +16,17 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { buildApiUrl } from '../../lib/config';
 
+// Dispatch a local sync event to trigger React Query cache invalidation
+function dispatchSyncEvent(action: string, userId: string) {
+  window.dispatchEvent(new CustomEvent('userDataChanged', {
+    detail: {
+      action,
+      userId,
+      timestamp: new Date().toISOString(),
+    }
+  }));
+}
+
 interface User {
   id: string;
   username: string;
@@ -213,6 +224,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
       setEditingUserId(null);
       setEditingCreditScore('');
+      dispatchSyncEvent('update-user', editingUserId);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -258,6 +270,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         setSelectedUser({ ...selectedUser, is_active: !user.is_active });
       }
 
+      dispatchSyncEvent('update-user', user.id);
     } catch (err: any) {
       setError(`Failed to ${user.is_active ? 'disable' : 'enable'} user: ${err.message}`);
     }
@@ -285,6 +298,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       }
 
       setError(null);
+      dispatchSyncEvent('delete-trades', user.id);
     } catch (err: any) {
       setError(`Failed to delete user history: ${err.message}`);
     }
@@ -346,6 +360,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       }
 
       setConfirmAction({ type: null, user: null });
+      dispatchSyncEvent('delete-trades', user.id);
     } catch (err: any) {
       setError(`Failed to hide orders: ${err.message}`);
     }
@@ -377,6 +392,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         throw new Error(errorData.message || 'Failed to delete futures trade history');
       }
       setConfirmAction({ type: null, user: null });
+      dispatchSyncEvent('delete-trades', user.id);
     } catch (err: any) {
       setError(`Failed to hide futures trades: ${err.message}`);
     }
@@ -405,6 +421,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_verified: false } : u));
       setConfirmAction({ type: null, user: null });
+      dispatchSyncEvent('update-user', user.id);
     } catch (err: any) {
       setError(`Failed to reset verification: ${err.message}`);
     }
@@ -470,7 +487,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         const res = await fetch(buildApiUrl('/admin/hide-transactions'), {
           method: 'POST',
           headers,
-          body: JSON.stringify({ type: 'deposit', ids: depositIds }),
+          body: JSON.stringify({ type: 'deposit', ids: depositIds, userId: selectedUser.id }),
         });
         if (!res.ok) {
           const err = await res.json();
@@ -482,7 +499,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         const res = await fetch(buildApiUrl('/admin/hide-transactions'), {
           method: 'POST',
           headers,
-          body: JSON.stringify({ type: 'withdraw', ids: withdrawIds }),
+          body: JSON.stringify({ type: 'withdraw', ids: withdrawIds, userId: selectedUser.id }),
         });
         if (!res.ok) {
           const err = await res.json();
@@ -493,6 +510,8 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
       setShowManageTransactions(false);
       setSelectedTransactionIds(new Set());
       setError(null);
+      dispatchSyncEvent('update-deposit-request', selectedUser.id);
+      dispatchSyncEvent('update-withdraw-request', selectedUser.id);
     } catch (err: any) {
       setError(`Failed to hide selected transactions: ${err.message}`);
     }
@@ -562,6 +581,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
       setShowPortfolioEditor(false);
       setError(null);
+      dispatchSyncEvent('update-portfolio', selectedUser.id);
     } catch (err: any) {
       setError(`Failed to save portfolio: ${err.message}`);
     }
@@ -586,6 +606,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
       setConfirmAction({ type: null, user: null });
       setError(null);
+      dispatchSyncEvent('delete-portfolio', user.id);
     } catch (err: any) {
       setError(`Failed to delete portfolio data: ${err.message}`);
     }

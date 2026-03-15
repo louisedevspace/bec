@@ -66,17 +66,20 @@ const QUERY_INVALIDATION_PATTERNS = {
   'create-trade': (userId?: string) => [
     ['/api/trades', userId],
     ['/api/admin/pending-orders'],
-    ['/api/admin/all-orders']
+    ['/api/admin/all-orders'],
+    ['/api/wallet/summary']
   ],
   'update-trade': (userId?: string) => [
     ['/api/trades', userId],
     ['/api/admin/pending-orders'],
-    ['/api/admin/all-orders']
+    ['/api/admin/all-orders'],
+    ['/api/wallet/summary']
   ],
   'delete-trades': (userId?: string) => [
     ['/api/trades', userId],
     ['/api/admin/pending-orders'],
-    ['/api/admin/all-orders']
+    ['/api/admin/all-orders'],
+    ['/api/wallet/summary']
   ],
   'create-transaction': (userId?: string) => [
     ['/api/transactions', userId]
@@ -85,29 +88,36 @@ const QUERY_INVALIDATION_PATTERNS = {
     ['/api/transactions', userId]
   ],
   'delete-transactions': (userId?: string) => [
-    ['/api/transactions', userId]
+    ['/api/transactions', userId],
+    ['/api/wallet/summary']
   ],
   'update-portfolio': (userId?: string) => [
-    ['/api/portfolio', userId]
+    ['/api/portfolio', userId],
+    ['/api/wallet/summary']
   ],
   'delete-portfolio': (userId?: string) => [
-    ['/api/portfolio', userId]
+    ['/api/portfolio', userId],
+    ['/api/wallet/summary']
   ],
   'create-deposit-request': (userId?: string) => [
     ['/api/deposit-requests', userId],
-    ['/api/admin/deposit-requests']
+    ['/api/admin/deposit-requests'],
+    ['/api/wallet/summary']
   ],
   'update-deposit-request': (userId?: string) => [
     ['/api/deposit-requests', userId],
-    ['/api/admin/deposit-requests']
+    ['/api/admin/deposit-requests'],
+    ['/api/wallet/summary']
   ],
   'create-withdraw-request': (userId?: string) => [
     ['/api/withdraw-requests', userId],
-    ['/api/admin/withdraw-requests']
+    ['/api/admin/withdraw-requests'],
+    ['/api/wallet/summary']
   ],
   'update-withdraw-request': (userId?: string) => [
     ['/api/withdraw-requests', userId],
-    ['/api/admin/withdraw-requests']
+    ['/api/admin/withdraw-requests'],
+    ['/api/wallet/summary']
   ],
   'create-staking': (userId?: string) => [
     ['/api/staking', userId]
@@ -127,7 +137,8 @@ const QUERY_INVALIDATION_PATTERNS = {
   ],
   'update-user': (userId?: string) => [
     ['/api/user-profile'],
-    ['/api/admin/users']
+    ['/api/admin/users'],
+    ['/api/wallet/summary']
   ],
   'update-password': (userId?: string) => [
     ['/api/user-profile']

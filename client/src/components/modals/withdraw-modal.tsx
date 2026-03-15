@@ -41,7 +41,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
   // Get user's portfolio balance
   const { data: portfolio } = useQuery({
-    queryKey: ['portfolio', userId],
+    queryKey: ["/api/portfolio", userId],
     queryFn: async () => {
       if (!userId) return [];
       
