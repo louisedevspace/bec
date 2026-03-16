@@ -15,9 +15,10 @@ interface TradingFormProps {
   type: "spot";
   className?: string;
   tradingFeeRate?: number;
+  suggestedPrice?: string | null;
 }
 
-export function TradingForm({ pair, type, className = "", tradingFeeRate = 0 }: TradingFormProps) {
+export function TradingForm({ pair, type, className = "", tradingFeeRate = 0, suggestedPrice }: TradingFormProps) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [amountMode, setAmountMode] = useState<"crypto" | "usdt">("crypto"); // crypto = units, usdt = total spend/receive
@@ -28,6 +29,14 @@ export function TradingForm({ pair, type, className = "", tradingFeeRate = 0 }: 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
+
+  // Auto-fill price from order book click
+  useEffect(() => {
+    if (suggestedPrice) {
+      setPrice(suggestedPrice);
+      setOrderType("limit");
+    }
+  }, [suggestedPrice]);
 
   // Get current user ID
   useEffect(() => {

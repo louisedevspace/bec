@@ -14,6 +14,7 @@ import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { FutureTradeTimerModal } from '@/components/modals/future-trade-timer-modal';
 import { formatUsdNumber } from '@/utils/format-utils';
 import { CryptoIcon } from '@/components/crypto/crypto-icon';
+import { MarketStatsBar } from '@/components/trading/market-stats-bar';
 
 interface FuturesTrade {
   id: number;
@@ -466,6 +467,13 @@ export default function FuturesPage() {
               <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Market Stats Bar */}
+      <div className="bg-[#111] border-b border-[#1e1e1e] flex-shrink-0">
+        <div className="max-w-[1600px] mx-auto">
+          <MarketStatsBar symbol={baseAsset} />
         </div>
       </div>
 

@@ -160,11 +160,31 @@
   .nav-btn-active {
     @apply text-accent;
   }
-  
+
   .nav-btn-inactive {
     @apply text-muted-foreground hover:text-foreground;
   }
-  
+
+  /* Custom thin scrollbar for order book, lists, etc. */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.4);
+  }
+
+  /* Tabular nums for financial data */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Ensure checkboxes are visible in dark notification surfaces */
   .notification-surface .checkbox,
   [role="dialog"] .checkbox {

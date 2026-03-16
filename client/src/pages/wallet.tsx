@@ -8,12 +8,16 @@ import { DepositModal } from "@/components/modals/deposit-modal";
 import { WithdrawModal } from "@/components/modals/withdraw-modal";
 import { ConvertModal } from "@/components/modals/convert-modal";
 import { PortfolioModal } from "@/components/modals/portfolio-modal";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { exportToCSV } from "@/utils/csv-export";
 import {
   Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
   RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, CreditCard, Snowflake, BarChart3, Activity,
-  DollarSign, Target, Award, Percent, ArrowDown, ArrowUp, Info, X
+  DollarSign, Target, Award, Percent, ArrowDown, ArrowUp, Info, X,
+  Download, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -113,6 +117,10 @@ export default function WalletPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [historyDateRange, setHistoryDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize, setHistoryPageSize] = useState(25);
 
   // Parse URL params for deep-linking (e.g. /wallet?action=deposit&tab=history)
   useEffect(() => {
@@ -156,9 +164,53 @@ export default function WalletPage() {
 
   const filteredTransactions = useMemo(() => {
     if (!wallet?.transactions) return [];
-    if (txFilter === "all") return wallet.transactions;
-    return wallet.transactions.filter(t => t.type === txFilter);
-  }, [wallet?.transactions, txFilter]);
+    let items = wallet.transactions;
+    if (txFilter !== "all") {
+      items = items.filter(t => t.type === txFilter);
+    }
+    if (historySearch) {
+      const q = historySearch.toLowerCase();
+      items = items.filter(t => t.symbol.toLowerCase().includes(q) || t.type.toLowerCase().includes(q) || t.status.toLowerCase().includes(q));
+    }
+    if (historyDateRange.from) {
+      items = items.filter(t => new Date(t.date) >= historyDateRange.from!);
+    }
+    if (historyDateRange.to) {
+      const endOfDay = new Date(historyDateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      items = items.filter(t => new Date(t.date) <= endOfDay);
+    }
+    return items;
+  }, [wallet?.transactions, txFilter, historySearch, historyDateRange]);
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / historyPageSize));
+  const paginatedTransactions = filteredTransactions.slice(historyPage * historyPageSize, (historyPage + 1) * historyPageSize);
+
+  useEffect(() => { setHistoryPage(0); }, [txFilter, historySearch, historyDateRange, historyPageSize]);
+
+  const handleExportHistory = () => {
+    if (filteredTransactions.length === 0) return;
+    const csvData = filteredTransactions.map(tx => ({
+      date: formatDateTime(tx.date),
+      type: tx.type,
+      symbol: tx.symbol,
+      side: tx.side || "",
+      amount: tx.amount,
+      price: tx.price || "",
+      fee: tx.feeAmount || 0,
+      status: tx.status,
+    }));
+    exportToCSV(csvData, "wallet_history", [
+      { key: "date", label: "Date" },
+      { key: "type", label: "Type" },
+      { key: "symbol", label: "Symbol" },
+      { key: "side", label: "Side" },
+      { key: "amount", label: "Amount" },
+      { key: "price", label: "Price" },
+      { key: "fee", label: "Fee" },
+      { key: "status", label: "Status" },
+    ]);
+  };
 
   const bal = (v: number) => hideBalances ? "••••••" : `$${formatUsdNumber(v)}`;
   const cryptoBal = (v: number) => hideBalances ? "••••" : formatCryptoNumber(v);
@@ -781,7 +833,30 @@ export default function WalletPage() {
         {/* History Tab */}
         {activeTab === "history" && (
           <div className="mt-4 space-y-3">
-            {/* Filter Tabs */}
+            {/* Filter Row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[160px]">
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  placeholder="Search symbol, type..."
+                  className="w-full bg-[#111] border border-[#1e1e1e] rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#2a2a2a]"
+                />
+              </div>
+              <DateRangePicker value={historyDateRange} onChange={setHistoryDateRange} />
+              <button
+                onClick={handleExportHistory}
+                disabled={filteredTransactions.length === 0}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download size={12} />
+                CSV
+              </button>
+            </div>
+
+            {/* Type Filter Tabs */}
             <div className="flex gap-1 overflow-x-auto pb-1">
               {[
                 { id: "all", label: "All" },
@@ -806,7 +881,40 @@ export default function WalletPage() {
 
             {/* Transaction List */}
             <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <TransactionList transactions={filteredTransactions} hideBalances={hideBalances} />
+              <TransactionList transactions={paginatedTransactions} hideBalances={hideBalances} />
+
+              {/* Pagination */}
+              {filteredTransactions.length > 0 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#1e1e1e]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-600">{filteredTransactions.length} total</span>
+                    <select
+                      value={historyPageSize}
+                      onChange={e => setHistoryPageSize(Number(e.target.value))}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 focus:outline-none"
+                    >
+                      {[10, 25, 50].map(s => <option key={s} value={s}>{s}/page</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
+                      disabled={historyPage === 0}
+                      className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronLeft size={14} className="text-gray-400" />
+                    </button>
+                    <span className="text-[10px] text-gray-500 px-2">{historyPage + 1} / {historyTotalPages}</span>
+                    <button
+                      onClick={() => setHistoryPage(p => Math.min(historyTotalPages - 1, p + 1))}
+                      disabled={historyPage >= historyTotalPages - 1}
+                      className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronRight size={14} className="text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -886,9 +994,7 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
                   <span className="text-[10px] text-gray-600">
                     {formatDateTime(tx.date)}
                   </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusColor(tx.status)}`}>
-                    {tx.status}
-                  </span>
+                  <StatusBadge status={tx.status} size="sm" showIcon={false} />
                 </div>
               </div>
               <div className="text-right flex-shrink-0 flex items-center gap-2">
@@ -942,9 +1048,7 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
             <div className="p-4 space-y-4">
               {/* Status & Date */}
               <div className="flex items-center justify-between">
-                <span className={`text-xs px-2 py-1 rounded-lg font-medium ${getStatusColor(selectedTx.status)}`}>
-                  {selectedTx.status}
-                </span>
+                <StatusBadge status={selectedTx.status} size="md" />
                 <span className="text-xs text-gray-500">{formatDateTime(selectedTx.date)}</span>
               </div>
 

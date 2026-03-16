@@ -281,9 +281,20 @@ export default function registerWithdrawalsRoutes(app: Express) {
 
         // If approved, deduct from portfolio
         if (action === "approve") {
+          // SECURITY: Check wallet lock status at approval time
+          const { data: userStatus } = await supabaseAdmin
+            .from("users")
+            .select("wallet_locked")
+            .eq("id", withdrawRequest.user_id)
+            .maybeSingle();
+
+          if (userStatus?.wallet_locked) {
+            return res.status(403).json({ message: "User's wallet is locked. Cannot approve withdrawal." });
+          }
+
           const { data: portfolios, error: portfolioError } = await supabaseAdmin
             .from("portfolios")
-            .select("available, id, user_id, symbol")
+            .select("available, id, user_id, symbol, frozen")
             .eq("user_id", withdrawRequest.user_id)
             .eq("symbol", withdrawRequest.symbol);
 
@@ -293,11 +304,28 @@ export default function registerWithdrawalsRoutes(app: Express) {
 
           const portfolio = portfolios[0];
           const currentBalance = parseFloat(portfolio.available);
+          const frozenBalance = parseFloat(portfolio.frozen || "0");
           const withdrawAmount = parseFloat(withdrawRequest.amount);
           const withdrawFeeAmount = parseFloat(withdrawRequest.fee_amount || "0");
           const withdrawFeeRate = parseFloat(withdrawRequest.fee_rate || "0");
           const withdrawNetAmount = parseFloat(withdrawRequest.net_amount || withdrawRequest.amount);
-          const newBalance = Math.max(0, currentBalance - withdrawAmount);
+
+          // SECURITY: Re-validate balance at approval time (prevents double-spend)
+          if (currentBalance < withdrawAmount) {
+            return res.status(400).json({
+              message: `Insufficient balance at approval time. Available: ${currentBalance.toFixed(8)} ${withdrawRequest.symbol}, Required: ${withdrawAmount.toFixed(8)} ${withdrawRequest.symbol}`,
+            });
+          }
+
+          // SECURITY: Check if asset is frozen
+          if (frozenBalance > 0 && currentBalance === 0) {
+            return res.status(403).json({ message: `User's ${withdrawRequest.symbol} assets are fully frozen. Cannot approve withdrawal.` });
+          }
+
+          const newBalance = currentBalance - withdrawAmount;
+          if (newBalance < 0) {
+            return res.status(400).json({ message: "Withdrawal would result in negative balance" });
+          }
 
           const { error: portfolioUpdateError } = await supabaseAdmin
             .from("portfolios")

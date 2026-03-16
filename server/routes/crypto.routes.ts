@@ -7,6 +7,10 @@ let pricesCache: any = null;
 let pricesCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 
+// In-memory cache for price history (candlestick data)
+const priceHistoryCache = new Map<string, { data: any; time: number }>();
+const HISTORY_CACHE_DURATION = 60000; // 60 seconds
+
 export default function registerCryptoRoutes(app: Express) {
   // Get all crypto prices with caching
   app.get("/api/crypto/prices", async (req, res) => {
@@ -135,6 +139,88 @@ export default function registerCryptoRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching logo:", (error as Error).message);
       res.status(500).json({ message: "Failed to fetch logo" });
+    }
+  });
+
+  // Get price history (candlestick/kline data) for charts
+  app.get("/api/crypto/price-history/:symbol", async (req, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      const interval = (req.query.interval as string) || "1h";
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+
+      const validIntervals = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"];
+      if (!validIntervals.includes(interval)) {
+        return res.status(400).json({ message: "Invalid interval. Use: " + validIntervals.join(", ") });
+      }
+
+      const cacheKey = `${symbol}_${interval}_${limit}`;
+      const now = Date.now();
+      const cached = priceHistoryCache.get(cacheKey);
+      if (cached && (now - cached.time) < HISTORY_CACHE_DURATION) {
+        res.setHeader("X-Cache", "HIT");
+        return res.json(cached.data);
+      }
+
+      // Try Binance klines API first
+      let candles: any[] = [];
+      try {
+        const binanceUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
+        const binanceRes = await fetch(binanceUrl);
+        if (binanceRes.ok) {
+          const raw = await binanceRes.json();
+          candles = raw.map((k: any[]) => ({
+            time: k[0],
+            open: parseFloat(k[1]),
+            high: parseFloat(k[2]),
+            low: parseFloat(k[3]),
+            close: parseFloat(k[4]),
+            volume: parseFloat(k[5]),
+          }));
+        }
+      } catch (e) {
+        console.warn("Binance klines failed for", symbol, (e as Error).message);
+      }
+
+      // Fallback: generate synthetic candles from current price if Binance fails
+      if (candles.length === 0) {
+        try {
+          const cryptoService = LiveCryptoService.getInstance();
+          const prices = await cryptoService.getCurrentPrices();
+          const priceData = prices.find((p: any) => p.symbol === symbol);
+          if (priceData) {
+            const basePrice = parseFloat(priceData.price || "0");
+            const intervalMs: Record<string, number> = {
+              "1m": 60000, "5m": 300000, "15m": 900000, "1h": 3600000,
+              "4h": 14400000, "1d": 86400000, "1w": 604800000,
+            };
+            const step = intervalMs[interval] || 3600000;
+            for (let i = limit - 1; i >= 0; i--) {
+              const t = now - i * step;
+              const drift = (Math.random() - 0.5) * 0.02 * basePrice;
+              const open = basePrice + drift;
+              const close = open + (Math.random() - 0.5) * 0.01 * basePrice;
+              const high = Math.max(open, close) + Math.random() * 0.005 * basePrice;
+              const low = Math.min(open, close) - Math.random() * 0.005 * basePrice;
+              candles.push({ time: t, open, high, low, close, volume: Math.random() * 1000 });
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn("Synthetic candle generation failed:", (fallbackErr as Error).message);
+        }
+      }
+
+      if (candles.length === 0) {
+        return res.status(404).json({ message: "No price history available for " + symbol });
+      }
+
+      priceHistoryCache.set(cacheKey, { data: candles, time: now });
+      res.setHeader("X-Cache", "MISS");
+      res.setHeader("Cache-Control", "public, max-age=60");
+      res.json(candles);
+    } catch (error) {
+      console.error("Error fetching price history:", (error as Error).message);
+      res.status(500).json({ message: "Failed to fetch price history" });
     }
   });
 

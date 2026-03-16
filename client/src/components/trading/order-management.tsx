@@ -1,17 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserDataSync } from "@/hooks/use-data-sync";
-import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, TrendingDown, Info, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { cryptoApi } from "@/services/crypto-api";
 import { formatCryptoNumber, formatPrice as formatPriceUtil } from "@/utils/format-utils";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { exportToCSV } from "@/utils/csv-export";
 import type { Trade } from "@/types/crypto";
 
 interface OrderManagementProps {
   className?: string;
 }
+
+const PAGE_SIZES = [10, 25, 50];
 
 export function OrderManagement({ className = "" }: OrderManagementProps) {
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
@@ -19,23 +23,27 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   const [selectedOrder, setSelectedOrder] = useState<Trade | null>(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<number>(0);
 
-  // Get current user ID
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sideFilter, setSideFilter] = useState<string>("all");
+  const [pairFilter, setPairFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
+      if (user) setUserId(user.id);
     };
     getCurrentUser();
   }, []);
 
-  // Use the comprehensive data sync hook
-  useUserDataSync(userId || '', {
-    enabled: !!userId
-  });
+  useUserDataSync(userId || '', { enabled: !!userId });
 
-  // Fetch all trades (for per-user numbering)
   const { data: allOrders } = useQuery({
     queryKey: ["/api/trades", userId, "all"],
     queryFn: () => userId ? cryptoApi.getTrades(userId) : Promise.resolve([]),
@@ -43,81 +51,83 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     refetchInterval: 10000,
   });
 
-  // Fetch current orders (pending and pending_approval status)
   const { data: currentOrders, isLoading: currentLoading } = useQuery({
     queryKey: ["/api/trades", userId, "current"],
     queryFn: () => userId ? cryptoApi.getTrades(userId) : Promise.resolve([]),
-    select: (trades: Trade[]) => trades.filter(trade => 
+    select: (trades: Trade[]) => trades.filter(trade =>
       trade.status === "pending" || trade.status === "pending_approval"
     ),
     enabled: !!userId,
-    refetchInterval: 5000, // Refresh every 5 seconds for current orders
-    refetchOnWindowFocus: true, // Refresh when user returns to the tab
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
-  // Fetch order history (completed/cancelled/approved/rejected status)
   const { data: orderHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["/api/trades", userId, "history"],
     queryFn: () => userId ? cryptoApi.getTrades(userId) : Promise.resolve([]),
-    select: (trades: Trade[]) => trades.filter(trade => 
+    select: (trades: Trade[]) => trades.filter(trade =>
       trade.status !== "pending" && trade.status !== "pending_approval"
     ),
     enabled: !!userId,
-    refetchInterval: 10000, // Refresh every 10 seconds to ensure synchronization
-    refetchOnWindowFocus: true, // Refresh when user returns to the tab
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-500/20 text-yellow-500";
-      case "pending_approval":
-        return "bg-orange-500/20 text-orange-500";
-      case "approved":
-        return "bg-blue-500/20 text-blue-500";
-      case "rejected":
-        return "bg-red-500/20 text-red-500";
-      case "filled":
-        return "bg-green-500/20 text-green-500";
-      case "executed":
-        return "bg-green-500/20 text-green-500";
-      case "cancelled":
-        return "bg-red-500/20 text-red-500";
-      default:
-        return "bg-gray-500/20 text-gray-500";
+  // Get unique pairs from orders
+  const availablePairs = useMemo(() => {
+    const orders = activeTab === "current" ? currentOrders : orderHistory;
+    if (!orders) return [];
+    const pairs = new Set(orders.map(o => o.symbol));
+    return Array.from(pairs).sort();
+  }, [currentOrders, orderHistory, activeTab]);
+
+  // Apply filters
+  const filteredOrders = useMemo(() => {
+    const orders = activeTab === "current" ? currentOrders : orderHistory;
+    if (!orders) return [];
+
+    let filtered = [...orders];
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(o => o.status === statusFilter);
     }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <Clock size={14} />;
-      case "pending_approval":
-        return <Clock size={14} />;
-      case "approved":
-        return <CheckCircle size={14} />;
-      case "rejected":
-        return <XCircle size={14} />;
-      case "filled":
-        return <CheckCircle size={14} />;
-      case "executed":
-        return <CheckCircle size={14} />;
-      case "cancelled":
-        return <XCircle size={14} />;
-      default:
-        return <AlertCircle size={14} />;
+    if (sideFilter !== "all") {
+      filtered = filtered.filter(o => o.side === sideFilter);
     }
-  };
+    if (pairFilter !== "all") {
+      filtered = filtered.filter(o => o.symbol === pairFilter);
+    }
+    if (dateRange.from) {
+      filtered = filtered.filter(o => {
+        const d = new Date((o as any).created_at || o.createdAt);
+        return d >= dateRange.from!;
+      });
+    }
+    if (dateRange.to) {
+      const endOfDay = new Date(dateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(o => {
+        const d = new Date((o as any).created_at || o.createdAt);
+        return d <= endOfDay;
+      });
+    }
 
-  const getSideIcon = (side: string) => {
-    return side === "buy" || side === "long" ? (
-      <TrendingUp size={14} className="text-green-500" />
-    ) : (
-      <TrendingDown size={14} className="text-red-500" />
-    );
-  };
+    filtered.sort((a, b) => {
+      const da = new Date((a as any).created_at || a.createdAt).getTime();
+      const db = new Date((b as any).created_at || b.createdAt).getTime();
+      return sortOrder === "newest" ? db - da : da - db;
+    });
 
-  // Compute per-user order number (allOrders is sorted by created_at desc, so last = #1)
+    return filtered;
+  }, [currentOrders, orderHistory, activeTab, statusFilter, sideFilter, pairFilter, dateRange, sortOrder]);
+
+  // Paginated results
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+  const paginatedOrders = filteredOrders.slice(page * pageSize, (page + 1) * pageSize);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [activeTab, statusFilter, sideFilter, pairFilter, dateRange, sortOrder, pageSize]);
+
   const getOrderNumber = (order: Trade): number => {
     if (!allOrders || allOrders.length === 0) return order.id;
     const idx = allOrders.findIndex(o => o.id === order.id);
@@ -134,7 +144,6 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     if (!dateString) return 'N/A';
     try {
       let date: Date;
-      // Normalize timezone-less strings as UTC
       if (!dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
         date = new Date(dateString + 'Z');
       } else {
@@ -185,14 +194,45 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   const handleCancelOrder = async (orderId: number) => {
     try {
       await cryptoApi.cancelTrade(orderId);
-      // Refresh the queries to update the UI
-      window.location.reload(); // Simple refresh for demo
+      window.location.reload();
     } catch (error) {
       console.error('Error cancelling order:', error);
     }
   };
 
-  const renderOrderList = (orders: Trade[] | undefined, isLoading: boolean, emptyMessage: string) => {
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) return;
+    const csvData = filteredOrders.map(o => ({
+      date: formatDate((o as any).created_at || o.createdAt),
+      pair: o.symbol,
+      side: o.side,
+      type: (o as any).order_type || "limit",
+      amount: o.amount,
+      price: o.price || "Market",
+      fee: (o as any).fee_amount || "0",
+      status: o.status,
+    }));
+    exportToCSV(csvData, `orders_${activeTab}`, [
+      { key: "date", label: "Date" },
+      { key: "pair", label: "Pair" },
+      { key: "side", label: "Side" },
+      { key: "type", label: "Type" },
+      { key: "amount", label: "Amount" },
+      { key: "price", label: "Price" },
+      { key: "fee", label: "Fee" },
+      { key: "status", label: "Status" },
+    ]);
+  };
+
+  const getSideIcon = (side: string) => {
+    return side === "buy" || side === "long" ? (
+      <TrendingUp size={14} className="text-green-500" />
+    ) : (
+      <TrendingDown size={14} className="text-red-500" />
+    );
+  };
+
+  const renderOrderList = (orders: Trade[], isLoading: boolean, emptyMessage: string) => {
     if (isLoading) {
       return (
         <div className="space-y-3">
@@ -211,16 +251,16 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
       );
     }
 
-    if (!orders || orders.length === 0) {
+    if (orders.length === 0) {
       return (
         <div className="text-center py-10">
           <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mx-auto mb-3 flex items-center justify-center">
-            <span className="text-lg">📊</span>
+            <AlertCircle size={20} className="text-gray-600" />
           </div>
           <p className="text-gray-400 text-sm">{emptyMessage}</p>
           <p className="text-gray-600 text-xs mt-1">
-            {activeTab === "current" 
-              ? "Your orders awaiting admin approval will appear here" 
+            {activeTab === "current"
+              ? "Your orders awaiting admin approval will appear here"
               : "Your completed and processed orders will appear here"
             }
           </p>
@@ -229,7 +269,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     }
 
     return (
-      <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+      <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
         {orders.map((order) => (
           <div key={order.id} className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
             <div className="flex items-center justify-between">
@@ -256,7 +296,6 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                   <div className="text-[11px] text-gray-500 mt-0.5">
                     {formatAmount(order.amount, order.symbol)} @ {formatPrice(order.price)}
                   </div>
-                  {/* Fee info for executed/completed trades */}
                   {(order.status === "executed" || order.status === "filled") && formatFee(order) && (
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-amber-400/80">
@@ -276,12 +315,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                 <div className="text-right mr-1">
                   <div className="text-[10px] text-gray-600">{formatDate((order as any).created_at || order.createdAt)}</div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {getStatusIcon(order.status)}
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
-                    {order.status.toUpperCase().replace('_', ' ')}
-                  </span>
-                </div>
+                <StatusBadge status={order.status} size="sm" />
                 <button
                   onClick={() => handleSelectOrder(order)}
                   className="p-1 rounded-lg hover:bg-[#222] transition-colors"
@@ -310,7 +344,20 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white">Order Management</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              disabled={filteredOrders.length === 0}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-gray-400 hover:text-white bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export to CSV"
+            >
+              <Download size={10} />
+              CSV
+            </button>
+          </div>
         </div>
+
+        {/* Tabs */}
         <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 border border-[#1e1e1e]">
           <button
             onClick={() => setActiveTab("current")}
@@ -321,6 +368,9 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             }`}
           >
             Current Orders
+            {currentOrders && currentOrders.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">{currentOrders.length}</span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("history")}
@@ -333,13 +383,99 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             Order History
           </button>
         </div>
+
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+
+          {/* Side Filter */}
+          <select
+            value={sideFilter}
+            onChange={e => setSideFilter(e.target.value)}
+            className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+          >
+            <option value="all">All Sides</option>
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+
+          {/* Pair Filter */}
+          {availablePairs.length > 1 && (
+            <select
+              value={pairFilter}
+              onChange={e => setPairFilter(e.target.value)}
+              className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+            >
+              <option value="all">All Pairs</option>
+              {availablePairs.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
+
+          {/* Status Filter (history tab only) */}
+          {activeTab === "history" && (
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+            >
+              <option value="all">All Status</option>
+              <option value="executed">Executed</option>
+              <option value="filled">Filled</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          )}
+
+          {/* Sort */}
+          <button
+            onClick={() => setSortOrder(s => s === "newest" ? "oldest" : "newest")}
+            className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors"
+          >
+            {sortOrder === "newest" ? "Newest" : "Oldest"}
+          </button>
+        </div>
       </div>
-      <div className="px-4 pb-4">
-        {activeTab === "current"
-          ? renderOrderList(currentOrders, currentLoading, "No current orders found")
-          : renderOrderList(orderHistory, historyLoading, "No order history found")
-        }
+
+      {/* Order List */}
+      <div className="px-4 pb-2">
+        {renderOrderList(paginatedOrders, activeTab === "current" ? currentLoading : historyLoading, activeTab === "current" ? "No current orders found" : "No order history found")}
       </div>
+
+      {/* Pagination */}
+      {filteredOrders.length > 0 && (
+        <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-[#1e1e1e]">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-600">{filteredOrders.length} total</span>
+            <select
+              value={pageSize}
+              onChange={e => setPageSize(Number(e.target.value))}
+              className="px-1.5 py-0.5 rounded text-[10px] bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 focus:outline-none"
+            >
+              {PAGE_SIZES.map(s => <option key={s} value={s}>{s}/page</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+            >
+              <ChevronLeft size={14} className="text-gray-400" />
+            </button>
+            <span className="text-[10px] text-gray-500 px-2">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+            >
+              <ChevronRight size={14} className="text-gray-400" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Trade Details Modal */}
       {selectedOrder && (
@@ -370,9 +506,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                   </div>
                   <span className="text-[10px] text-gray-500">Order #{selectedOrderNumber}</span>
                 </div>
-                <div className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(selectedOrder.status)}`}>
-                  {selectedOrder.status.toUpperCase().replace('_', ' ')}
-                </div>
+                <StatusBadge status={selectedOrder.status} size="md" />
               </div>
 
               {/* Timestamp */}
@@ -418,7 +552,6 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                       <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Fee Breakdown</span>
                     </div>
                     <div className="p-3 space-y-2">
-                      {/* Trade Value */}
                       {selectedOrder.price && (
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-400">Trade Value</span>
@@ -427,8 +560,6 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                           </span>
                         </div>
                       )}
-
-                      {/* Fee */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">
                           Trading Fee {(selectedOrder as any).fee_rate ? `(${(parseFloat((selectedOrder as any).fee_rate) * 100).toFixed(2)}%)` : ''}
@@ -437,10 +568,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
                           {formatFee(selectedOrder) ? `-${formatFee(selectedOrder)}` : '$0.00'}
                         </span>
                       </div>
-
                       <div className="border-t border-[#1e1e1e] my-1" />
-
-                      {/* Total */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400 font-semibold">
                           {selectedOrder.side === 'buy' ? 'Total Paid' : 'Net Received'}
@@ -477,4 +605,4 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
       )}
     </div>
   );
-} 
+}

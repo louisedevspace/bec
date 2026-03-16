@@ -823,6 +823,11 @@ export default function AdminUsers() {
                             title="Copy User ID">
                             {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                           </button>
+                          <a href={`/admin/users/${user.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
+                            title="View Details">
+                            <Eye className="h-3 w-3" />
+                          </a>
                         </div>
                       </div>
 

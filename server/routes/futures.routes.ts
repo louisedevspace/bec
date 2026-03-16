@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, requireInternalTask, requireUnlockedWallet, requireVerifiedUser, supabaseAdmin } from "./middleware";
-import { updatePortfolioBalance, getTradingFeeRate } from "./helpers";
+import { updatePortfolioBalance, getTradingFeeRate, validateFinancialAmount } from "./helpers";
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 import { syncManager } from "../sync-manager";
@@ -199,11 +199,12 @@ export default function registerFuturesRoutes(app: Express) {
           rejection_reason: rejectionReason || "Trade rejected by admin",
         })
         .eq("id", tradeId)
+        .eq("status", "pending")  // SECURITY: Only reject if still pending (prevents double-refund)
         .select()
         .single();
 
-      if (error) {
-        return res.status(500).json({ message: "Failed to reject future trade" });
+      if (error || !updatedTrade) {
+        return res.status(400).json({ message: "Failed to reject trade - it may have already been processed" });
       }
 
       // Refund user's balance
@@ -267,6 +268,13 @@ export default function registerFuturesRoutes(app: Express) {
       if (!symbol || !side || !amount || !duration || !profitRatio) {
         return res.status(400).json({ message: "All fields are required" });
       }
+
+      // SECURITY: Validate amount is a sane financial number
+      const amountError = validateFinancialAmount(amount, "Trade amount");
+      if (amountError) {
+        return res.status(400).json({ message: amountError });
+      }
+
       if (!["long", "short"].includes(side)) {
         return res.status(400).json({ message: "Invalid side. Must be long or short" });
       }

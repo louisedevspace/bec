@@ -149,9 +149,17 @@ export default function registerStakingRoutes(app: Express) {
         .single();
 
       if (positionError || !position) {
+        // SECURITY: Rollback balance deduction if position creation fails
+        await supabaseAdmin
+          .from("portfolios")
+          .update({
+            available: availableBalance.toString(),
+            frozen: (parseFloat(portfolio.frozen || "0")).toString(),
+          })
+          .eq("user_id", userId)
+          .eq("symbol", "USDT");
         return res.status(500).json({
-          message: "Failed to create staking position",
-          error: positionError?.message || "Unknown error",
+          message: "Failed to create staking position. Balance has been restored.",
         });
       }
 
