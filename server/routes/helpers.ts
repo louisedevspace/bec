@@ -1,6 +1,33 @@
 import { supabaseAdmin } from './middleware';
 import LiveCryptoService from '../services/live-crypto-service';
 
+/**
+ * Validate a financial amount — must be a finite positive number.
+ * Returns an error message if invalid, or null if valid.
+ */
+export function validateFinancialAmount(value: any, fieldName: string = "amount"): string | null {
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (typeof num !== "number" || isNaN(num) || !isFinite(num)) {
+    return `${fieldName} must be a valid number`;
+  }
+  if (num <= 0) {
+    return `${fieldName} must be a positive number`;
+  }
+  if (num > 1e15) {
+    return `${fieldName} exceeds maximum allowed value`;
+  }
+  return null;
+}
+
+/**
+ * SECURITY FIX M1: Check if an amount is a valid decimal (not NaN, Infinity, or negative)
+ */
+export function isValidFinancialAmount(amount: any): boolean {
+  if (amount === null || amount === undefined) return false;
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return typeof num === 'number' && isFinite(num) && num > 0 && num < 1e15;
+}
+
 export async function getTradingFeeRate(symbol: string): Promise<number> {
   const { data: pairData } = await supabaseAdmin
     .from('trading_pairs')
@@ -261,4 +288,22 @@ export async function generateDisplayId(): Promise<string> {
   }
 
   return displayId;
+}
+
+/**
+ * SECURITY FIX L2: Validate and constrain pagination parameters
+ */
+export function validatePaginationParams(page: any, limit: any, maxLimit: number = 100): { offset: number; limit: number } {
+  let limitNum = typeof limit === 'string' ? parseInt(limit) : (typeof limit === 'number' ? limit : 50);
+  let pageNum = typeof page === 'string' ? parseInt(page) : (typeof page === 'number' ? page : 1);
+
+  // Validate limits
+  if (isNaN(limitNum) || limitNum < 1) limitNum = 50;
+  if (limitNum > maxLimit) limitNum = maxLimit;
+
+  // Validate page
+  if (isNaN(pageNum) || pageNum < 1) pageNum = 1;
+
+  const offset = (pageNum - 1) * limitNum;
+  return { offset, limit: limitNum };
 }

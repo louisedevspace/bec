@@ -512,6 +512,9 @@ export default function registerAdminRoutes(app: Express) {
   app.post("/api/admin/edit-portfolio-balances", requireAuth, requireAdmin, async (req, res) => {
     try {
       const { userId, balances, btcBalance, usdtBalance } = req.body;
+      const adminUserId = req.user.id;
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
 
       if (!userId) {
         return res.status(400).json({ message: "userId is required" });
@@ -567,11 +570,37 @@ export default function registerAdminRoutes(app: Express) {
         }
       }
 
+      // SECURITY FIX H7: Log admin balance edits
+      await logAuditEvent({
+        userId: adminUserId,
+        action: 'ADMIN_BALANCE_EDIT',
+        resourceType: 'portfolios',
+        resourceId: userId,
+        details: {
+          targetUserId: userId,
+          updates: updates.map(u => ({ symbol: u.symbol, newAvailable: u.available })),
+        },
+        ipAddress,
+        userAgent,
+        status: 'success',
+      });
+
       invalidateAdminUsersCache();
       syncManager.syncPortfolioUpdated(userId, {});
       res.json({ message: "Portfolio balances updated successfully" });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      await logAuditEvent({
+        userId: adminUserId || (req.user?.id),
+        action: 'ADMIN_BALANCE_EDIT_FAILED',
+        resourceType: 'portfolios',
+        resourceId: userId,
+        details: { targetUserId: userId },
+        ipAddress: getClientIP(req),
+        userAgent: getUserAgent(req),
+        status: 'failure',
+        errorMessage: error?.message || 'Unknown error',
+      });
+      res.status(500).json({ message: "Server error" });
     }
   });
 

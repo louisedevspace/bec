@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, requireVerifiedUser, requireUnlockedWallet, checkAssetFrozen, supabaseAdmin } from "./middleware";
-import { validateTradeBalance, executeTradeAndUpdatePortfolio, ensurePortfolioExists, updatePortfolioBalance } from "./helpers";
+import { validateTradeBalance, executeTradeAndUpdatePortfolio, ensurePortfolioExists, updatePortfolioBalance, validatePaginationParams } from "./helpers";
 import { insertTradeSchema } from "@shared/schema";
 import { z } from "zod";
 import { storage } from "../storage";
 import { syncManager } from "../sync-manager";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import LiveCryptoService from "../services/live-crypto-service";
 
 export default function registerTradingRoutes(app: Express) {
   // GET /api/portfolio/:userId
@@ -78,6 +79,9 @@ export default function registerTradingRoutes(app: Express) {
       const currentUserId = req.user.id;
       const { type } = req.query;
 
+      // SECURITY FIX L2: Add pagination limits
+      const { offset, limit } = validatePaginationParams(req.query.page, req.query.limit, 100);
+
       const { data: currentUser } = await supabaseAdmin
         .from("users")
         .select("role")
@@ -91,7 +95,17 @@ export default function registerTradingRoutes(app: Express) {
       }
 
       const transactions = await storage.getTransactions(requestedUserId, type as string);
-      res.json(transactions);
+
+      // Apply pagination
+      const paginatedTransactions = transactions.slice(offset, offset + limit);
+      res.json({
+        data: paginatedTransactions,
+        pagination: {
+          offset,
+          limit,
+          total: transactions.length,
+        },
+      });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch transactions" });
     }
@@ -472,10 +486,43 @@ export default function registerTradingRoutes(app: Express) {
         return res.status(400).json({ message: "Amount must be a positive number" });
       }
 
-      const parsedFromPrice = parseFloat(fromPrice);
-      const parsedToPrice = parseFloat(toPrice);
+      let parsedFromPrice = parseFloat(fromPrice);
+      let parsedToPrice = parseFloat(toPrice);
       if (isNaN(parsedFromPrice) || parsedFromPrice <= 0 || isNaN(parsedToPrice) || parsedToPrice <= 0) {
         return res.status(400).json({ message: "Prices must be positive numbers" });
+      }
+
+      // SECURITY: Validate client-supplied prices against server-side market data
+      // Prevents price manipulation attacks
+      try {
+        const liveCryptoService = LiveCryptoService.getInstance();
+        const livePrices = await liveCryptoService.getCurrentPrices();
+
+        const fromUpper = fromSymbol.toUpperCase();
+        const toUpper = toSymbol.toUpperCase();
+
+        const serverFromPrice = fromUpper === "USDT" ? 1 : parseFloat(livePrices.find((p: any) => p.symbol === fromUpper)?.price || "0");
+        const serverToPrice = toUpper === "USDT" ? 1 : parseFloat(livePrices.find((p: any) => p.symbol === toUpper)?.price || "0");
+
+        if (serverFromPrice > 0 && serverToPrice > 0) {
+          const MAX_PRICE_DEVIATION = 0.05; // 5% tolerance for price staleness
+          const fromDeviation = Math.abs(parsedFromPrice - serverFromPrice) / serverFromPrice;
+          const toDeviation = Math.abs(parsedToPrice - serverToPrice) / serverToPrice;
+
+          if (fromDeviation > MAX_PRICE_DEVIATION || toDeviation > MAX_PRICE_DEVIATION) {
+            return res.status(400).json({
+              message: "Conversion prices are stale or manipulated. Please refresh prices and try again.",
+              code: "PRICE_DEVIATION",
+            });
+          }
+
+          // Use server-validated prices instead of client-supplied
+          parsedFromPrice = serverFromPrice;
+          parsedToPrice = serverToPrice;
+        }
+      } catch {
+        // If price service is unavailable, block conversion rather than trust client prices
+        return res.status(503).json({ message: "Price service unavailable. Please try again later." });
       }
 
       if (fromSymbol.toUpperCase() === toSymbol.toUpperCase()) {

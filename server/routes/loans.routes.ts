@@ -9,6 +9,7 @@ import { logFinancialOperation, getClientIP, getUserAgent, logAuditEvent } from 
 import { adminNotificationService } from "../services/admin-notification.service";
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
+import { validateFinancialAmount, validatePaginationParams } from "./helpers";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -71,7 +72,19 @@ export default function registerLoansRoutes(app: Express) {
       }
 
       const applications = await storage.getLoanApplications(userId);
-      res.json(applications);
+
+      // SECURITY FIX L2: Add pagination to loan results
+      const { offset, limit } = validatePaginationParams(req.query.page, req.query.limit, 100);
+      const paginatedApps = applications.slice(offset, offset + limit);
+
+      res.json({
+        data: paginatedApps,
+        pagination: {
+          offset,
+          limit,
+          total: applications.length,
+        },
+      });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch loan applications" });
     }
@@ -142,6 +155,10 @@ export default function registerLoansRoutes(app: Express) {
       if (loan.status !== "approved") {
         return res.status(400).json({ error: "Loan is not approved" });
       }
+      // SECURITY: Check loan_status to prevent double-payment
+      if (loan.loan_status === "paid") {
+        return res.status(400).json({ error: "This loan has already been paid" });
+      }
 
       const { data: portfolio, error: portfolioError } = await supabaseAdmin
         .from("portfolios")
@@ -178,12 +195,15 @@ export default function registerLoansRoutes(app: Express) {
         return res.status(500).json({ error: "Failed to update portfolio balance" });
       }
 
-      const { error: updateLoanError } = await supabaseAdmin
+      const { data: updatedLoan, error: updateLoanError } = await supabaseAdmin
         .from("loan_applications")
         .update({ loan_status: "paid", reviewed_at: new Date().toISOString() })
-        .eq("id", loanId);
+        .eq("id", loanId)
+        .neq("loan_status", "paid")  // SECURITY: Conditional update — only if not already paid
+        .select()
+        .single();
 
-      if (updateLoanError) {
+      if (updateLoanError || !updatedLoan) {
         // Revert portfolio balance
         await supabaseAdmin
           .from("portfolios")
@@ -230,10 +250,12 @@ export default function registerLoansRoutes(app: Express) {
         return res.status(400).json({ message: "Loan duration must be between 7 and 90 days" });
       }
 
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        return res.status(400).json({ message: "Invalid loan amount" });
+      // SECURITY FIX M1: Validate financial amounts properly
+      const amountError = validateFinancialAmount(amount, "Loan amount");
+      if (amountError) {
+        return res.status(400).json({ message: amountError });
       }
+      const amountNum = parseFloat(amount);
 
       // Upload documents
       const documentUrls: string[] = [];

@@ -241,3 +241,114 @@ export function getClientIP(req: any): string {
 export function getUserAgent(req: any): string {
   return req.headers['user-agent'] || 'unknown';
 }
+
+// ==================== PASSWORD POLICY ====================
+
+/**
+ * SECURITY FIX M4: Validate password against policy requirements
+ */
+export function validatePasswordPolicy(password: string): { valid: boolean; message: string } {
+  // Minimum 8 characters
+  if (!password || password.length < 8) {
+    return { valid: false, message: 'Password must be at least 8 characters long' };
+  }
+
+  // Maximum 128 characters
+  if (password.length > 128) {
+    return { valid: false, message: 'Password must not exceed 128 characters' };
+  }
+
+  // At least one uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one uppercase letter' };
+  }
+
+  // At least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one lowercase letter' };
+  }
+
+  // At least one digit
+  if (!/\d/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one digit' };
+  }
+
+  // At least one special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one special character' };
+  }
+
+  return { valid: true, message: 'Password is valid' };
+}
+
+// ==================== RATE LIMITING ====================
+
+/**
+ * SECURITY FIX M3: Simple in-memory rate limiting by IP
+ */
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+/**
+ * Check if request should be rate limited
+ * @param identifier - Usually IP address or user ID
+ * @param maxRequests - Max requests allowed
+ * @param windowMs - Time window in milliseconds
+ */
+export function checkRateLimit(identifier: string, maxRequests: number = 5, windowMs: number = 60000): boolean {
+  const now = Date.now();
+  const entry = rateLimitStore.get(identifier);
+
+  if (!entry || now >= entry.resetTime) {
+    // Create new entry
+    rateLimitStore.set(identifier, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  entry.count++;
+  return entry.count <= maxRequests;
+}
+
+/**
+ * Get remaining requests for identifier
+ */
+export function getRateLimitRemaining(identifier: string, maxRequests: number = 5): number {
+  const entry = rateLimitStore.get(identifier);
+  if (!entry || Date.now() >= entry.resetTime) {
+    return maxRequests;
+  }
+  return Math.max(0, maxRequests - entry.count);
+}
+
+// Clean up expired rate limit entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now >= entry.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// ==================== ERROR SANITIZATION ====================
+
+/**
+ * SECURITY FIX M2: Sanitize error responses to prevent information leakage
+ */
+export function sanitizeErrorResponse(error: any, isDevelopment: boolean = false): string {
+  // In production, return generic error message
+  if (!isDevelopment) {
+    return 'An error occurred. Please try again later.';
+  }
+
+  // In development, return the actual error
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}

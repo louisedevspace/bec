@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { hasAdminAccess, requireAdmin, requireAuth, supabaseAdmin } from "./middleware";
 import { generateDisplayId } from "./helpers";
 import supabase from "../supabaseClient";
-import { hashPassword, verifyPassword, logAuditEvent, logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
+import { hashPassword, verifyPassword, logAuditEvent, logFinancialOperation, getClientIP, getUserAgent, invalidateSession, validatePasswordPolicy, checkRateLimit, getRateLimitRemaining, sanitizeErrorResponse } from "../utils/security";
 import { encryptPasswordForAdminView } from "../utils/admin-password-vault";
 
 async function upsertPasswordRecord(userId: string, password: string) {
@@ -66,6 +66,12 @@ export default function registerAuthRoutes(app: Express) {
         return res.status(400).json({ message: "Password is required" });
       }
 
+      // SECURITY FIX M4: Enforce password policy
+      const passwordValidation = validatePasswordPolicy(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
+      }
+
       try {
         await upsertPasswordRecord(userId, password);
       } catch (error) {
@@ -96,12 +102,27 @@ export default function registerAuthRoutes(app: Express) {
 
   // POST /api/auth/login
   app.post("/api/auth/login", async (req, res) => {
+    const ipAddress = getClientIP(req);
     const { email, password } = req.body;
+
+    // SECURITY FIX M3: Rate limit login attempts by IP
+    if (!checkRateLimit(ipAddress, 5, 60000)) {
+      const remaining = getRateLimitRemaining(ipAddress, 5);
+      return res.status(429).json({
+        message: 'Too many login attempts. Please try again later.',
+        retryAfter: 60,
+        remaining,
+      });
+    }
+
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) return res.status(400).json({ message: error.message });
+    if (error) {
+      // SECURITY FIX M2: Don't leak error details in response
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
 
     // Check if user exists in the users table and is active (blocks deleted/deactivated accounts)
     const { data: userRecord, error: userError } = await supabaseAdmin
@@ -123,8 +144,34 @@ export default function registerAuthRoutes(app: Express) {
   });
 
   // POST /api/auth/logout
-  app.post("/api/auth/logout", (_req, res) => {
-    res.json({ message: "Logged out" });
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      // Invalidate the server-side session cache
+      const authHeader = req.headers['authorization'];
+      if (authHeader) {
+        // SECURITY FIX L1: Properly parse Bearer token
+        const token = (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer '))
+          ? authHeader.slice(7).trim()
+          : typeof authHeader === 'string' ? authHeader.trim() : '';
+        if (token) {
+          const userId = req.user?.id;
+          if (userId) {
+            invalidateSession(token, userId);
+          }
+        }
+      }
+
+      // Also sign out from Supabase if possible
+      try {
+        await supabaseAdmin.auth.signOut();
+      } catch {
+        // Non-critical: server-side session is already invalidated
+      }
+
+      res.json({ message: "Logged out successfully" });
+    } catch {
+      res.json({ message: "Logged out" });
+    }
   });
 
   // GET /api/auth/me
@@ -155,34 +202,45 @@ export default function registerAuthRoutes(app: Express) {
         displayId = await generateDisplayId();
       }
 
-      // User role is always 'user' for self-registration
-      // Admin accounts must be created through database seeding or admin panel
-      const userRole = "user";
-
-      const { error } = await supabaseAdmin.from("users").upsert(
-        [
-          {
-            id: supabaseUserId,
+      // SECURITY: Preserve existing user role — never overwrite admin or existing roles via self-registration
+      // Only set role for truly new users; existing users keep their current role
+      if (existingUser) {
+        // User already exists — only update profile fields, never role
+        const { error } = await supabaseAdmin
+          .from("users")
+          .update({
             username: (req.user.email || "").split("@")[0],
             email: req.user.email,
-            password: "--supabase-auth--",
             full_name,
             phone,
-            role: userRole,
-            is_active: true,
-            is_verified: false,
-            credit_score: 0.60,
             display_id: displayId,
-          },
-        ],
-        { onConflict: "id" }
-      );
+          })
+          .eq("id", supabaseUserId);
 
-      if (error) {
-        console.error("signup-profile insert error:", JSON.stringify(error));
-        return res
-          .status(500)
-          .json({ message: "Insert error", error: error.message, details: error.details, code: error.code });
+        if (error) {
+          console.error("signup-profile update error:", JSON.stringify(error));
+          return res.status(500).json({ message: "Update error", error: error.message });
+        }
+      } else {
+        // New user — insert with 'user' role
+        const { error } = await supabaseAdmin.from("users").insert({
+          id: supabaseUserId,
+          username: (req.user.email || "").split("@")[0],
+          email: req.user.email,
+          password: "--supabase-auth--",
+          full_name,
+          phone,
+          role: "user",
+          is_active: true,
+          is_verified: false,
+          credit_score: 0.60,
+          display_id: displayId,
+        });
+
+        if (error) {
+          console.error("signup-profile insert error:", JSON.stringify(error));
+          return res.status(500).json({ message: "Insert error", error: error.message });
+        }
       }
 
       // Create default portfolios for major cryptos
@@ -231,6 +289,21 @@ export default function registerAuthRoutes(app: Express) {
       }
 
       if (!customUser) {
+        // SECURITY: Check if this user was previously deleted before auto-creating
+        // Deleted users should not be resurrected via auto-creation
+        const { data: auditLogs } = await supabaseAdmin
+          .from("audit_logs")
+          .select("id")
+          .eq("resource_id", supabaseUserId)
+          .in("action", ["USER_SELF_DELETED", "USER_DELETED_BY_ADMIN"])
+          .limit(1);
+
+        if (auditLogs && auditLogs.length > 0) {
+          return res.status(403).json({
+            message: "This account has been deleted. Please contact support to create a new account.",
+          });
+        }
+
         const { data: newUser, error: createError } = await supabase
           .from("users")
           .insert({
@@ -396,6 +469,12 @@ export default function registerAuthRoutes(app: Express) {
         return res.status(400).json({ message: "Missing password" });
       }
 
+      // SECURITY FIX M4: Enforce password policy
+      const passwordValidation = validatePasswordPolicy(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
+      }
+
       await upsertPasswordRecord(userId, password);
 
       await logAuditEvent({
@@ -426,10 +505,11 @@ export default function registerAuthRoutes(app: Express) {
           .status(400)
           .json({ message: "Missing current password or new password" });
       }
-      if (newPassword.length < 6) {
-        return res
-          .status(400)
-          .json({ message: "New password must be at least 6 characters long" });
+
+      // SECURITY FIX M4: Enforce password policy on new password
+      const passwordValidation = validatePasswordPolicy(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
       }
 
       const userId = req.user.id;
@@ -508,10 +588,11 @@ export default function registerAuthRoutes(app: Express) {
           .status(400)
           .json({ message: "User ID and new password are required" });
       }
-      if (newPassword.length < 6) {
-        return res
-          .status(400)
-          .json({ message: "Password must be at least 6 characters long" });
+
+      // SECURITY FIX M4: Enforce password policy
+      const passwordValidation = validatePasswordPolicy(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
       }
 
       const currentUserId = req.user.id;
