@@ -102,6 +102,23 @@ export default function registerAuthRoutes(app: Express) {
       password,
     });
     if (error) return res.status(400).json({ message: error.message });
+
+    // Check if user exists in the users table and is active (blocks deleted/deactivated accounts)
+    const { data: userRecord, error: userError } = await supabaseAdmin
+      .from("users")
+      .select("id, is_active")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (userError || !userRecord) {
+      // User was deleted from the users table — reject login
+      return res.status(403).json({ message: "This account has been deleted. Please contact support." });
+    }
+
+    if (userRecord.is_active === false) {
+      return res.status(403).json({ message: "This account has been deactivated. Please contact support." });
+    }
+
     res.json({ session: data.session, user: data.user });
   });
 
@@ -318,6 +335,13 @@ export default function registerAuthRoutes(app: Express) {
         return res
           .status(500)
           .json({ message: "Failed to delete user account" });
+      }
+
+      // Also delete the Supabase Auth record so the user can no longer authenticate
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
+      } catch (authDeleteErr) {
+        console.error("Failed to delete Supabase Auth user:", (authDeleteErr as Error).message);
       }
 
       res.json({ message: "Account deleted successfully" });

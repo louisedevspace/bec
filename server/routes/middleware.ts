@@ -68,6 +68,21 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     req.user = data.user;
 
+    // Check if user still exists in the users table (blocks deleted accounts)
+    const { data: userRecord, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, is_active')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    if (userError || !userRecord) {
+      return res.status(401).json({ message: 'Account has been deleted. Please contact support.' });
+    }
+
+    if (userRecord.is_active === false) {
+      return res.status(401).json({ message: 'Account has been deactivated. Please contact support.' });
+    }
+
     // Validate and track session
     const sessionInfo = await validateSession(token, data.user.id, ipAddress, userAgent);
     if (!sessionInfo) {

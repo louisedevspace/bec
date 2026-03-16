@@ -383,6 +383,15 @@ export default function registerAdminRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to delete user", error: deleteUserError.message });
           }
 
+          // Also delete the Supabase Auth record so the user can no longer authenticate
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(userId);
+          } catch (authDeleteErr) {
+            // Log but don't fail — the users table row is already gone,
+            // and the requireAuth middleware will block this user anyway.
+            console.error("Failed to delete Supabase Auth user:", (authDeleteErr as Error).message);
+          }
+
           await logAuditEvent({
             userId: adminUserId,
             action: "ADMIN_USER_DELETED",

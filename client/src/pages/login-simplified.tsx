@@ -29,7 +29,9 @@ export default function LoginPage() {
       
       if (profileError) {
         console.error('Profile select error:', profileError);
-        throw new Error('User profile not found. Please contact support.');
+        // User was deleted — sign out the Supabase session and reject login
+        await supabase.auth.signOut();
+        throw new Error('This account has been deleted. Please contact support.');
       }
       
       // Ensure role is present in profile

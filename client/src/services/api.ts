@@ -21,6 +21,24 @@ export const authApi = {
   login: async ({ email, password }: { email: string; password: string }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Verify user still exists in the users table (blocks deleted accounts)
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, is_active')
+      .eq('id', data.user!.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      await supabase.auth.signOut();
+      throw new Error('This account has been deleted. Please contact support.');
+    }
+
+    if (profile.is_active === false) {
+      await supabase.auth.signOut();
+      throw new Error('This account has been deactivated. Please contact support.');
+    }
+
     return data.session;
   },
   logout: async () => {
