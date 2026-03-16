@@ -53,6 +53,8 @@ export async function safeServiceRoleQuery(
   return null;
 }
 
+const internalTaskSecret = process.env.INTERNAL_TASK_SECRET || randomBytes(32).toString('hex');
+
 function matchesInternalTaskSecret(headerValue: string | undefined): boolean {
   if (!headerValue) {
     return false;
