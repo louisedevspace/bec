@@ -589,17 +589,19 @@ export default function registerAdminRoutes(app: Express) {
       syncManager.syncPortfolioUpdated(userId, {});
       res.json({ message: "Portfolio balances updated successfully" });
     } catch (error: any) {
-      await logAuditEvent({
-        userId: adminUserId || (req.user?.id),
-        action: 'ADMIN_BALANCE_EDIT_FAILED',
-        resourceType: 'portfolios',
-        resourceId: userId,
-        details: { targetUserId: userId },
-        ipAddress: getClientIP(req),
-        userAgent: getUserAgent(req),
-        status: 'failure',
-        errorMessage: error?.message || 'Unknown error',
-      });
+      try {
+        await logAuditEvent({
+          userId: req.user?.id || 'unknown',
+          action: 'ADMIN_BALANCE_EDIT_FAILED',
+          resourceType: 'portfolios',
+          resourceId: req.body?.userId || 'unknown',
+          details: { targetUserId: req.body?.userId },
+          ipAddress: getClientIP(req),
+          userAgent: getUserAgent(req),
+          status: 'failure',
+          errorMessage: error?.message || 'Unknown error',
+        });
+      } catch { /* don't fail if audit logging itself fails */ }
       res.status(500).json({ message: "Server error" });
     }
   });
