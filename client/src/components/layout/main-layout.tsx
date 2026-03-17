@@ -89,62 +89,108 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
-        <nav className="hidden md:flex items-center justify-between px-6 h-14 border-b border-[#1e1e1e] bg-[#0a0a0a]/95 backdrop-blur-md sticky top-0 z-50" style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}>
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#111] border border-[#2a2a2a] rounded-lg flex items-center justify-center overflow-hidden">
-              <Logo className="w-full h-full" />
+        <nav 
+          className="hidden md:flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50 shadow-lg shadow-black/20"
+          style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
+        >
+          {/* Gradient bottom border */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+          
+          {/* Logo Area */}
+          <a href="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] rounded-xl flex items-center justify-center overflow-hidden shadow-lg shadow-black/30 transition-all duration-300 group-hover:border-blue-500/40 group-hover:shadow-blue-500/20">
+              <Logo className="w-7 h-7" />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-white">Becxus</span>
+            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent transition-all duration-300 group-hover:from-blue-400 group-hover:to-blue-200">
+              Becxus
+            </span>
           </a>
+
+          {/* Navigation Items */}
           <div className="flex items-center gap-1">
             {navItems.map(({ path, label, icon: Icon }) => (
               <a
                 key={path}
                 href={path}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 overflow-hidden ${
                   location === path
-                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                    ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
+                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                {location === path && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" />
+                )}
+                <Icon className={`h-4 w-4 transition-transform duration-300 ${location === path ? 'scale-110' : 'group-hover:scale-105'}`} />
                 {label}
               </a>
             ))}
             {isAdmin && (
               <a
                 href="/admin/dashboard"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 overflow-hidden ${
                   location.startsWith('/admin')
-                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                    ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
+                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
                 }`}
               >
-                <Settings className="h-3.5 w-3.5" />
+                {location.startsWith('/admin') && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" />
+                )}
+                <Settings className={`h-4 w-4 transition-transform duration-300 ${location.startsWith('/admin') ? 'scale-110' : ''}`} />
                 Dashboard
               </a>
             )}
+
+            {/* Separator */}
+            <div className="w-px h-6 bg-gradient-to-b from-transparent via-[#2a2a2a] to-transparent mx-2" />
+
+            {/* Notification Bell for Desktop */}
+            <button
+              onClick={() => setLocation('/wallet')}
+              className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80 transition-all duration-300"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {notifCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                  {notifCount > 99 ? '99+' : notifCount}
+                </span>
+              )}
+            </button>
           </div>
         </nav>
       )}
 
       {/* Mobile top bar - logo + notification bell */}
       {!isAuthPage && (
-        <div className="flex md:hidden items-center justify-between px-4 h-12 border-b border-[#1e1e1e] bg-[#0a0a0a]/95 backdrop-blur-md sticky top-0 z-50" style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}>
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#111] border border-[#2a2a2a] rounded-lg flex items-center justify-center overflow-hidden">
-              <Logo className="w-full h-full" />
+        <div 
+          className="flex md:hidden items-center justify-between px-4 h-14 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50 shadow-lg shadow-black/20"
+          style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
+        >
+          {/* Gradient bottom border */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+          
+          {/* Logo Area */}
+          <a href="/" className="flex items-center gap-2.5">
+            <div className="relative w-9 h-9 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] rounded-xl flex items-center justify-center overflow-hidden shadow-md shadow-black/30">
+              <Logo className="w-6 h-6" />
             </div>
-            <span className="font-bold text-base tracking-tight text-white">Becxus</span>
+            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Becxus
+            </span>
           </a>
+
+          {/* Notification Bell */}
           <button
             onClick={() => setLocation('/wallet')}
-            className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
+            className="relative p-2.5 rounded-xl bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222] transition-all duration-300 touch-manipulation"
             aria-label="Notifications"
           >
-            <Bell size={22} />
+            <Bell className="h-5 w-5" />
             {notifCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse border-2 border-[#0a0a0a]">
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}
