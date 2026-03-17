@@ -115,7 +115,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <span className={`font-bold text-xl tracking-tight bg-clip-text text-transparent transition-all duration-300 ${
               isDark 
                 ? 'bg-gradient-to-r from-white to-gray-300 group-hover:from-blue-400 group-hover:to-blue-200' 
-                : 'bg-gradient-to-r from-gray-900 to-gray-700 group-hover:from-blue-600 group-hover:to-blue-500'
+                : 'bg-gradient-to-r from-gray-900 to-gray-800 group-hover:from-blue-600 group-hover:to-blue-500'
             }`}>
               Becxus
             </span>
@@ -134,7 +134,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       : "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-600 shadow-lg shadow-blue-200/30"
                     : isDark
                       ? "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100/80"
                 }`}
               >
                 {location === path && (
@@ -154,7 +154,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                       : "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-600 shadow-lg shadow-blue-200/30"
                     : isDark
                       ? "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100/80"
                 }`}
               >
                 {location.startsWith('/admin') && (
@@ -178,7 +178,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               className={`relative p-2.5 rounded-xl transition-all duration-300 ${
                 isDark 
                   ? 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80' 
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/80'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/80'
               }`}
               aria-label="Notifications"
             >
@@ -218,7 +218,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <span className={`font-bold text-lg tracking-tight bg-clip-text text-transparent ${
               isDark 
                 ? 'bg-gradient-to-r from-white to-gray-300' 
-                : 'bg-gradient-to-r from-gray-900 to-gray-700'
+                : 'bg-gradient-to-r from-gray-900 to-gray-800'
             }`}>
               Becxus
             </span>
@@ -230,7 +230,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             className={`relative p-2.5 rounded-xl transition-all duration-300 touch-manipulation ${
               isDark 
                 ? 'bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222]' 
-                : 'bg-gray-100/60 border border-gray-200/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 active:bg-gray-200'
+                : 'bg-gray-100/60 border border-gray-200/50 text-gray-700 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 active:bg-gray-200'
             }`}
             aria-label="Notifications"
           >
