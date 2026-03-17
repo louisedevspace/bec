@@ -174,7 +174,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
             {/* Notification Bell for Desktop */}
             <button
-              onClick={() => setLocation('/wallet')}
+              onClick={() => { setNotifCount(0); setLocation('/wallet'); }}
               className={`relative p-2.5 rounded-xl transition-all duration-300 ${
                 isDark 
                   ? 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80' 
@@ -226,7 +226,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
           {/* Notification Bell */}
           <button
-            onClick={() => setLocation('/wallet')}
+            onClick={() => { setNotifCount(0); setLocation('/wallet'); }}
             className={`relative p-2.5 rounded-xl transition-all duration-300 touch-manipulation ${
               isDark 
                 ? 'bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222]' 

@@ -130,6 +130,31 @@ export default function registerDepositsRoutes(app: Express) {
     }
   });
 
+  // POST /api/deposit-requests/mark-seen — mark user's deposit notifications as seen
+  app.post("/api/deposit-requests/mark-seen", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      // Update all visible deposit requests for this user to hidden_for_user = true
+      const { error } = await supabaseAdmin
+        .from("deposit_requests")
+        .update({ hidden_for_user: true })
+        .eq("user_id", userId)
+        .eq("hidden_for_user", false)
+        .in("status", ["pending", "approved", "rejected"]);
+
+      if (error) {
+        console.error("Error marking deposits as seen:", error);
+        return res.status(500).json({ message: "Failed to mark deposits as seen" });
+      }
+
+      res.json({ message: "Deposits marked as seen" });
+    } catch (err) {
+      console.error("Mark-seen error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // GET /api/deposit-requests/:userId
   app.get("/api/deposit-requests/:userId", requireAuth, async (req, res) => {
     try {

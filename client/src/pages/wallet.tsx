@@ -145,6 +145,27 @@ export default function WalletPage() {
     });
   }, []);
 
+  // Clear notification badge when visiting wallet page
+  useEffect(() => {
+    const markDepositsSeen = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        
+        await fetch("/api/deposit-requests/mark-seen", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+        });
+      } catch {
+        // Silent - non-critical
+      }
+    };
+    markDepositsSeen();
+  }, []);
+
   const { data: wallet, isLoading, refetch } = useQuery<WalletSummary>({
     queryKey: ["/api/wallet/summary"],
     queryFn: () => apiRequest("GET", "/api/wallet/summary").then(r => r.json()),
