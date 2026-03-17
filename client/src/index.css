@@ -357,6 +357,7 @@
 
 /* ---- Background overrides ---- */
 html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #f8fafc !important; }
+html:not(.dark) .bg-\[\#0f0f0f\]  { background-color: #f1f5f9 !important; } /* slate-100, used in staking cards */
 html:not(.dark) .bg-\[\#111\],
 html:not(.dark) .bg-\[\#111111\]  { background-color: #ffffff !important; }
 html:not(.dark) .bg-\[\#111\]\/95  { background-color: rgba(255,255,255,0.95) !important; }

@@ -285,12 +285,12 @@ export default function AdminStakingPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3 flex-wrap">
+              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Coins size={22} className="text-purple-400" />
               </div>
-              Staking Management
+              <span className="min-w-0">Staking Management</span>
             </h1>
             <p className="text-sm text-gray-500 mt-1">Monitor and manage all staking positions & user limits</p>
           </div>
