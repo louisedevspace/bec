@@ -256,6 +256,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
+        attributionLogo: false, // Remove TradingView branding
       },
       grid: {
         vertLines: { color: colors.grid },
