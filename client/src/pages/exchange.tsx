@@ -122,16 +122,16 @@ export default function ExchangePage() {
       </div>
 
       {/* Main Trading Area - Binance-like Layout */}
-      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
+      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
         {/* Top Row: Chart + Order Book */}
-        <div className="flex flex-col lg:flex-row gap-2 flex-1 min-h-0">
-          {/* Price Chart - Center/Main - explicit height for mobile PWA */}
-          <div className="flex-1 order-1 min-h-[350px] lg:min-h-0" style={{ height: 'clamp(300px, 50vh, 600px)' }}>
-            <PriceChart symbol={baseAsset} className="h-full" />
+        <div className="flex flex-col lg:flex-row gap-2 flex-1 min-h-0 overflow-hidden">
+          {/* Price Chart - Center/Main - constrained to prevent overflow */}
+          <div className="flex-1 order-1 min-h-[300px] lg:min-h-0 max-h-[400px] lg:max-h-none overflow-hidden">
+            <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 
-          {/* Order Book - Right Sidebar */}
-          <div className="lg:w-[300px] xl:w-[340px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 min-h-[300px] lg:min-h-0">
+          {/* Order Book - Right Sidebar - fixed width on desktop */}
+          <div className="lg:w-[280px] xl:w-[320px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 min-h-[280px] max-h-[400px] lg:max-h-none overflow-hidden">
             <OrderBook pair={currentPair} className="h-full" onPriceSelect={setSelectedPrice} />
           </div>
         </div>
