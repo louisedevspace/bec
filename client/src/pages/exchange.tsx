@@ -125,8 +125,8 @@ export default function ExchangePage() {
       <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
         {/* Top Row: Chart + Order Book */}
         <div className="flex flex-col lg:flex-row gap-2 flex-1 min-h-0">
-          {/* Price Chart - Center/Main */}
-          <div className="flex-1 order-1 min-h-[350px] lg:min-h-0">
+          {/* Price Chart - Center/Main - explicit height for mobile PWA */}
+          <div className="flex-1 order-1 min-h-[350px] lg:min-h-0" style={{ height: 'clamp(300px, 50vh, 600px)' }}>
             <PriceChart symbol={baseAsset} className="h-full" />
           </div>
 

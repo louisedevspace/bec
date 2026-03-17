@@ -49,7 +49,7 @@ function formatTime(timestamp: number, interval: ChartTimeframe): string {
 // Custom candlestick shape for Recharts
 function CandlestickShape(props: any) {
   const { x, y, width, height, payload } = props;
-  if (!payload || payload.open === undefined) return null;
+  if (!payload || payload.open === undefined) return <g />;
 
   const { open, close, high, low } = payload;
   const isUp = close >= open;
@@ -62,7 +62,7 @@ function CandlestickShape(props: any) {
   const domain = props.yAxis?.domain || [low, high];
   const [domainMin, domainMax] = domain;
   const range = domainMax - domainMin;
-  if (range === 0) return null;
+  if (range === 0) return <g />;
 
   const yScale = (val: number) => {
     const pct = (val - domainMin) / range;
@@ -120,18 +120,44 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 100);
-  
+
   // Mobile PWA fix: Explicit dimension management instead of ResponsiveContainer
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  
+  // Initialize with reasonable defaults based on window size for immediate rendering
+  const getDefaultDimensions = useCallback(() => {
+    const defaultWidth = typeof window !== 'undefined' ? Math.max(280, window.innerWidth - 40) : 320;
+    const defaultHeight = 280;
+    return { width: defaultWidth, height: defaultHeight };
+  }, []);
+  
+  const [dimensions, setDimensions] = useState(getDefaultDimensions);
 
   const updateDimensions = useCallback(() => {
     if (containerRef.current) {
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      // Only update if dimensions actually changed
+      // Try multiple methods to get dimensions (mobile PWA compatibility)
+      let width = containerRef.current.getBoundingClientRect().width;
+      let height = containerRef.current.getBoundingClientRect().height;
+      
+      // Fallback 1: offsetWidth/offsetHeight
+      if (width < 50) width = containerRef.current.offsetWidth;
+      if (height < 50) height = containerRef.current.offsetHeight;
+      
+      // Fallback 2: clientWidth/clientHeight
+      if (width < 50) width = containerRef.current.clientWidth;
+      if (height < 50) height = containerRef.current.clientHeight;
+      
+      // Fallback 3: window-based calculation for PWA standalone mode
+      if (width < 50) width = window.innerWidth - 40;
+      if (height < 50) height = 280; // Match min-height
+
+      // Ensure minimum dimensions
+      width = Math.max(200, width);
+      height = Math.max(200, height);
+
       setDimensions((prev) => {
-        if (prev.width !== width || prev.height !== height) {
-          return { width, height };
+        if (Math.abs(prev.width - width) > 2 || Math.abs(prev.height - height) > 2) {
+          return { width: Math.floor(width), height: Math.floor(height) };
         }
         return prev;
       });
@@ -139,21 +165,28 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   }, []);
 
   useEffect(() => {
-    // Initial measurement with delay for PWA initialization
-    const initialTimer = setTimeout(updateDimensions, 50);
-    // Second measurement after PWA viewport stabilizes
-    const pwaTimer = setTimeout(updateDimensions, 300);
+    // Staggered measurements for PWA initialization - mobile webviews need
+    // extra time after the viewport stabilizes (especially iOS standalone mode)
+    const timers = [
+      setTimeout(updateDimensions, 0),
+      setTimeout(updateDimensions, 100),
+      setTimeout(updateDimensions, 500),
+      setTimeout(updateDimensions, 1000),
+    ];
 
-    // Handle resize and orientation change
+    // Handle resize events
     const handleResize = () => {
       requestAnimationFrame(updateDimensions);
     };
 
+    // Handle orientation change with extra delay for viewport recalculation
+    const handleOrientationChange = () => {
+      setTimeout(updateDimensions, 150);
+      setTimeout(updateDimensions, 500);
+    };
+
     window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", () => {
-      // Delay after orientation change to let viewport settle
-      setTimeout(updateDimensions, 100);
-    });
+    window.addEventListener("orientationchange", handleOrientationChange);
 
     // ResizeObserver for container size changes
     let resizeObserver: ResizeObserver | null = null;
@@ -163,10 +196,9 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     }
 
     return () => {
-      clearTimeout(initialTimer);
-      clearTimeout(pwaTimer);
+      timers.forEach(clearTimeout);
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener("orientationchange", handleOrientationChange);
       resizeObserver?.disconnect();
     };
   }, [updateDimensions]);
@@ -244,20 +276,27 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         </div>
       </div>
 
-      {/* Chart Area */}
-      <div 
+      {/* Chart Area - explicit height ensures mobile PWA renders properly */}
+      <div
         ref={containerRef}
         className="flex-1 min-h-[280px] px-1 pt-2 touch-manipulation"
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          height: '280px', // Fixed height for reliable mobile rendering
+          position: 'relative',
+          overflow: 'hidden',
+          WebkitTransform: 'translateZ(0)',
+          willChange: 'transform',
+        }}
       >
         {chartData.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
+          <div className="h-full flex items-center justify-center" style={{ minHeight: '280px' }}>
             <p className="text-gray-600 text-sm">No data available</p>
           </div>
-        ) : dimensions.width > 0 && dimensions.height > 0 ? (
+        ) : (
           <ComposedChart 
-            width={dimensions.width - 8} 
-            height={dimensions.height - 8} 
+            width={Math.max(200, dimensions.width - 8)} 
+            height={Math.max(200, dimensions.height - 8)} 
             data={chartData} 
             margin={{ top: 5, right: 10, bottom: 5, left: 10 }}
           >
@@ -371,13 +410,6 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
                 </linearGradient>
               </defs>
           </ComposedChart>
-        ) : (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <BarChart3 size={24} className="text-gray-600 mx-auto mb-2 animate-pulse" />
-              <p className="text-gray-500 text-xs">Initializing chart...</p>
-            </div>
-          </div>
         )}
       </div>
     </div>
