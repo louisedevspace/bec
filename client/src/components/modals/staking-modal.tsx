@@ -11,6 +11,7 @@ import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles, AlertTri
 import type { StakingPosition } from "@/types/crypto";
 import { StakingDetailsModal } from "./staking-details-modal";
 import { formatUsdNumber } from "@/utils/format-utils";
+import { useTheme } from "@/hooks/use-theme";
 
 interface StakingModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isDark } = useTheme();
   
   // Get user's USDT balance
   const { data: portfolio } = useQuery({
@@ -155,25 +157,37 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
-        {/* Custom Header - Fixed Position */}
-        <div className="fixed top-0 left-0 right-0 bg-[#111] border-b border-[#1e1e1e] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-50">
+      <DialogContent className={`sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden border ${
+        isDark 
+          ? 'bg-[#111] border-[#1e1e1e] text-white' 
+          : 'bg-white border-gray-200 text-gray-900'
+      }`} hideCloseButton>
+        {/* Custom Header - Sticky within dialog */}
+        <div className={`sticky top-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 border-b ${
+          isDark 
+            ? 'bg-[#111] border-[#1e1e1e]' 
+            : 'bg-white border-gray-200'
+        }`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
               <TrendingUp size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">USDT Staking</h2>
-              <p className="text-xs text-gray-500">Earn passive income on your crypto</p>
+              <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>USDT Staking</h2>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Earn passive income on your crypto</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#2a2a2a] transition-colors">
-            <X size={16} className="text-gray-400" />
+          <button onClick={onClose} className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
+            isDark 
+              ? 'bg-[#1a1a1a] border-[#2a2a2a] hover:bg-[#2a2a2a]' 
+              : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+          }`}>
+            <X size={16} className={isDark ? 'text-gray-400' : 'text-gray-600'} />
           </button>
         </div>
 
-        {/* Content with padding to account for fixed header */}
-        <div className="pt-20 p-4 sm:p-6 space-y-6">
+        {/* Content - no extra top padding needed since header is sticky within scroll container */}
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Staking disabled warning */}
           {stakingLimits && !stakingLimits.isEnabled && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">

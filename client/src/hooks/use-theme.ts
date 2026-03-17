@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 type Theme = 'dark' | 'light';
 
 const STORAGE_KEY = 'becxus-theme';
+const THEME_CHANGE_EVENT = 'becxus-theme-change';
 
 function getStoredTheme(): Theme {
   try {
@@ -26,6 +27,11 @@ function applyTheme(theme: Theme) {
   }
 }
 
+// Dispatch custom event to notify all useTheme consumers
+function dispatchThemeChange(theme: Theme) {
+  window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: theme }));
+}
+
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
 
@@ -34,12 +40,25 @@ export function useTheme() {
     applyTheme(theme);
   }, []);
 
+  // Listen for theme changes from other components
+  useEffect(() => {
+    const handleThemeChange = (e: CustomEvent<Theme>) => {
+      setThemeState(e.detail);
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange as EventListener);
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange as EventListener);
+    };
+  }, []);
+
   const setTheme = useCallback((newTheme: Theme) => {
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
     } catch {}
     applyTheme(newTheme);
     setThemeState(newTheme);
+    dispatchThemeChange(newTheme);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -49,6 +68,7 @@ export function useTheme() {
         localStorage.setItem(STORAGE_KEY, next);
       } catch {}
       applyTheme(next);
+      dispatchThemeChange(next);
       return next;
     });
   }, []);
