@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabaseClient';
 import AdminLayout from './admin-layout';
 import {
@@ -87,6 +88,7 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
   const { toast } = useToast();
+  const { isDark } = useTheme();
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -402,9 +404,9 @@ export default function AdminAnalyticsPage() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.userGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
+                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
                     <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} name="Total Users" />
@@ -465,9 +467,9 @@ export default function AdminAnalyticsPage() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData.tradingVolume}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
+                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
                     <Bar dataKey="volume" fill="#8b5cf6" name="Volume ($)" radius={[4, 4, 0, 0]} />
@@ -488,7 +490,7 @@ export default function AdminAnalyticsPage() {
                     <PieChart>
                       <Pie data={chartData.tradeStatus} cx="50%" cy="50%" labelLine={false}
                         label={({ x, y, status, count, percent }) => (
-                          <text x={x} y={y} fill="#9ca3af" textAnchor="middle" dominantBaseline="central" fontSize={11}>
+                          <text x={x} y={y} fill={isDark ? '#9ca3af' : '#1e293b'} textAnchor="middle" dominantBaseline="central" fontSize={11}>
                             {`${status}: ${count} (${(percent * 100).toFixed(0)}%)`}
                           </text>
                         )}
@@ -540,9 +542,9 @@ export default function AdminAnalyticsPage() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={chartData.depositWithdrawal}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
+                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
                     <Area type="monotone" dataKey="deposits" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Deposits ($)" />
@@ -617,9 +619,9 @@ export default function AdminAnalyticsPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData.cumulativeMetrics}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
-                <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-                <YAxis stroke="#6b7280" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
+                <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
                 <Tooltip content={<ChartTooltipContent />} />
                 <Legend formatter={renderLegendText} />
                 <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Total Users" />
