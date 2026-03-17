@@ -1,11 +1,34 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
-import type { ChartTimeframe, ChartType, CandlestickData } from "@/types/chart";
-import {
-  ComposedChart, Bar, Line, Area, XAxis, YAxis, Tooltip,
-  CartesianGrid, Cell, ReferenceLine,
-} from "recharts";
+import type { ChartTimeframe } from "@/types/chart";
+import { 
+  createChart, 
+  IChartApi, 
+  ISeriesApi,
+  CandlestickSeries,
+  LineSeries,
+  BarSeries,
+  HistogramSeries,
+  ColorType,
+  CrosshairMode,
+  UTCTimestamp,
+} from "lightweight-charts";
 import { BarChart3, TrendingUp, Activity, Layers, Grid3X3 } from "lucide-react";
+
+// Define data types for TradingView charts
+interface OHLCData {
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+interface SingleValueData {
+  time: UTCTimestamp;
+  value: number;
+  color?: string;
+}
 
 interface PriceChartProps {
   symbol: string;
@@ -22,7 +45,6 @@ const TIMEFRAMES: { label: string; value: ChartTimeframe }[] = [
   { label: "1W", value: "1w" },
 ];
 
-// Extended chart types including all 5 requested
 type ExtendedChartType = "candlestick" | "line" | "ohlc" | "heikin-ashi" | "renko";
 
 const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarChart3 }[] = [
@@ -33,29 +55,11 @@ const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarCh
   { label: "Renko", value: "renko", icon: Grid3X3 },
 ];
 
-function formatPrice(price: number): string {
-  if (price >= 10000) return price.toFixed(0);
-  if (price >= 100) return price.toFixed(1);
-  if (price >= 1) return price.toFixed(2);
-  return price.toFixed(4);
-}
-
-function formatTime(timestamp: number, interval: ChartTimeframe): string {
-  const d = new Date(timestamp);
-  if (["1d", "1w"].includes(interval)) {
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-  if (["4h", "1h"].includes(interval)) {
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  }
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-}
-
 // Calculate Heikin-Ashi values from regular OHLC data
-function calculateHeikinAshi(candles: any[]): any[] {
+function calculateHeikinAshi(candles: any[]): OHLCData[] {
   if (!candles.length) return [];
   
-  const result: any[] = [];
+  const result: OHLCData[] = [];
   let prevHA = { open: candles[0].open, close: candles[0].close };
   
   for (let i = 0; i < candles.length; i++) {
@@ -66,13 +70,11 @@ function calculateHeikinAshi(candles: any[]): any[] {
     const haLow = Math.min(c.low, haOpen, haClose);
     
     result.push({
-      ...c,
+      time: Math.floor(c.time / 1000) as any, // Convert ms to seconds
       open: haOpen,
       high: haHigh,
       low: haLow,
       close: haClose,
-      originalOpen: c.open,
-      originalClose: c.close,
     });
     
     prevHA = { open: haOpen, close: haClose };
@@ -82,18 +84,18 @@ function calculateHeikinAshi(candles: any[]): any[] {
 }
 
 // Calculate Renko bricks from price data
-function calculateRenko(candles: any[], brickSize?: number): any[] {
+function calculateRenko(candles: any[], brickSize?: number): OHLCData[] {
   if (!candles.length) return [];
   
-  // Auto-calculate brick size if not provided (2% of price range)
   const prices = candles.map(c => c.close);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const autoSize = brickSize || Math.max(1, (maxPrice - minPrice) * 0.02);
   
-  const bricks: any[] = [];
+  const bricks: OHLCData[] = [];
   let currentPrice = candles[0].close;
   let direction: 'up' | 'down' | null = null;
+  let brickIndex = 0;
   
   for (const candle of candles) {
     const price = candle.close;
@@ -102,58 +104,52 @@ function calculateRenko(candles: any[], brickSize?: number): any[] {
       if (direction === null || direction === 'up') {
         if (price >= currentPrice + autoSize) {
           bricks.push({
-            time: candle.time,
+            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
             open: currentPrice,
             close: currentPrice + autoSize,
             high: currentPrice + autoSize,
             low: currentPrice,
-            isUp: true,
-            volume: candle.volume,
           });
           currentPrice += autoSize;
           direction = 'up';
+          brickIndex++;
         } else if (price <= currentPrice - autoSize * 2) {
-          // Reversal requires 2 bricks
           bricks.push({
-            time: candle.time,
+            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
             open: currentPrice,
             close: currentPrice - autoSize,
             high: currentPrice,
             low: currentPrice - autoSize,
-            isUp: false,
-            volume: candle.volume,
           });
           currentPrice -= autoSize;
           direction = 'down';
+          brickIndex++;
         } else {
           break;
         }
       } else {
         if (price <= currentPrice - autoSize) {
           bricks.push({
-            time: candle.time,
+            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
             open: currentPrice,
             close: currentPrice - autoSize,
             high: currentPrice,
             low: currentPrice - autoSize,
-            isUp: false,
-            volume: candle.volume,
           });
           currentPrice -= autoSize;
           direction = 'down';
+          brickIndex++;
         } else if (price >= currentPrice + autoSize * 2) {
-          // Reversal requires 2 bricks
           bricks.push({
-            time: candle.time,
+            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
             open: currentPrice,
             close: currentPrice + autoSize,
             high: currentPrice + autoSize,
             low: currentPrice,
-            isUp: true,
-            volume: candle.volume,
           });
           currentPrice += autoSize;
           direction = 'up';
+          brickIndex++;
         } else {
           break;
         }
@@ -161,169 +157,186 @@ function calculateRenko(candles: any[], brickSize?: number): any[] {
     }
   }
   
-  // Limit to last 100 bricks for performance
   return bricks.slice(-100);
-}
-
-function ChartTooltipContent({ active, payload, interval }: any) {
-  if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
-  if (!data) return null;
-
-  const isUp = data.close >= data.open;
-  return (
-    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-xs shadow-xl z-50">
-      <p className="text-gray-400 mb-1">{formatTime(data.time, interval)}</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-        <span className="text-gray-500">O</span>
-        <span className="text-white tabular-nums">{formatPrice(data.open)}</span>
-        <span className="text-gray-500">H</span>
-        <span className="text-green-400 tabular-nums">{formatPrice(data.high)}</span>
-        <span className="text-gray-500">L</span>
-        <span className="text-red-400 tabular-nums">{formatPrice(data.low)}</span>
-        <span className="text-gray-500">C</span>
-        <span className={`tabular-nums ${isUp ? "text-green-400" : "text-red-400"}`}>{formatPrice(data.close)}</span>
-        {data.volume !== undefined && (
-          <>
-            <span className="text-gray-500">Vol</span>
-            <span className="text-white tabular-nums">{data.volume >= 1000 ? `${(data.volume / 1000).toFixed(1)}K` : data.volume.toFixed(1)}</span>
-          </>
-        )}
-      </div>
-    </div>
-  );
 }
 
 export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 100);
-
-  // Mobile PWA fix: Explicit dimension management instead of ResponsiveContainer
-  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Initialize with reasonable defaults based on window size for immediate rendering
-  const getDefaultDimensions = useCallback(() => {
-    const defaultWidth = typeof window !== 'undefined' ? Math.min(800, Math.max(280, window.innerWidth - 380)) : 320;
-    const defaultHeight = 260;
-    return { width: defaultWidth, height: defaultHeight };
-  }, []);
-  
-  const [dimensions, setDimensions] = useState(getDefaultDimensions);
-
-  const updateDimensions = useCallback(() => {
-    if (containerRef.current) {
-      // Get parent container's actual dimensions
-      const parent = containerRef.current.parentElement;
-      const parentRect = parent?.getBoundingClientRect();
-      
-      // Try multiple methods to get dimensions (mobile PWA compatibility)
-      let width = containerRef.current.getBoundingClientRect().width;
-      let height = containerRef.current.getBoundingClientRect().height;
-      
-      // Use parent width if available and smaller (prevents overflow)
-      if (parentRect && parentRect.width > 0 && parentRect.width < width) {
-        width = parentRect.width;
-      }
-      
-      // Fallback chain for PWA
-      if (width < 50) width = containerRef.current.offsetWidth;
-      if (height < 50) height = containerRef.current.offsetHeight;
-      if (width < 50) width = containerRef.current.clientWidth;
-      if (height < 50) height = containerRef.current.clientHeight;
-      
-      // Window-based fallback with proper constraints
-      if (width < 50) {
-        const isDesktop = window.innerWidth >= 1024;
-        width = isDesktop ? Math.min(800, window.innerWidth - 400) : window.innerWidth - 40;
-      }
-      if (height < 50) height = 260;
-
-      // Ensure minimum and maximum dimensions to prevent overflow
-      width = Math.max(200, Math.min(width, window.innerWidth - 20));
-      height = Math.max(200, Math.min(height, 400));
-
-      setDimensions((prev) => {
-        if (Math.abs(prev.width - width) > 2 || Math.abs(prev.height - height) > 2) {
-          return { width: Math.floor(width), height: Math.floor(height) };
-        }
-        return prev;
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    // Staggered measurements for PWA initialization
-    const timers = [
-      setTimeout(updateDimensions, 0),
-      setTimeout(updateDimensions, 100),
-      setTimeout(updateDimensions, 500),
-      setTimeout(updateDimensions, 1000),
-    ];
-
-    const handleResize = () => {
-      requestAnimationFrame(updateDimensions);
-    };
-
-    const handleOrientationChange = () => {
-      setTimeout(updateDimensions, 150);
-      setTimeout(updateDimensions, 500);
-    };
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleOrientationChange);
-
-    let resizeObserver: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
-      resizeObserver = new ResizeObserver(handleResize);
-      resizeObserver.observe(containerRef.current);
-    }
-
-    return () => {
-      timers.forEach(clearTimeout);
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleOrientationChange);
-      resizeObserver?.disconnect();
-    };
-  }, [updateDimensions]);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<any> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
 
   // Process chart data based on chart type
-  const chartData = useMemo(() => {
-    if (!candles?.length) return [];
+  const processedData = useMemo(() => {
+    if (!candles?.length) return { mainData: [], volumeData: [] };
     
-    let processedData = candles;
+    let mainData: OHLCData[] | SingleValueData[];
     
-    // Apply Heikin-Ashi transformation
     if (chartType === "heikin-ashi") {
-      processedData = calculateHeikinAshi(candles);
+      mainData = calculateHeikinAshi(candles);
+    } else if (chartType === "renko") {
+      mainData = calculateRenko(candles);
+    } else if (chartType === "line") {
+      mainData = candles.map((c: any) => ({
+        time: Math.floor(c.time / 1000) as UTCTimestamp,
+        value: c.close,
+      }));
+    } else {
+      // Candlestick, OHLC, Bar
+      mainData = candles.map((c: any) => ({
+        time: Math.floor(c.time / 1000) as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
     }
     
-    // Apply Renko transformation
-    if (chartType === "renko") {
-      processedData = calculateRenko(candles);
-    }
+    // Volume data (skip for Renko)
+    const volumeData: SingleValueData[] = chartType !== "renko" 
+      ? candles.map((c: any) => ({
+          time: Math.floor(c.time / 1000) as UTCTimestamp,
+          value: c.volume,
+          color: c.close >= c.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+        }))
+      : [];
     
-    return processedData.map((c: any, index: number) => ({
-      ...c,
-      displayTime: formatTime(c.time, timeframe),
-      index,
-      volColor: c.close >= c.open ? "#22c55e" : "#ef4444",
-      isUp: c.isUp !== undefined ? c.isUp : c.close >= c.open,
-    }));
-  }, [candles, timeframe, chartType]);
+    return { mainData, volumeData };
+  }, [candles, chartType]);
 
-  const { minPrice, maxPrice, maxVolume } = useMemo(() => {
-    if (!chartData.length) return { minPrice: 0, maxPrice: 0, maxVolume: 0 };
-    const lows = chartData.map((c: any) => c.low);
-    const highs = chartData.map((c: any) => c.high);
-    const vols = chartData.map((c: any) => c.volume || 0);
-    const pad = (Math.max(...highs) - Math.min(...lows)) * 0.05;
-    return {
-      minPrice: Math.min(...lows) - pad,
-      maxPrice: Math.max(...highs) + pad,
-      maxVolume: Math.max(...vols),
+  // Initialize and update chart
+  useEffect(() => {
+    if (!chartContainerRef.current || isLoading) return;
+    
+    // Clean up existing chart
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      volumeSeriesRef.current = null;
+    }
+    
+    const container = chartContainerRef.current;
+    const { width, height } = container.getBoundingClientRect();
+    
+    // Create chart with dark theme
+    const chart = createChart(container, {
+      width: Math.max(200, width),
+      height: Math.max(200, height),
+      layout: {
+        background: { type: ColorType.Solid, color: '#111111' },
+        textColor: '#6b7280',
+      },
+      grid: {
+        vertLines: { color: '#1e1e1e' },
+        horzLines: { color: '#1e1e1e' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: { color: '#3b82f6', width: 1, style: 2 },
+        horzLine: { color: '#3b82f6', width: 1, style: 2 },
+      },
+      rightPriceScale: {
+        borderColor: '#1e1e1e',
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+      },
+      timeScale: {
+        borderColor: '#1e1e1e',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
+    });
+    
+    chartRef.current = chart;
+    
+    // Add volume series first (background)
+    if (processedData.volumeData.length > 0) {
+      const volumeSeries = chart.addSeries(HistogramSeries, {
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+      });
+      
+      chart.priceScale('volume').applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+      });
+      
+      volumeSeries.setData(processedData.volumeData as any);
+      volumeSeriesRef.current = volumeSeries;
+    }
+    
+    // Add main series based on chart type
+    if (chartType === "line") {
+      const lineSeries = chart.addSeries(LineSeries, {
+        color: '#3b82f6',
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderColor: '#111111',
+        crosshairMarkerBackgroundColor: '#3b82f6',
+      });
+      lineSeries.setData(processedData.mainData as any);
+      seriesRef.current = lineSeries;
+    } else if (chartType === "ohlc") {
+      // OHLC Bar chart
+      const barSeries = chart.addSeries(BarSeries, {
+        upColor: '#22c55e',
+        downColor: '#ef4444',
+        thinBars: false,
+      });
+      barSeries.setData(processedData.mainData as any);
+      seriesRef.current = barSeries;
+    } else {
+      // Candlestick, Heikin-Ashi, Renko
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#22c55e',
+        downColor: '#ef4444',
+        borderUpColor: '#22c55e',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#22c55e',
+        wickDownColor: '#ef4444',
+      });
+      candleSeries.setData(processedData.mainData as any);
+      seriesRef.current = candleSeries;
+    }
+    
+    // Fit content
+    chart.timeScale().fitContent();
+    
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        const { width, height } = chartContainerRef.current.getBoundingClientRect();
+        chartRef.current.applyOptions({
+          width: Math.max(200, width),
+          height: Math.max(200, height),
+        });
+      }
     };
-  }, [chartData]);
+    
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleResize, 100);
+      setTimeout(handleResize, 500);
+    });
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
+    };
+  }, [processedData, chartType, isLoading]);
 
   if (isLoading) {
     return (
@@ -337,16 +350,16 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   }
 
   return (
-    <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] flex flex-col ${className || ""}`}>
+    <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] flex flex-col overflow-hidden ${className || ""}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e1e]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e1e] flex-shrink-0">
         {/* Timeframes */}
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 overflow-x-auto">
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf.value}
               onClick={() => setTimeframe(tf.value)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                 timeframe === tf.value
                   ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
                   : "text-gray-500 hover:text-gray-300"
@@ -357,7 +370,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
           ))}
         </div>
         {/* Chart Type */}
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 flex-shrink-0">
           {CHART_TYPES.map((ct) => (
             <button
               key={ct.value}
@@ -375,195 +388,19 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         </div>
       </div>
 
-      {/* Chart Area - constrained to prevent overflow */}
+      {/* Chart Container */}
       <div
-        ref={containerRef}
-        className="flex-1 min-h-[240px] max-h-[350px] px-1 pt-2 touch-manipulation overflow-hidden"
+        ref={chartContainerRef}
+        className="flex-1 min-h-[240px] touch-manipulation"
         style={{
           WebkitOverflowScrolling: 'touch',
-          position: 'relative',
           WebkitTransform: 'translateZ(0)',
-          willChange: 'transform',
         }}
       >
-        {chartData.length === 0 ? (
+        {(!candles || candles.length === 0) && !isLoading && (
           <div className="h-full flex items-center justify-center" style={{ minHeight: '240px' }}>
             <p className="text-gray-600 text-sm">No data available</p>
           </div>
-        ) : (
-          <ComposedChart 
-            width={Math.max(200, Math.min(dimensions.width - 8, window.innerWidth - 350))} 
-            height={Math.max(180, Math.min(dimensions.height - 8, 340))} 
-            data={chartData} 
-            margin={{ top: 5, right: 8, bottom: 5, left: 5 }}
-          >
-              <CartesianGrid stroke="#1e1e1e" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="displayTime"
-                tick={{ fill: "#6b7280", fontSize: 10 }}
-                axisLine={{ stroke: "#1e1e1e" }}
-                tickLine={false}
-                interval="preserveStartEnd"
-                minTickGap={50}
-              />
-              <YAxis
-                domain={[minPrice, maxPrice]}
-                tick={{ fill: "#6b7280", fontSize: 10 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={formatPrice}
-                orientation="right"
-                width={65}
-              />
-              <Tooltip
-                content={<ChartTooltipContent interval={timeframe} />}
-                cursor={{ stroke: "#3b82f6", strokeWidth: 0.5, strokeDasharray: "4 4" }}
-              />
-
-              {/* Volume bars (background, low opacity) - skip for Renko */}
-              {chartType !== "renko" && (
-                <Bar
-                  dataKey="volume"
-                  yAxisId="volume"
-                  barSize={chartData.length > 60 ? 3 : 6}
-                  opacity={0.3}
-                >
-                  {chartData.map((entry: any, i: number) => (
-                    <Cell key={i} fill={entry.volColor} />
-                  ))}
-                </Bar>
-              )}
-
-              {/* Candlestick Chart */}
-              {chartType === "candlestick" && (
-                <Bar
-                  dataKey="close"
-                  barSize={chartData.length > 60 ? 4 : 8}
-                  shape={(props: any) => {
-                    const d = props.payload;
-                    if (!d || d.open === undefined) return <g />;
-                    
-                    const isUp = d.close >= d.open;
-                    const color = isUp ? "#22c55e" : "#ef4444";
-                    const { x, width, y, height } = props;
-                    const wickX = x + width / 2;
-                    const bodyHeight = Math.max(2, Math.abs(height) || 2);
-                    
-                    return (
-                      <g>
-                        <line x1={wickX} y1={y - 8} x2={wickX} y2={y + bodyHeight + 8} stroke={color} strokeWidth={1} />
-                        <rect x={x} y={y} width={width} height={bodyHeight} fill={color} stroke={color} strokeWidth={0.5} rx={0.5} />
-                      </g>
-                    );
-                  }}
-                />
-              )}
-
-              {/* Heikin-Ashi Chart - uses transformed data with candlestick rendering */}
-              {chartType === "heikin-ashi" && (
-                <Bar
-                  dataKey="close"
-                  barSize={chartData.length > 60 ? 4 : 8}
-                  shape={(props: any) => {
-                    const d = props.payload;
-                    if (!d || d.open === undefined) return <g />;
-                    
-                    const isUp = d.close >= d.open;
-                    const color = isUp ? "#22c55e" : "#ef4444";
-                    const { x, width, y, height } = props;
-                    const wickX = x + width / 2;
-                    const bodyHeight = Math.max(2, Math.abs(height) || 2);
-                    
-                    return (
-                      <g>
-                        <line x1={wickX} y1={y - 8} x2={wickX} y2={y + bodyHeight + 8} stroke={color} strokeWidth={1} />
-                        <rect x={x} y={y} width={width} height={bodyHeight} fill={color} stroke={color} strokeWidth={0.5} rx={0.5} />
-                      </g>
-                    );
-                  }}
-                />
-              )}
-
-              {/* OHLC Bar Chart */}
-              {chartType === "ohlc" && (
-                <Bar
-                  dataKey="close"
-                  barSize={chartData.length > 60 ? 4 : 8}
-                  shape={(props: any) => {
-                    const d = props.payload;
-                    if (!d || d.open === undefined) return <g />;
-                    
-                    const isUp = d.close >= d.open;
-                    const color = isUp ? "#22c55e" : "#ef4444";
-                    const { x, width, y, height } = props;
-                    const centerX = x + width / 2;
-                    const tickSize = width * 0.4;
-                    
-                    // OHLC uses vertical line for high-low, horizontal ticks for open/close
-                    return (
-                      <g>
-                        {/* High-Low vertical line */}
-                        <line x1={centerX} y1={y - 10} x2={centerX} y2={y + Math.abs(height) + 10} stroke={color} strokeWidth={1.5} />
-                        {/* Open tick (left) */}
-                        <line x1={centerX - tickSize} y1={y + (isUp ? Math.abs(height) : 0)} x2={centerX} y2={y + (isUp ? Math.abs(height) : 0)} stroke={color} strokeWidth={1.5} />
-                        {/* Close tick (right) */}
-                        <line x1={centerX} y1={y + (isUp ? 0 : Math.abs(height))} x2={centerX + tickSize} y2={y + (isUp ? 0 : Math.abs(height))} stroke={color} strokeWidth={1.5} />
-                      </g>
-                    );
-                  }}
-                />
-              )}
-
-              {/* Renko Chart - brick-based rendering */}
-              {chartType === "renko" && (
-                <Bar
-                  dataKey="close"
-                  barSize={chartData.length > 60 ? 6 : 10}
-                  shape={(props: any) => {
-                    const d = props.payload;
-                    if (!d) return <g />;
-                    
-                    const isUp = d.isUp;
-                    const color = isUp ? "#22c55e" : "#ef4444";
-                    const { x, width, y, height } = props;
-                    const brickHeight = Math.max(4, Math.abs(height) || 8);
-                    
-                    // Renko uses filled bricks without wicks
-                    return (
-                      <rect
-                        x={x}
-                        y={y}
-                        width={width}
-                        height={brickHeight}
-                        fill={isUp ? color : "transparent"}
-                        stroke={color}
-                        strokeWidth={1}
-                        rx={1}
-                      />
-                    );
-                  }}
-                />
-              )}
-
-              {/* Line Chart */}
-              {chartType === "line" && (
-                <Line
-                  type="monotone"
-                  dataKey="close"
-                  stroke="#3b82f6"
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={{ r: 3, fill: "#3b82f6", stroke: "#111" }}
-                />
-              )}
-
-              {/* Volume Y axis (hidden, just for scaling) */}
-              <YAxis
-                yAxisId="volume"
-                domain={[0, maxVolume * 5]}
-                hide
-              />
-          </ComposedChart>
         )}
       </div>
     </div>
