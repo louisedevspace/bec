@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
+import { useTheme } from "@/hooks/use-theme";
+import { useWebSocket } from "@/hooks/use-websocket";
 import type { ChartTimeframe } from "@/types/chart";
 import { 
   createChart, 
@@ -29,6 +31,19 @@ interface SingleValueData {
   value: number;
   color?: string;
 }
+
+// Theme-based chart colors
+const getChartColors = (isDark: boolean) => ({
+  background: isDark ? '#111111' : '#ffffff',
+  text: isDark ? '#6b7280' : '#374151',
+  grid: isDark ? '#1e1e1e' : '#e5e7eb',
+  border: isDark ? '#1e1e1e' : '#d1d5db',
+  crosshair: '#3b82f6',
+  upColor: '#22c55e',
+  downColor: '#ef4444',
+  volumeUp: isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)',
+  volumeDown: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)',
+});
 
 interface PriceChartProps {
   symbol: string;
@@ -164,11 +179,17 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 100);
+  const { isDark } = useTheme();
+  const { subscribe, isConnected } = useWebSocket("/ws");
   
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
+  const lastCandleRef = useRef<any>(null);
+  
+  // Get current theme colors
+  const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
   // Process chart data based on chart type
   const processedData = useMemo(() => {
@@ -201,12 +222,17 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       ? candles.map((c: any) => ({
           time: Math.floor(c.time / 1000) as UTCTimestamp,
           value: c.volume,
-          color: c.close >= c.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+          color: c.close >= c.open ? colors.volumeUp : colors.volumeDown,
         }))
       : [];
     
+    // Store last candle for real-time updates
+    if (mainData.length > 0) {
+      lastCandleRef.current = mainData[mainData.length - 1];
+    }
+    
     return { mainData, volumeData };
-  }, [candles, chartType]);
+  }, [candles, chartType, colors]);
 
   // Initialize and update chart
   useEffect(() => {
@@ -223,29 +249,29 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const container = chartContainerRef.current;
     const { width, height } = container.getBoundingClientRect();
     
-    // Create chart with dark theme
+    // Create chart with theme-aware styling
     const chart = createChart(container, {
       width: Math.max(200, width),
       height: Math.max(200, height),
       layout: {
-        background: { type: ColorType.Solid, color: '#111111' },
-        textColor: '#6b7280',
+        background: { type: ColorType.Solid, color: colors.background },
+        textColor: colors.text,
       },
       grid: {
-        vertLines: { color: '#1e1e1e' },
-        horzLines: { color: '#1e1e1e' },
+        vertLines: { color: colors.grid },
+        horzLines: { color: colors.grid },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: '#3b82f6', width: 1, style: 2 },
-        horzLine: { color: '#3b82f6', width: 1, style: 2 },
+        vertLine: { color: colors.crosshair, width: 1, style: 2 },
+        horzLine: { color: colors.crosshair, width: 1, style: 2 },
       },
       rightPriceScale: {
-        borderColor: '#1e1e1e',
+        borderColor: colors.border,
         scaleMargins: { top: 0.1, bottom: 0.2 },
       },
       timeScale: {
-        borderColor: '#1e1e1e',
+        borderColor: colors.border,
         timeVisible: true,
         secondsVisible: false,
       },
@@ -273,20 +299,20 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     // Add main series based on chart type
     if (chartType === "line") {
       const lineSeries = chart.addSeries(LineSeries, {
-        color: '#3b82f6',
+        color: colors.crosshair,
         lineWidth: 2,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
-        crosshairMarkerBorderColor: '#111111',
-        crosshairMarkerBackgroundColor: '#3b82f6',
+        crosshairMarkerBorderColor: colors.background,
+        crosshairMarkerBackgroundColor: colors.crosshair,
       });
       lineSeries.setData(processedData.mainData as any);
       seriesRef.current = lineSeries;
     } else if (chartType === "ohlc") {
       // OHLC Bar chart
       const barSeries = chart.addSeries(BarSeries, {
-        upColor: '#22c55e',
-        downColor: '#ef4444',
+        upColor: colors.upColor,
+        downColor: colors.downColor,
         thinBars: false,
       });
       barSeries.setData(processedData.mainData as any);
@@ -294,12 +320,12 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     } else {
       // Candlestick, Heikin-Ashi, Renko
       const candleSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#22c55e',
-        downColor: '#ef4444',
-        borderUpColor: '#22c55e',
-        borderDownColor: '#ef4444',
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
+        upColor: colors.upColor,
+        downColor: colors.downColor,
+        borderUpColor: colors.upColor,
+        borderDownColor: colors.downColor,
+        wickUpColor: colors.upColor,
+        wickDownColor: colors.downColor,
       });
       candleSeries.setData(processedData.mainData as any);
       seriesRef.current = candleSeries;
@@ -336,23 +362,67 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         chartRef.current = null;
       }
     };
-  }, [processedData, chartType, isLoading]);
+  }, [processedData, chartType, isLoading, colors]);
+
+  // Real-time price updates via WebSocket
+  useEffect(() => {
+    if (!isConnected || !seriesRef.current || chartType === 'renko') return;
+    
+    const unsubscribe = subscribe('price_update', (priceData: any) => {
+      if (!priceData || !seriesRef.current || !lastCandleRef.current) return;
+      
+      // Extract symbol from the current trading pair (e.g., "BTC" from "BTCUSDT")
+      const symbolBase = symbol.replace('USDT', '').toUpperCase();
+      
+      // Find matching price from the update
+      const matchingPrice = priceData.find?.((p: any) => 
+        p.symbol?.toUpperCase() === symbolBase || 
+        p.symbol?.toUpperCase() === symbol.toUpperCase()
+      );
+      
+      if (!matchingPrice?.price) return;
+      
+      const newPrice = parseFloat(matchingPrice.price);
+      const lastCandle = lastCandleRef.current;
+      
+      if (chartType === 'line') {
+        // Update line chart with new close price
+        seriesRef.current.update({
+          time: lastCandle.time,
+          value: newPrice,
+        });
+      } else {
+        // Update OHLC candle
+        const updatedCandle = {
+          time: lastCandle.time,
+          open: lastCandle.open,
+          high: Math.max(lastCandle.high, newPrice),
+          low: Math.min(lastCandle.low, newPrice),
+          close: newPrice,
+        };
+        seriesRef.current.update(updatedCandle);
+        lastCandleRef.current = updatedCandle;
+      }
+    });
+    
+    return unsubscribe;
+  }, [isConnected, subscribe, symbol, chartType]);
 
   if (isLoading) {
     return (
-      <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 flex items-center justify-center ${className || ""}`}>
+      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? 'bg-[#111] border-[#1e1e1e]' : 'bg-white border-gray-200'} ${className || ""}`}>
         <div className="text-center">
-          <BarChart3 size={24} className="text-gray-600 mx-auto mb-2 animate-pulse" />
-          <p className="text-gray-500 text-xs">Loading chart...</p>
+          <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Loading chart...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] flex flex-col overflow-hidden ${className || ""}`}>
+    <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? 'bg-[#111] border-[#1e1e1e]' : 'bg-white border-gray-200'} ${className || ""}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e1e] flex-shrink-0">
+      <div className={`flex items-center justify-between px-3 py-2 border-b flex-shrink-0 ${isDark ? 'border-[#1e1e1e]' : 'border-gray-200'}`}>
         {/* Timeframes */}
         <div className="flex gap-0.5 overflow-x-auto">
           {TIMEFRAMES.map((tf) => (
@@ -361,8 +431,12 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setTimeframe(tf.value)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                 timeframe === tf.value
-                  ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? isDark 
+                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
+                    : "bg-gray-100 text-gray-900 border border-gray-300"
+                  : isDark
+                    ? "text-gray-500 hover:text-gray-300"
+                    : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {tf.label}
@@ -377,8 +451,12 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setChartType(ct.value)}
               className={`p-1.5 rounded transition-colors ${
                 chartType === ct.value
-                  ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? isDark
+                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
+                    : "bg-gray-100 text-gray-900 border border-gray-300"
+                  : isDark
+                    ? "text-gray-500 hover:text-gray-300"
+                    : "text-gray-500 hover:text-gray-700"
               }`}
               title={ct.label}
             >
@@ -399,7 +477,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       >
         {(!candles || candles.length === 0) && !isLoading && (
           <div className="h-full flex items-center justify-center" style={{ minHeight: '240px' }}>
-            <p className="text-gray-600 text-sm">No data available</p>
+            <p className={`text-sm ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>No data available</p>
           </div>
         )}
       </div>
