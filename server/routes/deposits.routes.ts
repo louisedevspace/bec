@@ -126,7 +126,7 @@ export default function registerDepositsRoutes(app: Express) {
 
       res.json({ message: "Deposit request submitted successfully", depositRequest });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -150,7 +150,7 @@ export default function registerDepositsRoutes(app: Express) {
 
       res.json(data || []);
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -190,7 +190,7 @@ export default function registerDepositsRoutes(app: Express) {
 
       res.json(merged);
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -382,7 +382,7 @@ export default function registerDepositsRoutes(app: Express) {
       syncManager.syncDepositRequestUpdated(updatedRequest);
       res.json({ message: `Deposit request ${action}d successfully`, depositRequest: updatedRequest });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 

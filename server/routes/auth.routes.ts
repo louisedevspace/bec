@@ -219,7 +219,7 @@ export default function registerAuthRoutes(app: Express) {
 
         if (error) {
           console.error("signup-profile update error:", JSON.stringify(error));
-          return res.status(500).json({ message: "Update error", error: error.message });
+          return res.status(500).json({ message: "Update error" });
         }
       } else {
         // New user — insert with 'user' role
@@ -239,7 +239,7 @@ export default function registerAuthRoutes(app: Express) {
 
         if (error) {
           console.error("signup-profile insert error:", JSON.stringify(error));
-          return res.status(500).json({ message: "Insert error", error: error.message });
+          return res.status(500).json({ message: "Insert error" });
         }
       }
 
@@ -421,7 +421,7 @@ export default function registerAuthRoutes(app: Express) {
     } catch (error) {
       res
         .status(500)
-        .json({ message: "Server error", error: (error as Error).message });
+        .json({ message: "Server error" });
     }
   });
 
@@ -489,7 +489,7 @@ export default function registerAuthRoutes(app: Express) {
     } catch (error) {
       res
         .status(500)
-        .json({ message: "Server error", error: (error as Error).message });
+        .json({ message: "Server error" });
     }
   });
 
@@ -572,7 +572,7 @@ export default function registerAuthRoutes(app: Express) {
     } catch (error) {
       res
         .status(500)
-        .json({ message: "Server error", error: (error as Error).message });
+        .json({ message: "Server error" });
     }
   });
 
@@ -623,7 +623,7 @@ export default function registerAuthRoutes(app: Express) {
     } catch (error) {
       res
         .status(500)
-        .json({ message: "Server error", error: (error as Error).message });
+        .json({ message: "Server error" });
     }
   });
 }

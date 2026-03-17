@@ -322,7 +322,7 @@ export default function registerTradingRoutes(app: Express) {
         .order("created_at", { ascending: false });
 
       if (error) {
-        return res.status(500).json({ message: "Database error", error: error.message });
+        return res.status(500).json({ message: "Database error" });
       }
 
       const pendingOrders = trades?.filter(
@@ -648,7 +648,7 @@ export default function registerTradingRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error("Conversion error:", error);
-      res.status(500).json({ message: error.message || "Failed to execute conversion" });
+      res.status(500).json({ message: "Failed to execute conversion" });
     }
   });
 }

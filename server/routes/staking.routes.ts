@@ -239,7 +239,7 @@ export default function registerStakingRoutes(app: Express) {
         .order("start_date", { ascending: false });
 
       if (error) {
-        return res.status(500).json({ message: "Failed to fetch staking positions", error: error.message, code: error.code });
+        return res.status(500).json({ message: "Failed to fetch staking positions", code: error.code });
       }
 
       const transformed = (positions || []).map((p) => ({

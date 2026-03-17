@@ -122,8 +122,8 @@ export default function registerAdminRoutes(app: Express) {
         });
       }
 
-      const errorMessage = (error as Error).message || "Failed to reveal password";
-      return res.status(500).json({ message: errorMessage });
+      console.error("Reveal password error:", (error as Error).message);
+      return res.status(500).json({ message: "Failed to reveal password" });
     }
   });
 
@@ -147,7 +147,8 @@ export default function registerAdminRoutes(app: Express) {
         .order("created_at", { ascending: false });
 
       if (customError) {
-        return res.status(500).json({ message: "Failed to fetch users", error: customError.message });
+        console.error("Admin users fetch error:", customError.message);
+        return res.status(500).json({ message: "Failed to fetch users" });
       }
 
       const { data: passwords } = await supabaseAdmin
@@ -251,7 +252,8 @@ export default function registerAdminRoutes(app: Express) {
       res.setHeader('Cache-Control', 'private, max-age=60');
       res.json({ users: mergedUsers });
     } catch (err) {
-      res.status(500).json({ message: "Server error", error: (err as Error).message });
+      console.error("Admin users error:", (err as Error).message);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -430,7 +432,7 @@ export default function registerAdminRoutes(app: Express) {
           }
           const { error } = await supabaseAdmin.from("users").update({ credit_score: creditScoreValue }).eq("id", userId);
           if (error) {
-            return res.status(500).json({ message: "Failed to update credit score", error: error.message });
+            return res.status(500).json({ message: "Failed to update credit score" });
           }
           syncManager.syncUserUpdated({ id: userId });
           message = `Credit score updated to ${creditScoreValue}`;
@@ -443,7 +445,7 @@ export default function registerAdminRoutes(app: Express) {
 
       res.json({ message });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -504,7 +506,7 @@ export default function registerAdminRoutes(app: Express) {
 
       return res.json({ deletedUsers });
     } catch (error: any) {
-      return res.status(500).json({ message: "Server error", error: error.message });
+      return res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -618,14 +620,14 @@ export default function registerAdminRoutes(app: Express) {
         .in("symbol", ["BTC", "ETH", "USDT"]);
 
       if (error) {
-        return res.status(500).json({ message: "Failed to fetch portfolio", error: error.message });
+        return res.status(500).json({ message: "Failed to fetch portfolio" });
       }
 
       res.json({
         balances: portfolios || [],
       });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -656,7 +658,7 @@ export default function registerAdminRoutes(app: Express) {
         user: updatedUser,
       });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -734,7 +736,7 @@ export default function registerAdminRoutes(app: Express) {
         .in("id", ids);
 
       if (error) {
-        return res.status(500).json({ message: `Failed to hide ${type} transactions`, error: error.message });
+        return res.status(500).json({ message: `Failed to hide ${type} transactions` });
       }
 
       // Broadcast sync events so user's wallet updates in real-time
@@ -748,7 +750,7 @@ export default function registerAdminRoutes(app: Express) {
 
       res.json({ message: `${ids.length} ${type} transaction(s) hidden successfully` });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -798,7 +800,7 @@ export default function registerAdminRoutes(app: Express) {
         user: updatedUser,
       });
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -819,7 +821,7 @@ export default function registerAdminRoutes(app: Express) {
 
       res.json(user);
     } catch (error: any) {
-      res.status(500).json({ message: "Server error", error: error.message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -1255,7 +1257,7 @@ export default function registerAdminRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error('Dashboard stats error:', error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 
@@ -1540,7 +1542,7 @@ export default function registerAdminRoutes(app: Express) {
       });
     } catch (error: any) {
       console.error('Analytics error:', error);
-      res.status(500).json({ message: "Failed to fetch analytics", error: error.message });
+      res.status(500).json({ message: "Failed to fetch analytics" });
     }
   });
 }

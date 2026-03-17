@@ -62,7 +62,7 @@ export default function registerKycRoutes(app: Express) {
 
       res.json({ message: "KYC verification request submitted successfully", kycId: newKYC.id });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -101,7 +101,7 @@ export default function registerKycRoutes(app: Express) {
 
       res.json(kycRequestsWithUserDetails || []);
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -155,7 +155,7 @@ export default function registerKycRoutes(app: Express) {
         userVerified: verificationStatus,
       });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -188,7 +188,7 @@ export default function registerKycRoutes(app: Express) {
         deletedRecords: deleteResult?.length || 0,
       });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 }

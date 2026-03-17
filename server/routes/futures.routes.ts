@@ -363,7 +363,7 @@ export default function registerFuturesRoutes(app: Express) {
           status: 'failure',
           errorMessage: error.message,
         });
-        return res.status(500).json({ message: "Failed to submit future trade", error: error.message });
+        return res.status(500).json({ message: "Failed to submit future trade" });
       }
 
       // Lock trade amount by deducting from balance at submission time

@@ -164,7 +164,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
 
       res.json({ message: "Withdraw request submitted successfully", withdrawRequest });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -188,7 +188,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
 
       res.json(data || []);
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -206,7 +206,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
 
       res.json(data || []);
     } catch (error) {
-      res.status(500).json({ message: "Server error", error: (error as Error).message });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -395,7 +395,7 @@ export default function registerWithdrawalsRoutes(app: Express) {
         syncManager.syncWithdrawRequestUpdated(updatedRequest);
         res.json({ message: `Withdraw request ${action}d successfully`, withdrawRequest: updatedRequest });
       } catch (error) {
-        res.status(500).json({ message: "Server error", error: (error as Error).message });
+        res.status(500).json({ message: "Server error" });
       }
     }
   );

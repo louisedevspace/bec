@@ -514,7 +514,7 @@ export default function registerAdminStakingRoutes(app: Express) {
         .maybeSingle();
 
       if (error) {
-        return res.status(500).json({ message: "Failed to fetch staking limit", error: error.message });
+        return res.status(500).json({ message: "Failed to fetch staking limit" });
       }
 
       if (!limit) {
@@ -597,7 +597,7 @@ export default function registerAdminStakingRoutes(app: Express) {
           .select()
           .single();
         if (error) {
-          return res.status(500).json({ message: "Failed to update staking limit", error: error.message });
+          return res.status(500).json({ message: "Failed to update staking limit" });
         }
         result = updated;
       } else {
@@ -607,7 +607,7 @@ export default function registerAdminStakingRoutes(app: Express) {
           .select()
           .single();
         if (error) {
-          return res.status(500).json({ message: "Failed to create staking limit", error: error.message });
+          return res.status(500).json({ message: "Failed to create staking limit" });
         }
         result = created;
       }
@@ -656,7 +656,7 @@ export default function registerAdminStakingRoutes(app: Express) {
         .eq("user_id", userId);
 
       if (error) {
-        return res.status(500).json({ message: "Failed to delete staking limit", error: error.message });
+        return res.status(500).json({ message: "Failed to delete staking limit" });
       }
 
       await logAuditEvent({

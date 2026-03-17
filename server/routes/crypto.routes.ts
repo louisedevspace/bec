@@ -284,13 +284,13 @@ export default function registerCryptoRoutes(app: Express) {
 
       if (error) {
         console.error('Error inserting crypto logos:', error);
-        return res.status(500).json({ message: 'Failed to insert crypto logos', error: error.message });
+        return res.status(500).json({ message: 'Failed to insert crypto logos' });
       }
 
       res.json({ message: `Successfully initialized ${cryptoLogos.length} crypto logos`, count: cryptoLogos.length });
     } catch (error) {
       console.error('Error initializing crypto logos:', (error as Error).message);
-      res.status(500).json({ message: 'Failed to initialize crypto logos', error: (error as Error).message });
+      res.status(500).json({ message: 'Failed to initialize crypto logos' });
     }
   });
 }

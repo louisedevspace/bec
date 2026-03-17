@@ -169,7 +169,6 @@ export default function registerSupportRoutes(app: Express) {
     } catch (error) {
       res.status(500).json({
         message: "Internal server error.",
-        error: (error as Error).message,
       });
     }
   });
@@ -243,7 +242,7 @@ export default function registerSupportRoutes(app: Express) {
 
       res.json(supportMessage);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -386,7 +385,7 @@ export default function registerSupportRoutes(app: Express) {
 
       if (error) {
         console.error("Error fetching conversations:", error);
-        return res.status(500).json({ message: "Failed to fetch support conversations", error: error.message });
+        return res.status(500).json({ message: "Failed to fetch support conversations" });
       }
 
       // Fetch user details separately for each conversation
@@ -427,7 +426,7 @@ export default function registerSupportRoutes(app: Express) {
       res.json(conversationsWithUsers);
     } catch (error) {
       console.error("Error in admin support conversations:", error);
-      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -553,7 +552,7 @@ export default function registerSupportRoutes(app: Express) {
 
       res.json({ success: true, updatedMessage: updateData });
     } catch (error) {
-      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

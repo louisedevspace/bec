@@ -305,7 +305,7 @@ export default function registerLoansRoutes(app: Express) {
       }
 
       if (error) {
-        return res.status(500).json({ message: "Failed to submit loan application", error: error.message });
+        return res.status(500).json({ message: "Failed to submit loan application" });
       }
 
       // Admin notification
@@ -316,7 +316,7 @@ export default function registerLoansRoutes(app: Express) {
 
       res.json({ message: "Loan application submitted successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Internal server error", error: (error as Error).message });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
