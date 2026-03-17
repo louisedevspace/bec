@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
 import type { ChartTimeframe, ChartType, CandlestickData } from "@/types/chart";
 import {
-  ComposedChart, Bar, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ComposedChart, Bar, Line, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, Cell,
 } from "recharts";
 import { BarChart3, TrendingUp, Activity } from "lucide-react";
@@ -120,6 +120,56 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
   const [chartType, setChartType] = useState<ChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 100);
+  
+  // Mobile PWA fix: Explicit dimension management instead of ResponsiveContainer
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const updateDimensions = useCallback(() => {
+    if (containerRef.current) {
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      // Only update if dimensions actually changed
+      setDimensions((prev) => {
+        if (prev.width !== width || prev.height !== height) {
+          return { width, height };
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial measurement with delay for PWA initialization
+    const initialTimer = setTimeout(updateDimensions, 50);
+    // Second measurement after PWA viewport stabilizes
+    const pwaTimer = setTimeout(updateDimensions, 300);
+
+    // Handle resize and orientation change
+    const handleResize = () => {
+      requestAnimationFrame(updateDimensions);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", () => {
+      // Delay after orientation change to let viewport settle
+      setTimeout(updateDimensions, 100);
+    });
+
+    // ResizeObserver for container size changes
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(pwaTimer);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+      resizeObserver?.disconnect();
+    };
+  }, [updateDimensions]);
 
   const chartData = useMemo(() => {
     if (!candles?.length) return [];
@@ -195,14 +245,22 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       </div>
 
       {/* Chart Area */}
-      <div className="flex-1 min-h-[280px] px-1 pt-2">
+      <div 
+        ref={containerRef}
+        className="flex-1 min-h-[280px] px-1 pt-2 touch-manipulation"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <p className="text-gray-600 text-sm">No data available</p>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+        ) : dimensions.width > 0 && dimensions.height > 0 ? (
+          <ComposedChart 
+            width={dimensions.width - 8} 
+            height={dimensions.height - 8} 
+            data={chartData} 
+            margin={{ top: 5, right: 10, bottom: 5, left: 10 }}
+          >
               <CartesianGrid stroke="#1e1e1e" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="displayTime"
@@ -312,8 +370,14 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-            </ComposedChart>
-          </ResponsiveContainer>
+          </ComposedChart>
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <BarChart3 size={24} className="text-gray-600 mx-auto mb-2 animate-pulse" />
+              <p className="text-gray-500 text-xs">Initializing chart...</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
