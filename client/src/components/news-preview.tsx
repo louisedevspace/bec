@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
 import { getImageDisplayUrl } from '@/lib/image';
+import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
 
 interface NewsPreviewProps {
   title: string;
@@ -22,6 +24,11 @@ export default function NewsPreview({
   button_text,
   button_color
 }: NewsPreviewProps) {
+  // Extract URLs from content for link previews (max 3)
+  const contentUrls = useMemo(() => {
+    return extractUrls(content || '').slice(0, 3);
+  }, [content]);
+
   const getIcon = () => {
     switch (type) {
       case 'announcement':
@@ -92,6 +99,15 @@ export default function NewsPreview({
           <p className="text-sm leading-relaxed mb-6" style={{ color: text_color || '#ffffff' }}>
             {content || 'This is a preview of how your news will appear to users. The content will be displayed here...'}
           </p>
+
+          {/* Link previews for URLs in content */}
+          {contentUrls.length > 0 && (
+            <div className="space-y-2 mb-6">
+              {contentUrls.map((url) => (
+                <LinkPreview key={url} url={url} />
+              ))}
+            </div>
+          )}
 
           {/* Action Button */}
           <button

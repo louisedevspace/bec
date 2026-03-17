@@ -3,6 +3,7 @@ import { formatDate, formatTime } from '@/lib/date-utils';
 import { useLocation } from 'wouter';
 import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
 
 
 interface SupportConversation {
@@ -291,6 +292,10 @@ export default function SupportPage() {
     }
 
     const isUser = msg.sender_type === 'user';
+    // Extract first URL for preview (only for non-system messages)
+    const urls = extractUrls(msg.message || '');
+    const firstUrl = urls.length > 0 ? urls[0] : null;
+
     return (
       <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
         {!isUser && (
@@ -307,6 +312,12 @@ export default function SupportPage() {
             <p className="text-[10px] text-blue-400 font-medium mb-1">Support Agent</p>
           )}
           <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+          {/* Link preview for first URL in message */}
+          {firstUrl && (
+            <div className="mt-2">
+              <LinkPreview url={firstUrl} className="!bg-[#0a0a0a] !border-[#2a2a2a]" />
+            </div>
+          )}
           <p className="text-[10px] opacity-60 mt-1.5">
             {formatTime(msg.created_at)}
           </p>

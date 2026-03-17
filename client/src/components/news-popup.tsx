@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
 import { getImageDisplayUrl } from '@/lib/image';
 import { supabase } from '@/lib/supabaseClient';
+import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
 
 interface NewsItem {
   id: number;
@@ -31,6 +32,11 @@ interface NewsPopupProps {
 export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Extract URLs from news content for link previews (max 3)
+  const contentUrls = useMemo(() => {
+    return extractUrls(news.content || '').slice(0, 3);
+  }, [news.content]);
 
   useEffect(() => {
     if (!news.show_popup) {
@@ -159,6 +165,15 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
             <p className="text-sm leading-relaxed mt-2 text-white/80" style={{ color: news.text_color || '#ffffff' }}>
               {news.content}
             </p>
+
+            {/* Link previews for URLs in content */}
+            {contentUrls.length > 0 && (
+              <div className="space-y-2 mt-3">
+                {contentUrls.map((url) => (
+                  <LinkPreview key={url} url={url} />
+                ))}
+              </div>
+            )}
 
             <div className="h-px bg-white/10 my-4" />
 
