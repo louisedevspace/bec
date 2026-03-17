@@ -535,3 +535,62 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 html:not(.dark) * {
   scrollbar-color: rgba(100, 116, 139, 0.25) transparent;
 }
+
+/* ---- Additional dark hex overrides (admin pages) ---- */
+/* bg-[#333] — used in admin-news tabs active state */
+html:not(.dark) .bg-\[\#333\] { background-color: #cbd5e1 !important; }
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:bg-\[\#333\] {
+  background-color: #cbd5e1 !important;
+}
+
+/* border-[#1f1f1f] — used in admin-user */
+html:not(.dark) .border-\[\#1f1f1f\] { border-color: #e2e8f0 !important; }
+
+/* ===== Accent Color Contrast Boost for Light Mode ===== */
+/* The app uses -400 shade variants which appear washed out on white backgrounds.
+   These overrides boost them to darker, more vibrant -600/-700 shades. */
+
+/* Green shades — boost from -400 to -600 */
+html:not(.dark) .text-green-400 { color: #16a34a !important; }  /* green-600 */
+html:not(.dark) .text-green-500 { color: #15803d !important; }  /* green-700 */
+html:not(.dark) .text-emerald-400 { color: #059669 !important; }  /* emerald-600 */
+html:not(.dark) .text-emerald-500 { color: #047857 !important; }  /* emerald-700 */
+
+/* Red shades — boost from -400 to -600 */
+html:not(.dark) .text-red-400 { color: #dc2626 !important; }  /* red-600 */
+html:not(.dark) .text-red-500 { color: #b91c1c !important; }  /* red-700 */
+
+/* Orange shades — boost from -400 to -600 */
+html:not(.dark) .text-orange-400 { color: #ea580c !important; }  /* orange-600 */
+html:not(.dark) .text-orange-500 { color: #c2410c !important; }  /* orange-700 */
+
+/* Yellow shades — boost from -400 to -600 */
+html:not(.dark) .text-yellow-400 { color: #ca8a04 !important; }  /* yellow-600 */
+html:not(.dark) .text-yellow-500 { color: #a16207 !important; }  /* yellow-700 */
+
+/* Blue shades — boost from -400 to -600 */
+html:not(.dark) .text-blue-400 { color: #2563eb !important; }  /* blue-600 */
+html:not(.dark) .text-blue-500 { color: #1d4ed8 !important; }  /* blue-700 */
+
+/* Purple shades — boost from -400/500 to -600/700 */
+html:not(.dark) .text-purple-400 { color: #9333ea !important; }  /* purple-600 */
+html:not(.dark) .text-purple-500 { color: #7e22ce !important; }  /* purple-700 */
+
+/* Indigo shades */
+html:not(.dark) .text-indigo-400 { color: #4f46e5 !important; }  /* indigo-600 */
+html:not(.dark) .text-indigo-500 { color: #4338ca !important; }  /* indigo-700 */
+
+/* Violet shades */
+html:not(.dark) .text-violet-400 { color: #7c3aed !important; }  /* violet-600 */
+html:not(.dark) .text-violet-500 { color: #6d28d9 !important; }  /* violet-700 */
+
+/* ---- Background accent opacity boost ---- */
+/* bg-*-500/10 is nearly invisible on white — boost to /20 for visibility */
+html:not(.dark) .bg-green-500\/10 { background-color: rgb(34 197 94 / 0.2) !important; }
+html:not(.dark) .bg-red-500\/10 { background-color: rgb(239 68 68 / 0.2) !important; }
+html:not(.dark) .bg-orange-500\/10 { background-color: rgb(249 115 22 / 0.2) !important; }
+html:not(.dark) .bg-yellow-500\/10 { background-color: rgb(234 179 8 / 0.2) !important; }
+html:not(.dark) .bg-blue-500\/10 { background-color: rgb(59 130 246 / 0.2) !important; }
+html:not(.dark) .bg-purple-500\/10 { background-color: rgb(168 85 247 / 0.2) !important; }
+html:not(.dark) .bg-emerald-500\/10 { background-color: rgb(16 185 129 / 0.2) !important; }
+html:not(.dark) .bg-indigo-500\/10 { background-color: rgb(99 102 241 / 0.2) !important; }
