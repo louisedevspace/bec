@@ -1,5 +1,15 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from '../routes/middleware';
+import { 
+  isRedisConnected, 
+  redisGet, 
+  redisIncr, 
+  redisGetJSON, 
+  redisSetJSON, 
+  redisDel, 
+  redisDelPattern,
+  REDIS_KEYS 
+} from './redis';
 
 // ==================== PASSWORD HASHING ====================
 
@@ -45,12 +55,54 @@ export interface SessionInfo {
   userAgent?: string;
 }
 
-// Session cache with expiration (in-memory for now, can be moved to Redis)
+// Redis-serializable session format (dates as ISO strings)
+interface RedisSessionInfo {
+  userId: string;
+  email?: string;
+  role?: string;
+  createdAt: string;
+  lastActivityAt: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+// Session cache with expiration (in-memory fallback when Redis unavailable)
 const sessionCache = new Map<string, SessionInfo>();
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity
+const SESSION_TIMEOUT_SECONDS = 30 * 60; // 30 minutes for Redis TTL
+
+/**
+ * Helper: Convert SessionInfo to Redis-serializable format
+ */
+function toRedisSession(session: SessionInfo): RedisSessionInfo {
+  return {
+    ...session,
+    createdAt: session.createdAt.toISOString(),
+    lastActivityAt: session.lastActivityAt.toISOString(),
+  };
+}
+
+/**
+ * Helper: Convert Redis session to SessionInfo
+ */
+function fromRedisSession(redisSession: RedisSessionInfo): SessionInfo {
+  return {
+    ...redisSession,
+    createdAt: new Date(redisSession.createdAt),
+    lastActivityAt: new Date(redisSession.lastActivityAt),
+  };
+}
+
+/**
+ * Build Redis session key
+ */
+function buildSessionKey(userId: string, tokenPrefix: string): string {
+  return REDIS_KEYS.SESSION + userId + ':' + tokenPrefix;
+}
 
 /**
  * Validate and refresh session, returns session info or null if invalid
+ * Uses Redis if available, falls back to in-memory Map
  */
 export async function validateSession(
   token: string,
@@ -58,9 +110,58 @@ export async function validateSession(
   ipAddress?: string,
   userAgent?: string
 ): Promise<SessionInfo | null> {
-  const cacheKey = `${userId}:${token.substring(0, 16)}`;
-  const cached = sessionCache.get(cacheKey);
+  const tokenPrefix = token.substring(0, 16);
+  const cacheKey = `${userId}:${tokenPrefix}`;
+  const redisKey = buildSessionKey(userId, tokenPrefix);
   const now = new Date();
+
+  // Try Redis first
+  if (isRedisConnected()) {
+    try {
+      const redisSession = await redisGetJSON<RedisSessionInfo>(redisKey);
+      
+      if (redisSession) {
+        const session = fromRedisSession(redisSession);
+        
+        // Check if session has expired due to inactivity
+        const inactiveTime = now.getTime() - session.lastActivityAt.getTime();
+        if (inactiveTime > SESSION_TIMEOUT_MS) {
+          await redisDel(redisKey);
+          await logAuditEvent({
+            userId,
+            action: 'SESSION_EXPIRED',
+            details: { reason: 'inactivity', inactiveMinutes: Math.floor(inactiveTime / 60000) },
+            ipAddress,
+            userAgent,
+          });
+          console.log(`[Redis:Security] Session expired for user ${userId}`);
+          return null;
+        }
+
+        // Update last activity and refresh TTL
+        session.lastActivityAt = now;
+        await redisSetJSON(redisKey, toRedisSession(session), SESSION_TIMEOUT_SECONDS);
+        return session;
+      }
+
+      // No session in Redis, create new one
+      const sessionInfo: SessionInfo = {
+        userId,
+        createdAt: now,
+        lastActivityAt: now,
+        ipAddress,
+        userAgent,
+      };
+      await redisSetJSON(redisKey, toRedisSession(sessionInfo), SESSION_TIMEOUT_SECONDS);
+      console.log(`[Redis:Security] Created new session for user ${userId}`);
+      return sessionInfo;
+    } catch (error) {
+      console.log('[Redis:Security] Session validation error, falling back to Map:', (error as Error).message);
+    }
+  }
+
+  // Map fallback
+  const cached = sessionCache.get(cacheKey);
 
   if (cached) {
     // Check if session has expired due to inactivity
@@ -97,14 +198,64 @@ export async function validateSession(
 
 /**
  * Invalidate a session (logout)
+ * Uses Redis if available, falls back to in-memory Map
  */
-export function invalidateSession(token: string, userId: string): void {
-  const cacheKey = `${userId}:${token.substring(0, 16)}`;
+export async function invalidateSession(token: string, userId: string): Promise<void> {
+  const tokenPrefix = token.substring(0, 16);
+  const cacheKey = `${userId}:${tokenPrefix}`;
+  const redisKey = buildSessionKey(userId, tokenPrefix);
+
+  // Try Redis first
+  if (isRedisConnected()) {
+    try {
+      const deleted = await redisDel(redisKey);
+      if (deleted) {
+        console.log(`[Redis:Security] Invalidated session for user ${userId}`);
+      }
+    } catch (error) {
+      console.log('[Redis:Security] Session invalidation error:', (error as Error).message);
+    }
+  }
+
+  // Always clean up Map fallback as well
   sessionCache.delete(cacheKey);
 }
 
 /**
+ * Invalidate all sessions for a user (logout from all devices)
+ * Uses Redis pattern delete if available, falls back to in-memory Map
+ */
+export async function invalidateUserSessions(userId: string): Promise<number> {
+  let deletedCount = 0;
+
+  // Try Redis first
+  if (isRedisConnected()) {
+    try {
+      const pattern = REDIS_KEYS.SESSION + userId + ':*';
+      deletedCount = await redisDelPattern(pattern);
+      if (deletedCount > 0) {
+        console.log(`[Redis:Security] Invalidated ${deletedCount} sessions for user ${userId}`);
+      }
+    } catch (error) {
+      console.log('[Redis:Security] User sessions invalidation error:', (error as Error).message);
+    }
+  }
+
+  // Also clean up Map fallback
+  const mapEntries = Array.from(sessionCache.keys());
+  for (const key of mapEntries) {
+    if (key.startsWith(`${userId}:`)) {
+      sessionCache.delete(key);
+      deletedCount++;
+    }
+  }
+
+  return deletedCount;
+}
+
+/**
  * Clean up expired sessions (run periodically)
+ * Only cleans Map fallback - Redis handles TTL automatically
  */
 export function cleanupExpiredSessions(): number {
   const now = Date.now();
@@ -121,11 +272,11 @@ export function cleanupExpiredSessions(): number {
   return cleaned;
 }
 
-// Run cleanup every 5 minutes
+// Run cleanup every 5 minutes (for Map fallback)
 setInterval(() => {
   const cleaned = cleanupExpiredSessions();
   if (cleaned > 0) {
-    console.log(`[Security] Cleaned up ${cleaned} expired sessions`);
+    console.log(`[Security] Cleaned up ${cleaned} expired sessions from Map fallback`);
   }
 }, 5 * 60 * 1000);
 
@@ -285,6 +436,7 @@ export function validatePasswordPolicy(password: string): { valid: boolean; mess
 
 /**
  * SECURITY FIX M3: Simple in-memory rate limiting by IP
+ * Now with Redis-first, Map-fallback pattern
  */
 interface RateLimitEntry {
   count: number;
@@ -295,11 +447,34 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 
 /**
  * Check if request should be rate limited
+ * Uses Redis if available, falls back to in-memory Map
  * @param identifier - Usually IP address or user ID
  * @param maxRequests - Max requests allowed
  * @param windowMs - Time window in milliseconds
  */
-export function checkRateLimit(identifier: string, maxRequests: number = 5, windowMs: number = 60000): boolean {
+export async function checkRateLimit(identifier: string, maxRequests: number = 5, windowMs: number = 60000): Promise<boolean> {
+  const windowSeconds = Math.ceil(windowMs / 1000);
+  const redisKey = REDIS_KEYS.RATE_LIMIT + identifier;
+
+  // Try Redis first
+  if (isRedisConnected()) {
+    try {
+      const count = await redisIncr(redisKey, windowSeconds);
+      if (count !== null) {
+        const allowed = count <= maxRequests;
+        if (!allowed) {
+          console.log(`[Redis:Security] Rate limit exceeded for ${identifier}: ${count}/${maxRequests}`);
+        }
+        return allowed;
+      }
+      // If redisIncr returned null, fall through to Map fallback
+      console.log('[Redis:Security] INCR returned null, falling back to Map');
+    } catch (error) {
+      console.log('[Redis:Security] Rate limit check error, falling back to Map:', (error as Error).message);
+    }
+  }
+
+  // Map fallback
   const now = Date.now();
   const entry = rateLimitStore.get(identifier);
 
@@ -315,8 +490,27 @@ export function checkRateLimit(identifier: string, maxRequests: number = 5, wind
 
 /**
  * Get remaining requests for identifier
+ * Uses Redis if available, falls back to in-memory Map
  */
-export function getRateLimitRemaining(identifier: string, maxRequests: number = 5): number {
+export async function getRateLimitRemaining(identifier: string, maxRequests: number = 5, windowMs: number = 60000): Promise<number> {
+  const redisKey = REDIS_KEYS.RATE_LIMIT + identifier;
+
+  // Try Redis first
+  if (isRedisConnected()) {
+    try {
+      const countStr = await redisGet(redisKey);
+      if (countStr !== null) {
+        const count = parseInt(countStr, 10);
+        return Math.max(0, maxRequests - count);
+      }
+      // Key doesn't exist, full quota available
+      return maxRequests;
+    } catch (error) {
+      console.log('[Redis:Security] Get rate limit remaining error, falling back to Map:', (error as Error).message);
+    }
+  }
+
+  // Map fallback
   const entry = rateLimitStore.get(identifier);
   if (!entry || Date.now() >= entry.resetTime) {
     return maxRequests;

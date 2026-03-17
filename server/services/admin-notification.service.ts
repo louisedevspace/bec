@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../routes/middleware";
 import { syncManager } from "../sync-manager";
+import { redisGetJSON, redisSetJSON, redisDel, REDIS_KEYS } from "../utils/redis";
 
 // Admin notification types
 export type AdminNotificationType =
@@ -79,6 +80,14 @@ class AdminNotificationService {
         return;
       }
 
+      // Invalidate notification counts cache
+      try {
+        await redisDel(REDIS_KEYS.ADMIN_NOTIF_COUNTS);
+        console.log('[Redis:Admin] Invalidated notification counts cache');
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
+
       // Broadcast via WebSocket so admin clients receive it instantly
       syncManager.broadcastSyncEvent({
         type: "data_sync",
@@ -128,11 +137,31 @@ class AdminNotificationService {
       return { notifications: [], unreadCount: 0, categoryBadges: {} };
     }
 
-    // Get unread count
-    const { count: unreadCount } = await supabaseAdmin
+    // Try to get counts from Redis cache (15s TTL)
+    let unreadCount = 0;
+    let categoryBadges: Record<string, number> = {};
+    
+    try {
+      const cachedCounts = await redisGetJSON<{ unreadCount: number; categoryBadges: Record<string, number> }>(REDIS_KEYS.ADMIN_NOTIF_COUNTS);
+      if (cachedCounts) {
+        console.log('[Redis:Admin] Cache HIT for notification counts');
+        return {
+          notifications: notifications || [],
+          unreadCount: cachedCounts.unreadCount,
+          categoryBadges: cachedCounts.categoryBadges,
+        };
+      }
+    } catch (err) {
+      // Redis errors are non-fatal
+    }
+
+    // Get unread count from DB
+    const { count: dbUnreadCount } = await supabaseAdmin
       .from("admin_notifications")
       .select("*", { count: "exact", head: true })
       .eq("is_read", false);
+    
+    unreadCount = dbUnreadCount || 0;
 
     // Get per-category unread counts for sidebar badges
     const { data: categoryData } = await supabaseAdmin
@@ -140,16 +169,23 @@ class AdminNotificationService {
       .select("category")
       .eq("is_read", false);
 
-    const categoryBadges: Record<string, number> = {};
     if (categoryData) {
       for (const row of categoryData) {
         categoryBadges[row.category] = (categoryBadges[row.category] || 0) + 1;
       }
     }
 
+    // Store counts in Redis with 15s TTL
+    try {
+      await redisSetJSON(REDIS_KEYS.ADMIN_NOTIF_COUNTS, { unreadCount, categoryBadges }, 15);
+      console.log('[Redis:Admin] Cached notification counts');
+    } catch (err) {
+      // Redis errors are non-fatal
+    }
+
     return {
       notifications: notifications || [],
-      unreadCount: unreadCount || 0,
+      unreadCount,
       categoryBadges,
     };
   }
@@ -169,6 +205,13 @@ class AdminNotificationService {
 
     if (error) {
       console.error("Failed to mark notification as read:", error.message);
+    } else {
+      // Invalidate counts cache
+      try {
+        await redisDel(REDIS_KEYS.ADMIN_NOTIF_COUNTS);
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
     }
   }
 
@@ -192,6 +235,13 @@ class AdminNotificationService {
     const { error } = await query;
     if (error) {
       console.error("Failed to mark all notifications as read:", error.message);
+    } else {
+      // Invalidate counts cache
+      try {
+        await redisDel(REDIS_KEYS.ADMIN_NOTIF_COUNTS);
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
     }
   }
 

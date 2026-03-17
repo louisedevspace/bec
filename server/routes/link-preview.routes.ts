@@ -1,69 +1,92 @@
 import type { Express, Request, Response } from 'express';
 import { requireAuth } from './middleware';
 import { fetchLinkPreview, LinkPreviewData } from '../utils/link-preview';
+import { redisGetJSON, redisSetJSON, isRedisConnected, REDIS_KEYS } from '../utils/redis';
 
 interface CacheEntry {
   data: LinkPreviewData;
   timestamp: number;
 }
 
-// In-memory cache with TTL
-const cache = new Map<string, CacheEntry>();
+// In-memory cache as fallback when Redis is unavailable
+const fallbackCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const MAX_CACHE_SIZE = 500;
+const REDIS_TTL_SECONDS = 3600; // 1 hour for Redis
 
 /**
- * Clean up expired cache entries and enforce max size
+ * Generate Redis key for a URL
  */
-function cleanupCache(): void {
+function getRedisKey(url: string): string {
+  return REDIS_KEYS.LINK_PREVIEW + encodeURIComponent(url);
+}
+
+/**
+ * Clean up expired fallback cache entries (used when Redis is down)
+ */
+function cleanupFallbackCache(): void {
   const now = Date.now();
-  
-  // Remove expired entries
-  const entries = Array.from(cache.entries());
+  const entries = Array.from(fallbackCache.entries());
   for (const [key, entry] of entries) {
     if (now - entry.timestamp > CACHE_TTL_MS) {
-      cache.delete(key);
-    }
-  }
-  
-  // If still over max size, remove oldest entries
-  if (cache.size > MAX_CACHE_SIZE) {
-    const entries = Array.from(cache.entries())
-      .sort((a, b) => a[1].timestamp - b[1].timestamp);
-    
-    const toRemove = entries.slice(0, cache.size - MAX_CACHE_SIZE);
-    for (const [key] of toRemove) {
-      cache.delete(key);
+      fallbackCache.delete(key);
     }
   }
 }
 
+// Run fallback cache cleanup periodically (only matters when Redis is down)
+setInterval(cleanupFallbackCache, 10 * 60 * 1000); // Every 10 minutes
+
 /**
- * Get cached preview data if valid
+ * Get cached preview data - Redis first, Map fallback
  */
-function getCachedPreview(url: string): LinkPreviewData | null {
-  const entry = cache.get(url);
+async function getCachedPreview(url: string): Promise<LinkPreviewData | null> {
+  // Try Redis first
+  try {
+    if (isRedisConnected()) {
+      const redisKey = getRedisKey(url);
+      const redisData = await redisGetJSON<LinkPreviewData>(redisKey);
+      if (redisData) {
+        console.log('[Redis:LinkPreview] Cache hit for:', url.substring(0, 50));
+        return redisData;
+      }
+    }
+  } catch (error) {
+    console.log('[Redis:LinkPreview] Error reading cache:', (error as Error).message);
+  }
+
+  // Fallback to Map cache
+  const entry = fallbackCache.get(url);
   if (!entry) return null;
-  
+
   const now = Date.now();
   if (now - entry.timestamp > CACHE_TTL_MS) {
-    cache.delete(url);
+    fallbackCache.delete(url);
     return null;
   }
-  
+
+  console.log('[Redis:LinkPreview] Fallback cache hit for:', url.substring(0, 50));
   return entry.data;
 }
 
 /**
- * Store preview data in cache
+ * Store preview data in cache - write to both Redis and Map
  */
-function setCachedPreview(url: string, data: LinkPreviewData): void {
-  // Cleanup before adding new entry
-  if (cache.size >= MAX_CACHE_SIZE) {
-    cleanupCache();
+async function setCachedPreview(url: string, data: LinkPreviewData): Promise<void> {
+  // Write to Redis (with TTL, Redis handles expiry automatically)
+  try {
+    if (isRedisConnected()) {
+      const redisKey = getRedisKey(url);
+      const success = await redisSetJSON(redisKey, data, REDIS_TTL_SECONDS);
+      if (success) {
+        console.log('[Redis:LinkPreview] Cached:', url.substring(0, 50));
+      }
+    }
+  } catch (error) {
+    console.log('[Redis:LinkPreview] Error writing cache:', (error as Error).message);
   }
-  
-  cache.set(url, {
+
+  // Always write to fallback Map (for when Redis is unavailable)
+  fallbackCache.set(url, {
     data,
     timestamp: Date.now(),
   });
@@ -93,8 +116,8 @@ async function handleLinkPreview(req: Request, res: Response): Promise<void> {
       decodedUrl = url;
     }
     
-    // Check cache first
-    const cachedData = getCachedPreview(decodedUrl);
+    // Check cache first (Redis, then Map fallback)
+    const cachedData = await getCachedPreview(decodedUrl);
     if (cachedData) {
       res.json({
         success: true,
@@ -107,8 +130,8 @@ async function handleLinkPreview(req: Request, res: Response): Promise<void> {
     // Fetch fresh preview data
     const previewData = await fetchLinkPreview(decodedUrl);
     
-    // Cache the result
-    setCachedPreview(decodedUrl, previewData);
+    // Cache the result (writes to both Redis and Map)
+    await setCachedPreview(decodedUrl, previewData);
     
     res.json({
       success: true,

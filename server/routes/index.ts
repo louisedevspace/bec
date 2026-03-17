@@ -12,6 +12,13 @@ import {
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { getServerConfig } from "../config";
+import {
+  getRedisClient,
+  createRedisSubscriber,
+  isRedisConnected,
+  REDIS_KEYS,
+} from "../utils/redis";
+import type Redis from "ioredis";
 
 // Route modules
 import registerCryptoRoutes from "./crypto.routes";
@@ -37,14 +44,92 @@ import registerAdminStakingRoutes from "./admin-staking.routes";
 import registerAssetRoutes from "./assets.routes";
 import registerLinkPreviewRoutes from "./link-preview.routes";
 
-// Broadcast price updates to all connected WebSocket clients
-function broadcastPriceUpdate(priceData: any) {
-  const message = JSON.stringify({ type: "price_update", data: priceData });
+// Redis subscriber instance for Pub/Sub
+let redisSubscriber: Redis | null = null;
+
+// Broadcast price updates to local WebSocket clients only (no Redis publish)
+function broadcastToLocalClients(message: string) {
   clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
   });
+}
+
+// Publish price update to Redis channel for cross-instance broadcasting
+// Falls back to local broadcast if Redis is unavailable
+async function publishPriceUpdate(priceData: any) {
+  const message = JSON.stringify({ type: "price_update", data: priceData });
+  
+  try {
+    const redisClient = getRedisClient();
+    if (redisClient && isRedisConnected()) {
+      // Publish to Redis - all instances (including this one) will receive via subscription
+      await redisClient.publish(REDIS_KEYS.WS_CHANNEL_PRICES, message);
+      console.log("[Redis:PubSub] Published price update to channel:", REDIS_KEYS.WS_CHANNEL_PRICES);
+    } else {
+      // Fallback: Redis unavailable, broadcast directly to local clients
+      broadcastToLocalClients(message);
+    }
+  } catch (error) {
+    console.error("[Redis:PubSub] Error publishing price update:", error);
+    // Fallback to local broadcast on error
+    broadcastToLocalClients(message);
+  }
+}
+
+// Initialize Redis Pub/Sub subscriber for WebSocket broadcasting
+async function initWebSocketPubSub() {
+  try {
+    if (!isRedisConnected()) {
+      console.log("[Redis:PubSub] Redis not available, skipping Pub/Sub initialization");
+      return;
+    }
+
+    redisSubscriber = createRedisSubscriber();
+    if (!redisSubscriber) {
+      console.log("[Redis:PubSub] Failed to create subscriber");
+      return;
+    }
+
+    // Handle incoming messages from subscribed channels
+    redisSubscriber.on("message", (channel: string, message: string) => {
+      try {
+        if (channel === REDIS_KEYS.WS_CHANNEL_PRICES) {
+          // Broadcast price update to local WebSocket clients
+          broadcastToLocalClients(message);
+          console.log("[Redis:PubSub] Received and broadcast price update from channel");
+        } else if (channel === REDIS_KEYS.WS_CHANNEL_SYNC) {
+          // Broadcast sync event to local WebSocket clients
+          broadcastToLocalClients(message);
+          console.log("[Redis:PubSub] Received and broadcast sync event from channel");
+        }
+      } catch (error) {
+        console.error("[Redis:PubSub] Error processing message:", error);
+      }
+    });
+
+    // Subscribe to price and sync channels
+    await redisSubscriber.subscribe(REDIS_KEYS.WS_CHANNEL_PRICES, REDIS_KEYS.WS_CHANNEL_SYNC);
+    console.log("[Redis:PubSub] Subscribed to channels:", REDIS_KEYS.WS_CHANNEL_PRICES, REDIS_KEYS.WS_CHANNEL_SYNC);
+
+    // Handle reconnection
+    redisSubscriber.on("reconnecting", () => {
+      console.log("[Redis:PubSub] Subscriber reconnecting...");
+    });
+
+    redisSubscriber.on("connect", async () => {
+      console.log("[Redis:PubSub] Subscriber reconnected, resubscribing to channels...");
+      try {
+        await redisSubscriber?.subscribe(REDIS_KEYS.WS_CHANNEL_PRICES, REDIS_KEYS.WS_CHANNEL_SYNC);
+      } catch (error) {
+        console.error("[Redis:PubSub] Error resubscribing after reconnect:", error);
+      }
+    });
+
+  } catch (error) {
+    console.error("[Redis:PubSub] Error initializing WebSocket Pub/Sub:", error);
+  }
 }
 
 // Send initial price data to a newly connected client
@@ -250,11 +335,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const cryptoService = LiveCryptoService.getInstance();
       const prices = await cryptoService.getCurrentPrices();
-      broadcastPriceUpdate(prices);
+      // Use Redis Pub/Sub to broadcast prices across all instances
+      await publishPriceUpdate(prices);
     } catch (error) {
       console.error("Error updating live prices:", error);
     }
   }, 30000);
+
+  // Initialize Redis Pub/Sub for WebSocket cross-instance broadcasting
+  initWebSocketPubSub().catch((error) => {
+    console.error("[Redis:PubSub] Failed to initialize:", error);
+  });
 
   // Global error handler (JSON)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

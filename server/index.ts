@@ -8,6 +8,7 @@ import { recordApiMetric } from "./perf-metrics";
 import { getServerConfig } from "./config";
 import { getInternalTaskSecret } from "./routes/middleware";
 import postgres from "postgres";
+import { initRedis, closeRedis } from "./utils/redis";
 
 // Function to start scheduled tasks
 function startScheduledTasks(port: number) {
@@ -235,6 +236,9 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Redis cache (optional - app works without it)
+  await initRedis();
+
   // Initialize live crypto service
   const cryptoService = LiveCryptoService.getInstance();
   await cryptoService.initializeCryptoTable();
@@ -279,4 +283,27 @@ app.use((req, res, next) => {
     // Start scheduled tasks
     startScheduledTasks(port);
   });
+
+  // Graceful shutdown handlers
+  const gracefulShutdown = async (signal: string) => {
+    log(`\n${signal} received, shutting down gracefully...`);
+    
+    // Close Redis connection
+    await closeRedis();
+    
+    // Close HTTP server
+    server.close(() => {
+      log('HTTP server closed');
+      process.exit(0);
+    });
+
+    // Force exit after 10 seconds if graceful shutdown fails
+    setTimeout(() => {
+      log('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 })();

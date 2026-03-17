@@ -66,6 +66,14 @@ if [ -n "$MISSING" ]; then
 fi
 echo -e "${GREEN}✓ Environment variables configured${NC}"
 
+# Check Redis (optional but recommended)
+if [ -z "$REDIS_URL" ]; then
+    echo -e "${YELLOW}⚠ REDIS_URL not set - app will work but caching disabled${NC}"
+    echo -e "${YELLOW}  For production, add Redis service in Coolify and set REDIS_URL${NC}"
+else
+    echo -e "${GREEN}✓ Redis configured: $REDIS_URL${NC}"
+fi
+
 # ------------------------------------------
 # 3. Install dependencies
 # ------------------------------------------

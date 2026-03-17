@@ -106,8 +106,8 @@ export default function registerAuthRoutes(app: Express) {
     const { email, password } = req.body;
 
     // SECURITY FIX M3: Rate limit login attempts by IP
-    if (!checkRateLimit(ipAddress, 5, 60000)) {
-      const remaining = getRateLimitRemaining(ipAddress, 5);
+    if (!await checkRateLimit(ipAddress, 5, 60000)) {
+      const remaining = await getRateLimitRemaining(ipAddress, 5, 60000);
       return res.status(429).json({
         message: 'Too many login attempts. Please try again later.',
         retryAfter: 60,
@@ -156,7 +156,7 @@ export default function registerAuthRoutes(app: Express) {
         if (token) {
           const userId = req.user?.id;
           if (userId) {
-            invalidateSession(token, userId);
+            await invalidateSession(token, userId);
           }
         }
       }

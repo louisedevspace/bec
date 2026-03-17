@@ -1,15 +1,18 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import LiveCryptoService from "../services/live-crypto-service";
+import { redisGetJSON, redisSetJSON, isRedisConnected, REDIS_KEYS } from "../utils/redis";
 
-// In-memory cache for crypto prices
+// In-memory cache for crypto prices (fallback when Redis unavailable)
 let pricesCache: any = null;
 let pricesCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
+const REDIS_PRICES_TTL = 30; // 30 seconds for Redis
 
-// In-memory cache for price history (candlestick data)
+// In-memory cache for price history (candlestick data) - fallback when Redis unavailable
 const priceHistoryCache = new Map<string, { data: any; time: number }>();
 const HISTORY_CACHE_DURATION = 60000; // 60 seconds
+const REDIS_HISTORY_TTL = 60; // 60 seconds for Redis
 
 export default function registerCryptoRoutes(app: Express) {
   // Get all crypto prices with caching
@@ -17,9 +20,25 @@ export default function registerCryptoRoutes(app: Express) {
     try {
       const now = Date.now();
       
-      // Return cached data if still valid
+      // Try Redis first
+      try {
+        if (isRedisConnected()) {
+          const redisPrices = await redisGetJSON<any>(REDIS_KEYS.PRICES);
+          if (redisPrices) {
+            console.log('[Redis:Crypto] Cache HIT for prices');
+            res.setHeader('X-Cache', 'HIT');
+            res.setHeader('X-Cache-Source', 'redis');
+            return res.json(redisPrices);
+          }
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Read error, falling back to memory:', (redisError as Error).message);
+      }
+      
+      // Check in-memory cache (fallback)
       if (pricesCache && (now - pricesCacheTime) < CACHE_DURATION) {
         res.setHeader('X-Cache', 'HIT');
+        res.setHeader('X-Cache-Source', 'memory');
         return res.json(pricesCache);
       }
 
@@ -27,9 +46,19 @@ export default function registerCryptoRoutes(app: Express) {
       const cryptoService = LiveCryptoService.getInstance();
       const prices = await cryptoService.getCurrentPrices();
       
-      // Update cache
+      // Update in-memory cache
       pricesCache = prices;
       pricesCacheTime = now;
+      
+      // Try to store in Redis
+      try {
+        if (isRedisConnected()) {
+          await redisSetJSON(REDIS_KEYS.PRICES, prices, REDIS_PRICES_TTL);
+          console.log('[Redis:Crypto] Cached prices with TTL', REDIS_PRICES_TTL);
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Write error:', (redisError as Error).message);
+      }
       
       res.setHeader('X-Cache', 'MISS');
       res.setHeader('Cache-Control', 'public, max-age=30');
@@ -51,11 +80,30 @@ export default function registerCryptoRoutes(app: Express) {
       const { symbol } = req.params;
       const now = Date.now();
       
-      // Use cache if available
+      // Try Redis first
+      try {
+        if (isRedisConnected()) {
+          const redisPrices = await redisGetJSON<any[]>(REDIS_KEYS.PRICES);
+          if (redisPrices) {
+            const price = redisPrices.find((p: any) => p.symbol === symbol.toUpperCase());
+            if (price) {
+              console.log('[Redis:Crypto] Cache HIT for price:', symbol);
+              res.setHeader('X-Cache', 'HIT');
+              res.setHeader('X-Cache-Source', 'redis');
+              return res.json(price);
+            }
+          }
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Read error for symbol, falling back to memory:', (redisError as Error).message);
+      }
+      
+      // Use in-memory cache if available (fallback)
       if (pricesCache && (now - pricesCacheTime) < CACHE_DURATION) {
         const price = pricesCache.find((p: any) => p.symbol === symbol.toUpperCase());
         if (price) {
           res.setHeader('X-Cache', 'HIT');
+          res.setHeader('X-Cache-Source', 'memory');
           return res.json(price);
         }
       }
@@ -65,6 +113,15 @@ export default function registerCryptoRoutes(app: Express) {
       const prices = await cryptoService.getCurrentPrices();
       pricesCache = prices;
       pricesCacheTime = now;
+      
+      // Try to store in Redis
+      try {
+        if (isRedisConnected()) {
+          await redisSetJSON(REDIS_KEYS.PRICES, prices, REDIS_PRICES_TTL);
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Write error:', (redisError as Error).message);
+      }
       
       const price = prices.find(p => p.symbol === symbol.toUpperCase());
       if (!price) {
@@ -155,10 +212,29 @@ export default function registerCryptoRoutes(app: Express) {
       }
 
       const cacheKey = `${symbol}_${interval}_${limit}`;
+      const redisKey = `${REDIS_KEYS.PRICE_HISTORY}${symbol}:${interval}:${limit}`;
       const now = Date.now();
+      
+      // Try Redis first
+      try {
+        if (isRedisConnected()) {
+          const redisHistory = await redisGetJSON<any[]>(redisKey);
+          if (redisHistory) {
+            console.log('[Redis:Crypto] Cache HIT for price history:', symbol, interval);
+            res.setHeader("X-Cache", "HIT");
+            res.setHeader("X-Cache-Source", "redis");
+            return res.json(redisHistory);
+          }
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Read error for history, falling back to memory:', (redisError as Error).message);
+      }
+      
+      // Check in-memory cache (fallback)
       const cached = priceHistoryCache.get(cacheKey);
       if (cached && (now - cached.time) < HISTORY_CACHE_DURATION) {
         res.setHeader("X-Cache", "HIT");
+        res.setHeader("X-Cache-Source", "memory");
         return res.json(cached.data);
       }
 
@@ -214,7 +290,19 @@ export default function registerCryptoRoutes(app: Express) {
         return res.status(404).json({ message: "No price history available for " + symbol });
       }
 
+      // Update in-memory cache
       priceHistoryCache.set(cacheKey, { data: candles, time: now });
+      
+      // Try to store in Redis
+      try {
+        if (isRedisConnected()) {
+          await redisSetJSON(redisKey, candles, REDIS_HISTORY_TTL);
+          console.log('[Redis:Crypto] Cached price history with TTL', REDIS_HISTORY_TTL, 'for', symbol, interval);
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Write error for history:', (redisError as Error).message);
+      }
+      
       res.setHeader("X-Cache", "MISS");
       res.setHeader("Cache-Control", "public, max-age=60");
       res.json(candles);

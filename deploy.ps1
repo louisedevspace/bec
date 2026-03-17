@@ -69,6 +69,14 @@ if ($missing.Count -gt 0) {
 }
 Write-Host "OK Environment variables configured" -ForegroundColor Green
 
+# Check Redis (optional but recommended)
+if (-not $env:REDIS_URL) {
+    Write-Host "! REDIS_URL not set - app will work but caching disabled" -ForegroundColor Yellow
+    Write-Host "  For production, add Redis service in Coolify and set REDIS_URL" -ForegroundColor Yellow
+} else {
+    Write-Host "OK Redis configured: $($env:REDIS_URL)" -ForegroundColor Green
+}
+
 # ------------------------------------------
 # 3. Install dependencies
 # ------------------------------------------

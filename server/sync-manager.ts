@@ -1,4 +1,9 @@
 import { WebSocket } from 'ws';
+import {
+  getRedisClient,
+  isRedisConnected,
+  REDIS_KEYS,
+} from './utils/redis';
 
 // Global WebSocket clients collection
 export const clients = new Set<WebSocket>();
@@ -56,10 +61,8 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  // Broadcast synchronization event to all connected clients
-  public broadcastSyncEvent(event: SyncEvent): void {
-    const message = JSON.stringify(event);
-    
+  // Broadcast synchronization event to local WebSocket clients only (no Redis)
+  private broadcastToLocalClients(message: string): void {
     clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         try {
@@ -69,8 +72,30 @@ export class SyncManager {
         }
       }
     });
+  }
 
-    console.log(`📡 Broadcasted sync event: ${event.data.action} for user: ${event.data.userId || 'all'}`);
+  // Broadcast synchronization event - uses Redis Pub/Sub for cross-instance broadcasting
+  // Falls back to local broadcast if Redis is unavailable
+  public async broadcastSyncEvent(event: SyncEvent): Promise<void> {
+    const message = JSON.stringify(event);
+    
+    try {
+      const redisClient = getRedisClient();
+      if (redisClient && isRedisConnected()) {
+        // Publish to Redis - all instances (including this one) will receive via subscription
+        await redisClient.publish(REDIS_KEYS.WS_CHANNEL_SYNC, message);
+        console.log(`[Redis:PubSub] Published sync event: ${event.data.action} for user: ${event.data.userId || 'all'}`);
+      } else {
+        // Fallback: Redis unavailable, broadcast directly to local clients
+        this.broadcastToLocalClients(message);
+        console.log(`📡 Broadcasted sync event: ${event.data.action} for user: ${event.data.userId || 'all'}`);
+      }
+    } catch (error) {
+      console.error('[Redis:PubSub] Error publishing sync event:', error);
+      // Fallback to local broadcast on error
+      this.broadcastToLocalClients(message);
+      console.log(`📡 Broadcasted sync event (fallback): ${event.data.action} for user: ${event.data.userId || 'all'}`);
+    }
   }
 
   // Trade synchronization

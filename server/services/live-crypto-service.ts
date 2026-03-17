@@ -1,11 +1,13 @@
 import axios from 'axios';
 import supabase from '../supabaseClient';
+import { redisGetJSON, redisSetJSON, isRedisConnected, REDIS_KEYS } from '../utils/redis';
 
 // In-memory cache for prices when database is unavailable
 let inMemoryPriceCache: CryptoPriceData[] = [];
 let dbConnectionHealthy = true;
 let lastDbCheckTime = 0;
 const DB_HEALTH_CHECK_INTERVAL = 60000; // 1 minute
+const REDIS_SERVICE_PRICES_TTL = 60; // 60 seconds for service-level cache
 
 // Supported cryptocurrencies
 const SUPPORTED_CRYPTOS = [
@@ -350,6 +352,16 @@ class LiveCryptoService {
     // Always update in-memory cache
     inMemoryPriceCache = prices;
     
+    // Try to write to Redis as intermediate cache
+    try {
+      if (isRedisConnected()) {
+        await redisSetJSON(REDIS_KEYS.PRICES, prices, REDIS_SERVICE_PRICES_TTL);
+        console.log('[Redis:Crypto] Service cached prices with TTL', REDIS_SERVICE_PRICES_TTL);
+      }
+    } catch (redisError) {
+      console.warn('[Redis:Crypto] Service write error:', (redisError as Error).message);
+    }
+    
     // Check database health before attempting writes
     const isDbHealthy = await this.checkDbHealth();
     if (!isDbHealthy) {
@@ -401,9 +413,25 @@ class LiveCryptoService {
       }
     }
 
-    // If database is unhealthy, return in-memory cache
-    if (!dbConnectionHealthy && inMemoryPriceCache.length > 0) {
-      return inMemoryPriceCache;
+    // If database is unhealthy, try Redis first, then fall back to in-memory cache
+    if (!dbConnectionHealthy) {
+      // Try Redis first
+      try {
+        if (isRedisConnected()) {
+          const redisPrices = await redisGetJSON<CryptoPriceData[]>(REDIS_KEYS.PRICES);
+          if (redisPrices && redisPrices.length > 0) {
+            console.log('[Redis:Crypto] Service fallback cache HIT');
+            return redisPrices;
+          }
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Service read error:', (redisError as Error).message);
+      }
+      
+      // Fall back to in-memory cache
+      if (inMemoryPriceCache.length > 0) {
+        return inMemoryPriceCache;
+      }
     }
 
     // Try to get cached data from database
@@ -414,8 +442,22 @@ class LiveCryptoService {
         .order('symbol');
 
       if (error) {
-        console.warn('⚠️ Error fetching cached prices from DB, using in-memory cache');
+        console.warn('⚠️ Error fetching cached prices from DB, trying Redis then in-memory cache');
         dbConnectionHealthy = false;
+        
+        // Try Redis first
+        try {
+          if (isRedisConnected()) {
+            const redisPrices = await redisGetJSON<CryptoPriceData[]>(REDIS_KEYS.PRICES);
+            if (redisPrices && redisPrices.length > 0) {
+              console.log('[Redis:Crypto] Service fallback cache HIT after DB error');
+              return redisPrices;
+            }
+          }
+        } catch (redisError) {
+          console.warn('[Redis:Crypto] Service read error:', (redisError as Error).message);
+        }
+        
         return inMemoryPriceCache;
       }
 
@@ -428,6 +470,20 @@ class LiveCryptoService {
       }));
     } catch {
       dbConnectionHealthy = false;
+      
+      // Try Redis first
+      try {
+        if (isRedisConnected()) {
+          const redisPrices = await redisGetJSON<CryptoPriceData[]>(REDIS_KEYS.PRICES);
+          if (redisPrices && redisPrices.length > 0) {
+            console.log('[Redis:Crypto] Service fallback cache HIT after exception');
+            return redisPrices;
+          }
+        }
+      } catch (redisError) {
+        console.warn('[Redis:Crypto] Service read error:', (redisError as Error).message);
+      }
+      
       return inMemoryPriceCache;
     }
   }

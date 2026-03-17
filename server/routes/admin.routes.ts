@@ -4,15 +4,23 @@ import { syncManager } from "../sync-manager";
 import supabase from "../supabaseClient";
 import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
 import { decryptPasswordForAdminView, encryptPasswordForAdminView, isEncryptedPasswordRecord } from "../utils/admin-password-vault";
+import { redisGetJSON, redisSetJSON, redisDel, REDIS_KEYS, isRedisConnected } from "../utils/redis";
 
 // Cache for admin users data
 let adminUsersCache: any = null;
 let adminUsersCacheTime = 0;
 const ADMIN_CACHE_DURATION = 60000; // 1 minute
 
-function invalidateAdminUsersCache() {
+async function invalidateAdminUsersCache() {
   adminUsersCache = null;
   adminUsersCacheTime = 0;
+  // Also invalidate Redis cache
+  try {
+    await redisDel(REDIS_KEYS.ADMIN_USERS);
+    console.log('[Redis:Admin] Invalidated admin users cache');
+  } catch (err) {
+    // Redis errors are non-fatal
+  }
 }
 
 export default function registerAdminRoutes(app: Express) {
@@ -133,10 +141,28 @@ export default function registerAdminRoutes(app: Express) {
       const now = Date.now();
       const forceRefresh = req.query.refresh === 'true' || typeof req.query.t === 'string';
       
-      // Return cached data if available and not force refreshing
+      // Return memory cached data if available and not force refreshing
       if (!forceRefresh && adminUsersCache && (now - adminUsersCacheTime) < ADMIN_CACHE_DURATION) {
         res.setHeader('X-Cache', 'HIT');
         return res.json({ users: adminUsersCache });
+      }
+
+      // Check Redis cache if memory cache miss
+      if (!forceRefresh) {
+        try {
+          const redisCached = await redisGetJSON<any[]>(REDIS_KEYS.ADMIN_USERS);
+          if (redisCached) {
+            console.log('[Redis:Admin] Cache HIT for admin users');
+            // Populate memory cache from Redis
+            adminUsersCache = redisCached;
+            adminUsersCacheTime = now;
+            res.setHeader('X-Cache', 'HIT-REDIS');
+            return res.json({ users: redisCached });
+          }
+        } catch (err) {
+          // Redis errors are non-fatal, continue to fetch from DB
+          console.log('[Redis:Admin] Cache check error, falling back to DB');
+        }
       }
 
       // Fetch only essential user columns
@@ -244,9 +270,17 @@ export default function registerAdminRoutes(app: Express) {
         };
       });
 
-      // Update cache
+      // Update memory cache
       adminUsersCache = mergedUsers;
       adminUsersCacheTime = now;
+
+      // Store in Redis with 60s TTL
+      try {
+        await redisSetJSON(REDIS_KEYS.ADMIN_USERS, mergedUsers, 60);
+        console.log('[Redis:Admin] Cached admin users list');
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
 
       res.setHeader('X-Cache', 'MISS');
       res.setHeader('Cache-Control', 'private, max-age=60');
@@ -335,7 +369,7 @@ export default function registerAdminRoutes(app: Express) {
 
           // Idempotent response for stale UI/cache cases where user was already removed.
           if (!targetUser) {
-            invalidateAdminUsersCache();
+            await invalidateAdminUsersCache();
             return res.json({ message: "User was already deleted", alreadyDeleted: true });
           }
 
@@ -414,7 +448,7 @@ export default function registerAdminRoutes(app: Express) {
             status: "success",
           });
 
-          invalidateAdminUsersCache();
+          await invalidateAdminUsersCache();
 
           message = "User deleted successfully";
           break;
@@ -587,7 +621,7 @@ export default function registerAdminRoutes(app: Express) {
         status: 'success',
       });
 
-      invalidateAdminUsersCache();
+      await invalidateAdminUsersCache();
       syncManager.syncPortfolioUpdated(userId, {});
       res.json({ message: "Portfolio balances updated successfully" });
     } catch (error: any) {
@@ -651,7 +685,7 @@ export default function registerAdminRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to update user status" });
       }
 
-      invalidateAdminUsersCache();
+      await invalidateAdminUsersCache();
 
       res.json({
         message: `User ${isActive ? "enabled" : "disabled"} successfully`,
@@ -828,6 +862,18 @@ export default function registerAdminRoutes(app: Express) {
   // GET /api/admin/pending-counts — lightweight pending item counts for badges
   app.get("/api/admin/pending-counts", requireAuth, requireAdmin, async (req, res) => {
     try {
+      // Check Redis cache first (10s TTL for real-time data)
+      try {
+        const cached = await redisGetJSON<any>(REDIS_KEYS.ADMIN_PENDING);
+        if (cached) {
+          console.log('[Redis:Admin] Cache HIT for pending counts');
+          res.setHeader('X-Cache', 'HIT-REDIS');
+          return res.json(cached);
+        }
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
+
       const [
         depositsRes, withdrawalsRes, tradesRes, futuresRes,
         loansRes, kycRes, supportRes
@@ -845,7 +891,7 @@ export default function registerAdminRoutes(app: Express) {
         (supportRes.data || []).map((message: any) => message.conversation_id)
       ).size;
 
-      res.json({
+      const result = {
         deposits: depositsRes.count ?? 0,
         withdrawals: withdrawalsRes.count ?? 0,
         trades: tradesRes.count ?? 0,
@@ -853,7 +899,18 @@ export default function registerAdminRoutes(app: Express) {
         loans: loansRes.count ?? 0,
         kyc: kycRes.count ?? 0,
         support: unreadSupportConversationCount,
-      });
+      };
+
+      // Store in Redis with 10s TTL
+      try {
+        await redisSetJSON(REDIS_KEYS.ADMIN_PENDING, result, 10);
+        console.log('[Redis:Admin] Cached pending counts');
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
+
+      res.setHeader('X-Cache', 'MISS');
+      res.json(result);
     } catch (error: any) {
       console.error("Pending counts error:", error);
       res.status(500).json({ message: "Failed to fetch pending counts" });
@@ -863,6 +920,18 @@ export default function registerAdminRoutes(app: Express) {
   // GET /api/admin/dashboard-stats — comprehensive dashboard statistics
   app.get("/api/admin/dashboard-stats", requireAuth, requireAdmin, async (req, res) => {
     try {
+      // Check Redis cache first (5 min TTL for dashboard stats)
+      try {
+        const cached = await redisGetJSON<any>(REDIS_KEYS.ADMIN_STATS);
+        if (cached) {
+          console.log('[Redis:Admin] Cache HIT for dashboard stats');
+          res.setHeader('X-Cache', 'HIT-REDIS');
+          return res.json(cached);
+        }
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
+
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const yesterday = new Date(today.getTime() - 86400000);
@@ -1180,7 +1249,7 @@ export default function registerAdminRoutes(app: Express) {
       // Sort by time descending
       recentActivity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
-      res.json({
+      const result = {
         users: {
           total: totalUsers,
           active: activeUsers,
@@ -1254,7 +1323,18 @@ export default function registerAdminRoutes(app: Express) {
           financialTrend,
         },
         recentActivity: recentActivity.slice(0, 20),
-      });
+      };
+
+      // Store in Redis with 5 min TTL
+      try {
+        await redisSetJSON(REDIS_KEYS.ADMIN_STATS, result, 300);
+        console.log('[Redis:Admin] Cached dashboard stats');
+      } catch (err) {
+        // Redis errors are non-fatal
+      }
+
+      res.setHeader('X-Cache', 'MISS');
+      res.json(result);
     } catch (error: any) {
       console.error('Dashboard stats error:', error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
