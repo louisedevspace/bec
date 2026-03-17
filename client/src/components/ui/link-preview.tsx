@@ -29,6 +29,50 @@ export function extractUrls(text: string): string[] {
   return matches ? Array.from(new Set(matches)) : [];
 }
 
+/**
+ * Extract domain from URL for display
+ */
+function getDomain(urlString: string): string {
+  try {
+    const parsed = new URL(urlString);
+    return parsed.hostname.replace('www.', '');
+  } catch {
+    return urlString;
+  }
+}
+
+/**
+ * Prefetch link preview data for a URL and store in cache.
+ * Useful for eager loading previews before they're displayed.
+ */
+export async function prefetchLinkPreview(url: string): Promise<void> {
+  if (previewCache.has(url)) return; // Already cached
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.data) {
+        previewCache.set(url, json.data);
+      } else {
+        previewCache.set(url, null);
+      }
+    }
+  } catch {
+    // Silent fail for prefetch
+  }
+}
+
+/**
+ * Batch prefetch multiple URLs in parallel.
+ */
+export function prefetchUrls(urls: string[]): void {
+  urls.forEach(url => prefetchLinkPreview(url));
+}
+
 export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
   const [loading, setLoading] = useState(true);
   const [previewData, setPreviewData] = useState<LinkPreviewData | null>(null);
@@ -96,27 +140,19 @@ export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Extract domain from URL for display
-  const getDomain = (urlString: string): string => {
-    try {
-      const parsed = new URL(urlString);
-      return parsed.hostname.replace('www.', '');
-    } catch {
-      return urlString;
-    }
-  };
-
-  // Loading skeleton
+  // Loading skeleton - shows domain for immediate feedback
   if (loading) {
     return (
       <div
         className={`bg-[#111] border border-[#1e1e1e] rounded-xl p-3 flex gap-3 ${className}`}
       >
-        <div className="w-20 h-20 rounded-lg bg-[#1e1e1e] animate-pulse flex-shrink-0" />
-        <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
+        <div className="w-20 h-20 rounded-lg bg-[#1e1e1e] animate-pulse flex-shrink-0 flex items-center justify-center">
+          <Globe className="w-6 h-6 text-gray-600" />
+        </div>
+        <div className="flex-1 flex flex-col justify-center min-w-0">
           <div className="h-4 bg-[#1e1e1e] rounded animate-pulse w-3/4" />
-          <div className="h-3 bg-[#1e1e1e] rounded animate-pulse w-full" />
-          <div className="h-3 bg-[#1e1e1e] rounded animate-pulse w-1/2" />
+          <div className="h-3 bg-[#1e1e1e] rounded animate-pulse w-full mt-2" />
+          <span className="text-blue-400 text-[10px] mt-1.5">{getDomain(url)}</span>
         </div>
       </div>
     );

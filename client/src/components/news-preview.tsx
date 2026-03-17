@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
 import { getImageDisplayUrl } from '@/lib/image';
-import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
+import { LinkPreview, extractUrls, prefetchUrls } from '@/components/ui/link-preview';
 
 interface NewsPreviewProps {
   title: string;
@@ -28,6 +28,13 @@ export default function NewsPreview({
   const contentUrls = useMemo(() => {
     return extractUrls(content || '').slice(0, 3);
   }, [content]);
+
+  // Eagerly prefetch link preview data when URLs are detected
+  useEffect(() => {
+    if (contentUrls.length > 0) {
+      prefetchUrls(contentUrls);
+    }
+  }, [contentUrls]);
 
   const getIcon = () => {
     switch (type) {

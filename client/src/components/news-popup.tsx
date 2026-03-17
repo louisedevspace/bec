@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { X, Megaphone, Bell, AlertTriangle, Info } from 'lucide-react';
 import { getImageDisplayUrl } from '@/lib/image';
 import { supabase } from '@/lib/supabaseClient';
-import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
+import { LinkPreview, extractUrls, prefetchUrls } from '@/components/ui/link-preview';
 
 interface NewsItem {
   id: number;
@@ -37,6 +37,13 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
   const contentUrls = useMemo(() => {
     return extractUrls(news.content || '').slice(0, 3);
   }, [news.content]);
+
+  // Eagerly prefetch link preview data when URLs are detected
+  useEffect(() => {
+    if (contentUrls.length > 0) {
+      prefetchUrls(contentUrls);
+    }
+  }, [contentUrls]);
 
   useEffect(() => {
     if (!news.show_popup) {

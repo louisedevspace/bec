@@ -102,7 +102,7 @@ export async function fetchLinkPreview(urlString: string): Promise<LinkPreviewDa
   try {
     // Fetch the HTML with timeout and size limit
     const response = await axios.get(normalizedUrl, {
-      timeout: 5000,
+      timeout: 3000,
       maxContentLength: 1024 * 1024, // 1MB max
       maxBodyLength: 1024 * 1024,
       headers: {
