@@ -147,17 +147,23 @@ export default function registerFuturesRoutes(app: Express) {
         });
       }
 
-      // Record fee in platform_fees
+      // Record fee in platform_fees (fire-and-forget)
       if (feeAmount > 0) {
-        await supabaseAdmin.from('platform_fees').insert({
-          user_id: futureTrade.user_id,
-          trade_id: tradeId,
-          trade_type: 'futures',
-          symbol: futureTrade.symbol,
-          fee_amount: feeAmount.toFixed(8),
-          fee_symbol: 'USDT',
-          fee_rate: feeRate.toString(),
-        }).catch(() => {});
+        (async () => {
+          try {
+            await supabaseAdmin.from('platform_fees').insert({
+              user_id: futureTrade.user_id,
+              trade_id: tradeId,
+              trade_type: 'futures',
+              symbol: futureTrade.symbol,
+              fee_amount: feeAmount.toFixed(8),
+              fee_symbol: 'USDT',
+              fee_rate: feeRate.toString(),
+            });
+          } catch {
+            // Non-critical
+          }
+        })();
       }
 
       res.json(updatedTrade);
@@ -587,17 +593,23 @@ export default function registerFuturesRoutes(app: Express) {
       // Now that trade is marked completed, safely update balance
       await updatePortfolioBalance(userId, "USDT", newBalance.toString());
 
-      // Record fee in platform_fees (non-critical, catch errors)
+      // Record fee in platform_fees (fire-and-forget, non-critical)
       if (feeAmount > 0) {
-        await supabaseAdmin.from('platform_fees').insert({
-          user_id: userId,
-          trade_id: trade.id,
-          trade_type: 'futures',
-          symbol: trade.symbol,
-          fee_amount: feeAmount.toFixed(8),
-          fee_symbol: 'USDT',
-          fee_rate: feeRate.toString(),
-        }).catch(() => {});
+        (async () => {
+          try {
+            await supabaseAdmin.from('platform_fees').insert({
+              user_id: userId,
+              trade_id: trade.id,
+              trade_type: 'futures',
+              symbol: trade.symbol,
+              fee_amount: feeAmount.toFixed(8),
+              fee_symbol: 'USDT',
+              fee_rate: feeRate.toString(),
+            });
+          } catch {
+            // Non-critical
+          }
+        })();
       }
 
       res.json({
@@ -773,17 +785,23 @@ export default function registerFuturesRoutes(app: Express) {
           // Now safely update balance after trade is marked completed
           await updatePortfolioBalance(trade.user_id, "USDT", newBalance.toString());
 
-          // Record fee in platform_fees (non-critical)
+          // Record fee in platform_fees (fire-and-forget, non-critical)
           if (feeAmount > 0) {
-            await supabaseAdmin.from('platform_fees').insert({
-              user_id: trade.user_id,
-              trade_id: trade.id,
-              trade_type: 'futures',
-              symbol: trade.symbol,
-              fee_amount: feeAmount.toFixed(8),
-              fee_symbol: 'USDT',
-              fee_rate: feeRate.toString(),
-            }).catch(() => {});
+            (async () => {
+              try {
+                await supabaseAdmin.from('platform_fees').insert({
+                  user_id: trade.user_id,
+                  trade_id: trade.id,
+                  trade_type: 'futures',
+                  symbol: trade.symbol,
+                  fee_amount: feeAmount.toFixed(8),
+                  fee_symbol: 'USDT',
+                  fee_rate: feeRate.toString(),
+                });
+              } catch {
+                // Non-critical
+              }
+            })();
           }
 
           processedCount++;

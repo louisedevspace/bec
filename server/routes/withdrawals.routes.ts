@@ -372,18 +372,23 @@ export default function registerWithdrawalsRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to create transaction" });
           }
 
+          // Record withdrawal fee (fire-and-forget)
           if (withdrawFeeAmount > 0) {
-            await supabaseAdmin.from("platform_fees").insert({
-              user_id: withdrawRequest.user_id,
-              trade_id: parsedId,
-              trade_type: "withdrawal",
-              symbol: withdrawRequest.symbol,
-              fee_amount: withdrawFeeAmount.toFixed(8),
-              fee_symbol: withdrawRequest.symbol,
-              fee_rate: withdrawFeeRate.toFixed(8),
-            }).then(() => {}).catch((err: any) => {
-              console.error("Failed to log withdrawal fee:", err);
-            });
+            (async () => {
+              try {
+                await supabaseAdmin.from("platform_fees").insert({
+                  user_id: withdrawRequest.user_id,
+                  trade_id: parsedId,
+                  trade_type: "withdrawal",
+                  symbol: withdrawRequest.symbol,
+                  fee_amount: withdrawFeeAmount.toFixed(8),
+                  fee_symbol: withdrawRequest.symbol,
+                  fee_rate: withdrawFeeRate.toFixed(8),
+                });
+              } catch (err) {
+                console.error("Failed to log withdrawal fee:", err);
+              }
+            })();
           }
 
           syncManager.syncPortfolioUpdated(withdrawRequest.user_id, {

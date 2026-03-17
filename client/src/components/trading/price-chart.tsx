@@ -337,37 +337,52 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
               {chartType === "candlestick" && (
                 <>
-                  {/* Render candlestick bodies as colored bars */}
+                  {/* Render candlestick bodies using proper CandlestickShape */}
                   <Bar
                     dataKey="close"
                     barSize={chartData.length > 60 ? 4 : 8}
                     shape={(props: any) => {
                       const d = props.payload;
-                      if (!d) return <rect width={0} height={0} />;
+                      if (!d || d.open === undefined) return <g />;
+                      
                       const isUp = d.close >= d.open;
                       const color = isUp ? "#22c55e" : "#ef4444";
-                      const { x, width } = props;
-                      // Get Y positions from the scale
-                      const yAxisScale = props.background?.y !== undefined;
+                      const { x, width, y, height } = props;
+                      
+                      // Calculate wick position
+                      const wickX = x + width / 2;
+                      
+                      // The y and height from props are based on 'close' value
+                      // For candlestick body, we need to show open-to-close range
+                      // For the wick, we show high-to-low
+                      const bodyTop = isUp ? y : y;
+                      const bodyHeight = Math.max(1, Math.abs(height) || 2);
+                      
                       return (
-                        <rect
-                          x={x}
-                          y={props.y}
-                          width={width}
-                          height={Math.max(1, props.height)}
-                          fill={color}
-                          rx={0.5}
-                        />
+                        <g>
+                          {/* Wick line - from high to low */}
+                          <line
+                            x1={wickX}
+                            y1={y - (isUp ? 10 : 0)}
+                            x2={wickX}
+                            y2={y + bodyHeight + (isUp ? 0 : 10)}
+                            stroke={color}
+                            strokeWidth={1}
+                          />
+                          {/* Candlestick body */}
+                          <rect
+                            x={x}
+                            y={y}
+                            width={width}
+                            height={Math.max(2, bodyHeight)}
+                            fill={color}
+                            stroke={color}
+                            strokeWidth={0.5}
+                            rx={0.5}
+                          />
+                        </g>
                       );
                     }}
-                  />
-                  {/* High-Low wicks as error-bar-like lines */}
-                  <Line
-                    type="monotone"
-                    dataKey="high"
-                    stroke="transparent"
-                    dot={false}
-                    activeDot={false}
                   />
                 </>
               )}
