@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/logo";
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings, Wallet, Bell } from "lucide-react";
 import { supabase } from '../../lib/supabaseClient';
+import { useTheme } from '@/hooks/use-theme';
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
@@ -20,6 +21,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
+  const { isDark } = useTheme();
 
   // Memoize admin check to avoid unnecessary re-runs
   const checkAdminAccess = useCallback(async () => {
@@ -90,7 +92,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
         <nav 
-          className="hidden md:flex items-center justify-between px-6 h-16 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50 shadow-lg shadow-black/20"
+          className={`hidden md:flex items-center justify-between px-6 h-16 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
+            isDark 
+              ? 'bg-[#0a0a0a]/80 shadow-black/20' 
+              : 'bg-white/80 shadow-gray-300/30'
+          }`}
           style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
         >
           {/* Gradient bottom border */}
@@ -98,11 +104,19 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           
           {/* Logo Area */}
           <a href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] rounded-xl flex items-center justify-center overflow-hidden shadow-lg shadow-black/30 transition-all duration-300 group-hover:border-blue-500/40 group-hover:shadow-blue-500/20">
+            <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg transition-all duration-300 group-hover:border-blue-500/40 group-hover:shadow-blue-500/20 ${
+              isDark 
+                ? 'bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] shadow-black/30' 
+                : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 shadow-blue-200/30'
+            }`}>
               <Logo className="w-7 h-7" />
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent transition-all duration-300 group-hover:from-blue-400 group-hover:to-blue-200">
+            <span className={`font-bold text-xl tracking-tight bg-clip-text text-transparent transition-all duration-300 ${
+              isDark 
+                ? 'bg-gradient-to-r from-white to-gray-300 group-hover:from-blue-400 group-hover:to-blue-200' 
+                : 'bg-gradient-to-r from-gray-900 to-gray-700 group-hover:from-blue-600 group-hover:to-blue-500'
+            }`}>
               Becxus
             </span>
           </a>
@@ -115,8 +129,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 href={path}
                 className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 overflow-hidden ${
                   location === path
-                    ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
-                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
+                    ? isDark
+                      ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
+                      : "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-600 shadow-lg shadow-blue-200/30"
+                    : isDark
+                      ? "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
                 }`}
               >
                 {location === path && (
@@ -131,8 +149,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 href="/admin/dashboard"
                 className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 overflow-hidden ${
                   location.startsWith('/admin')
-                    ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
-                    : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
+                    ? isDark
+                      ? "bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-400 shadow-lg shadow-blue-500/10"
+                      : "bg-gradient-to-r from-blue-100 to-blue-50 text-blue-600 shadow-lg shadow-blue-200/30"
+                    : isDark
+                      ? "text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
                 }`}
               >
                 {location.startsWith('/admin') && (
@@ -144,12 +166,20 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Separator */}
-            <div className="w-px h-6 bg-gradient-to-b from-transparent via-[#2a2a2a] to-transparent mx-2" />
+            <div className={`w-px h-6 mx-2 ${
+              isDark 
+                ? 'bg-gradient-to-b from-transparent via-[#2a2a2a] to-transparent' 
+                : 'bg-gradient-to-b from-transparent via-gray-300 to-transparent'
+            }`} />
 
             {/* Notification Bell for Desktop */}
             <button
               onClick={() => setLocation('/wallet')}
-              className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80 transition-all duration-300"
+              className={`relative p-2.5 rounded-xl transition-all duration-300 ${
+                isDark 
+                  ? 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80' 
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/80'
+              }`}
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
@@ -166,7 +196,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar - logo + notification bell */}
       {!isAuthPage && (
         <div 
-          className="flex md:hidden items-center justify-between px-4 h-14 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50 shadow-lg shadow-black/20"
+          className={`flex md:hidden items-center justify-between px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
+            isDark 
+              ? 'bg-[#0a0a0a]/80 shadow-black/20' 
+              : 'bg-white/80 shadow-gray-300/30'
+          }`}
           style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
         >
           {/* Gradient bottom border */}
@@ -174,10 +208,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           
           {/* Logo Area */}
           <a href="/" className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] rounded-xl flex items-center justify-center overflow-hidden shadow-md shadow-black/30">
+            <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shadow-md ${
+              isDark 
+                ? 'bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] shadow-black/30' 
+                : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 shadow-blue-200/30'
+            }`}>
               <Logo className="w-6 h-6" />
             </div>
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            <span className={`font-bold text-lg tracking-tight bg-clip-text text-transparent ${
+              isDark 
+                ? 'bg-gradient-to-r from-white to-gray-300' 
+                : 'bg-gradient-to-r from-gray-900 to-gray-700'
+            }`}>
               Becxus
             </span>
           </a>
@@ -185,12 +227,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           {/* Notification Bell */}
           <button
             onClick={() => setLocation('/wallet')}
-            className="relative p-2.5 rounded-xl bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222] transition-all duration-300 touch-manipulation"
+            className={`relative p-2.5 rounded-xl transition-all duration-300 touch-manipulation ${
+              isDark 
+                ? 'bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222]' 
+                : 'bg-gray-100/60 border border-gray-200/50 text-gray-500 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 active:bg-gray-200'
+            }`}
             aria-label="Notifications"
           >
             <Bell className="h-5 w-5" />
             {notifCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse border-2 border-[#0a0a0a]">
+              <span className={`absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse border-2 ${
+                isDark ? 'border-[#0a0a0a]' : 'border-white'
+              }`}>
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}
