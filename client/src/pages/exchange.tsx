@@ -130,8 +130,8 @@ export default function ExchangePage() {
             <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 
-          {/* Order Book - Right Sidebar - fixed width on desktop */}
-          <div className="lg:w-[280px] xl:w-[320px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 min-h-[280px] max-h-[400px] lg:max-h-none overflow-hidden">
+          {/* Order Book - Right Sidebar - wider for side-by-side layout */}
+          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 min-h-[280px] max-h-[400px] lg:max-h-none overflow-hidden">
             <OrderBook pair={currentPair} className="h-full" onPriceSelect={setSelectedPrice} />
           </div>
         </div>

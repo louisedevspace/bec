@@ -99,85 +99,104 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
         <span className="text-xs font-semibold text-white">Order Book</span>
       </div>
 
+      {/* Spread Indicator - Centered between panels */}
+      <div className="flex items-center justify-center gap-3 px-2 py-1.5 bg-[#0a0a0a] border-y border-[#1e1e1e] flex-shrink-0">
+        <span className="text-xs font-semibold text-white tabular-nums">{orderBook.lastPrice}</span>
+        <span className="text-[10px] text-gray-500">
+          Spread: {orderBook.spread} ({spreadPct.toFixed(3)}%)
+        </span>
+      </div>
+
       {/* Buy/Sell Imbalance Bar */}
-      <div className="px-2 pb-1.5 flex-shrink-0">
+      <div className="px-2 py-1.5 flex-shrink-0">
         <div className="flex h-1.5 rounded-full overflow-hidden bg-[#1a1a1a]">
-          <div className="bg-green-500/60 transition-all" style={{ width: `${bidRatio}%` }} />
           <div className="bg-red-500/60 transition-all" style={{ width: `${100 - bidRatio}%` }} />
+          <div className="bg-green-500/60 transition-all" style={{ width: `${bidRatio}%` }} />
         </div>
         <div className="flex justify-between mt-0.5">
-          <span className="text-[9px] text-green-400">{bidRatio.toFixed(1)}% Buy</span>
           <span className="text-[9px] text-red-400">{(100 - bidRatio).toFixed(1)}% Sell</span>
+          <span className="text-[9px] text-green-400">{bidRatio.toFixed(1)}% Buy</span>
         </div>
       </div>
 
-      {/* Column Headers */}
-      <div className="flex text-[10px] text-gray-500 px-2 py-1 border-b border-[#1e1e1e] flex-shrink-0">
-        <span className="flex-1">Price</span>
-        <span className="flex-1 text-right">Amount</span>
-        <span className="flex-1 text-right">Total</span>
-      </div>
-
-      {/* Order Book Content */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Asks (Sell Orders) - reversed so closest to spread is at bottom */}
-        <div 
-          className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto touch-pan-y"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {displayAsks.map((ask, i) => {
-            const depthPct = (ask.cumTotal / maxAskVol) * 100;
-            return (
-              <div
-                key={i}
-                onClick={() => handleClick(ask.price)}
-                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
-              >
-                {/* Volume depth bar */}
+      {/* Order Book Content - Side by Side */}
+      <div className="flex-1 flex flex-row gap-1 min-h-0 overflow-hidden">
+        {/* Sell Orders Panel (Asks) - Left */}
+        <div className="flex-1 flex flex-col min-w-0 border-r border-[#1e1e1e]">
+          {/* Panel Header */}
+          <div className="flex items-center justify-center px-1 py-1 bg-red-500/10 flex-shrink-0">
+            <span className="text-[10px] font-semibold text-red-400">Sell Orders</span>
+          </div>
+          {/* Column Headers */}
+          <div className="flex text-[9px] text-gray-500 px-1 py-1 border-b border-[#1e1e1e] flex-shrink-0">
+            <span className="flex-1">Price</span>
+            <span className="flex-1 text-right">Amt</span>
+            <span className="flex-1 text-right">Total</span>
+          </div>
+          {/* Asks List */}
+          <div 
+            className="flex-1 min-h-0 flex flex-col justify-start overflow-y-auto touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {[...displayAsks].reverse().map((ask, i) => {
+              const depthPct = (ask.cumTotal / maxAskVol) * 100;
+              return (
                 <div
-                  className="absolute inset-y-0 right-0 bg-red-500/10"
-                  style={{ width: `${depthPct}%` }}
-                />
-                <span className="relative flex-1 text-red-400 font-medium tabular-nums">{ask.price}</span>
-                <span className="relative flex-1 text-right text-gray-300 tabular-nums">{ask.amount}</span>
-                <span className="relative flex-1 text-right text-gray-500 tabular-nums">{ask.cumTotal.toFixed(4)}</span>
-              </div>
-            );
-          })}
+                  key={i}
+                  onClick={() => handleClick(ask.price)}
+                  className="relative flex text-[10px] px-1 py-[2px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
+                >
+                  {/* Volume depth bar */}
+                  <div
+                    className="absolute inset-y-0 right-0 bg-red-500/10"
+                    style={{ width: `${depthPct}%` }}
+                  />
+                  <span className="relative flex-1 text-red-400 font-medium tabular-nums truncate">{ask.price}</span>
+                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate">{ask.amount}</span>
+                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate">{ask.cumTotal.toFixed(2)}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Spread Indicator */}
-        <div className="flex items-center justify-between px-2 py-1.5 bg-[#0a0a0a] border-y border-[#1e1e1e] flex-shrink-0">
-          <span className="text-xs font-semibold text-white tabular-nums">{orderBook.lastPrice}</span>
-          <span className="text-[10px] text-gray-500">
-            Spread: {orderBook.spread} ({spreadPct.toFixed(3)}%)
-          </span>
-        </div>
-
-        {/* Bids (Buy Orders) - closest to spread at top */}
-        <div 
-          className="flex-1 min-h-0 flex flex-col overflow-y-auto touch-pan-y"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {displayBids.map((bid, i) => {
-            const depthPct = (bid.cumTotal / maxBidVol) * 100;
-            return (
-              <div
-                key={i}
-                onClick={() => handleClick(bid.price)}
-                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
-              >
-                {/* Volume depth bar */}
+        {/* Buy Orders Panel (Bids) - Right */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Panel Header */}
+          <div className="flex items-center justify-center px-1 py-1 bg-green-500/10 flex-shrink-0">
+            <span className="text-[10px] font-semibold text-green-400">Buy Orders</span>
+          </div>
+          {/* Column Headers */}
+          <div className="flex text-[9px] text-gray-500 px-1 py-1 border-b border-[#1e1e1e] flex-shrink-0">
+            <span className="flex-1">Price</span>
+            <span className="flex-1 text-right">Amt</span>
+            <span className="flex-1 text-right">Total</span>
+          </div>
+          {/* Bids List */}
+          <div 
+            className="flex-1 min-h-0 flex flex-col overflow-y-auto touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {displayBids.map((bid, i) => {
+              const depthPct = (bid.cumTotal / maxBidVol) * 100;
+              return (
                 <div
-                  className="absolute inset-y-0 right-0 bg-green-500/10"
-                  style={{ width: `${depthPct}%` }}
-                />
-                <span className="relative flex-1 text-green-400 font-medium tabular-nums">{bid.price}</span>
-                <span className="relative flex-1 text-right text-gray-300 tabular-nums">{bid.amount}</span>
-                <span className="relative flex-1 text-right text-gray-500 tabular-nums">{bid.cumTotal.toFixed(4)}</span>
-              </div>
-            );
-          })}
+                  key={i}
+                  onClick={() => handleClick(bid.price)}
+                  className="relative flex text-[10px] px-1 py-[2px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
+                >
+                  {/* Volume depth bar */}
+                  <div
+                    className="absolute inset-y-0 right-0 bg-green-500/10"
+                    style={{ width: `${depthPct}%` }}
+                  />
+                  <span className="relative flex-1 text-green-400 font-medium tabular-nums truncate">{bid.price}</span>
+                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate">{bid.amount}</span>
+                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate">{bid.cumTotal.toFixed(2)}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
