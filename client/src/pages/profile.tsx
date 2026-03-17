@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Wallet, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/use-theme';
 import { PwaControls } from '@/components/pwa/pwa-controls';
 import { supabase } from '../lib/supabaseClient';
@@ -14,35 +15,116 @@ import { useLocation } from 'wouter';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { formatBalance, formatUsdNumber } from '@/utils/format-utils';
 import { getImageDisplayUrl } from '@/lib/image';
+import { userDataQueryOptions, portfolioQueryOptions } from '@/lib/queryClient';
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
-  const [kycStatus, setKycStatus] = useState<any>(null);
-  const [portfolio, setPortfolio] = useState<any[]>([]);
-  const [stakingPositions, setStakingPositions] = useState<any[]>([]);
-  const [portfolioLoading, setPortfolioLoading] = useState(false);
-  const [stakingLoading, setStakingLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { prices } = useCryptoPrices();
   const { isDark, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
 
-  const handlePictureUpdate = (pictureUrl: string) => {
-    setProfile((prev: any) => ({
-      ...prev,
-      profile_picture: pictureUrl
-    }));
-  };
+  // Fetch auth user first (required for all other queries)
+  const { data: authUser, isLoading: authLoading, error: authError } = useQuery({
+    queryKey: ['auth-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
+      return user;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-  const fetchPortfolio = async (userId: string) => {
-    setPortfolioLoading(true);
-    try {
+  // Fetch user profile (renders immediately when available)
+  const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
+    queryKey: ['user-profile', authUser?.id],
+    queryFn: async () => {
+      if (!authUser) throw new Error('No auth user');
+      
+      // Check if the user exists in the users table
+      const { data: users, error: listError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id);
+      
+      if (listError) throw listError;
+      
+      let userProfile;
+      
+      if (!users || users.length === 0) {
+        // User exists in Auth but not in users table — auto-create the row
+        console.log('User not found in users table, creating profile...');
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch('/api/signup-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || '',
+              phone: authUser.user_metadata?.phone || '',
+            }),
+          });
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || 'Failed to create user profile');
+          }
+          // Re-fetch the newly created user row
+          const { data: newUsers, error: refetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authUser.id);
+          if (refetchError) throw refetchError;
+          if (!newUsers || newUsers.length === 0) throw new Error('Failed to create user profile');
+          userProfile = newUsers[0];
+        } else {
+          throw new Error('No session found');
+        }
+      } else {
+        userProfile = users[0];
+      }
+      
+      return userProfile;
+    },
+    enabled: !!authUser?.id,
+    ...userDataQueryOptions,
+  });
+
+  // Fetch KYC status (independent, can load in parallel)
+  const { data: kycStatus } = useQuery({
+    queryKey: ['kyc-status', authUser?.id],
+    queryFn: async () => {
+      if (!authUser) return null;
+      const { data: kycData, error: kycError } = await supabase
+        .from('kyc_verifications')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('submitted_at', { ascending: false })
+        .limit(1);
+      
+      if (kycError) {
+        console.error('Error fetching KYC status:', kycError);
+        return null;
+      }
+      return kycData?.[0] || null;
+    },
+    enabled: !!authUser?.id,
+    ...userDataQueryOptions,
+  });
+
+  // Fetch portfolio (loads independently with skeleton)
+  const { data: portfolio = [], isLoading: portfolioLoading } = useQuery({
+    queryKey: ['user-portfolio', authUser?.id],
+    queryFn: async () => {
+      if (!authUser) return [];
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
-      const response = await fetch(`/api/portfolio/${userId}`, {
+      const response = await fetch(`/api/portfolio/${authUser.id}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -53,23 +135,22 @@ export default function ProfilePage() {
         throw new Error('Failed to fetch portfolio');
       }
 
-      const data = await response.json();
-      setPortfolio(data || []);
-    } catch (error) {
-      console.error('Error fetching portfolio:', error);
-      setPortfolio([]);
-    } finally {
-      setPortfolioLoading(false);
-    }
-  };
+      return await response.json() || [];
+    },
+    enabled: !!authUser?.id,
+    staleTime: 30 * 1000, // 30 seconds - trading data changes often
+    gcTime: 2 * 60 * 1000,
+  });
 
-  const fetchStaking = async (userId: string) => {
-    setStakingLoading(true);
-    try {
+  // Fetch staking positions (loads independently with skeleton)
+  const { data: stakingPositions = [], isLoading: stakingLoading } = useQuery({
+    queryKey: ['user-staking', authUser?.id],
+    queryFn: async () => {
+      if (!authUser) return [];
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session');
 
-      const response = await fetch(`/api/staking/${userId}`, {
+      const response = await fetch(`/api/staking/${authUser.id}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -80,34 +161,48 @@ export default function ProfilePage() {
         throw new Error('Failed to fetch staking positions');
       }
 
-      const data = await response.json();
-      setStakingPositions(data || []);
-    } catch (error) {
-      console.error('Error fetching staking positions:', error);
-      setStakingPositions([]);
-    } finally {
-      setStakingLoading(false);
+      return await response.json() || [];
+    },
+    enabled: !!authUser?.id,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000,
+  });
+
+  // Preload profile image when profile data is available
+  useEffect(() => {
+    if (profile?.profile_picture) {
+      const img = new Image();
+      img.src = getImageDisplayUrl(profile.profile_picture);
     }
+  }, [profile?.profile_picture]);
+
+  const handlePictureUpdate = (pictureUrl: string) => {
+    // Update React Query cache directly for immediate UI feedback
+    queryClient.setQueryData(['user-profile', authUser?.id], (oldData: any) => ({
+      ...oldData,
+      profile_picture: pictureUrl
+    }));
   };
 
-  const calculateTotalStaked = () => {
+  // Memoized calculations for performance
+  const totalStaked = useMemo(() => {
     if (!stakingPositions || stakingPositions.length === 0 || !prices || prices.length === 0) return 0;
     
-    let totalStaked = 0;
+    let total = 0;
     
     stakingPositions.forEach((position: any) => {
       const price = prices.find((p: any) => p.symbol === position.symbol);
       if (price && position.status === 'active') {
         const priceValue = parseFloat(price.price);
         const stakedAmount = parseFloat(position.amount) || 0;
-        totalStaked += stakedAmount * priceValue;
+        total += stakedAmount * priceValue;
       }
     });
     
-    return totalStaked;
-  };
+    return total;
+  }, [stakingPositions, prices]);
 
-  const calculateTotalBalance = () => {
+  const totalBalance = useMemo(() => {
     if (!portfolio || portfolio.length === 0 || !prices || prices.length === 0) return 0;
     
     let totalValue = 0;
@@ -126,93 +221,7 @@ export default function ProfilePage() {
     });
     
     return totalValue;
-  };
-
-  useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not logged in');
-        
-        // Check if the user exists in the users table
-        const { data: users, error: listError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id);
-        
-        if (listError) throw listError;
-        
-        let userProfile;
-        
-        if (!users || users.length === 0) {
-          // User exists in Auth but not in users table — auto-create the row
-          console.log('User not found in users table, creating profile...');
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token;
-          if (token) {
-            const res = await fetch('/api/signup-profile', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-                phone: user.user_metadata?.phone || '',
-              }),
-            });
-            if (!res.ok) {
-              const errData = await res.json();
-              throw new Error(errData.message || 'Failed to create user profile');
-            }
-            // Re-fetch the newly created user row
-            const { data: newUsers, error: refetchError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', user.id);
-            if (refetchError) throw refetchError;
-            if (!newUsers || newUsers.length === 0) throw new Error('Failed to create user profile');
-            userProfile = newUsers[0];
-          } else {
-            throw new Error('No session found');
-          }
-        } else {
-          userProfile = users[0];
-        }
-        
-        setProfile(userProfile);
-
-        // Fetch KYC verification status
-        const { data: kycData, error: kycError } = await supabase
-          .from('kyc_verifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('submitted_at', { ascending: false })
-          .limit(1);
-
-        if (kycError) {
-          console.error('Error fetching KYC status:', kycError);
-        } else {
-          setKycStatus(kycData?.[0] || null);
-        }
-
-        // Fetch portfolio and staking data
-        await Promise.all([
-          fetchPortfolio(user.id),
-          fetchStaking(user.id)
-        ]);
-
-      } catch (err: any) {
-        console.error('Profile fetch error:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProfile();
-  }, []);
+  }, [portfolio, prices]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -312,14 +321,18 @@ export default function ProfilePage() {
   const verificationDisplay = getVerificationStatusDisplay();
   const StatusIcon = verificationDisplay.icon;
 
-  if (loading) return (
+  // Show loading spinner only for initial auth/profile fetch
+  if (authLoading || profileLoading) return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
       <div className="animate-pulse text-gray-500 text-sm">Loading profile...</div>
     </div>
   );
+  
+  // Handle auth or profile errors
+  const error = authError || profileError;
   if (error) return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="text-red-400 text-sm">Error: {error}</div>
+      <div className="text-red-400 text-sm">Error: {(error as Error).message}</div>
     </div>
   );
   if (!profile) return (
@@ -374,13 +387,21 @@ export default function ProfilePage() {
             <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
               <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Portfolio</div>
               <div className="text-sm font-bold text-green-400 tabular-nums">
-                {portfolioLoading ? '...' : `$${formatUsdNumber(calculateTotalBalance())}`}
+                {portfolioLoading ? (
+                  <span className="inline-block w-16 h-4 bg-gray-700 animate-pulse rounded"></span>
+                ) : (
+                  `$${formatUsdNumber(totalBalance)}`
+                )}
               </div>
             </div>
             <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
               <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Staked</div>
               <div className="text-sm font-bold text-blue-400 tabular-nums">
-                {stakingLoading ? '...' : `$${formatUsdNumber(calculateTotalStaked())}`}
+                {stakingLoading ? (
+                  <span className="inline-block w-16 h-4 bg-gray-700 animate-pulse rounded"></span>
+                ) : (
+                  `$${formatUsdNumber(totalStaked)}`
+                )}
               </div>
             </div>
           </div>

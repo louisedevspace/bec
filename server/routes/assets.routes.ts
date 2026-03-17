@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import crypto from "crypto";
 import supabase from "../supabaseClient";
 import { createSupabaseStorageObjectRef } from "../../shared/supabase-storage";
 
@@ -22,11 +23,27 @@ export default function registerAssetRoutes(app: Express) {
       }
 
       const imageBuffer = Buffer.from(await data.arrayBuffer());
+      
+      // Generate ETag from content hash for conditional requests
+      const etag = `"${crypto.createHash('md5').update(imageBuffer).digest('hex')}"`;
+      
+      // Support conditional requests (If-None-Match → 304 Not Modified)
+      const clientEtag = req.headers['if-none-match'];
+      if (clientEtag && clientEtag === etag) {
+        res.setHeader("ETag", etag);
+        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+        return res.status(304).end();
+      }
 
-      res.setHeader("Content-Type", data.type || "application/octet-stream");
-      res.setHeader("Content-Length", String(imageBuffer.length));
-      res.setHeader("Content-Disposition", "inline");
-      res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+      // Set optimized caching headers
+      res.set({
+        "Content-Type": data.type || "application/octet-stream",
+        "Content-Length": String(imageBuffer.length),
+        "Content-Disposition": "inline",
+        "Cache-Control": "public, max-age=604800, immutable", // 7 days for profile pics
+        "Vary": "Accept-Encoding",
+        "ETag": etag,
+      });
 
       return res.status(200).send(imageBuffer);
     } catch (error) {

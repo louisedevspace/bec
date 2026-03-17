@@ -186,7 +186,7 @@ export default function registerAdminRoutes(app: Express) {
       // Fetch related data in parallel
       const [portfoliosData, tradesData, kycData, loansData, stakingData, pricesData] = await Promise.all([
         supabaseAdmin.from("portfolios").select("user_id, symbol, available, frozen"),
-        supabaseAdmin.from("trades").select("user_id"),
+        supabaseAdmin.from("trades").select("user_id, status"),
         supabaseAdmin.from("kyc_verifications").select("user_id, status, submitted_at, reviewed_at, rejection_reason"),
         supabaseAdmin.from("loan_applications").select("user_id, amount, status"),
         supabaseAdmin.from("staking_positions").select("user_id, amount, status"),
@@ -200,14 +200,66 @@ export default function registerAdminRoutes(app: Express) {
       const staking = stakingData.data || [];
       const currentPrices = pricesData.data || [];
 
+      // Build O(1) lookup Maps for all related data (converts O(n²) to O(n))
+      const authUserMap = new Map<string, typeof authUsers.users[0]>();
+      for (const au of authUsers?.users || []) {
+        authUserMap.set(au.id, au);
+      }
+
+      const passwordMap = new Map<string, { user_id: string; encrypted_at: string | null; last_updated: string | null }>();
+      for (const p of passwords || []) {
+        passwordMap.set(p.user_id, p);
+      }
+
+      const portfolioMap = new Map<string, typeof portfolios>();
+      for (const p of portfolios) {
+        const existing = portfolioMap.get(p.user_id) || [];
+        existing.push(p);
+        portfolioMap.set(p.user_id, existing);
+      }
+
+      // Pre-compute trade counts with status filter
+      const validTradeStatuses = new Set(['approved', 'executed', 'filled', 'completed']);
+      const tradeCountMap = new Map<string, number>();
+      for (const t of trades) {
+        if (validTradeStatuses.has(t.status)) {
+          tradeCountMap.set(t.user_id, (tradeCountMap.get(t.user_id) || 0) + 1);
+        }
+      }
+
+      const kycMap = new Map<string, typeof kycVerifications[0]>();
+      for (const k of kycVerifications) {
+        kycMap.set(k.user_id, k);
+      }
+
+      const loanMap = new Map<string, typeof loans>();
+      for (const l of loans) {
+        const existing = loanMap.get(l.user_id) || [];
+        existing.push(l);
+        loanMap.set(l.user_id, existing);
+      }
+
+      const stakingMap = new Map<string, typeof staking>();
+      for (const s of staking) {
+        const existing = stakingMap.get(s.user_id) || [];
+        existing.push(s);
+        stakingMap.set(s.user_id, existing);
+      }
+
+      // Build price lookup map (case-insensitive)
+      const priceMap = new Map<string, typeof currentPrices[0]>();
+      for (const price of currentPrices) {
+        priceMap.set(price.symbol.toLowerCase(), price);
+      }
+
+      // Merge with O(1) lookups per user
       const mergedUsers = customUsers.map((customUser) => {
-        const authUser = authUsers?.users.find((au) => au.id === customUser.id);
-        const userPassword = passwords?.find((p) => p.user_id === customUser.id);
-        const userPortfolio = portfolios.filter((p) => p.user_id === customUser.id);
-        const userTrades = trades.filter((t) => t.user_id === customUser.id);
-        const userKyc = kycVerifications.find((k) => k.user_id === customUser.id);
-        const userLoans = loans.filter((l) => l.user_id === customUser.id);
-        const userStaking = staking.filter((s) => s.user_id === customUser.id);
+        const authUser = authUserMap.get(customUser.id);
+        const userPassword = passwordMap.get(customUser.id);
+        const userPortfolio = portfolioMap.get(customUser.id) || [];
+        const userKyc = kycMap.get(customUser.id);
+        const userLoans = loanMap.get(customUser.id) || [];
+        const userStaking = stakingMap.get(customUser.id) || [];
 
         const totalPortfolioValue = userPortfolio.reduce((total, asset) => {
           const available = parseFloat(asset.available || "0");
@@ -215,9 +267,7 @@ export default function registerAdminRoutes(app: Express) {
           const totalAmount = available + frozen;
           if (totalAmount === 0) return total;
 
-          const priceData = currentPrices.find(
-            (price) => price.symbol.toLowerCase() === asset.symbol.toLowerCase()
-          );
+          const priceData = priceMap.get(asset.symbol.toLowerCase());
 
           if (asset.symbol.toUpperCase() === "USDT") {
             return total + totalAmount;
@@ -255,7 +305,7 @@ export default function registerAdminRoutes(app: Express) {
           user_metadata: authUser?.user_metadata,
           portfolio: userPortfolio,
           total_portfolio_value: totalPortfolioValue,
-          trade_count: userTrades.filter((t: any) => ['approved', 'executed', 'filled', 'completed'].includes(t.status)).length,
+          trade_count: tradeCountMap.get(customUser.id) || 0,
           assets_count: userPortfolio.filter((p: any) => parseFloat(p.available || '0') + parseFloat(p.frozen || '0') > 0).length,
           kyc_status: userKyc?.status || "not_submitted",
           kyc_submitted_at: userKyc?.submitted_at,
