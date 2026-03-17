@@ -121,14 +121,17 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
       {/* Order Book Content */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Asks (Sell Orders) - reversed so closest to spread is at bottom */}
-        <div className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden">
+        <div 
+          className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto touch-pan-y"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {displayAsks.map((ask, i) => {
             const depthPct = (ask.cumTotal / maxAskVol) * 100;
             return (
               <div
                 key={i}
                 onClick={() => handleClick(ask.price)}
-                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all"
+                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
               >
                 {/* Volume depth bar */}
                 <div
@@ -152,14 +155,17 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
         </div>
 
         {/* Bids (Buy Orders) - closest to spread at top */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div 
+          className="flex-1 min-h-0 flex flex-col overflow-y-auto touch-pan-y"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {displayBids.map((bid, i) => {
             const depthPct = (bid.cumTotal / maxBidVol) * 100;
             return (
               <div
                 key={i}
                 onClick={() => handleClick(bid.price)}
-                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all"
+                className="relative flex text-[11px] px-2 py-[3px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
               >
                 {/* Volume depth bar */}
                 <div
