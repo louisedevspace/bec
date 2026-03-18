@@ -248,25 +248,25 @@ export default function AdminStakingPage() {
   }, []);
 
   const openEditLimit = useCallback((limit: StakingLimit) => {
-    setLimitUserId(limit.userId);
+    setLimitUserId(limit.userId || "");
     setLimitForm({
       maxStakeAmount: limit.maxStakeAmount || "",
       maxTotalStaked: limit.maxTotalStaked || "",
       maxDuration: limit.maxDuration?.toString() || "",
       minStakeAmount: limit.minStakeAmount || "",
-      isEnabled: limit.isEnabled,
+      isEnabled: limit.isEnabled ?? true,
       notes: limit.notes || "",
     });
     setLimitEditorOpen(true);
   }, []);
 
   const handleSaveLimit = () => {
-    if (!limitUserId.trim()) {
+    if (!(limitUserId || '').trim()) {
       toast({ title: "Error", description: "User ID is required", variant: "destructive" });
       return;
     }
     limitMutation.mutate({
-      userId: limitUserId.trim(),
+      userId: (limitUserId || '').trim(),
       data: {
         maxStakeAmount: limitForm.maxStakeAmount || null,
         maxTotalStaked: limitForm.maxTotalStaked || null,
@@ -511,7 +511,7 @@ export default function AdminStakingPage() {
                     <Button
                       size="sm"
                       onClick={handleSaveLimit}
-                      disabled={limitMutation.isPending || !limitUserId.trim()}
+                      disabled={limitMutation.isPending || !(limitUserId || '').trim()}
                       className="bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       <Save size={14} className="mr-1.5" />
