@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
 import { adminNotificationService } from "../services/admin-notification.service";
+import { autoReplyService } from "../services/auto-reply.service";
 
 // ─── Auto-categorization helpers ─────────────────────────────────
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -165,6 +166,20 @@ export default function registerSupportRoutes(app: Express) {
         await adminNotificationService.notifySupportTicket(conversation, req.user?.email);
       } catch {}
 
+      // Trigger auto-reply check (non-blocking, don't await)
+      // 2 second delay to feel natural
+      setTimeout(async () => {
+        try {
+          await autoReplyService.processNewMessage(
+            String(conversation.id),
+            message,
+            category || "general"
+          );
+        } catch (err) {
+          console.error("[AutoReply] Error processing new ticket:", err);
+        }
+      }, 2000);
+
       res.json({ ...conversation, support_messages: [supportMessage] });
     } catch (error) {
       res.status(500).json({
@@ -234,10 +249,27 @@ export default function registerSupportRoutes(app: Express) {
       try {
         const { data: conv } = await supabaseAdmin
           .from("support_conversations")
-          .select("subject")
+          .select("subject, category")
           .eq("id", conversationId)
           .single();
         await adminNotificationService.notifySupportMessage(supportMessage, conv?.subject || "Support Ticket", req.user?.email);
+
+        // Trigger auto-reply check (non-blocking, don't await)
+        // 2 second delay to feel natural
+        setTimeout(async () => {
+          try {
+            // Only trigger auto-reply for text messages without attachments
+            if (messageType === "text" && !attachmentUrl) {
+              await autoReplyService.processNewMessage(
+                String(conversationId),
+                message,
+                conv?.category || "general"
+              );
+            }
+          } catch (err) {
+            console.error("[AutoReply] Error processing message:", err);
+          }
+        }, 2000);
       } catch {}
 
       res.json(supportMessage);

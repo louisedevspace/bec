@@ -43,6 +43,7 @@ import registerAdminNotificationRoutes from "./admin-notifications.routes";
 import registerAdminStakingRoutes from "./admin-staking.routes";
 import registerAssetRoutes from "./assets.routes";
 import registerLinkPreviewRoutes from "./link-preview.routes";
+import registerAutoReplyRoutes from "./auto-reply.routes";
 
 // Redis subscriber instance for Pub/Sub
 let redisSubscriber: Redis | null = null;
@@ -329,6 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminNotificationRoutes(app);
   registerAdminStakingRoutes(app);
   registerLinkPreviewRoutes(app);
+  registerAutoReplyRoutes(app);
 
   // Live price updates every 30 seconds
   setInterval(async () => {
