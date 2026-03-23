@@ -184,8 +184,8 @@ function StatCard({ icon, iconBg, iconColor, label, value, sub, trend, pendingBa
       </div>
       <div className="flex items-end gap-2">
         <p className="text-xl font-bold text-white leading-none">{value}</p>
-        {trend === 'up' && <ArrowUpRight size={14} className="text-green-400 mb-0.5" />}
-        {trend === 'down' && <ArrowDownRight size={14} className="text-red-400 mb-0.5" />}
+        {trend === 'up' && <ArrowUpRight size={14} className="text-green-400 mb-0.5 fill-current" />}
+        {trend === 'down' && <ArrowDownRight size={14} className="text-red-400 mb-0.5 fill-current" />}
       </div>
       {sub && <p className="text-[10px] text-gray-500 mt-1">{sub}</p>}
     </div>
@@ -222,7 +222,7 @@ function QuickActionLink({ href, onClick, icon, label, count, colorClasses }: {
       {count !== undefined && count > 0 && (
         <span className={`text-[10px] font-bold ${colorClasses.badge} px-1.5 py-0.5 rounded-md`}>{count}</span>
       )}
-      <ArrowRight size={12} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+      <ArrowRight size={12} className="text-gray-600 group-hover:text-gray-400 transition-colors fill-current" />
     </>
   );
 
@@ -419,11 +419,11 @@ export default function AdminDashboard() {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'deposit': return <ArrowDownRight size={14} className="text-green-400" />;
-      case 'withdrawal': return <ArrowUpRight size={14} className="text-red-400" />;
-      case 'trade': return <BarChart3 size={14} className="text-blue-400" />;
-      case 'support': return <MessageSquare size={14} className="text-purple-400" />;
-      default: return <Activity size={14} className="text-gray-400" />;
+      case 'deposit': return <ArrowDownRight size={14} className="text-green-400 fill-current" />;
+      case 'withdrawal': return <ArrowUpRight size={14} className="text-red-400 fill-current" />;
+      case 'trade': return <BarChart3 size={14} className="text-blue-400 fill-current" />;
+      case 'support': return <MessageSquare size={14} className="text-purple-400 fill-current" />;
+      default: return <Activity size={14} className="text-gray-400 fill-current" />;
     }
   };
 
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
       return (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-[#1a1a1a] rounded-full mx-auto mb-4 flex items-center justify-center">
-            <BarChart3 className="h-7 w-7 text-gray-600" />
+            <BarChart3 className="h-7 w-7 text-gray-600 fill-current" />
           </div>
           <p className="text-gray-500 text-sm">{searchQuery ? "No matching orders found" : showActions ? "No pending orders" : "No orders found"}</p>
         </div>
@@ -537,8 +537,8 @@ export default function AdminDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   {order.side === "buy" || order.side === "long"
-                    ? <TrendingUp size={14} className="text-green-400" />
-                    : <TrendingDown size={14} className="text-red-400" />}
+                    ? <TrendingUp size={14} className="text-green-400 fill-current" />
+                    : <TrendingDown size={14} className="text-red-400 fill-current" />}
                   <CryptoIcon symbol={order.symbol?.split('/')[0] || order.symbol} size="xs" />
                   <span className="font-semibold text-white">{order.symbol}</span>
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">{order.side.toUpperCase()}</Badge>
@@ -563,11 +563,11 @@ export default function AdminDashboard() {
                 <div className="flex gap-2 flex-shrink-0">
                   <Button size="sm" onClick={() => approveMutation.mutate(order.id)} disabled={approveMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-3">
-                    <CheckCircle size={12} className="mr-1" />Approve
+                    <CheckCircle size={12} className="mr-1 fill-current" />Approve
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate(order.id)} disabled={rejectMutation.isPending}
                     className="text-xs h-8 px-3">
-                    <XCircle size={12} className="mr-1" />Reject
+                    <XCircle size={12} className="mr-1 fill-current" />Reject
                   </Button>
                 </div>
               )}
@@ -665,18 +665,18 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExportCSV}
               className="border-[#2a2a2a] text-gray-300 hover:bg-[#1a1a1a] text-xs h-8">
-              <Download size={14} className="mr-1.5" />Export
+              <Download size={14} className="mr-1.5 fill-current" />Export
             </Button>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchDashboardStats(); }}
               className="border-[#2a2a2a] text-gray-300 hover:bg-[#1a1a1a] text-xs h-8">
-              <RefreshCw size={14} className="mr-1.5" />Refresh
+              <RefreshCw size={14} className="mr-1.5 fill-current" />Refresh
             </Button>
           </div>
         </div>
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm flex items-center gap-2">
-            <AlertTriangle size={16} />{error}
+            <AlertTriangle size={16} className="fill-current" />{error}
           </div>
         )}
 
@@ -687,7 +687,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {unreadSupportChats.length > 0 && (
                   <button onClick={() => setLocation('/admin/support')} className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 hover:bg-purple-500/15 transition-colors text-left">
-                    <MessageSquare size={18} className="text-purple-400 flex-shrink-0" />
+                    <MessageSquare size={18} className="text-purple-400 flex-shrink-0 fill-current" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-purple-400">{unreadSupportChats.length} Unread Support Chat{unreadSupportChats.length === 1 ? '' : 's'}</p>
                       <p className="text-[10px] text-purple-400/70 truncate">{unreadSupportPreview}{unreadSupportChats.length > 2 ? ', …' : ''}</p>
@@ -696,7 +696,7 @@ export default function AdminDashboard() {
                 )}
                 {stats.support.urgent > 0 && (
                   <a href="/admin/support" className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 hover:bg-red-500/15 transition-colors">
-                    <AlertTriangle size={18} className="text-red-400 flex-shrink-0" />
+                    <AlertTriangle size={18} className="text-red-400 flex-shrink-0 fill-current" />
                     <div>
                       <p className="text-xs font-semibold text-red-400">{stats.support.urgent} Urgent Tickets</p>
                       <p className="text-[10px] text-red-400/60">Requires immediate attention</p>
@@ -705,7 +705,7 @@ export default function AdminDashboard() {
                 )}
                 {stats.financial.pendingDeposits > 0 && (
                   <button onClick={() => setLocation('/admin/wallets')} className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 hover:bg-amber-500/15 transition-colors text-left">
-                    <Clock size={18} className="text-amber-400 flex-shrink-0" />
+                    <Clock size={18} className="text-amber-400 flex-shrink-0 fill-current" />
                     <div>
                       <p className="text-xs font-semibold text-amber-400">{stats.financial.pendingDeposits} Pending Deposits</p>
                       <p className="text-[10px] text-amber-400/60">Click to review</p>
@@ -714,7 +714,7 @@ export default function AdminDashboard() {
                 )}
                 {stats.financial.pendingWithdrawals > 0 && (
                   <button onClick={() => setLocation('/admin/wallets')} className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 hover:bg-orange-500/15 transition-colors text-left">
-                    <Clock size={18} className="text-orange-400 flex-shrink-0" />
+                    <Clock size={18} className="text-orange-400 flex-shrink-0 fill-current" />
                     <div>
                       <p className="text-xs font-semibold text-orange-400">{stats.financial.pendingWithdrawals} Pending Withdrawals</p>
                       <p className="text-[10px] text-orange-400/60">Click to review</p>
@@ -724,7 +724,7 @@ export default function AdminDashboard() {
                 {stats.trading.pendingTrades > 0 && (
                   <button onClick={() => setActiveTab('pending-orders')}
                     className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 hover:bg-blue-500/15 transition-colors text-left">
-                    <BarChart3 size={18} className="text-blue-400 flex-shrink-0" />
+                    <BarChart3 size={18} className="text-blue-400 flex-shrink-0 fill-current" />
                     <div>
                       <p className="text-xs font-semibold text-blue-400">{stats.trading.pendingTrades} Pending Trades</p>
                       <p className="text-[10px] text-blue-400/60">Click to review</p>
@@ -741,7 +741,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-emerald-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors text-emerald-400">
-                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                   {pendingCounts.deposits > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                       {pendingCounts.deposits > 99 ? '99+' : pendingCounts.deposits}
@@ -756,7 +756,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-blue-500/20 transition-colors text-blue-400">
-                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                   {pendingCounts.withdrawals > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                       {pendingCounts.withdrawals > 99 ? '99+' : pendingCounts.withdrawals}
@@ -771,7 +771,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-orange-500/30 hover:bg-orange-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-orange-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors text-orange-400">
-                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                 </div>
                 <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-orange-400 transition-colors text-center leading-tight">Deposit History</span>
               </button>
@@ -781,7 +781,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-purple-500/30 hover:bg-purple-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-purple-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-purple-500/20 transition-colors text-purple-400">
-                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                 </div>
                 <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 group-hover:text-purple-400 transition-colors text-center leading-tight">Withdraw History</span>
               </button>
@@ -791,7 +791,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-indigo-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors text-indigo-400">
-                  <FileCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <FileCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                   {pendingCounts.kyc > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                       {pendingCounts.kyc > 99 ? '99+' : pendingCounts.kyc}
@@ -806,7 +806,7 @@ export default function AdminDashboard() {
                 className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 hover:border-teal-500/30 hover:bg-teal-500/10 transition-all duration-200"
               >
                 <div className="relative w-7 h-7 sm:w-9 sm:h-9 bg-teal-500/10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:bg-teal-500/20 transition-colors text-teal-400">
-                  <Landmark className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Landmark className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
                   {pendingCounts.loans > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                       {pendingCounts.loans > 99 ? '99+' : pendingCounts.loans}
@@ -876,7 +876,7 @@ export default function AdminDashboard() {
                         <p className="text-[11px] text-gray-500">Last 30 days</p>
                       </div>
                       <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-1 rounded-lg">
-                        <TrendingUp size={12} className="text-green-400" />
+                        <TrendingUp size={12} className="text-green-400 fill-current" />
                         <span className="text-[11px] text-green-400 font-medium">{stats.users.newThisMonth} this month</span>
                       </div>
                     </div>
@@ -908,8 +908,8 @@ export default function AdminDashboard() {
                       </div>
                       <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${stats.financial.netFlow >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                         {stats.financial.netFlow >= 0
-                          ? <ArrowUpRight size={12} className="text-green-400" />
-                          : <ArrowDownRight size={12} className="text-red-400" />}
+                          ? <ArrowUpRight size={12} className="text-green-400 fill-current" />
+                          : <ArrowDownRight size={12} className="text-red-400 fill-current" />}
                         <span className={`text-[11px] font-medium ${stats.financial.netFlow >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           Net: {formatCurrency(Math.abs(stats.financial.netFlow))}
                         </span>
@@ -935,7 +935,7 @@ export default function AdminDashboard() {
                   {/* Detailed User Stats */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <Users size={16} className="text-blue-400" />
+                      <Users size={16} className="text-blue-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">User Breakdown</h3>
                     </div>
                     <div className="space-y-3">
@@ -961,7 +961,7 @@ export default function AdminDashboard() {
                   {/* Trading & Futures */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <BarChart3 size={16} className="text-purple-400" />
+                      <BarChart3 size={16} className="text-purple-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">Trading Overview</h3>
                     </div>
                     <div className="space-y-3">
@@ -1008,7 +1008,7 @@ export default function AdminDashboard() {
                   {/* Quick Actions */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <Zap size={16} className="text-amber-400" />
+                      <Zap size={16} className="text-amber-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">Quick Actions</h3>
                     </div>
                     <div className="space-y-2">
@@ -1043,7 +1043,7 @@ export default function AdminDashboard() {
                       <button onClick={() => setActiveTab('pending-orders')}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-amber-500/30 transition-all text-left group">
                         <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Clock size={16} className="text-amber-400" />
+                          <Clock size={16} className="text-amber-400 fill-current" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-gray-300 group-hover:text-white transition-colors">Pending Orders</p>
@@ -1061,9 +1061,9 @@ export default function AdminDashboard() {
                   {/* KYC Distribution */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/users')}>
                     <div className="flex items-center gap-2 mb-4">
-                      <FileCheck size={16} className="text-cyan-400" />
+                      <FileCheck size={16} className="text-cyan-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">KYC Status</h3>
-                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
+                      <ArrowRight size={12} className="text-gray-600 ml-auto fill-current" />
                     </div>
                     {pieKycData.length > 0 ? (
                       <div className="flex items-center gap-4">
@@ -1094,9 +1094,9 @@ export default function AdminDashboard() {
                   {/* Support Distribution */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/support')}>
                     <div className="flex items-center gap-2 mb-4">
-                      <MessageSquare size={16} className="text-purple-400" />
+                      <MessageSquare size={16} className="text-purple-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">Support Tickets</h3>
-                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
+                      <ArrowRight size={12} className="text-gray-600 ml-auto fill-current" />
                     </div>
                     {pieSupportData.length > 0 ? (
                       <div className="flex items-center gap-4">
@@ -1127,9 +1127,9 @@ export default function AdminDashboard() {
                   {/* Loans & Financial Summary */}
                   <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5 cursor-pointer hover:border-[#2a2a2a] hover:bg-[#151515] transition-all" onClick={() => setLocation('/admin/users')}>
                     <div className="flex items-center gap-2 mb-4">
-                      <Landmark size={16} className="text-emerald-400" />
+                      <Landmark size={16} className="text-emerald-400 fill-current" />
                       <h3 className="text-sm font-semibold text-white">Loans & Finance</h3>
-                      <ArrowRight size={12} className="text-gray-600 ml-auto" />
+                      <ArrowRight size={12} className="text-gray-600 ml-auto fill-current" />
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-xs">
@@ -1478,7 +1478,7 @@ export default function AdminDashboard() {
                         <div className="space-y-4">
                           <div>
                             <p className="text-[10px] font-medium text-gray-400 mb-2 flex items-center gap-1.5">
-                              <ArrowDownRight size={10} className="text-green-400" /> DEPOSIT BREAKDOWN
+                              <ArrowDownRight size={10} className="text-green-400 fill-current" /> DEPOSIT BREAKDOWN
                             </p>
                             {Object.entries(analytics.summary.depositsBySymbol)
                               .sort(([, a], [, b]) => b.usdtAmount - a.usdtAmount)
@@ -1500,7 +1500,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="border-t border-[#1e1e1e] pt-4">
                             <p className="text-[10px] font-medium text-gray-400 mb-2 flex items-center gap-1.5">
-                              <ArrowUpRight size={10} className="text-red-400" /> WITHDRAWAL BREAKDOWN
+                              <ArrowUpRight size={10} className="text-red-400 fill-current" /> WITHDRAWAL BREAKDOWN
                             </p>
                             {Object.entries(analytics.summary.withdrawalsBySymbol)
                               .sort(([, a], [, b]) => b.usdtAmount - a.usdtAmount)
@@ -1531,7 +1531,7 @@ export default function AdminDashboard() {
                     <div className="flex justify-center pt-2">
                       <button onClick={fetchAnalytics}
                         className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors bg-[#111] border border-[#1e1e1e] rounded-xl px-4 py-2">
-                        <RefreshCw size={12} /> Refresh Analytics
+                        <RefreshCw size={12} className="fill-current" /> Refresh Analytics
                       </button>
                     </div>
                   </>
@@ -1669,7 +1669,7 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-gray-500">{allOrders?.length || 0} total orders</p>
                     </div>
                     <div className="relative w-full sm:w-64">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
                       <Input placeholder="Search orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                         className="pl-9 h-8 bg-[#0a0a0a] border-[#1e1e1e] text-xs text-white placeholder:text-gray-600" />
                     </div>
@@ -1683,7 +1683,7 @@ export default function AdminDashboard() {
                 <div className="bg-[#111] rounded-2xl border border-[#1e1e1e]">
                   <div className="p-4 border-b border-[#1e1e1e] flex items-center gap-3">
                     <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center">
-                      <Clock size={14} className="text-amber-400" />
+                      <Clock size={14} className="text-amber-400 fill-current" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-white text-sm">Pending Approval</h3>
@@ -1724,7 +1724,7 @@ export default function AdminDashboard() {
                           <Badge className={`${getStatusColor(item.status)} text-[10px] px-1.5 py-0`}>
                             {item.status.replace('_', ' ')}
                           </Badge>
-                          <ArrowRight size={10} className="text-gray-600 flex-shrink-0" />
+                          <ArrowRight size={10} className="text-gray-600 flex-shrink-0 fill-current" />
                         </div>
                       ))
                     )}

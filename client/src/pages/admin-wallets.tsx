@@ -141,7 +141,7 @@ export default function AdminWalletPage() {
             onClick={() => setSelectedUserId(null)}
             className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors text-sm"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} className="fill-current" />
             Back to All Wallets
           </button>
 
@@ -177,7 +177,7 @@ export default function AdminWalletPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-              <Wallet size={20} className="text-blue-400" />
+              <Wallet size={20} className="text-blue-400 fill-current" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">Wallet Management</h1>
@@ -185,7 +185,7 @@ export default function AdminWalletPage() {
             </div>
           </div>
           <button onClick={() => refetch()} className="p-2 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#222] transition-colors">
-            <RefreshCw size={16} className="text-gray-400" />
+            <RefreshCw size={16} className="text-gray-400 fill-current" />
           </button>
         </div>
 
@@ -206,7 +206,7 @@ export default function AdminWalletPage() {
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -253,7 +253,7 @@ export default function AdminWalletPage() {
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-8 text-center">
-            <Users size={32} className="text-gray-600 mx-auto mb-2" />
+            <Users size={32} className="text-gray-600 mx-auto mb-2 fill-current" />
             <p className="text-gray-500 text-sm">No wallets found</p>
           </div>
         ) : (
@@ -274,12 +274,12 @@ export default function AdminWalletPage() {
                         <span className="text-sm font-semibold text-white truncate">{user.username || user.email}</span>
                         {user.walletLocked && (
                           <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">
-                            <Lock size={10} /> Locked
+                            <Lock size={10} className="fill-current" /> Locked
                           </span>
                         )}
                         {user.isVerified && (
                           <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-                            <Shield size={10} /> Verified
+                            <Shield size={10} className="fill-current" /> Verified
                           </span>
                         )}
                       </div>
@@ -291,7 +291,7 @@ export default function AdminWalletPage() {
                       <p className="text-sm font-semibold text-white tabular-nums">${formatUsdNumber(user.totalValue)}</p>
                       <p className="text-[10px] text-gray-500">{user.depositCount}D / {user.withdrawalCount}W / {user.tradeCount}T</p>
                     </div>
-                    <ChevronRight size={16} className="text-gray-600" />
+                    <ChevronRight size={16} className="text-gray-600 fill-current" />
                   </div>
                 </div>
               </button>
@@ -307,7 +307,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
   return (
     <div className="bg-[#111] rounded-xl border border-[#1e1e1e] p-3">
       <div className="flex items-center gap-1.5 mb-1">
-        <Icon size={12} className={color} />
+        <Icon size={12} className={`${color} fill-current`} />
         <span className="text-[10px] text-gray-500">{label}</span>
       </div>
       <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
@@ -353,14 +353,14 @@ function UserDetailView({
                 : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
             }`}
           >
-            {detail.walletLocked ? <Unlock size={14} /> : <Lock size={14} />}
+            {detail.walletLocked ? <Unlock size={14} className="fill-current" /> : <Lock size={14} className="fill-current" />}
             {lockLoading ? "..." : detail.walletLocked ? "Unlock Wallet" : "Lock Wallet"}
           </button>
         </div>
 
         {detail.walletLocked && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 flex items-center gap-2 mb-4">
-            <AlertTriangle size={14} className="text-red-400" />
+            <AlertTriangle size={14} className="text-red-400 fill-current" />
             <span className="text-red-400 text-xs">This wallet is currently locked</span>
           </div>
         )}
@@ -379,7 +379,7 @@ function UserDetailView({
       {/* Assets with Freeze */}
       <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Wallet size={14} className="text-blue-400" />
+          <Wallet size={14} className="text-blue-400 fill-current" />
           Assets ({detail.assets.length})
         </h3>
         {detail.assets.length === 0 ? (
@@ -409,7 +409,7 @@ function UserDetailView({
                     }`}
                     title={asset.frozen > 0 ? "Unfreeze asset" : "Freeze asset"}
                   >
-                    {asset.frozen > 0 ? <Sun size={14} /> : <Snowflake size={14} />}
+                    {asset.frozen > 0 ? <Sun size={14} className="fill-current" /> : <Snowflake size={14} className="fill-current" />}
                   </button>
                 </div>
               </div>
@@ -561,7 +561,7 @@ function OverviewRow({ label, count, value, icon: Icon, color }: { label: string
     <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
       <div className="flex items-center gap-2.5">
         <div className={`w-8 h-8 rounded-lg bg-opacity-10 flex items-center justify-center`} style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-          <Icon size={16} className={color} />
+          <Icon size={16} className={`${color} fill-current`} />
         </div>
         <div>
           <p className="text-sm text-white">{label}</p>

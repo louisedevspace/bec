@@ -311,7 +311,7 @@ export default function AdminSettings() {
           <div className="p-5 border-b border-[#1e1e1e] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-orange-400" />
+                <Wallet className="h-5 w-5 text-orange-400 fill-current" />
               </div>
               <div>
                 <h2 className="font-semibold text-white text-sm">Deposit Addresses</h2>
@@ -322,7 +322,7 @@ export default function AdminSettings() {
               onClick={refreshDepositAddresses}
               className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#2a2a2a] hover:text-white h-9 px-3 transition-colors w-full sm:w-auto justify-center"
             >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5 fill-current" />
               Refresh
             </button>
           </div>
@@ -431,7 +431,7 @@ export default function AdminSettings() {
             {depositAddresses.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-14 h-14 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <Wallet className="h-7 w-7 text-gray-500" />
+                  <Wallet className="h-7 w-7 text-gray-500 fill-current" />
                 </div>
                 <p className="text-sm text-gray-500">No deposit addresses configured</p>
                 <p className="text-xs text-gray-500 mt-1">Add addresses in the database to get started</p>
@@ -454,22 +454,22 @@ export default function AdminSettings() {
                       {editingAddress === address.asset_symbol ? (
                         <div className="flex gap-1.5">
                           <Button size="sm" onClick={() => saveAddress(address.asset_symbol)} className="rounded-lg h-7 w-7 p-0 bg-green-600 hover:bg-green-700">
-                            <Save className="w-3.5 h-3.5" />
+                            <Save className="w-3.5 h-3.5 fill-current" />
                           </Button>
                           <button onClick={cancelEditing} className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 border border-[#1e1e1e] bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white transition-colors">
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5 fill-current" />
                           </button>
                         </div>
                       ) : (
                         <div className="flex gap-1.5">
                           <button onClick={() => startEditingAddress(address)} className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                            <Edit className="w-3.5 h-3.5" />
+                            <Edit className="w-3.5 h-3.5 fill-current" />
                           </button>
                           <button
                             onClick={() => deleteAddress(address.asset_symbol)}
                             className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5 fill-current" />
                           </button>
                         </div>
                       )}
@@ -560,9 +560,9 @@ export default function AdminSettings() {
                               className="p-0.5 hover:bg-[#1a1a1a] rounded transition-colors"
                             >
                               {copied ? (
-                                <CheckCircle size={12} className="text-green-500" />
+                                <CheckCircle size={12} className="text-green-500 fill-current" />
                               ) : (
-                                <Copy size={12} className="text-gray-400" />
+                                <Copy size={12} className="text-gray-400 fill-current" />
                               )}
                             </button>
                           </div>
@@ -626,7 +626,7 @@ export default function AdminSettings() {
           <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-400" />
+                <Users className="h-5 w-5 text-blue-400 fill-current" />
               </div>
               <div>
                 <h2 className="font-semibold text-white text-sm">User Management</h2>
@@ -638,7 +638,7 @@ export default function AdminSettings() {
               className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
               size="sm"
             >
-              <Users className="h-3.5 w-3.5 mr-1.5" />
+              <Users className="h-3.5 w-3.5 mr-1.5 fill-current" />
               Manage Users
             </Button>
           </div>

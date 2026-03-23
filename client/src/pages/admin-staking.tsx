@@ -288,7 +288,7 @@ export default function AdminStakingPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-white flex items-center gap-3 flex-wrap">
               <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Coins size={22} className="text-purple-400" />
+                <Coins size={22} className="text-purple-400 fill-current" />
               </div>
               <span className="min-w-0">Staking Management</span>
             </h1>
@@ -300,7 +300,7 @@ export default function AdminStakingPage() {
             size="sm"
             className="bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#222] hover:text-white"
           >
-            <RefreshCw size={14} className="mr-2" /> Refresh
+            <RefreshCw size={14} className="mr-2 fill-current" /> Refresh
           </Button>
         </div>
 
@@ -329,16 +329,16 @@ export default function AdminStakingPage() {
         <Tabs value={tab} onValueChange={(newTab) => { setTab(newTab); setStatusFilter("all"); }} className="w-full">
           <TabsList className="bg-[#111] border border-[#1e1e1e] h-10 p-1 w-full md:w-auto">
             <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 text-xs md:text-sm">
-              <BarChart3 size={14} className="mr-1.5" /> All Positions
+              <BarChart3 size={14} className="mr-1.5 fill-current" /> All Positions
             </TabsTrigger>
             <TabsTrigger value="active" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 text-xs md:text-sm">
-              <Activity size={14} className="mr-1.5" /> Active
+              <Activity size={14} className="mr-1.5 fill-current" /> Active
             </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 text-xs md:text-sm">
-              <CheckCircle size={14} className="mr-1.5" /> Completed
+              <CheckCircle size={14} className="mr-1.5 fill-current" /> Completed
             </TabsTrigger>
             <TabsTrigger value="limits" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 text-xs md:text-sm">
-              <Shield size={14} className="mr-1.5" /> User Limits
+              <Shield size={14} className="mr-1.5 fill-current" /> User Limits
             </TabsTrigger>
           </TabsList>
 
@@ -348,7 +348,7 @@ export default function AdminStakingPage() {
               {/* Filter bar */}
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
                   <Input
                     placeholder="Search by name, email, ID..."
                     value={search}
@@ -410,7 +410,7 @@ export default function AdminStakingPage() {
                 size="sm"
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
-                <Plus size={14} className="mr-1.5" /> Add Limit
+                <Plus size={14} className="mr-1.5 fill-current" /> Add Limit
               </Button>
             </div>
 
@@ -420,11 +420,11 @@ export default function AdminStakingPage() {
                 <CardContent className="p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      <Shield size={16} className="text-purple-400" />
+                      <Shield size={16} className="text-purple-400 fill-current" />
                       {limitUserId ? "Edit Staking Limit" : "New Staking Limit"}
                     </h3>
                     <button onClick={() => { setLimitEditorOpen(false); resetLimitForm(); }} className="p-1 rounded hover:bg-[#1a1a1a]">
-                      <X size={16} className="text-gray-400" />
+                      <X size={16} className="text-gray-400 fill-current" />
                     </button>
                   </div>
 
@@ -514,7 +514,7 @@ export default function AdminStakingPage() {
                       disabled={limitMutation.isPending || !(limitUserId || '').trim()}
                       className="bg-purple-600 hover:bg-purple-700 text-white"
                     >
-                      <Save size={14} className="mr-1.5" />
+                      <Save size={14} className="mr-1.5 fill-current" />
                       {limitMutation.isPending ? "Saving..." : "Save Limit"}
                     </Button>
                   </div>
@@ -525,12 +525,12 @@ export default function AdminStakingPage() {
             {/* Limits Table */}
             {limitsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <RefreshCw size={20} className="text-gray-500 animate-spin" />
+                <RefreshCw size={20} className="text-gray-500 animate-spin fill-current" />
               </div>
             ) : !limits || limits.length === 0 ? (
               <Card className="bg-[#0f0f0f] border-[#1e1e1e]">
                 <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-                  <Shield size={32} className="mb-2 opacity-30" />
+                  <Shield size={32} className="mb-2 opacity-30 fill-current" />
                   <p className="text-sm">No staking limits configured</p>
                   <p className="text-xs text-gray-600 mt-1">Users can stake without restrictions</p>
                 </CardContent>
@@ -543,7 +543,7 @@ export default function AdminStakingPage() {
                       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${limit.isEnabled ? "bg-green-500/10" : "bg-red-500/10"}`}>
-                            {limit.isEnabled ? <Unlock size={16} className="text-green-400" /> : <Lock size={16} className="text-red-400" />}
+                            {limit.isEnabled ? <Unlock size={16} className="text-green-400 fill-current" /> : <Lock size={16} className="text-red-400 fill-current" />}
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white">
@@ -598,7 +598,7 @@ export default function AdminStakingPage() {
                             }}
                             className="h-7 px-2 text-xs text-red-400 hover:text-red-300"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={12} className="fill-current" />
                           </Button>
                         </div>
                       </div>
@@ -639,7 +639,7 @@ function StatCard({ icon: Icon, label, value, color }: {
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[color] || colors.blue}`}>
-            <Icon size={18} />
+            <Icon size={18} className="fill-current" />
           </div>
           <div>
             <p className="text-xs text-gray-500">{label}</p>
@@ -686,7 +686,7 @@ function PositionsList({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <RefreshCw size={20} className="text-gray-500 animate-spin" />
+        <RefreshCw size={20} className="text-gray-500 animate-spin fill-current" />
       </div>
     );
   }
@@ -695,7 +695,7 @@ function PositionsList({
     return (
       <Card className="bg-[#0f0f0f] border-[#1e1e1e]">
         <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-          <Coins size={32} className="mb-2 opacity-30" />
+          <Coins size={32} className="mb-2 opacity-30 fill-current" />
           <p className="text-sm">No staking positions found</p>
         </CardContent>
       </Card>
@@ -759,7 +759,7 @@ function PositionsList({
                 </div>
 
                 {/* Expand icon */}
-                {isExpanded ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />}
+                {isExpanded ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0 fill-current" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0 fill-current" />}
               </button>
 
               {/* Expanded Details */}
@@ -827,7 +827,7 @@ function PositionsList({
                           onClick={() => onStatusChange(p.id, "completed")}
                           className="h-7 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
                         >
-                          <CheckCircle size={12} className="mr-1" /> Complete
+                          <CheckCircle size={12} className="mr-1 fill-current" /> Complete
                         </Button>
 
                         {/* Extend */}
@@ -848,7 +848,7 @@ function PositionsList({
                             disabled={!extendDays[p.id] || parseInt(extendDays[p.id]) <= 0}
                             className="h-7 text-xs bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
                           >
-                            <Timer size={12} className="mr-1" /> Extend
+                            <Timer size={12} className="mr-1 fill-current" /> Extend
                           </Button>
                         </div>
                       </>
@@ -861,7 +861,7 @@ function PositionsList({
                         onClick={() => onStatusChange(p.id, "active")}
                         className="h-7 text-xs bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20"
                       >
-                        <Activity size={12} className="mr-1" /> Reactivate
+                        <Activity size={12} className="mr-1 fill-current" /> Reactivate
                       </Button>
                     )}
 
@@ -871,7 +871,7 @@ function PositionsList({
                       onClick={() => onSetLimit(p.userId)}
                       className="h-7 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
                     >
-                      <Shield size={12} className="mr-1" /> Set Limit
+                      <Shield size={12} className="mr-1 fill-current" /> Set Limit
                     </Button>
 
                     <Button
@@ -880,7 +880,7 @@ function PositionsList({
                       onClick={() => onDelete(p.id)}
                       className="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 ml-auto"
                     >
-                      <Trash2 size={12} className="mr-1" /> Delete
+                      <Trash2 size={12} className="mr-1 fill-current" /> Delete
                     </Button>
                   </div>
                 </div>

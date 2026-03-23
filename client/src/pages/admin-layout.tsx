@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               onClick={() => setSidebarOpen(true)}
               className="p-2 -ml-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors"
             >
-              <Menu size={22} />
+              <Menu size={22} className="fill-current" />
             </button>
             <div className="flex items-center gap-2">
               <Logo className="w-7 h-7" />
@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 onClick={() => setBellOpen(!bellOpen)}
                 className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
               >
-                <Bell size={22} />
+                <Bell size={22} className="fill-current" />
                 {unreadCount > 0 && (
                   <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -156,7 +156,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#222] flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Bell size={16} className="text-blue-400" />
+                <Bell size={16} className="text-blue-400 fill-current" />
                 <span className="text-sm font-semibold text-white">Notifications</span>
                 {unreadCount > 0 && (
                   <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     onClick={() => markAllAsRead()}
                     className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors p-1.5 rounded-lg active:bg-blue-500/10 touch-manipulation"
                   >
-                    <CheckCheck size={14} />
+                    <CheckCheck size={14} className="fill-current" />
                     Read all
                   </button>
                 )}
@@ -178,7 +178,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   onClick={() => setBellOpen(false)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
                 >
-                  <X size={16} />
+                  <X size={16} className="fill-current" />
                 </button>
               </div>
             </div>
@@ -187,7 +187,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div className="flex-1 overflow-y-auto overscroll-contain">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                  <Bell size={32} className="mb-2 opacity-30" />
+                  <Bell size={32} className="mb-2 opacity-30 fill-current" />
                   <p className="text-sm">No notifications yet</p>
                 </div>
               ) : (
@@ -214,7 +214,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
-                        {n.link && <ExternalLink size={10} className="text-gray-600" />}
+                        {n.link && <ExternalLink size={10} className="text-gray-600 fill-current" />}
                       </div>
                     </div>
                     {!n.is_read && (
@@ -223,7 +223,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         className="p-2 rounded-lg text-gray-500 hover:text-blue-400 active:bg-blue-500/10 transition-colors flex-shrink-0 touch-manipulation"
                         title="Mark as read"
                       >
-                        <Check size={16} />
+                        <Check size={16} className="fill-current" />
                       </button>
                     )}
                   </button>
@@ -275,13 +275,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
           >
-            <X size={18} />
+            <X size={18} className="fill-current" />
           </button>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
           >
-            <ChevronRight size={16} className={`transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`} />
+            <ChevronRight size={16} className={`transition-transform duration-300 fill-current ${isCollapsed ? '' : 'rotate-180'}`} />
           </button>
         </div>
 
@@ -310,7 +310,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   relative flex items-center justify-center rounded-lg flex-shrink-0 w-8 h-8
                   ${isActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}
                 `}>
-                  <Icon size={20} />
+                  <Icon size={20} className="fill-current" />
                   {badgeCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                       {badgeCount > 99 ? '99+' : badgeCount}
@@ -354,7 +354,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             `}
             title={isCollapsed ? 'Logout' : undefined}
           >
-            <LogOut size={18} />
+            <LogOut size={18} className="fill-current" />
             {!isCollapsed && <span className="text-sm font-medium">Log Out</span>}
           </button>
           {!isCollapsed && (
@@ -371,7 +371,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {currentPage && (
               <>
                 <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                  <currentPage.icon size={18} className="text-blue-400" />
+                  <currentPage.icon size={18} className="text-blue-400 fill-current" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-white text-sm">{currentPage.label}</h2>
@@ -387,7 +387,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 onClick={() => setBellOpen(!bellOpen)}
                 className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
               >
-                <Bell size={20} />
+                <Bell size={20} className="fill-current" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -401,7 +401,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#222]">
                     <div className="flex items-center gap-2">
-                      <Bell size={16} className="text-blue-400" />
+                      <Bell size={16} className="text-blue-400 fill-current" />
                       <span className="text-sm font-semibold text-white">Notifications</span>
                       {unreadCount > 0 && (
                         <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
@@ -414,7 +414,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         onClick={() => markAllAsRead()}
                         className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
                       >
-                        <CheckCheck size={13} />
+                        <CheckCheck size={13} className="fill-current" />
                         Mark all read
                       </button>
                     )}
@@ -424,7 +424,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <div className="flex-1 overflow-y-auto max-h-[380px]">
                     {notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                        <Bell size={32} className="mb-2 opacity-30" />
+                        <Bell size={32} className="mb-2 opacity-30 fill-current" />
                         <p className="text-sm">No notifications yet</p>
                       </div>
                     ) : (
@@ -452,7 +452,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                             <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
-                              {n.link && <ExternalLink size={10} className="text-gray-600" />}
+                              {n.link && <ExternalLink size={10} className="text-gray-600 fill-current" />}
                             </div>
                           </div>
                           {!n.is_read && (
@@ -461,7 +461,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                               className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors flex-shrink-0"
                               title="Mark as read"
                             >
-                              <Check size={14} />
+                              <Check size={14} className="fill-current" />
                             </button>
                           )}
                         </button>
@@ -473,7 +473,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a]">
-              <Shield size={14} className="text-blue-400" />
+              <Shield size={14} className="text-blue-400 fill-current" />
               <span className="text-xs text-gray-300 font-medium">{adminEmail}</span>
             </div>
           </div>

@@ -280,13 +280,13 @@ export default function AdminAnalyticsPage() {
               {subtitle && <p className="text-[10px] text-gray-500 mt-1">{subtitle}</p>}
               {trend && (
                 <div className={`flex items-center gap-1 mt-2 text-xs ${trendUp ? 'text-green-400' : 'text-red-400'}`}>
-                  {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                  {trendUp ? <ArrowUpRight size={14} className="fill-current" /> : <ArrowDownRight size={14} className="fill-current" />}
                   <span>{trend}</span>
                 </div>
               )}
             </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapped.bg} ${mapped.text}`}>
-              <Icon className="w-5 h-5" />
+              <Icon className="w-5 h-5 fill-current" />
             </div>
           </div>
         </CardContent>
@@ -322,7 +322,7 @@ export default function AdminAnalyticsPage() {
               disabled={loading}
               className="gap-2 bg-[#111] border-[#1e1e1e] text-white hover:bg-[#1a1a1a] hover:text-white"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 fill-current ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button
@@ -336,7 +336,7 @@ export default function AdminAnalyticsPage() {
                 });
               }}
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 fill-current" />
               Export
             </Button>
           </div>
@@ -637,7 +637,7 @@ export default function AdminAnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-6 h-6 text-white" />
+                <BarChart3 className="w-6 h-6 text-white fill-current" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white">Platform Insights</h3>

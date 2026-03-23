@@ -401,13 +401,13 @@ export default function AdminUsers() {
 
   // Status filter tabs config
   const filterTabs: { key: StatusFilter; label: string; icon: React.ReactNode; count: number }[] = [
-    { key: 'all', label: 'All', icon: <Users size={13} />, count: stats.total },
-    { key: 'active', label: 'Active', icon: <Activity size={13} />, count: stats.active },
-    { key: 'inactive', label: 'Inactive', icon: <UserX size={13} />, count: stats.inactive },
-    { key: 'verified', label: 'Verified', icon: <UserCheck size={13} />, count: stats.verified },
-    { key: 'pending', label: 'Pending', icon: <Clock size={13} />, count: stats.total - stats.verified },
-    { key: 'kyc_pending', label: 'KYC Pending', icon: <FileText size={13} />, count: stats.kycPending },
-    { key: 'deleted', label: 'Deleted', icon: <Shield size={13} />, count: deletedUsersCount },
+    { key: 'all', label: 'All', icon: <Users size={13} className="fill-current" />, count: stats.total },
+    { key: 'active', label: 'Active', icon: <Activity size={13} className="fill-current" />, count: stats.active },
+    { key: 'inactive', label: 'Inactive', icon: <UserX size={13} className="fill-current" />, count: stats.inactive },
+    { key: 'verified', label: 'Verified', icon: <UserCheck size={13} className="fill-current" />, count: stats.verified },
+    { key: 'pending', label: 'Pending', icon: <Clock size={13} className="fill-current" />, count: stats.total - stats.verified },
+    { key: 'kyc_pending', label: 'KYC Pending', icon: <FileText size={13} className="fill-current" />, count: stats.kycPending },
+    { key: 'deleted', label: 'Deleted', icon: <Shield size={13} className="fill-current" />, count: deletedUsersCount },
   ];
 
   // Sort options
@@ -437,24 +437,24 @@ export default function AdminUsers() {
               className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
               title={viewMode === 'cards' ? 'Switch to compact view' : 'Switch to card view'}
             >
-              <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+              <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />
               {viewMode === 'cards' ? 'Compact' : 'Cards'}
             </button>
             <button
               onClick={() => setShowPasswords(!showPasswords)}
               className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              {showPasswords ? <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" /> : <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />}
+              {showPasswords ? <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" /> : <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />}
               {showPasswords ? 'Hide' : 'Show'} Auth
             </button>
             <button
               onClick={handleExportCSV}
               className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Export
+              <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />Export
             </button>
             <Button onClick={fetchUsers} size="sm" className="rounded-xl text-[11px] sm:text-xs bg-blue-600 hover:bg-blue-700 h-7 sm:h-8">
-              <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Refresh
+              <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />Refresh
             </Button>
           </div>
         </div>
@@ -462,8 +462,8 @@ export default function AdminUsers() {
         {/* ---- Action Buttons Grid ---- */}
         <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5 sm:gap-2">
           {[
-            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
-            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
+            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
+            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
           ].map((btn, i) => {
             const colorClasses = btn.color === 'emerald' ? {
               hoverBorder: 'hover:border-emerald-500/30', hoverBg: 'hover:bg-emerald-500/10',
@@ -523,7 +523,7 @@ export default function AdminUsers() {
           <div className="p-3 sm:p-4 border-b border-[#1e1e1e]">
             <div className="flex flex-col gap-3">
               <div className="relative w-full sm:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 fill-current" />
                 <Input
                   placeholder="Search name, email, ID, phone..."
                   value={searchQuery}
@@ -532,7 +532,7 @@ export default function AdminUsers() {
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                    <X size={14} />
+                    <X size={14} className="fill-current" />
                   </button>
                 )}
               </div>
@@ -551,7 +551,7 @@ export default function AdminUsers() {
                       >
                         {opt.label}
                         {sortField === opt.field && (
-                          sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />
+                          sortDir === 'asc' ? <SortAsc size={10} className="fill-current" /> : <SortDesc size={10} className="fill-current" />
                         )}
                       </button>
                     ))}
@@ -609,13 +609,13 @@ export default function AdminUsers() {
             ) : error ? (
               <div className="text-center py-8">
                 <div className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl p-4 text-sm inline-flex items-center gap-2">
-                  <AlertTriangle size={16} />{error}
+                  <AlertTriangle size={16} className="fill-current" />{error}
                 </div>
               </div>
             ) : activeResultCount === 0 ? (
               <div className="text-center py-16">
                 <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  {statusFilter === 'deleted' ? <Shield className="h-8 w-8 text-gray-600" /> : <Users className="h-8 w-8 text-gray-600" />}
+                  {statusFilter === 'deleted' ? <Shield className="h-8 w-8 text-gray-600 fill-current" /> : <Users className="h-8 w-8 text-gray-600 fill-current" />}
                 </div>
                 <p className="text-gray-500 text-sm mb-1">{statusFilter === 'deleted' ? 'No deleted records found' : 'No users found'}</p>
                 <p className="text-gray-600 text-xs">
@@ -694,7 +694,7 @@ export default function AdminUsers() {
                               >
                                 {user.profile_picture
                                   ? <img src={getImageDisplayUrl(user.profile_picture)} alt="" className="w-full h-full object-cover" />
-                                  : <User className="h-3.5 w-3.5 text-blue-400" />}
+                                  : <User className="h-3.5 w-3.5 text-blue-400 fill-current" />}
                               </div>
                               {getActivityBadge(user)}
                             </div>
@@ -723,15 +723,15 @@ export default function AdminUsers() {
                           <div className="flex items-center gap-1 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                             <button onClick={() => handleChangePassword(user)}
                               className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Change Password">
-                              <Key size={12} />
+                              <Key size={12} className="fill-current" />
                             </button>
                             <button onClick={() => handleOpenManagement(user)}
                               className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 flex items-center justify-center transition-colors" title="Manage User">
-                              <Settings size={12} />
+                              <Settings size={12} className="fill-current" />
                             </button>
                             <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
                               className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 flex items-center justify-center transition-colors" title="Futures Settings">
-                              <TrendingUp size={12} />
+                              <TrendingUp size={12} className="fill-current" />
                             </button>
                           </div>
                         </td>
@@ -757,7 +757,7 @@ export default function AdminUsers() {
                             >
                               {user.profile_picture
                                 ? <img src={getImageDisplayUrl(user.profile_picture)} alt="Profile" className="w-full h-full object-cover" />
-                                : <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />}
+                                : <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 fill-current" />}
                             </div>
                             {user.is_active !== false && (
                               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 rounded-full ring-2 ring-[#111]" />
@@ -776,7 +776,7 @@ export default function AdminUsers() {
                           {/* Role Badge */}
                           {user.role === 'admin' && (
                             <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] sm:text-[10px] flex-shrink-0">
-                              <Shield size={10} className="mr-0.5 sm:mr-1" />Admin
+                              <Shield size={10} className="mr-0.5 sm:mr-1 fill-current" />Admin
                             </Badge>
                           )}
                         </div>
@@ -784,22 +784,22 @@ export default function AdminUsers() {
                         {/* Contact Info */}
                         <div className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-xs">
                           <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
                             <span className="truncate">{user.email}</span>
                           </div>
                           <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
                             <span className="truncate">Joined {formatDate(user.created_at)}</span>
                             <span className="text-gray-600 text-[9px] sm:text-[10px] hidden sm:inline">({timeAgo(user.created_at)})</span>
                           </div>
                           {user.last_sign_in_at && (
                             <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                              <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                              <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
                               <span className="truncate">Last login {timeAgo(user.last_sign_in_at)}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0" />
+                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
                             <span>{user.phone || 'No phone'}</span>
                           </div>
                         </div>
@@ -808,25 +808,25 @@ export default function AdminUsers() {
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                           <button onClick={() => handleChangePassword(user)}
                             className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <Key className="h-3 w-3" />Password
+                            <Key className="h-3 w-3 fill-current" />Password
                           </button>
                           <button onClick={() => handleOpenManagement(user)}
                             className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <Settings className="h-3 w-3" />Manage
+                            <Settings className="h-3 w-3 fill-current" />Manage
                           </button>
                           <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
                             className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <TrendingUp className="h-3 w-3" />Futures
+                            <TrendingUp className="h-3 w-3 fill-current" />Futures
                           </button>
                           <button onClick={() => copyToClipboard(user.id)}
                             className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
                             title="Copy User ID">
-                            {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                            {copiedId === user.id ? <Check className="h-3 w-3 text-green-400 fill-current" /> : <Copy className="h-3 w-3 fill-current" />}
                           </button>
                           <a href={`/admin/users/${user.id}`}
                             className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
                             title="View Details">
-                            <Eye className="h-3 w-3" />
+                            <Eye className="h-3 w-3 fill-current" />
                           </a>
                         </div>
                       </div>
@@ -837,7 +837,7 @@ export default function AdminUsers() {
                         <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 sm:p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center">
-                              <Coins className="h-3 w-3 text-blue-400" />
+                              <Coins className="h-3 w-3 text-blue-400 fill-current" />
                             </div>
                             <span className="text-[11px] sm:text-xs font-semibold text-gray-300">Portfolio & Trading</span>
                           </div>
@@ -905,7 +905,7 @@ export default function AdminUsers() {
                         {showPasswords && (
                           <div className="bg-amber-500/5 rounded-xl border border-amber-500/10 p-3 space-y-2">
                             <div className="flex items-center gap-1.5">
-                              <Shield className="h-3.5 w-3.5 text-amber-400" />
+                              <Shield className="h-3.5 w-3.5 text-amber-400 fill-current" />
                               <span className="text-xs font-semibold text-amber-300">Auth Details</span>
                             </div>
                             <div className="space-y-1.5 text-[11px]">
@@ -922,7 +922,7 @@ export default function AdminUsers() {
                                 <div className="flex items-center gap-1 min-w-0">
                                   <code className="text-[10px] text-amber-200 bg-[#111] px-1.5 py-0.5 rounded truncate block">{user.id}</code>
                                   <button onClick={() => copyToClipboard(user.id)} className="p-0.5 hover:bg-amber-500/20 rounded flex-shrink-0 transition-colors">
-                                    {copiedId === user.id ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-amber-400" />}
+                                    {copiedId === user.id ? <Check className="h-3 w-3 text-green-400 fill-current" /> : <Copy className="h-3 w-3 text-amber-400 fill-current" />}
                                   </button>
                                 </div>
                               </div>
@@ -988,18 +988,18 @@ export default function AdminUsers() {
                   disabled={currentPage <= 1}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={12} className="sm:hidden" />
-                  <ChevronLeft size={14} className="hidden sm:block" />
-                  <ChevronLeft size={12} className="-ml-1.5 sm:hidden" />
-                  <ChevronLeft size={14} className="-ml-2 hidden sm:block" />
+                  <ChevronLeft size={12} className="sm:hidden fill-current" />
+                  <ChevronLeft size={14} className="hidden sm:block fill-current" />
+                  <ChevronLeft size={12} className="-ml-1.5 sm:hidden fill-current" />
+                  <ChevronLeft size={14} className="-ml-2 hidden sm:block fill-current" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage <= 1}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={12} className="sm:hidden" />
-                  <ChevronLeft size={14} className="hidden sm:block" />
+                  <ChevronLeft size={12} className="sm:hidden fill-current" />
+                  <ChevronLeft size={14} className="hidden sm:block fill-current" />
                 </button>
                 {/* Page numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1031,18 +1031,18 @@ export default function AdminUsers() {
                   disabled={currentPage >= totalPages}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={12} className="sm:hidden" />
-                  <ChevronRight size={14} className="hidden sm:block" />
+                  <ChevronRight size={12} className="sm:hidden fill-current" />
+                  <ChevronRight size={14} className="hidden sm:block fill-current" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage >= totalPages}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={12} className="sm:hidden" />
-                  <ChevronRight size={14} className="hidden sm:block" />
-                  <ChevronRight size={12} className="-ml-1.5 sm:hidden" />
-                  <ChevronRight size={14} className="-ml-2 hidden sm:block" />
+                  <ChevronRight size={12} className="sm:hidden fill-current" />
+                  <ChevronRight size={14} className="hidden sm:block fill-current" />
+                  <ChevronRight size={12} className="-ml-1.5 sm:hidden fill-current" />
+                  <ChevronRight size={14} className="-ml-2 hidden sm:block fill-current" />
                 </button>
               </div>
             </div>

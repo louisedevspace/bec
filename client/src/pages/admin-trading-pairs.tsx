@@ -358,7 +358,7 @@ export default function AdminTradingPairs() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-              <TrendingUp size={24} className="text-blue-400" />
+              <TrendingUp size={24} className="text-blue-400 fill-current" />
               Trading Configuration
             </h1>
             <p className="text-sm text-gray-500 mt-1">Manage trading pairs and user limits</p>
@@ -373,7 +373,7 @@ export default function AdminTradingPairs() {
               activeTab === 'pairs' ? 'bg-[#222] text-white' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            <TrendingUp size={14} className="inline mr-1.5 -mt-0.5" />
+            <TrendingUp size={14} className="inline mr-1.5 -mt-0.5 fill-current" />
             Trading Pairs
           </button>
           <button
@@ -382,7 +382,7 @@ export default function AdminTradingPairs() {
               activeTab === 'limits' ? 'bg-[#222] text-white' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            <Shield size={14} className="inline mr-1.5 -mt-0.5" />
+            <Shield size={14} className="inline mr-1.5 -mt-0.5 fill-current" />
             Trading Limits
           </button>
         </div>
@@ -392,13 +392,13 @@ export default function AdminTradingPairs() {
         {/* Pairs Header Actions */}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={fetchPairs} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={`${loading ? 'animate-spin' : ''} fill-current`} />
           </Button>
           <Button variant="outline" size="sm" onClick={handleSeed} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-            <Shield size={14} className="mr-1" /> Seed Defaults
+            <Shield size={14} className="mr-1 fill-current" /> Seed Defaults
           </Button>
           <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus size={14} className="mr-1" /> Add Pair
+            <Plus size={14} className="mr-1 fill-current" /> Add Pair
           </Button>
         </div>
 
@@ -426,7 +426,7 @@ export default function AdminTradingPairs() {
         {showAddForm && (
           <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Plus size={16} className="text-blue-400" /> Add New Trading Pair
+              <Plus size={16} className="text-blue-400 fill-current" /> Add New Trading Pair
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <div>
@@ -496,7 +496,7 @@ export default function AdminTradingPairs() {
                 Cancel
               </Button>
               <Button size="sm" onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
-                <Plus size={14} className="mr-1" /> Add Pair
+                <Plus size={14} className="mr-1 fill-current" /> Add Pair
               </Button>
             </div>
           </div>
@@ -504,7 +504,7 @@ export default function AdminTradingPairs() {
 
         {/* Search */}
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
           <Input
             placeholder="Search pairs..."
             value={search}
@@ -517,11 +517,11 @@ export default function AdminTradingPairs() {
         <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw size={20} className="animate-spin text-gray-500" />
+              <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
             </div>
           ) : filteredPairs.length === 0 ? (
             <div className="text-center py-12">
-              <TrendingUp size={32} className="mx-auto mb-3 text-gray-600" />
+              <TrendingUp size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
               <p className="text-gray-500 text-sm">No trading pairs found</p>
               <p className="text-gray-600 text-xs mt-1">Click "Seed Defaults" to add common pairs</p>
             </div>
@@ -578,9 +578,9 @@ export default function AdminTradingPairs() {
                         <td className="text-center py-3 px-3">
                           <button onClick={() => handleToggle(pair.id)} className="inline-flex items-center">
                             {pair.is_enabled ? (
-                              <ToggleRight size={22} className="text-green-400" />
+                              <ToggleRight size={22} className="text-green-400 fill-current" />
                             ) : (
-                              <ToggleLeft size={22} className="text-gray-500" />
+                              <ToggleLeft size={22} className="text-gray-500 fill-current" />
                             )}
                           </button>
                         </td>
@@ -629,19 +629,19 @@ export default function AdminTradingPairs() {
                             {editingId === pair.id ? (
                               <>
                                 <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20">
-                                  <Save size={14} />
+                                  <Save size={14} className="fill-current" />
                                 </button>
                                 <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-gray-500/10 text-gray-400 hover:bg-gray-500/20">
-                                  <X size={14} />
+                                  <X size={14} className="fill-current" />
                                 </button>
                               </>
                             ) : (
                               <>
                                 <button onClick={() => startEdit(pair)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
-                                  <Edit2 size={14} />
+                                  <Edit2 size={14} className="fill-current" />
                                 </button>
                                 <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
-                                  <Trash2 size={14} />
+                                  <Trash2 size={14} className="fill-current" />
                                 </button>
                               </>
                             )}
@@ -671,10 +671,10 @@ export default function AdminTradingPairs() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => handleToggle(pair.id)}>
-                          {pair.is_enabled ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-gray-500" />}
+                          {pair.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
                         </button>
                         <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1 rounded text-red-400 hover:bg-red-500/10">
-                          <Trash2 size={14} />
+                          <Trash2 size={14} className="fill-current" />
                         </button>
                       </div>
                     </div>
@@ -707,10 +707,10 @@ export default function AdminTradingPairs() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={fetchLimits} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-                <RefreshCw size={14} className={limitsLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={`${limitsLoading ? 'animate-spin' : ''} fill-current`} />
               </Button>
               <Button size="sm" onClick={() => setShowAddLimit(!showAddLimit)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus size={14} className="mr-1" /> Add Limit
+                <Plus size={14} className="mr-1 fill-current" /> Add Limit
               </Button>
             </div>
           </div>
@@ -719,7 +719,7 @@ export default function AdminTradingPairs() {
           {showAddLimit && (
             <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Plus size={16} className="text-blue-400" /> New Trading Limit
+                <Plus size={16} className="text-blue-400 fill-current" /> New Trading Limit
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                 <div className="col-span-2 sm:col-span-1">
@@ -730,7 +730,7 @@ export default function AdminTradingPairs() {
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a] max-h-48">
                       <SelectItem value="*">
-                        <span className="flex items-center gap-1"><Globe size={12} className="text-blue-400" /> All Users (Global)</span>
+                        <span className="flex items-center gap-1"><Globe size={12} className="text-blue-400 fill-current" /> All Users (Global)</span>
                       </SelectItem>
                       {users.map(u => (
                         <SelectItem key={u.id} value={u.id}>{u.username} ({u.email})</SelectItem>
@@ -787,7 +787,7 @@ export default function AdminTradingPairs() {
                   Cancel
                 </Button>
                 <Button size="sm" onClick={handleAddLimit} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus size={14} className="mr-1" /> Save Limit
+                  <Plus size={14} className="mr-1 fill-current" /> Save Limit
                 </Button>
               </div>
             </div>
@@ -797,11 +797,11 @@ export default function AdminTradingPairs() {
           <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
             {limitsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <RefreshCw size={20} className="animate-spin text-gray-500" />
+                <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
               </div>
             ) : limits.length === 0 ? (
               <div className="text-center py-12">
-                <Shield size={32} className="mx-auto mb-3 text-gray-600" />
+                <Shield size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
                 <p className="text-gray-500 text-sm">No trading limits configured</p>
                 <p className="text-gray-600 text-xs mt-1">Add limits to control minimum/maximum trade amounts per user or globally</p>
               </div>
@@ -827,9 +827,9 @@ export default function AdminTradingPairs() {
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               {limit.user_id === '*' ? (
-                                <Globe size={14} className="text-blue-400" />
+                                <Globe size={14} className="text-blue-400 fill-current" />
                               ) : (
-                                <Users size={14} className="text-gray-400" />
+                                <Users size={14} className="text-gray-400 fill-current" />
                               )}
                               <span className="text-sm text-white truncate max-w-[200px]">{getUserLabel(limit.user_id)}</span>
                             </div>
@@ -857,15 +857,15 @@ export default function AdminTradingPairs() {
                           <td className="text-center py-3 px-3">
                             <button onClick={() => handleToggleLimit(limit)} className="inline-flex items-center">
                               {limit.is_enabled ? (
-                                <ToggleRight size={22} className="text-green-400" />
+                                <ToggleRight size={22} className="text-green-400 fill-current" />
                               ) : (
-                                <ToggleLeft size={22} className="text-gray-500" />
+                                <ToggleLeft size={22} className="text-gray-500 fill-current" />
                               )}
                             </button>
                           </td>
                           <td className="text-center py-3 px-4">
                             <button onClick={() => handleDeleteLimit(limit.id)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
-                              <Trash2 size={14} />
+                              <Trash2 size={14} className="fill-current" />
                             </button>
                           </td>
                         </tr>
@@ -880,15 +880,15 @@ export default function AdminTradingPairs() {
                     <div key={limit.id} className={`p-4 ${!limit.is_enabled ? 'opacity-50' : ''}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {limit.user_id === '*' ? <Globe size={14} className="text-blue-400" /> : <Users size={14} className="text-gray-400" />}
+                          {limit.user_id === '*' ? <Globe size={14} className="text-blue-400 fill-current" /> : <Users size={14} className="text-gray-400 fill-current" />}
                           <span className="font-medium text-white text-sm truncate max-w-[180px]">{getUserLabel(limit.user_id)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => handleToggleLimit(limit)}>
-                            {limit.is_enabled ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-gray-500" />}
+                            {limit.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
                           </button>
                           <button onClick={() => handleDeleteLimit(limit.id)} className="p-1 text-red-400">
-                            <Trash2 size={14} />
+                            <Trash2 size={14} className="fill-current" />
                           </button>
                         </div>
                       </div>

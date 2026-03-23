@@ -183,7 +183,7 @@ export default function AdminUserDetailPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
-          <Activity size={24} className="text-gray-600 mx-auto mb-2 animate-pulse" />
+          <Activity size={24} className="text-gray-600 mx-auto mb-2 animate-pulse fill-current" />
           <p className="text-gray-500 text-xs">Loading user details...</p>
         </div>
       </div>
@@ -194,7 +194,7 @@ export default function AdminUserDetailPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle size={24} className="text-red-400 mx-auto mb-2" />
+          <AlertCircle size={24} className="text-red-400 mx-auto mb-2 fill-current" />
           <p className="text-gray-400 text-sm">Failed to load user details</p>
           <button onClick={() => setLocation("/admin/users")} className="mt-3 text-blue-400 text-xs hover:text-blue-300">Back to Users</button>
         </div>
@@ -210,7 +210,7 @@ export default function AdminUserDetailPage() {
       <div className="bg-[#111] border-b border-[#1e1e1e] px-4 py-4">
         <div className="max-w-6xl mx-auto">
           <button onClick={() => setLocation("/admin/users")} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs mb-4 transition-colors">
-            <ArrowLeft size={14} /> Back to Users
+            <ArrowLeft size={14} className="fill-current" /> Back to Users
           </button>
 
           <div className="flex items-start justify-between flex-wrap gap-4">
@@ -222,7 +222,7 @@ export default function AdminUserDetailPage() {
               <div>
                 <h1 className="text-lg font-bold text-white">{u.full_name || u.username}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Mail size={12} className="text-gray-500" />
+                  <Mail size={12} className="text-gray-500 fill-current" />
                   <span className="text-xs text-gray-400">{u.email}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
@@ -246,7 +246,7 @@ export default function AdminUserDetailPage() {
                     : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
                 }`}
               >
-                {data.walletLocked ? <Unlock size={14} /> : <Lock size={14} />}
+                {data.walletLocked ? <Unlock size={14} className="fill-current" /> : <Lock size={14} className="fill-current" />}
                 {data.walletLocked ? "Unlock Wallet" : "Lock Wallet"}
               </button>
             </div>
@@ -264,7 +264,7 @@ export default function AdminUserDetailPage() {
             ].map(stat => (
               <div key={stat.label} className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <stat.icon size={12} className="text-gray-500" />
+                  <stat.icon size={12} className="text-gray-500 fill-current" />
                   <span className="text-[10px] text-gray-500">{stat.label}</span>
                 </div>
                 <p className={`text-sm font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
@@ -287,7 +287,7 @@ export default function AdminUserDetailPage() {
                   : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              <tab.icon size={12} />
+              <tab.icon size={12} className="fill-current" />
               {tab.label}
               {tab.id === "deposits" && data.deposits.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.deposits.length}</span>}
               {tab.id === "withdrawals" && data.withdrawals.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.withdrawals.length}</span>}
@@ -301,7 +301,7 @@ export default function AdminUserDetailPage() {
         {["deposits", "withdrawals", "trades", "futures"].includes(activeTab) && (
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <div className="relative flex-1 min-w-[160px]">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(0); }}
@@ -315,7 +315,7 @@ export default function AdminUserDetailPage() {
               disabled={currentData.total === 0}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download size={12} />
+              <Download size={12} className="fill-current" />
               CSV
             </button>
           </div>
@@ -329,7 +329,7 @@ export default function AdminUserDetailPage() {
               {/* Account Info */}
               <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
                 <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <User size={14} className="text-blue-400" />
+                  <User size={14} className="text-blue-400 fill-current" />
                   Account Information
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -355,7 +355,7 @@ export default function AdminUserDetailPage() {
               {/* Activity Counts */}
               <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
                 <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Activity size={14} className="text-purple-400" />
+                  <Activity size={14} className="text-purple-400 fill-current" />
                   Activity Summary
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -381,7 +381,7 @@ export default function AdminUserDetailPage() {
             <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
               {data.assets.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Wallet size={24} className="text-gray-600 mx-auto mb-2" />
+                  <Wallet size={24} className="text-gray-600 mx-auto mb-2 fill-current" />
                   <p className="text-gray-500 text-sm">No assets in wallet</p>
                 </div>
               ) : (
@@ -417,7 +417,7 @@ export default function AdminUserDetailPage() {
                               : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20"
                           }`}
                         >
-                          {asset.frozen > 0 ? <Sun size={10} /> : <Snowflake size={10} />}
+                          {asset.frozen > 0 ? <Sun size={10} className="fill-current" /> : <Snowflake size={10} className="fill-current" />}
                           {asset.frozen > 0 ? "Unfreeze" : "Freeze"}
                         </button>
                       </div>
@@ -571,7 +571,7 @@ function TableHeader({ columns }: { columns: string[] }) {
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="p-8 text-center">
-      <AlertCircle size={20} className="text-gray-600 mx-auto mb-2" />
+      <AlertCircle size={20} className="text-gray-600 mx-auto mb-2 fill-current" />
       <p className="text-gray-500 text-sm">{label}</p>
     </div>
   );
@@ -584,11 +584,11 @@ function Pagination({ total, page, totalPages, onPageChange }: { total: number; 
       <span className="text-[10px] text-gray-600">{total} records</span>
       <div className="flex items-center gap-1">
         <button onClick={() => onPageChange(Math.max(0, page - 1))} disabled={page === 0} className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors">
-          <ChevronLeft size={14} className="text-gray-400" />
+          <ChevronLeft size={14} className="text-gray-400 fill-current" />
         </button>
         <span className="text-[10px] text-gray-500 px-2">{page + 1} / {totalPages}</span>
         <button onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors">
-          <ChevronRight size={14} className="text-gray-400" />
+          <ChevronRight size={14} className="text-gray-400 fill-current" />
         </button>
       </div>
     </div>

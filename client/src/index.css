@@ -610,3 +610,42 @@ html:not(.dark) .bg-purple-500\/15 { background-color: rgb(168 85 247 / 0.2) !im
 html:not(.dark) .bg-purple-500\/20 { background-color: rgb(168 85 247 / 0.25) !important; }
 html:not(.dark) .bg-cyan-500\/15 { background-color: rgb(6 182 212 / 0.2) !important; }
 html:not(.dark) .bg-cyan-500\/20 { background-color: rgb(6 182 212 / 0.25) !important; }
+
+/* === Icon Fill Styling === */
+/* Add subtle fill to Lucide icons for a more solid, polished appearance */
+
+/* Dark mode: subtle fill for depth */
+.dark .lucide {
+  fill: currentColor;
+  fill-opacity: 0.15;
+}
+
+/* Light mode: slightly stronger fill for visibility */
+html:not(.dark) .lucide {
+  fill: currentColor;
+  fill-opacity: 0.2;
+}
+
+/* Icons inside colored containers (stat cards, badges) get stronger fill */
+.dark [class*="bg-"][class*="/10"] .lucide,
+.dark [class*="bg-"][class*="/15"] .lucide,
+.dark [class*="bg-"][class*="/20"] .lucide {
+  fill-opacity: 0.25;
+}
+
+html:not(.dark) [class*="bg-"][class*="/10"] .lucide,
+html:not(.dark) [class*="bg-"][class*="/15"] .lucide,
+html:not(.dark) [class*="bg-"][class*="/20"] .lucide {
+  fill-opacity: 0.3;
+}
+
+/* Navigation sidebar active icons - stronger fill */
+.dark [data-active="true"] .lucide,
+.dark .bg-blue-500\/10 .lucide {
+  fill-opacity: 0.3;
+}
+
+html:not(.dark) [data-active="true"] .lucide,
+html:not(.dark) .bg-blue-500\/10 .lucide {
+  fill-opacity: 0.35;
+}

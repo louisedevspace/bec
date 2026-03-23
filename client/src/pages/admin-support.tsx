@@ -373,7 +373,7 @@ export default function AdminSupportPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3" />
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3 fill-current" />
             <p className="text-sm text-gray-500">Loading support system...</p>
           </div>
         </div>
@@ -394,7 +394,7 @@ export default function AdminSupportPage() {
           <div className="flex items-center gap-4">
             {/* Auto-reply toggle */}
             <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-blue-400" />
+              <Bot className="w-4 h-4 text-blue-400 fill-current" />
               <span className="text-sm text-gray-400">Auto-Reply</span>
               <Switch 
                 checked={autoReplyEnabled} 
@@ -404,7 +404,7 @@ export default function AdminSupportPage() {
               {autoReplyEnabled && <span className="text-xs text-emerald-400">Active</span>}
             </div>
             <Button variant="outline" size="sm" onClick={() => refetchAll()} className="bg-transparent border-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
-              <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh
+              <RefreshCw className="h-4 w-4 mr-1.5 fill-current" /> Refresh
             </Button>
           </div>
         </div>
@@ -424,7 +424,7 @@ export default function AdminSupportPage() {
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{s.label}</p>
                   <div className={`w-7 h-7 ${s.iconBg} rounded-lg flex items-center justify-center`}>
-                    <s.icon className={`h-3.5 w-3.5 ${s.color}`} />
+                    <s.icon className={`h-3.5 w-3.5 ${s.color} fill-current`} />
                   </div>
                 </div>
                 <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
@@ -442,7 +442,7 @@ export default function AdminSupportPage() {
               <div className="p-3 border-b border-[#1e1e1e] space-y-2">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 fill-current" />
                     <Input
                       placeholder="Search tickets..."
                       value={searchTerm}
@@ -455,7 +455,7 @@ export default function AdminSupportPage() {
                     onClick={() => setShowFilters(!showFilters)}
                     className={`h-9 px-2.5 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] ${showFilters ? "text-blue-400 border-blue-500/30" : "text-gray-500"} hover:text-white hover:bg-[#1a1a1a]`}
                   >
-                    <Filter className="h-4 w-4" />
+                    <Filter className="h-4 w-4 fill-current" />
                   </Button>
                 </div>
 
@@ -502,7 +502,7 @@ export default function AdminSupportPage() {
               {/* Select All */}
               {filteredConversations.length > 0 && (
                 <button onClick={selectAll} className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-gray-500 hover:text-gray-300 border-b border-[#1e1e1e] transition-colors">
-                  {selectedIds.size === filteredConversations.length ? <CheckSquare className="h-3 w-3" /> : <Square className="h-3 w-3" />}
+                  {selectedIds.size === filteredConversations.length ? <CheckSquare className="h-3 w-3 fill-current" /> : <Square className="h-3 w-3 fill-current" />}
                   {selectedIds.size === filteredConversations.length ? "Deselect all" : "Select all"}
                 </button>
               )}
@@ -529,13 +529,13 @@ export default function AdminSupportPage() {
                               onClick={(e) => { e.stopPropagation(); toggleSelect(conv.id); }}
                               className="mt-1 text-gray-600 hover:text-gray-300 transition-colors flex-shrink-0"
                             >
-                              {selectedIds.has(conv.id) ? <CheckSquare className="h-3.5 w-3.5 text-blue-400" /> : <Square className="h-3.5 w-3.5" />}
+                              {selectedIds.has(conv.id) ? <CheckSquare className="h-3.5 w-3.5 text-blue-400 fill-current" /> : <Square className="h-3.5 w-3.5 fill-current" />}
                             </button>
 
                             {/* Content */}
                             <div className="flex-1 min-w-0" onClick={() => setSelectedConversation(conv)}>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <StatusIcon className={`h-3 w-3 ${sc.color} flex-shrink-0`} />
+                                <StatusIcon className={`h-3 w-3 ${sc.color} flex-shrink-0 fill-current`} />
                                 <h4 className="text-sm font-medium text-white truncate flex-1">{conv.users.full_name}</h4>
                                 {conv.unreadCount > 0 && (
                                   <Badge className="bg-red-500 text-white text-[9px] px-1.5 py-0 h-4 rounded-full">{conv.unreadCount} new</Badge>
@@ -570,7 +570,7 @@ export default function AdminSupportPage() {
                   </div>
                 ) : (
                   <div className="p-8 text-center">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700" />
+                    <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700 fill-current" />
                     <p className="text-sm text-gray-500">{searchTerm || filterStatus !== "all" ? "No matching tickets" : "No conversations yet"}</p>
                   </div>
                 )}
@@ -584,10 +584,10 @@ export default function AdminSupportPage() {
                   {/* Chat Header */}
                   <div className="p-3 border-b border-[#1e1e1e] flex items-start gap-3">
                     <button onClick={() => setSelectedConversation(null)} className="lg:hidden p-1.5 rounded-lg hover:bg-[#1a1a1a] text-gray-400 mt-0.5">
-                      <ArrowLeft size={18} />
+                      <ArrowLeft size={18} className="fill-current" />
                     </button>
                     <div className="w-9 h-9 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4 text-blue-400" />
+                      <User className="h-4 w-4 text-blue-400 fill-current" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -610,7 +610,7 @@ export default function AdminSupportPage() {
                           <option value="resolved" className="bg-[#111] text-white">Resolved</option>
                           <option value="closed" className="bg-[#111] text-white">Closed</option>
                         </select>
-                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500" />
+                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 fill-current" />
                       </div>
                       {/* Priority dropdown */}
                       <div className="relative">
@@ -624,7 +624,7 @@ export default function AdminSupportPage() {
                           <option value="high" className="bg-[#111] text-white">High</option>
                           <option value="urgent" className="bg-[#111] text-white">Urgent</option>
                         </select>
-                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500" />
+                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 fill-current" />
                       </div>
                     </div>
                   </div>
@@ -633,7 +633,7 @@ export default function AdminSupportPage() {
                   <div className="px-3 py-2 border-b border-[#1e1e1e] flex items-center gap-2 flex-wrap bg-[#0d0d0d]">
                     {selectedConversation.category && (
                       <span className="text-[10px] px-2 py-0.5 rounded border border-[#2a2a2a] text-gray-500 flex items-center gap-1">
-                        <Tag className="h-2.5 w-2.5" /> {categoryLabels[selectedConversation.category] || selectedConversation.category}
+                        <Tag className="h-2.5 w-2.5 fill-current" /> {categoryLabels[selectedConversation.category] || selectedConversation.category}
                       </span>
                     )}
                     <span className="text-[10px] text-gray-600">Created: {formatDate(selectedConversation.created_at)}</span>
@@ -645,7 +645,7 @@ export default function AdminSupportPage() {
                     <div className="ml-auto flex gap-1.5">
                       {selectedConversation.priority !== "urgent" && (
                         <Button size="sm" variant="outline" onClick={() => escalateMutation.mutate(selectedConversation.id)} className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-lg">
-                          <Zap className="h-2.5 w-2.5 mr-1" /> Escalate
+                          <Zap className="h-2.5 w-2.5 mr-1 fill-current" /> Escalate
                         </Button>
                       )}
                     </div>
@@ -674,7 +674,7 @@ export default function AdminSupportPage() {
                               <div className={`flex items-end gap-2 max-w-[80%] ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
                                 <Avatar className="h-7 w-7 flex-shrink-0">
                                   <AvatarFallback className={`text-[10px] ${isAdmin ? "bg-blue-600 text-white" : "bg-[#1a1a1a] text-gray-400"}`}>
-                                    {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                                    {isAdmin ? <Shield className="h-3 w-3 fill-current" /> : <User className="h-3 w-3 fill-current" />}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className={`space-y-0.5 ${isAdmin ? "text-right" : "text-left"}`}>
@@ -699,7 +699,7 @@ export default function AdminSupportPage() {
                         })
                       ) : (
                         <div className="text-center py-12">
-                          <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700" />
+                          <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700 fill-current" />
                           <p className="text-sm text-gray-500">No messages yet</p>
                         </div>
                       )}
@@ -735,7 +735,7 @@ export default function AdminSupportPage() {
                   {suggestions?.suggestions?.length > 0 && (
                     <div className="px-4 py-2 border-t border-[#1e1e1e] bg-[#0a0a0a]">
                       <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-current" />
                         <span className="text-xs font-medium text-gray-400">Suggested Replies</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -757,7 +757,7 @@ export default function AdminSupportPage() {
                           onClick={() => document.querySelector<HTMLTextAreaElement>('[data-reply-input]')?.focus()}
                           className="text-xs bg-[#1a1a1a] border border-dashed border-[#333] rounded-lg px-3 py-2 hover:border-blue-500/50 transition-colors text-gray-500 flex items-center gap-1.5"
                         >
-                          <Edit className="w-3 h-3" /> Custom Reply
+                          <Edit className="w-3 h-3 fill-current" /> Custom Reply
                         </button>
                       </div>
                     </div>
@@ -774,7 +774,7 @@ export default function AdminSupportPage() {
                         className={`rounded-xl self-end h-10 px-3 border-[#1e1e1e] ${showTemplates ? "text-blue-400 bg-blue-500/5" : "text-gray-500"} hover:text-white hover:bg-[#1a1a1a]`}
                         title="Response Templates"
                       >
-                        <FileText className="h-4 w-4" />
+                        <FileText className="h-4 w-4 fill-current" />
                       </Button>
                       <Textarea
                         value={message}
@@ -793,7 +793,7 @@ export default function AdminSupportPage() {
                         disabled={!message.trim() || sendMessageMutation.isPending}
                         className="rounded-xl bg-blue-600 hover:bg-blue-700 self-end h-10 w-10 p-0 flex-shrink-0"
                       >
-                        {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Send className="h-4 w-4 fill-current" />}
                       </Button>
                     </div>
                   </form>
@@ -802,7 +802,7 @@ export default function AdminSupportPage() {
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
                     <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                      <MessageSquare className="h-8 w-8 text-gray-600" />
+                      <MessageSquare className="h-8 w-8 text-gray-600 fill-current" />
                     </div>
                     <h3 className="text-sm font-semibold text-gray-400 mb-1">Select a Conversation</h3>
                     <p className="text-xs text-gray-600">Choose a ticket from the list to start responding</p>
