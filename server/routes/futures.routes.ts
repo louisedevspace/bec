@@ -353,19 +353,21 @@ export default function registerFuturesRoutes(app: Express) {
       // Check time-based minimum amount
       const parsedAmount = parseFloat(amount);
       const parsedDuration = parseInt(duration);
-      const timeLimitsConfig = futuresTimeLimitsService.getConfig();
+      // IMPORTANT: Use async getConfigAsync() to ensure we get the latest config from Redis
+      const timeLimitsConfig = await futuresTimeLimitsService.getConfigAsync();
 
       if (timeLimitsConfig.enabled) {
-        // Check if duration is active
-        if (!futuresTimeLimitsService.isDurationActive(parsedDuration)) {
+        // Check if duration is active (use async method to get latest config)
+        const isDurationActive = await futuresTimeLimitsService.isDurationActiveAsync(parsedDuration);
+        if (!isDurationActive) {
           return res.status(400).json({
             message: `Trading for ${parsedDuration} second duration is currently disabled.`,
             code: 'DURATION_DISABLED',
           });
         }
 
-        // Check minimum amount for this duration (using only time-based limits)
-        const timeBasedMin = futuresTimeLimitsService.getMinAmountForDuration(parsedDuration);
+        // Check minimum amount for this duration (use async method to get latest config)
+        const timeBasedMin = await futuresTimeLimitsService.getMinAmountForDurationAsync(parsedDuration);
 
         if (parsedAmount < timeBasedMin) {
           return res.status(400).json({

@@ -107,6 +107,30 @@ class FuturesTimeLimitsService {
    * Get the minimum amount for a specific duration.
    * If the feature is disabled, return defaultMinAmount.
    * If duration not in list, return defaultMinAmount.
+   * Uses async getConfigAsync to ensure we have the latest config from Redis.
+   */
+  async getMinAmountForDurationAsync(duration: number): Promise<number> {
+    const config = await this.getConfigAsync();
+
+    // If feature is disabled, return default
+    if (!config.enabled) {
+      return config.defaultMinAmount;
+    }
+
+    // Find the limit for this duration
+    const limit = config.limits.find((l) => l.duration === duration);
+
+    // If not found or not active, return default
+    if (!limit) {
+      return config.defaultMinAmount;
+    }
+
+    return limit.minAmount;
+  }
+
+  /**
+   * Sync version - only use when you've already called getConfigAsync() to warm the cache
+   * @deprecated Use getMinAmountForDurationAsync instead
    */
   getMinAmountForDuration(duration: number): number {
     const config = this.getConfig();
@@ -130,7 +154,31 @@ class FuturesTimeLimitsService {
   // ─── Check if Duration is Active ────────────────────────────────────────
 
   /**
-   * Check if a duration is available for trading
+   * Check if a duration is available for trading.
+   * Uses async getConfigAsync to ensure we have the latest config from Redis.
+   */
+  async isDurationActiveAsync(duration: number): Promise<boolean> {
+    const config = await this.getConfigAsync();
+
+    // If feature is disabled, all durations are active (no restrictions)
+    if (!config.enabled) {
+      return true;
+    }
+
+    // Find the limit for this duration
+    const limit = config.limits.find((l) => l.duration === duration);
+
+    // If not in list, it's allowed (use default min amount)
+    if (!limit) {
+      return true;
+    }
+
+    return limit.isActive;
+  }
+
+  /**
+   * Sync version - only use when you've already called getConfigAsync() to warm the cache
+   * @deprecated Use isDurationActiveAsync instead
    */
   isDurationActive(duration: number): boolean {
     const config = this.getConfig();
