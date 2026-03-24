@@ -83,6 +83,7 @@ export default function AdminSupportPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -402,6 +403,19 @@ export default function AdminSupportPage() {
                 className="data-[state=checked]:bg-blue-500"
               />
               {autoReplyEnabled && <span className="text-xs text-emerald-400">Active</span>}
+            </div>
+            {/* Suggestions visibility toggle */}
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-yellow-400 fill-current" />
+              <span className="text-sm text-gray-400">Suggestions</span>
+              <Switch 
+                checked={showSuggestions} 
+                onCheckedChange={setShowSuggestions}
+                className="data-[state=checked]:bg-yellow-500"
+              />
+              <span className={`text-xs ${showSuggestions ? 'text-emerald-400' : 'text-gray-500'}`}>
+                {showSuggestions ? 'On' : 'Off'}
+              </span>
             </div>
             <Button variant="outline" size="sm" onClick={() => refetchAll()} className="bg-transparent border-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
               <RefreshCw className="h-4 w-4 mr-1.5 fill-current" /> Refresh
@@ -732,7 +746,7 @@ export default function AdminSupportPage() {
                   )}
 
                   {/* Auto-Reply Suggestions */}
-                  {suggestions?.suggestions?.length > 0 && (
+                  {showSuggestions && autoReplyEnabled && suggestions?.suggestions?.length > 0 && (
                     <div className="px-4 py-2 border-t border-[#1e1e1e] bg-[#0a0a0a]">
                       <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-current" />
