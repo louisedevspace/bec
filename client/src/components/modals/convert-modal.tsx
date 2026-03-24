@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowDownUp, RefreshCw, Loader2, CheckCircle, AlertTriangle, ArrowRight, Snowflake } from "lucide-react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { formatCryptoNumber, getCurrencySymbol } from "@/utils/format-utils";
-import { useEffect } from "react";
+
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cryptoApi } from "@/services/crypto-api";
@@ -56,77 +56,98 @@ function useLivePrice(symbol: string) {
   const [price, setPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cgId, setCgId] = useState<string | null>(null);
 
-  // Dynamically fetch CoinGecko ID if not in hardcoded map
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchCgId() {
-      if (HARDCODED_IDS[symbol.toUpperCase()]) {
-        setCgId(HARDCODED_IDS[symbol.toUpperCase()]);
-      } else {
-        try {
-          const res = await fetch("https://api.coingecko.com/api/v3/coins/list");
-          const allCoins = await res.json();
-          const found = allCoins.find((c: any) => c.symbol.toLowerCase() === symbol.toLowerCase());
-          if (!cancelled) setCgId(found ? found.id : null);
-        } catch {
-          if (!cancelled) setCgId(null);
-        }
-      }
+  const STABLECOINS = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP'];
+  const isStable = STABLECOINS.includes(symbol.toUpperCase());
+
+  const fetchPrice = useCallback(async () => {
+    if (!symbol) return;
+    
+    // Stablecoins are always $1
+    if (isStable) {
+      setPrice(1.0);
+      setLoading(false);
+      setError(null);
+      return;
     }
-    if (symbol) fetchCgId();
-    return () => { cancelled = true; };
-  }, [symbol]);
 
-  async function fetchPrice() {
     setLoading(true);
     setError(null);
     let found = false;
-    
-    // Handle stablecoins specially (they're pegged to $1)
-    const stablecoins = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP'];
-    if (stablecoins.includes(symbol.toUpperCase())) {
-      setPrice(1.0);
-      setLoading(false);
-      return;
-    }
-    
-    // Try Binance first
+
+    // Try Binance with specific pair endpoint (much faster than fetching all)
     try {
-      const res = await fetch(BINANCE_URL);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const ticker = data.find((t: any) => t.symbol === symbol + "USDT");
-        if (ticker && ticker.price) {
-          setPrice(parseFloat(ticker.price));
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol.toUpperCase()}USDT`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.price) {
+          setPrice(parseFloat(data.price));
           found = true;
         }
       }
-    } catch {}
-    // Fallback to CoinGecko
-    if (!found && cgId) {
-      try {
-        const res = await fetch(COINGECKO_URL + cgId);
-        const data = await res.json();
-        if (data[cgId] && data[cgId].usd) {
-          setPrice(parseFloat(data[cgId].usd));
-          found = true;
-        }
-      } catch {}
+    } catch {
+      // Binance failed, try fallback
     }
+
+    // Fallback to CoinGecko
+    if (!found) {
+      const cgId = HARDCODED_IDS[symbol.toUpperCase()];
+      if (cgId) {
+        try {
+          const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=${cgId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data[cgId]?.usd) {
+              setPrice(parseFloat(data[cgId].usd));
+              found = true;
+            }
+          }
+        } catch {
+          // CoinGecko also failed
+        }
+      }
+    }
+
+    // If still not found, try searching CoinGecko coin list
+    if (!found && !HARDCODED_IDS[symbol.toUpperCase()]) {
+      try {
+        const listRes = await fetch("https://api.coingecko.com/api/v3/coins/list");
+        if (listRes.ok) {
+          const allCoins = await listRes.json();
+          const coin = allCoins.find((c: any) => c.symbol.toLowerCase() === symbol.toLowerCase());
+          if (coin) {
+            const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=${coin.id}`);
+            if (priceRes.ok) {
+              const priceData = await priceRes.json();
+              if (priceData[coin.id]?.usd) {
+                setPrice(parseFloat(priceData[coin.id].usd));
+                found = true;
+              }
+            }
+          }
+        }
+      } catch {
+        // All sources failed
+      }
+    }
+
     if (!found) {
       setError("Price not available");
-      setPrice(null);
     }
     setLoading(false);
-  }
+  }, [symbol, isStable]);
 
+  // Fetch on mount and symbol change
   useEffect(() => {
-    const stablecoins = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP'];
-    if (symbol && (stablecoins.includes(symbol.toUpperCase()) || HARDCODED_IDS[symbol.toUpperCase()] || cgId)) fetchPrice();
-    // eslint-disable-next-line
-  }, [symbol, cgId]);
+    fetchPrice();
+  }, [fetchPrice]);
+
+  // Auto-refresh every 15 seconds for non-stablecoins
+  useEffect(() => {
+    if (isStable || !symbol) return;
+    const interval = setInterval(fetchPrice, 15000);
+    return () => clearInterval(interval);
+  }, [fetchPrice, isStable, symbol]);
 
   return { price, loading, error, refresh: fetchPrice };
 }
