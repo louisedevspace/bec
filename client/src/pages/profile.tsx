@@ -409,7 +409,7 @@ export default function ProfilePage() {
 
         {/* Verification Status Card - Hide when KYC is approved */}
         {verificationDisplay.status !== 'approved' && (
-          <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4`}>
+          <div id="kyc-status-section" className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 transition-all duration-300`}>
             <div className="flex items-center gap-2 mb-2">
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
                 verificationDisplay.status === 'rejected' ? 'bg-red-500/10' :
@@ -535,8 +535,17 @@ export default function ProfilePage() {
           <MenuButton icon={History} label="Transaction history" onClick={() => handleMenuAction('transaction-history')} />
           <MenuButton 
             icon={Shield} 
-            label="Verification status" 
-            onClick={() => {}}
+            label={kycStatus?.status === 'approved' ? "KYC Verified" : "Verification status"} 
+            onClick={() => {
+              if (kycStatus?.status !== 'approved') {
+                const el = document.getElementById('kyc-status-section');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  el.classList.add('ring-2', 'ring-blue-500/50');
+                  setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500/50'), 2000);
+                }
+              }
+            }}
             showShield={kycStatus?.status === 'approved'}
           />
           <MenuButton icon={Key} label="Update the password" onClick={() => handleMenuAction('update-password')} isLast />
