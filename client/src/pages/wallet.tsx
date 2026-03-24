@@ -10,14 +10,14 @@ import { ConvertModal } from "@/components/modals/convert-modal";
 import { PortfolioModal } from "@/components/modals/portfolio-modal";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { exportToCSV } from "@/utils/csv-export";
+
 import {
   Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
   RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, CreditCard, Snowflake, BarChart3, Activity,
-  DollarSign, Target, Award, Percent, ArrowDown, ArrowUp, Info, X,
-  Download, ChevronLeft, ChevronRight
+  DollarSign, ArrowDown, ArrowUp, Info, X,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -112,7 +112,7 @@ interface WalletSummary {
 export default function WalletPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [hideBalances, setHideBalances] = useState(false);
-  const [activeTab, setActiveTab] = useState<"assets" | "history" | "overview" | "analytics">("overview");
+  const [activeTab, setActiveTab] = useState<"assets" | "history" | "overview">("overview");
   const [txFilter, setTxFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
@@ -130,8 +130,8 @@ export default function WalletPage() {
     if (action && ["deposit", "withdraw", "convert", "portfolio"].includes(action)) {
       setActiveModal(action);
     }
-    if (tab && ["overview", "assets", "history", "analytics"].includes(tab)) {
-      setActiveTab(tab as "overview" | "assets" | "history" | "analytics");
+    if (tab && ["overview", "assets", "history"].includes(tab)) {
+      setActiveTab(tab as "overview" | "assets" | "history");
     }
     // Clean URL params after reading
     if (action || tab) {
@@ -209,29 +209,7 @@ export default function WalletPage() {
 
   useEffect(() => { setHistoryPage(0); }, [txFilter, historySearch, historyDateRange, historyPageSize]);
 
-  const handleExportHistory = () => {
-    if (filteredTransactions.length === 0) return;
-    const csvData = filteredTransactions.map(tx => ({
-      date: formatDateTime(tx.date),
-      type: tx.type,
-      symbol: tx.symbol,
-      side: tx.side || "",
-      amount: tx.amount,
-      price: tx.price || "",
-      fee: tx.feeAmount || 0,
-      status: tx.status,
-    }));
-    exportToCSV(csvData, "wallet_history", [
-      { key: "date", label: "Date" },
-      { key: "type", label: "Type" },
-      { key: "symbol", label: "Symbol" },
-      { key: "side", label: "Side" },
-      { key: "amount", label: "Amount" },
-      { key: "price", label: "Price" },
-      { key: "fee", label: "Fee" },
-      { key: "status", label: "Status" },
-    ]);
-  };
+  
 
   const bal = (v: number) => hideBalances ? "••••••" : `$${formatUsdNumber(v)}`;
   const cryptoBal = (v: number) => hideBalances ? "••••" : formatCryptoNumber(v);
@@ -361,7 +339,6 @@ export default function WalletPage() {
         <div className="flex gap-1 mt-4 bg-[#111] rounded-xl border border-[#1e1e1e] p-1">
           {[
             { id: "overview", label: "Overview", icon: PieChart },
-            { id: "analytics", label: "Analytics", icon: BarChart3 },
             { id: "assets", label: "Assets", icon: Wallet },
             { id: "history", label: "History", icon: History },
           ].map(tab => (
@@ -547,229 +524,6 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && wallet.analytics && (
-          <div className="mt-4 space-y-4">
-            {/* Trading Overview */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <BarChart3 size={14} className="text-blue-400" />
-                Trading Overview
-              </h3>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-lg font-bold text-white">{wallet.analytics.trading.executedTrades}</p>
-                  <p className="text-[10px] text-gray-500">Executed</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-lg font-bold text-yellow-400">{wallet.analytics.trading.pendingTrades}</p>
-                  <p className="text-[10px] text-gray-500">Pending</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-lg font-bold text-gray-500">{wallet.analytics.trading.cancelledTrades}</p>
-                  <p className="text-[10px] text-gray-500">Cancelled</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-green-500/5 rounded-xl border border-green-500/10 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ArrowDown size={12} className="text-green-400" />
-                    <span className="text-[10px] text-gray-500">Buy Orders</span>
-                  </div>
-                  <p className="text-sm font-bold text-green-400">{wallet.analytics.trading.buyCount}</p>
-                  <p className="text-[10px] text-gray-600">Vol: {hideBalances ? '••••' : `$${formatUsdNumber(wallet.analytics.trading.buyVolume)}`}</p>
-                </div>
-                <div className="bg-red-500/5 rounded-xl border border-red-500/10 p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <ArrowUp size={12} className="text-red-400" />
-                    <span className="text-[10px] text-gray-500">Sell Orders</span>
-                  </div>
-                  <p className="text-sm font-bold text-red-400">{wallet.analytics.trading.sellCount}</p>
-                  <p className="text-[10px] text-gray-600">Vol: {hideBalances ? '••••' : `$${formatUsdNumber(wallet.analytics.trading.sellVolume)}`}</p>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Total Volume</p>
-                  <p className="text-sm font-bold text-white">{bal(wallet.analytics.trading.totalVolume)}</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Avg Trade Size</p>
-                  <p className="text-sm font-bold text-white">{bal(wallet.analytics.trading.avgTradeSize)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Traded Pairs */}
-            {wallet.analytics.trading.topTradedPairs.length > 0 && (
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Target size={14} className="text-purple-400" />
-                  Most Traded Pairs
-                </h3>
-                <div className="space-y-2">
-                  {wallet.analytics.trading.topTradedPairs.map((pair, i) => {
-                    const maxVol = wallet.analytics!.trading.topTradedPairs[0]?.volume || 1;
-                    const pct = (pair.volume / maxVol) * 100;
-                    return (
-                      <div key={pair.symbol} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-600 w-4">{i + 1}</span>
-                        <CryptoIcon symbol={pair.symbol.split("/")[0]} size="xs" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-white">{pair.symbol}</span>
-                            <span className="text-xs text-gray-400">{pair.count} trades</span>
-                          </div>
-                          <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
-                            <div className="h-full bg-purple-500 rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                        <span className="text-xs text-white tabular-nums w-20 text-right">{bal(pair.volume)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Futures Performance */}
-            {wallet.analytics.futures.totalFutures > 0 && (
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Zap size={14} className="text-purple-400" />
-                  Futures Performance
-                </h3>
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                    <p className="text-lg font-bold text-white">{wallet.analytics.futures.completedFutures}</p>
-                    <p className="text-[10px] text-gray-500">Completed</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                    <p className="text-lg font-bold text-green-400">{wallet.analytics.futures.wins}</p>
-                    <p className="text-[10px] text-gray-500">Wins</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                    <p className="text-lg font-bold text-red-400">{wallet.analytics.futures.losses}</p>
-                    <p className="text-[10px] text-gray-500">Losses</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                    <p className="text-[10px] text-gray-500 mb-0.5">Win Rate</p>
-                    <p className="text-sm font-bold text-white">{wallet.analytics.futures.winRate.toFixed(1)}%</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                    <p className="text-[10px] text-gray-500 mb-0.5">Total P&L</p>
-                    <p className={`text-sm font-bold ${wallet.analytics.futures.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {wallet.analytics.futures.pnl >= 0 ? '+' : ''}{bal(wallet.analytics.futures.pnl)}
-                    </p>
-                  </div>
-                  <div className="bg-green-500/5 rounded-xl border border-green-500/10 p-3">
-                    <p className="text-[10px] text-gray-500 mb-0.5">Biggest Win</p>
-                    <p className="text-sm font-bold text-green-400">+{bal(wallet.analytics.futures.biggestWin)}</p>
-                  </div>
-                  <div className="bg-red-500/5 rounded-xl border border-red-500/10 p-3">
-                    <p className="text-[10px] text-gray-500 mb-0.5">Biggest Loss</p>
-                    <p className="text-sm font-bold text-red-400">{bal(wallet.analytics.futures.biggestLoss)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Monthly Performance */}
-            {wallet.analytics.monthlyPerformance.length > 0 && (
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Activity size={14} className="text-cyan-400" />
-                  Monthly Performance
-                </h3>
-                <div className="space-y-2">
-                  {wallet.analytics.monthlyPerformance.map(m => {
-                    const maxVol = Math.max(...wallet.analytics!.monthlyPerformance.map(p => p.volume), 1);
-                    const pct = (m.volume / maxVol) * 100;
-                    return (
-                      <div key={m.month} className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-medium text-white">{m.month}</span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-gray-500">{m.trades} trades</span>
-                            <span className={`text-xs font-semibold ${m.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {m.pnl >= 0 ? '+' : ''}{hideBalances ? '••••' : `$${formatUsdNumber(Math.abs(m.pnl))}`}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${m.pnl >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                            style={{ width: `${Math.max(2, pct)}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] text-gray-600">
-                            Vol: {hideBalances ? '••••' : `$${formatUsdNumber(m.volume)}`}
-                          </span>
-                          <span className="text-[10px] text-amber-400/60">
-                            Fees: {hideBalances ? '••••' : `$${formatUsdNumber(m.fees)}`}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Net Flow & Fees Summary */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <DollarSign size={14} className="text-amber-400" />
-                Financial Summary
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Net Deposit Flow</span>
-                  <span className={`text-sm font-bold ${wallet.analytics.portfolio.netFlow >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {wallet.analytics.portfolio.netFlow >= 0 ? '+' : ''}{bal(wallet.analytics.portfolio.netFlow)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Total Fees Paid</span>
-                  <span className="text-sm font-bold text-amber-400">{bal(wallet.analytics.fees.total)}</span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Trading Fees</span>
-                  <span className="text-sm font-bold text-white">{bal(wallet.analytics.fees.trading)}</span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Deposit Fees</span>
-                  <span className="text-sm font-bold text-white">{bal(wallet.analytics.fees.deposit)}</span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Withdrawal Fees</span>
-                  <span className="text-sm font-bold text-white">{bal(wallet.analytics.fees.withdrawal)}</span>
-                </div>
-                <div className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <span className="text-xs text-gray-400">Estimated P&L</span>
-                  <span className={`text-sm font-bold ${wallet.estimatedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {wallet.estimatedPnl >= 0 ? '+' : ''}{bal(wallet.estimatedPnl)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Analytics Tab - Empty State */}
-        {activeTab === "analytics" && !wallet.analytics && (
-          <div className="mt-4">
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-8 text-center">
-              <BarChart3 size={32} className="text-gray-600 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Analytics data is loading...</p>
-              <button onClick={() => refetch()} className="mt-3 text-blue-400 text-xs hover:text-blue-300">Refresh</button>
-            </div>
-          </div>
-        )}
-
         {/* Assets Tab */}
         {activeTab === "assets" && (
           <div className="mt-4 space-y-3">
@@ -867,14 +621,6 @@ export default function WalletPage() {
                 />
               </div>
               <DateRangePicker value={historyDateRange} onChange={setHistoryDateRange} />
-              <button
-                onClick={handleExportHistory}
-                disabled={filteredTransactions.length === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Download size={12} />
-                CSV
-              </button>
             </div>
 
             {/* Type Filter Tabs */}
