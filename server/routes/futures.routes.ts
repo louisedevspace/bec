@@ -69,8 +69,8 @@ export default function registerFuturesRoutes(app: Express) {
 
   // ─── Public Futures Time Limits Route ───────────────────────────────────────
 
-  // GET /api/futures-time-limits — get time limits for client display
-  app.get("/api/futures-time-limits", requireAuth, async (req, res) => {
+  // GET /api/futures-time-limits — get time limits for client display (public, no auth needed)
+  app.get("/api/futures-time-limits", async (req, res) => {
     try {
       const config = await futuresTimeLimitsService.getConfigAsync();
       res.json(config);

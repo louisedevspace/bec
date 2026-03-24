@@ -4,6 +4,7 @@ import compression from "compression";
 import { registerRoutes } from "./routes/index";
 import { setupVite, serveStatic, log } from "./vite";
 import LiveCryptoService from "./services/live-crypto-service";
+import { futuresTimeLimitsService } from "./services/futures-time-limits.service";
 import { recordApiMetric } from "./perf-metrics";
 import { getServerConfig } from "./config";
 import { getInternalTaskSecret } from "./routes/middleware";
@@ -238,6 +239,9 @@ app.use((req, res, next) => {
 
   // Initialize Redis cache (optional - app works without it)
   await initRedis();
+
+  // Initialize futures time limits service (loads config from Redis)
+  await futuresTimeLimitsService.initialize();
 
   // Initialize live crypto service
   const cryptoService = LiveCryptoService.getInstance();
