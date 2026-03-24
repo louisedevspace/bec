@@ -82,7 +82,6 @@ export default function FuturesPage() {
   const [timerTradeData, setTimerTradeData] = useState<any>(null);
   const [duration, setDuration] = useState<number>(60);
   const [availableBalance, setAvailableBalance] = useState<number>(0);
-  const [minTradeAmount, setMinTradeAmount] = useState<number>(50);
   const [tradeLimits, setTradeLimits] = useState<{ is_enabled: boolean; min_amount: number; max_amount: number } | null>(null);
   
     // Time-based limits state
@@ -108,12 +107,11 @@ export default function FuturesPage() {
   const selectedDuration = durationOptions.find(d => d.value === duration);
   const profitRatio = selectedDuration?.profitRatio || 30;
 
-  // Calculate effective minimum based on time-based limits
+  // Calculate effective minimum based on time-based limits only
   const getEffectiveMinimum = (durationValue: number) => {
-    if (!timeLimitsConfig?.enabled) return minTradeAmount;
+    if (!timeLimitsConfig?.enabled) return timeLimitsConfig?.defaultMinAmount ?? 50;
     const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue && l.isActive);
-    const timeBasedMin = limitForDuration?.minAmount ?? timeLimitsConfig.defaultMinAmount;
-    return Math.max(minTradeAmount, timeBasedMin);
+    return limitForDuration?.minAmount ?? timeLimitsConfig.defaultMinAmount;
   };
 
   const effectiveMinAmount = getEffectiveMinimum(duration);
@@ -191,27 +189,6 @@ export default function FuturesPage() {
     }
   };
 
-  const fetchFuturesSettings = async () => {
-    if (!user) return;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
-
-      const response = await fetch('/api/futures-settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMinTradeAmount(data.futures_min_amount || 50);
-      }
-    } catch {
-      // keep default
-    }
-  };
 
   // Fetch trading limits for current pair
   const fetchTradingLimits = async () => {
@@ -228,7 +205,7 @@ export default function FuturesPage() {
         setTradeLimits(data);
         // Use the higher of old min setting and new limits min
         if (data?.min_amount) {
-          setMinTradeAmount(prev => Math.max(prev, data.min_amount));
+          // Trading limits from admin can still apply as a floor
         }
       }
     } catch { /* keep defaults */ }
@@ -263,7 +240,6 @@ export default function FuturesPage() {
   useEffect(() => {
     fetchTrades();
     fetchBalance();
-    fetchFuturesSettings();
     fetchTimeLimits();
   }, [user]);
 

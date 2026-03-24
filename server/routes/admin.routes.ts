@@ -841,21 +841,13 @@ export default function registerAdminRoutes(app: Express) {
   // PUT /api/admin/user-futures-settings — update per-user futures trade controls
   app.put("/api/admin/user-futures-settings", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { userId, futuresMinAmount, futuresTradeResult } = req.body;
+      const { userId, futuresTradeResult } = req.body;
 
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
       }
 
       const updateData: any = {};
-
-      if (futuresMinAmount !== undefined) {
-        const minAmount = parseFloat(futuresMinAmount);
-        if (isNaN(minAmount) || minAmount < 0) {
-          return res.status(400).json({ message: "Invalid minimum amount" });
-        }
-        updateData.futures_min_amount = minAmount;
-      }
 
       if (futuresTradeResult !== undefined) {
         if (futuresTradeResult !== null && futuresTradeResult !== 'win' && futuresTradeResult !== 'loss') {
@@ -872,7 +864,7 @@ export default function registerAdminRoutes(app: Express) {
         .from("users")
         .update(updateData)
         .eq("id", userId)
-        .select("id, email, futures_min_amount, futures_trade_result")
+        .select("id, email, futures_trade_result")
         .single();
 
       if (updateError) {

@@ -1072,7 +1072,6 @@ export default function AdminUsers() {
             userId={selectedFuturesUser.id}
             userEmail={selectedFuturesUser.email}
             userName={selectedFuturesUser.full_name || selectedFuturesUser.email}
-            currentMinAmount={parseFloat(selectedFuturesUser.futures_min_amount) || 50}
             currentTradeResult={selectedFuturesUser.futures_trade_result}
           />
         )}

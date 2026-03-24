@@ -30,66 +30,8 @@ export default function registerStakingRoutes(app: Express) {
       const validatedData = insertStakingPositionSchema.parse(req.body);
       (validatedData as any).userId = userId;
 
-      // Check user staking limits
-      const { data: stakingLimit } = await supabaseAdmin
-        .from("user_staking_limits")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (stakingLimit) {
-        // Check if staking is blocked for this user
-        if (!stakingLimit.is_enabled) {
-          return res.status(403).json({ message: "Staking is currently disabled for your account. Contact support for details." });
-        }
-
-        const stakeAmount = parseFloat(validatedData.amount);
-
-        // Check min amount
-        if (stakingLimit.min_stake_amount && stakeAmount < parseFloat(stakingLimit.min_stake_amount)) {
-          return res.status(400).json({
-            message: `Minimum staking amount is $${parseFloat(stakingLimit.min_stake_amount).toLocaleString()}`,
-            minAmount: stakingLimit.min_stake_amount,
-          });
-        }
-
-        // Check max single stake
-        if (stakingLimit.max_stake_amount && stakeAmount > parseFloat(stakingLimit.max_stake_amount)) {
-          return res.status(400).json({
-            message: `Maximum staking amount is $${parseFloat(stakingLimit.max_stake_amount).toLocaleString()}`,
-            maxAmount: stakingLimit.max_stake_amount,
-          });
-        }
-
-        // Check max duration
-        if (stakingLimit.max_duration && validatedData.duration > stakingLimit.max_duration) {
-          return res.status(400).json({
-            message: `Maximum staking duration is ${stakingLimit.max_duration} days`,
-            maxDuration: stakingLimit.max_duration,
-          });
-        }
-
-        // Check max total staked
-        if (stakingLimit.max_total_staked) {
-          const { data: activePositions } = await supabaseAdmin
-            .from("staking_positions")
-            .select("amount")
-            .eq("user_id", userId)
-            .eq("status", "active");
-
-          const currentTotalStaked = (activePositions || []).reduce(
-            (sum: number, p: any) => sum + parseFloat(p.amount || "0"), 0
-          );
-
-          if (currentTotalStaked + stakeAmount > parseFloat(stakingLimit.max_total_staked)) {
-            return res.status(400).json({
-              message: `Total staked amount would exceed your limit of $${parseFloat(stakingLimit.max_total_staked).toLocaleString()}`,
-              currentStaked: currentTotalStaked,
-              maxTotal: stakingLimit.max_total_staked,
-            });
-          }
-        }
-      }
+      // Note: Staking validation uses product-level limits (hardcoded per-product min/max/APY)
+      // No per-user staking limits are enforced
 
       // Check balance
       const { data: portfolio } = await supabaseAdmin

@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, ArrowUpDown, 
-  Settings, TrendingUp, Shield, Search, Edit2, Save, X, Users, Globe 
+  Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, 
+  TrendingUp, Search, Edit2, Save, X 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
@@ -26,24 +26,6 @@ interface TradingPair {
   updated_at: string;
 }
 
-interface TradingLimit {
-  id: number;
-  user_id: string;
-  symbol: string;
-  trade_type: string;
-  min_amount: string;
-  max_amount: string;
-  is_enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface UserOption {
-  id: string;
-  email: string;
-  username: string;
-}
-
 function rateToPercent(rate: string | number): string {
   const numeric = Number(rate);
   if (!Number.isFinite(numeric)) return '0.10';
@@ -58,7 +40,6 @@ const AVAILABLE_ASSETS = [
 
 export default function AdminTradingPairs() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'pairs' | 'limits'>('pairs');
   const [pairs, setPairs] = useState<TradingPair[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -73,21 +54,6 @@ export default function AdminTradingPairs() {
     maxTradeAmount: '1000',
     tradingFeePercent: '0.10',
   });
-
-  // Trading limits state
-  const [limits, setLimits] = useState<TradingLimit[]>([]);
-  const [limitsLoading, setLimitsLoading] = useState(false);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [showAddLimit, setShowAddLimit] = useState(false);
-  const [newLimit, setNewLimit] = useState({
-    userId: '*',
-    symbol: '*',
-    tradeType: 'both',
-    minAmount: '0',
-    maxAmount: '1000000',
-    isEnabled: true,
-  });
-  const [userSearch, setUserSearch] = useState('');
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -117,7 +83,6 @@ export default function AdminTradingPairs() {
 
   useEffect(() => {
     fetchPairs();
-    fetchUsers();
   }, []);
 
   const handleToggle = async (id: number) => {
@@ -246,102 +211,6 @@ export default function AdminTradingPairs() {
     }
   };
 
-  // ========== TRADING LIMITS FUNCTIONS ==========
-  const fetchUsers = async () => {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch('/api/admin/users', { headers });
-      if (response.ok) {
-        const data = await response.json();
-        const usersList = Array.isArray(data) ? data : (data.users || []);
-        setUsers(usersList.map((u: any) => ({ id: u.id, email: u.email, username: u.username })));
-      }
-    } catch { /* ignore */ }
-  };
-
-  const fetchLimits = async () => {
-    try {
-      setLimitsLoading(true);
-      const headers = await getAuthHeaders();
-      const response = await fetch('/api/admin/trading-limits', { headers });
-      if (response.ok) {
-        setLimits(await response.json());
-      }
-    } catch { /* ignore */ }
-    finally { setLimitsLoading(false); }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'limits') fetchLimits();
-  }, [activeTab]);
-
-  const handleAddLimit = async () => {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch('/api/admin/trading-limits', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(newLimit),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setLimits(prev => [data, ...prev]);
-        setShowAddLimit(false);
-        setNewLimit({ userId: '*', symbol: '*', tradeType: 'both', minAmount: '0', maxAmount: '1000000', isEnabled: true });
-        toast({ title: 'Success', description: 'Trading limit saved' });
-      } else {
-        const err = await response.json();
-        toast({ title: 'Error', description: err.message || 'Failed to save limit', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to save limit', variant: 'destructive' });
-    }
-  };
-
-  const handleToggleLimit = async (limit: TradingLimit) => {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/admin/trading-limits/${limit.id}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ isEnabled: !limit.is_enabled }),
-      });
-      if (response.ok) {
-        const updated = await response.json();
-        setLimits(prev => prev.map(l => l.id === limit.id ? updated : l));
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to toggle limit', variant: 'destructive' });
-    }
-  };
-
-  const handleDeleteLimit = async (id: number) => {
-    if (!confirm('Delete this trading limit?')) return;
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/admin/trading-limits/${id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      if (response.ok) {
-        setLimits(prev => prev.filter(l => l.id !== id));
-        toast({ title: 'Deleted', description: 'Trading limit removed' });
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to delete limit', variant: 'destructive' });
-    }
-  };
-
-  const getUserLabel = (userId: string) => {
-    if (userId === '*') return 'All Users (Global)';
-    const user = users.find(u => u.id === userId);
-    return user ? `${user.username} (${user.email})` : userId.slice(0, 12) + '...';
-  };
-
-  const filteredUsers = userSearch
-    ? users.filter(u => u.email.toLowerCase().includes(userSearch.toLowerCase()) || u.username.toLowerCase().includes(userSearch.toLowerCase()))
-    : users;
-
   const filteredPairs = pairs.filter(p => 
     p.symbol.toLowerCase().includes(search.toLowerCase()) ||
     p.base_asset.toLowerCase().includes(search.toLowerCase())
@@ -361,41 +230,17 @@ export default function AdminTradingPairs() {
               <TrendingUp size={24} className="text-blue-400 fill-current" />
               Trading Configuration
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Manage trading pairs and user limits</p>
+            <p className="text-sm text-gray-500 mt-1">Manage trading pairs and their limits</p>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-[#111] rounded-xl p-1 border border-[#1e1e1e] w-fit">
-          <button
-            onClick={() => setActiveTab('pairs')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'pairs' ? 'bg-[#222] text-white' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <TrendingUp size={14} className="inline mr-1.5 -mt-0.5 fill-current" />
-            Trading Pairs
-          </button>
-          <button
-            onClick={() => setActiveTab('limits')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'limits' ? 'bg-[#222] text-white' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <Shield size={14} className="inline mr-1.5 -mt-0.5 fill-current" />
-            Trading Limits
-          </button>
-        </div>
-
-        {activeTab === 'pairs' && (
-        <>
         {/* Pairs Header Actions */}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={fetchPairs} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
             <RefreshCw size={14} className={`${loading ? 'animate-spin' : ''} fill-current`} />
           </Button>
           <Button variant="outline" size="sm" onClick={handleSeed} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-            <Shield size={14} className="mr-1 fill-current" /> Seed Defaults
+            Seed Defaults
           </Button>
           <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700">
             <Plus size={14} className="mr-1 fill-current" /> Add Pair
@@ -689,222 +534,6 @@ export default function AdminTradingPairs() {
             </>
           )}
         </div>
-        </>
-        )}
-
-        {/* ==================== LIMITS TAB ==================== */}
-        {activeTab === 'limits' && (
-        <>
-          <div className="flex gap-2 justify-between items-start">
-            <div>
-              <p className="text-sm text-gray-400">
-                Set minimum/maximum trade amounts per user or globally. 
-                Use <span className="text-blue-400 font-mono">*</span> for "all users" or "all pairs".
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Priority: Per-user + per-pair &gt; Per-user + all pairs &gt; Global + per-pair &gt; Global + all pairs
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchLimits} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-                <RefreshCw size={14} className={`${limitsLoading ? 'animate-spin' : ''} fill-current`} />
-              </Button>
-              <Button size="sm" onClick={() => setShowAddLimit(!showAddLimit)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus size={14} className="mr-1 fill-current" /> Add Limit
-              </Button>
-            </div>
-          </div>
-
-          {/* Add Limit Form */}
-          {showAddLimit && (
-            <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Plus size={16} className="text-blue-400 fill-current" /> New Trading Limit
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="text-[10px] text-gray-500 uppercase mb-1 block">User</label>
-                  <Select value={newLimit.userId} onValueChange={(v) => setNewLimit({ ...newLimit, userId: v })}>
-                    <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a] max-h-48">
-                      <SelectItem value="*">
-                        <span className="flex items-center gap-1"><Globe size={12} className="text-blue-400 fill-current" /> All Users (Global)</span>
-                      </SelectItem>
-                      {users.map(u => (
-                        <SelectItem key={u.id} value={u.id}>{u.username} ({u.email})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase mb-1 block">Pair</label>
-                  <Select value={newLimit.symbol} onValueChange={(v) => setNewLimit({ ...newLimit, symbol: v })}>
-                    <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a] max-h-48">
-                      <SelectItem value="*">All Pairs (*)</SelectItem>
-                      {pairs.map(p => (
-                        <SelectItem key={p.id} value={p.symbol}>{p.symbol}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase mb-1 block">Type</label>
-                  <Select value={newLimit.tradeType} onValueChange={(v) => setNewLimit({ ...newLimit, tradeType: v })}>
-                    <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
-                      <SelectItem value="spot">Spot</SelectItem>
-                      <SelectItem value="futures">Futures</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase mb-1 block">Min Amount</label>
-                  <Input
-                    type="number" step="any" value={newLimit.minAmount}
-                    onChange={(e) => setNewLimit({ ...newLimit, minAmount: e.target.value })}
-                    className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 uppercase mb-1 block">Max Amount</label>
-                  <Input
-                    type="number" step="any" value={newLimit.maxAmount}
-                    onChange={(e) => setNewLimit({ ...newLimit, maxAmount: e.target.value })}
-                    className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowAddLimit(false)} className="border-[#2a2a2a] bg-[#0a0a0a] text-gray-400">
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleAddLimit} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus size={14} className="mr-1 fill-current" /> Save Limit
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Limits Table */}
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
-            {limitsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
-              </div>
-            ) : limits.length === 0 ? (
-              <div className="text-center py-12">
-                <Shield size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
-                <p className="text-gray-500 text-sm">No trading limits configured</p>
-                <p className="text-gray-600 text-xs mt-1">Add limits to control minimum/maximum trade amounts per user or globally</p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-xs text-gray-500 uppercase border-b border-[#1e1e1e] bg-[#0a0a0a]">
-                        <th className="text-left py-3 px-4">User</th>
-                        <th className="text-center py-3 px-3">Pair</th>
-                        <th className="text-center py-3 px-3">Type</th>
-                        <th className="text-right py-3 px-3">Min Amount</th>
-                        <th className="text-right py-3 px-3">Max Amount</th>
-                        <th className="text-center py-3 px-3">Status</th>
-                        <th className="text-center py-3 px-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {limits.map((limit) => (
-                        <tr key={limit.id} className={`border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${!limit.is_enabled ? 'opacity-50' : ''}`}>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              {limit.user_id === '*' ? (
-                                <Globe size={14} className="text-blue-400 fill-current" />
-                              ) : (
-                                <Users size={14} className="text-gray-400 fill-current" />
-                              )}
-                              <span className="text-sm text-white truncate max-w-[200px]">{getUserLabel(limit.user_id)}</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3 px-3">
-                            <span className={`text-sm ${limit.symbol === '*' ? 'text-blue-400 font-mono' : 'text-white font-semibold'}`}>
-                              {limit.symbol === '*' ? 'All Pairs' : limit.symbol}
-                            </span>
-                          </td>
-                          <td className="text-center py-3 px-3">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              limit.trade_type === 'both' ? 'bg-purple-500/10 text-purple-400' :
-                              limit.trade_type === 'futures' ? 'bg-orange-500/10 text-orange-400' :
-                              'bg-blue-500/10 text-blue-400'
-                            }`}>
-                              {limit.trade_type === 'both' ? 'Spot + Futures' : limit.trade_type.charAt(0).toUpperCase() + limit.trade_type.slice(1)}
-                            </span>
-                          </td>
-                          <td className="text-right py-3 px-3 text-sm text-gray-300 tabular-nums">
-                            {parseFloat(limit.min_amount).toLocaleString()}
-                          </td>
-                          <td className="text-right py-3 px-3 text-sm text-gray-300 tabular-nums">
-                            {parseFloat(limit.max_amount).toLocaleString()}
-                          </td>
-                          <td className="text-center py-3 px-3">
-                            <button onClick={() => handleToggleLimit(limit)} className="inline-flex items-center">
-                              {limit.is_enabled ? (
-                                <ToggleRight size={22} className="text-green-400 fill-current" />
-                              ) : (
-                                <ToggleLeft size={22} className="text-gray-500 fill-current" />
-                              )}
-                            </button>
-                          </td>
-                          <td className="text-center py-3 px-4">
-                            <button onClick={() => handleDeleteLimit(limit.id)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
-                              <Trash2 size={14} className="fill-current" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile */}
-                <div className="block md:hidden divide-y divide-[#1e1e1e]">
-                  {limits.map((limit) => (
-                    <div key={limit.id} className={`p-4 ${!limit.is_enabled ? 'opacity-50' : ''}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {limit.user_id === '*' ? <Globe size={14} className="text-blue-400 fill-current" /> : <Users size={14} className="text-gray-400 fill-current" />}
-                          <span className="font-medium text-white text-sm truncate max-w-[180px]">{getUserLabel(limit.user_id)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleToggleLimit(limit)}>
-                            {limit.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
-                          </button>
-                          <button onClick={() => handleDeleteLimit(limit.id)} className="p-1 text-red-400">
-                            <Trash2 size={14} className="fill-current" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 text-xs text-gray-500">
-                        <span>Pair: {limit.symbol === '*' ? 'All' : limit.symbol}</span>
-                        <span>Min: {parseFloat(limit.min_amount).toLocaleString()}</span>
-                        <span>Max: {parseFloat(limit.max_amount).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </>
-        )}
 
       </div>
     </AdminLayout>

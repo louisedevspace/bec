@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, TrendingUp, TrendingDown, Minus, DollarSign, AlertTriangle } from 'lucide-react';
+import { Save, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,7 +15,6 @@ interface AdminFuturesSettingsModalProps {
   userId: string;
   userEmail: string;
   userName: string;
-  currentMinAmount?: number;
   currentTradeResult?: string | null;
 }
 
@@ -26,11 +24,9 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
   userId,
   userEmail,
   userName,
-  currentMinAmount,
   currentTradeResult,
 }) => {
   const { toast } = useToast();
-  const [minAmount, setMinAmount] = useState<string>('50');
   const [tradeResult, setTradeResult] = useState<string>('auto');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,15 +53,12 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
 
       if (response.ok) {
         const data = await response.json();
-        setMinAmount(String(parseFloat(data.futures_min_amount) || 50));
         setTradeResult(data.futures_trade_result || 'auto');
       } else {
         // Use props as fallback
-        setMinAmount(String(currentMinAmount || 50));
         setTradeResult(currentTradeResult || 'auto');
       }
     } catch {
-      setMinAmount(String(currentMinAmount || 50));
       setTradeResult(currentTradeResult || 'auto');
     } finally {
       setLoading(false);
@@ -87,7 +80,6 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
         },
         body: JSON.stringify({
           userId,
-          futuresMinAmount: parseFloat(minAmount),
           futuresTradeResult: tradeResult === 'auto' ? null : tradeResult,
         }),
       });
@@ -155,26 +147,6 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
             </div>
           ) : (
             <>
-              {/* Minimum Trade Amount */}
-              <div className="space-y-2">
-                <Label className="flex items-center space-x-2 text-gray-300">
-                  <DollarSign className="h-4 w-4 text-blue-400" />
-                  <span>Minimum Trade Amount (USDT)</span>
-                </Label>
-                <Input
-                  type="number"
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  min="0"
-                  step="1"
-                  placeholder="50"
-                  className="bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500 focus:border-blue-500"
-                />
-                <p className="text-xs text-gray-500">
-                  The minimum amount this user must trade in futures. Default is 50 USDT.
-                </p>
-              </div>
-
               {/* Trade Outcome Control */}
               <div className="space-y-2">
                 <Label className="flex items-center space-x-2 text-gray-300">
@@ -208,10 +180,6 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
                 <CardContent className="p-3">
                   <div className="text-sm font-medium text-blue-400 mb-2">Current Settings Preview</div>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-blue-300">Min Amount:</span>
-                      <span className="font-medium text-white">{minAmount} USDT</span>
-                    </div>
                     <div className="flex justify-between items-center">
                       <span className="text-blue-300">Trade Outcome:</span>
                       {getResultBadge(tradeResult)}

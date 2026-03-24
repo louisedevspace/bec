@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Coins, Users, TrendingUp, Clock, DollarSign, Search, RefreshCw,
-  ChevronDown, ChevronUp, Filter, MoreHorizontal, CheckCircle,
-  XCircle, Timer, Trash2, ArrowRight, Shield, AlertTriangle,
-  BarChart3, Activity, Lock, Unlock, Plus, Save, X, Calendar
+  ChevronDown, ChevronUp, CheckCircle, Timer, Trash2, BarChart3, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./admin-layout";
@@ -52,21 +50,6 @@ interface StakingStats {
   averageDuration: number;
 }
 
-interface StakingLimit {
-  id: number;
-  userId: string;
-  maxStakeAmount: string | null;
-  maxTotalStaked: string | null;
-  maxDuration: number | null;
-  minStakeAmount: string | null;
-  isEnabled: boolean;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  updatedBy: string | null;
-  user: StakingUser | null;
-}
-
 // ─── Helper ─────────────────────────────────────────────────────────────────
 
 function fmt(n: number | string, dec = 2): string {
@@ -98,18 +81,6 @@ export default function AdminStakingPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [extendDays, setExtendDays] = useState<Record<number, string>>({});
 
-  // Limit editor state
-  const [limitEditorOpen, setLimitEditorOpen] = useState(false);
-  const [limitUserId, setLimitUserId] = useState("");
-  const [limitForm, setLimitForm] = useState({
-    maxStakeAmount: "",
-    maxTotalStaked: "",
-    maxDuration: "",
-    minStakeAmount: "",
-    isEnabled: true,
-    notes: "",
-  });
-
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -137,14 +108,6 @@ export default function AdminStakingPage() {
       return res.json();
     },
     refetchInterval: 30000,
-  });
-
-  const { data: limits, isLoading: limitsLoading, refetch: refetchLimits } = useQuery<StakingLimit[]>({
-    queryKey: ["/api/admin/staking/limits"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/staking/limits");
-      return res.json();
-    },
   });
 
   // ─── Mutations ──────────────────────────────
@@ -195,36 +158,6 @@ export default function AdminStakingPage() {
     },
   });
 
-  const limitMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: string; data: any }) => {
-      const res = await apiRequest("PUT", `/api/admin/staking/limits/${userId}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Limit Saved", description: "Staking limit updated successfully" });
-      refetchLimits();
-      setLimitEditorOpen(false);
-      resetLimitForm();
-    },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Failed to save limit", variant: "destructive" });
-    },
-  });
-
-  const deleteLimitMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const res = await apiRequest("DELETE", `/api/admin/staking/limits/${userId}`);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Limit Removed", description: "User staking limit has been removed" });
-      refetchLimits();
-    },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Failed to remove limit", variant: "destructive" });
-    },
-  });
-
   // ─── Helpers ────────────────────────────────
 
   const positions = positionsData?.positions || [];
@@ -242,42 +175,6 @@ export default function AdminStakingPage() {
     );
   });
 
-  const resetLimitForm = useCallback(() => {
-    setLimitUserId("");
-    setLimitForm({ maxStakeAmount: "", maxTotalStaked: "", maxDuration: "", minStakeAmount: "", isEnabled: true, notes: "" });
-  }, []);
-
-  const openEditLimit = useCallback((limit: StakingLimit) => {
-    setLimitUserId(limit.userId || "");
-    setLimitForm({
-      maxStakeAmount: limit.maxStakeAmount || "",
-      maxTotalStaked: limit.maxTotalStaked || "",
-      maxDuration: limit.maxDuration?.toString() || "",
-      minStakeAmount: limit.minStakeAmount || "",
-      isEnabled: limit.isEnabled ?? true,
-      notes: limit.notes || "",
-    });
-    setLimitEditorOpen(true);
-  }, []);
-
-  const handleSaveLimit = () => {
-    if (!(limitUserId || '').trim()) {
-      toast({ title: "Error", description: "User ID is required", variant: "destructive" });
-      return;
-    }
-    limitMutation.mutate({
-      userId: (limitUserId || '').trim(),
-      data: {
-        maxStakeAmount: limitForm.maxStakeAmount || null,
-        maxTotalStaked: limitForm.maxTotalStaked || null,
-        maxDuration: limitForm.maxDuration ? parseInt(limitForm.maxDuration) : null,
-        minStakeAmount: limitForm.minStakeAmount || null,
-        isEnabled: limitForm.isEnabled,
-        notes: limitForm.notes || null,
-      },
-    });
-  };
-
   // ─── Render ─────────────────────────────────
 
   return (
@@ -292,10 +189,10 @@ export default function AdminStakingPage() {
               </div>
               <span className="min-w-0">Staking Management</span>
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monitor and manage all staking positions & user limits</p>
+            <p className="text-sm text-gray-500 mt-1">Monitor and manage all staking positions</p>
           </div>
           <Button
-            onClick={() => { refetchPositions(); refetchLimits(); }}
+            onClick={() => refetchPositions()}
             variant="outline"
             size="sm"
             className="bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#222] hover:text-white"
@@ -336,9 +233,6 @@ export default function AdminStakingPage() {
             </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 text-xs md:text-sm">
               <CheckCircle size={14} className="mr-1.5 fill-current" /> Completed
-            </TabsTrigger>
-            <TabsTrigger value="limits" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 text-xs md:text-sm">
-              <Shield size={14} className="mr-1.5 fill-current" /> User Limits
             </TabsTrigger>
           </TabsList>
 
@@ -392,225 +286,9 @@ export default function AdminStakingPage() {
                     deleteMutation.mutate(id);
                   }
                 }}
-                onSetLimit={(userId) => {
-                  setLimitUserId(userId);
-                  setLimitEditorOpen(true);
-                  setTab("limits");
-                }}
               />
             </TabsContent>
           ))}
-
-          {/* Limits Tab */}
-          <TabsContent value="limits" className="mt-4 space-y-4">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-              <p className="text-sm text-gray-400">Set per-user staking limits to control maximum amounts, durations, and enable/disable staking.</p>
-              <Button
-                onClick={() => { resetLimitForm(); setLimitEditorOpen(true); }}
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                <Plus size={14} className="mr-1.5 fill-current" /> Add Limit
-              </Button>
-            </div>
-
-            {/* Limit Editor Dialog */}
-            {limitEditorOpen && (
-              <Card className="bg-[#0f0f0f] border-purple-500/30">
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      <Shield size={16} className="text-purple-400 fill-current" />
-                      {limitUserId ? "Edit Staking Limit" : "New Staking Limit"}
-                    </h3>
-                    <button onClick={() => { setLimitEditorOpen(false); resetLimitForm(); }} className="p-1 rounded hover:bg-[#1a1a1a]">
-                      <X size={16} className="text-gray-400 fill-current" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">User ID</label>
-                      <Input
-                        value={limitUserId}
-                        onChange={(e) => setLimitUserId(e.target.value)}
-                        placeholder="Paste user UUID"
-                        className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Min Stake Amount (USDT)</label>
-                      <Input
-                        type="number"
-                        value={limitForm.minStakeAmount}
-                        onChange={(e) => setLimitForm({ ...limitForm, minStakeAmount: e.target.value })}
-                        placeholder="e.g. 10"
-                        className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Max Single Stake (USDT)</label>
-                      <Input
-                        type="number"
-                        value={limitForm.maxStakeAmount}
-                        onChange={(e) => setLimitForm({ ...limitForm, maxStakeAmount: e.target.value })}
-                        placeholder="e.g. 100000"
-                        className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Max Total Staked (USDT)</label>
-                      <Input
-                        type="number"
-                        value={limitForm.maxTotalStaked}
-                        onChange={(e) => setLimitForm({ ...limitForm, maxTotalStaked: e.target.value })}
-                        placeholder="e.g. 500000"
-                        className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Max Duration (days)</label>
-                      <Input
-                        type="number"
-                        value={limitForm.maxDuration}
-                        onChange={(e) => setLimitForm({ ...limitForm, maxDuration: e.target.value })}
-                        placeholder="e.g. 180"
-                        className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 pt-4">
-                      <label className="text-xs text-gray-500">Staking Enabled</label>
-                      <button
-                        onClick={() => setLimitForm({ ...limitForm, isEnabled: !limitForm.isEnabled })}
-                        className={`w-10 h-5 rounded-full transition-colors ${limitForm.isEnabled ? "bg-green-500" : "bg-red-500/50"}`}
-                      >
-                        <div className={`w-4 h-4 bg-white rounded-full transition-transform mx-0.5 ${limitForm.isEnabled ? "translate-x-5" : ""}`} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Admin Notes</label>
-                    <Input
-                      value={limitForm.notes}
-                      onChange={(e) => setLimitForm({ ...limitForm, notes: e.target.value })}
-                      placeholder="Optional notes..."
-                      className="bg-[#111] border-[#1e1e1e] text-white h-9 text-sm"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setLimitEditorOpen(false); resetLimitForm(); }}
-                      className="bg-[#1a1a1a] border-[#2a2a2a] text-gray-300"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveLimit}
-                      disabled={limitMutation.isPending || !(limitUserId || '').trim()}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      <Save size={14} className="mr-1.5 fill-current" />
-                      {limitMutation.isPending ? "Saving..." : "Save Limit"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Limits Table */}
-            {limitsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw size={20} className="text-gray-500 animate-spin fill-current" />
-              </div>
-            ) : !limits || limits.length === 0 ? (
-              <Card className="bg-[#0f0f0f] border-[#1e1e1e]">
-                <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-                  <Shield size={32} className="mb-2 opacity-30 fill-current" />
-                  <p className="text-sm">No staking limits configured</p>
-                  <p className="text-xs text-gray-600 mt-1">Users can stake without restrictions</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {limits.map((limit) => (
-                  <Card key={limit.id} className="bg-[#0f0f0f] border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${limit.isEnabled ? "bg-green-500/10" : "bg-red-500/10"}`}>
-                            {limit.isEnabled ? <Unlock size={16} className="text-green-400 fill-current" /> : <Lock size={16} className="text-red-400 fill-current" />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">
-                              {limit.user?.full_name || limit.user?.email || limit.userId.slice(0, 12) + "..."}
-                            </p>
-                            <p className="text-xs text-gray-500">{limit.user?.email || limit.userId}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          {limit.minStakeAmount && (
-                            <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-400 bg-blue-500/5">
-                              Min: ${fmt(limit.minStakeAmount)}
-                            </Badge>
-                          )}
-                          {limit.maxStakeAmount && (
-                            <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400 bg-purple-500/5">
-                              Max Stake: ${fmt(limit.maxStakeAmount)}
-                            </Badge>
-                          )}
-                          {limit.maxTotalStaked && (
-                            <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 bg-yellow-500/5">
-                              Max Total: ${fmt(limit.maxTotalStaked)}
-                            </Badge>
-                          )}
-                          {limit.maxDuration && (
-                            <Badge variant="outline" className="text-[10px] border-cyan-500/30 text-cyan-400 bg-cyan-500/5">
-                              Max {limit.maxDuration}d
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className={`text-[10px] ${limit.isEnabled ? "border-green-500/30 text-green-400 bg-green-500/5" : "border-red-500/30 text-red-400 bg-red-500/5"}`}>
-                            {limit.isEnabled ? "Enabled" : "Blocked"}
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditLimit(limit)}
-                            className="h-7 px-2 text-xs text-gray-400 hover:text-white"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm("Remove this staking limit? The user will revert to default limits.")) {
-                                deleteLimitMutation.mutate(limit.userId);
-                              }
-                            }}
-                            className="h-7 px-2 text-xs text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 size={12} className="fill-current" />
-                          </Button>
-                        </div>
-                      </div>
-                      {limit.notes && (
-                        <p className="text-xs text-gray-500 mt-2 ml-11">Note: {limit.notes}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
@@ -670,7 +348,6 @@ function PositionsList({
   onStatusChange,
   onExtend,
   onDelete,
-  onSetLimit,
 }: {
   positions: StakingPosition[];
   loading: boolean;
@@ -681,7 +358,6 @@ function PositionsList({
   onStatusChange: (id: number, status: string) => void;
   onExtend: (id: number) => void;
   onDelete: (id: number) => void;
-  onSetLimit: (userId: string) => void;
 }) {
   if (loading) {
     return (
@@ -864,15 +540,6 @@ function PositionsList({
                         <Activity size={12} className="mr-1 fill-current" /> Reactivate
                       </Button>
                     )}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSetLimit(p.userId)}
-                      className="h-7 text-xs bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
-                    >
-                      <Shield size={12} className="mr-1 fill-current" /> Set Limit
-                    </Button>
 
                     <Button
                       variant="ghost"

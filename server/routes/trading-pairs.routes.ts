@@ -295,199 +295,35 @@ export default function registerTradingPairsRoutes(app: Express) {
     }
   });
 
-  // ============================================================
-  // USER TRADING LIMITS
-  // ============================================================
-
-  // GET /api/admin/trading-limits — all limits (admin)
-  app.get("/api/admin/trading-limits", requireAuth, requireAdmin, async (_req, res) => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from("user_trading_limits")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        return res.status(500).json({ message: "Failed to fetch trading limits" });
-      }
-      res.json(data || []);
-    } catch {
-      res.status(500).json({ message: "Failed to fetch trading limits" });
-    }
-  });
-
-  // GET /api/admin/trading-limits/user/:userId — limits for a specific user
-  app.get("/api/admin/trading-limits/user/:userId", requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { data, error } = await supabaseAdmin
-        .from("user_trading_limits")
-        .select("*")
-        .eq("user_id", userId)
-        .order("symbol");
-
-      if (error) {
-        return res.status(500).json({ message: "Failed to fetch user limits" });
-      }
-      res.json(data || []);
-    } catch {
-      res.status(500).json({ message: "Failed to fetch user limits" });
-    }
-  });
-
-  // POST /api/admin/trading-limits — create or upsert a limit
-  app.post("/api/admin/trading-limits", requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const { userId, symbol, tradeType, minAmount, maxAmount, isEnabled } = req.body;
-
-      if (!userId || !symbol) {
-        return res.status(400).json({ message: "userId and symbol are required" });
-      }
-
-      const limitData: any = {
-        user_id: userId,
-        symbol: symbol || '*',
-        trade_type: tradeType || 'both',
-        min_amount: parseFloat(minAmount) || 0,
-        max_amount: parseFloat(maxAmount) || 1000000,
-        is_enabled: isEnabled !== false,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Upsert based on user_id + symbol + trade_type
-      const { data: existing } = await supabaseAdmin
-        .from("user_trading_limits")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("symbol", symbol || '*')
-        .eq("trade_type", tradeType || 'both')
-        .maybeSingle();
-
-      let result;
-      if (existing) {
-        const { data, error } = await supabaseAdmin
-          .from("user_trading_limits")
-          .update(limitData)
-          .eq("id", existing.id)
-          .select()
-          .single();
-        if (error) throw error;
-        result = data;
-      } else {
-        const { data, error } = await supabaseAdmin
-          .from("user_trading_limits")
-          .insert(limitData)
-          .select()
-          .single();
-        if (error) throw error;
-        result = data;
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error saving trading limit:", error);
-      res.status(500).json({ message: error.message || "Failed to save trading limit" });
-    }
-  });
-
-  // PUT /api/admin/trading-limits/:id — update a limit
-  app.put("/api/admin/trading-limits/:id", requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { minAmount, maxAmount, isEnabled, tradeType } = req.body;
-
-      const updateData: any = { updated_at: new Date().toISOString() };
-      if (minAmount !== undefined) updateData.min_amount = parseFloat(minAmount);
-      if (maxAmount !== undefined) updateData.max_amount = parseFloat(maxAmount);
-      if (isEnabled !== undefined) updateData.is_enabled = isEnabled;
-      if (tradeType !== undefined) updateData.trade_type = tradeType;
-
-      const { data, error } = await supabaseAdmin
-        .from("user_trading_limits")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      res.json(data);
-    } catch {
-      res.status(500).json({ message: "Failed to update trading limit" });
-    }
-  });
-
-  // DELETE /api/admin/trading-limits/:id — remove a limit
-  app.delete("/api/admin/trading-limits/:id", requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { error } = await supabaseAdmin
-        .from("user_trading_limits")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-      res.json({ message: "Limit deleted" });
-    } catch {
-      res.status(500).json({ message: "Failed to delete trading limit" });
-    }
-  });
-
-  // GET /api/trading-limits/me — current user's effective limits for a pair
+  // GET /api/trading-limits/me — returns trading pair limits for spot trading
   // Query: ?symbol=BTC/USDT&type=spot
+  // Spot trades use ONLY the trading pair min/max from the trading_pairs table (admin-configured)
   app.get("/api/trading-limits/me", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const symbol = (req.query.symbol as string) || '*';
-      const tradeType = (req.query.type as string) || 'spot';
+      const symbol = (req.query.symbol as string) || '';
 
-      // Fetch all applicable limits in priority order
-      // 1. Per-user + per-pair
-      // 2. Per-user + wildcard pair
-      // 3. Global + per-pair
-      // 4. Global + wildcard pair
-      const { data: limits } = await supabaseAdmin
-        .from("user_trading_limits")
-        .select("*")
-        .or(`user_id.eq.${userId},user_id.eq.*`)
-        .or(`symbol.eq.${symbol},symbol.eq.*`)
-        .in("trade_type", [tradeType, 'both']);
+      // Default limits if pair not found
+      let effective = { min_amount: 0.0001, max_amount: 1000000, is_enabled: true };
 
-      // Resolve effective limit (most specific wins)
-      let effective = { min_amount: 0, max_amount: 1000000, is_enabled: true };
-
-      if (limits && limits.length > 0) {
-        // Score each limit by specificity
-        const scored = limits.map(l => ({
-          ...l,
-          score: (l.user_id !== '*' ? 2 : 0) + (l.symbol !== '*' ? 1 : 0),
-        }));
-        scored.sort((a, b) => b.score - a.score);
-        const best = scored[0];
-        effective = {
-          min_amount: parseFloat(best.min_amount) || 0,
-          max_amount: parseFloat(best.max_amount) || 1000000,
-          is_enabled: best.is_enabled,
-        };
-      }
-
-      // Also check the trading pair's own limits
-      if (symbol !== '*') {
+      if (symbol && symbol !== '*') {
         const { data: pair } = await supabaseAdmin
           .from("trading_pairs")
-          .select("min_trade_amount, max_trade_amount")
+          .select("min_trade_amount, max_trade_amount, is_enabled")
           .eq("symbol", symbol)
           .single();
 
         if (pair) {
-          // Use the larger min and smaller max between pair defaults and user limits
-          effective.min_amount = Math.max(effective.min_amount, parseFloat(pair.min_trade_amount) || 0);
-          effective.max_amount = Math.min(effective.max_amount, parseFloat(pair.max_trade_amount) || 1000000);
+          effective = {
+            min_amount: parseFloat(pair.min_trade_amount) || 0.0001,
+            max_amount: parseFloat(pair.max_trade_amount) || 1000000,
+            is_enabled: pair.is_enabled,
+          };
         }
       }
 
       res.json(effective);
     } catch {
-      res.json({ min_amount: 0, max_amount: 1000000, is_enabled: true });
+      res.json({ min_amount: 0.0001, max_amount: 1000000, is_enabled: true });
     }
   });
 }

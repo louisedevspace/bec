@@ -79,25 +79,7 @@ export default function registerFuturesRoutes(app: Express) {
     }
   });
 
-  // GET /api/futures-settings — get current user's futures min amount
-  app.get("/api/futures-settings", requireAuth, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { data: user, error } = await supabaseAdmin
-        .from("users")
-        .select("futures_min_amount")
-        .eq("id", userId)
-        .single();
 
-      if (error || !user) {
-        return res.json({ futures_min_amount: 50 }); // default
-      }
-
-      res.json({ futures_min_amount: parseFloat(user.futures_min_amount) || 50 });
-    } catch {
-      res.json({ futures_min_amount: 50 });
-    }
-  });
 
   // PUT /api/future-trade/approve/:tradeId
   app.put("/api/future-trade/approve/:tradeId", requireAuth, requireAdmin, async (req, res) => {
@@ -382,26 +364,14 @@ export default function registerFuturesRoutes(app: Express) {
           });
         }
 
-        // Check minimum amount for this duration
+        // Check minimum amount for this duration (using only time-based limits)
         const timeBasedMin = futuresTimeLimitsService.getMinAmountForDuration(parsedDuration);
 
-        // Get per-user minimum amount
-        const { data: userData } = await supabaseAdmin
-          .from("users")
-          .select("futures_min_amount")
-          .eq("id", userId)
-          .single();
-
-        const userMinAmount = userData?.futures_min_amount ? parseFloat(userData.futures_min_amount) : 50;
-
-        // Take the MAX of time-based limit and per-user limit
-        const effectiveMinAmount = Math.max(timeBasedMin, userMinAmount);
-
-        if (parsedAmount < effectiveMinAmount) {
+        if (parsedAmount < timeBasedMin) {
           return res.status(400).json({
-            message: `Minimum trade amount for ${parsedDuration}s duration is ${effectiveMinAmount} USDT`,
+            message: `Minimum trade amount for ${parsedDuration}s duration is ${timeBasedMin} USDT`,
             code: 'BELOW_TIME_LIMIT',
-            minAmount: effectiveMinAmount,
+            minAmount: timeBasedMin,
           });
         }
       }
