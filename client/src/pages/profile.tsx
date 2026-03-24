@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Wallet, PieChart, History, Shield, Key, UserPlus, Download, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon } from 'lucide-react';
+import { Wallet, PieChart, History, Shield, Key, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -240,12 +240,6 @@ export default function ProfilePage() {
         break;
       case 'update-password':
         setActiveModal('change-password');
-        break;
-      case 'invite':
-        alert('Invite feature coming soon!');
-        break;
-      case 'download-app':
-        alert('Download app feature coming soon!');
         break;
       case 'customer-support':
         setLocation('/support');
@@ -553,9 +547,7 @@ export default function ProfilePage() {
 
         {/* Menu Section 2 */}
         <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <MenuButton icon={UserPlus} label="Invite" onClick={() => handleMenuAction('invite')} />
           <MenuButton icon={FileText} label="Legal Agreements" onClick={() => handleMenuAction('privacy-policy')} />
-          <MenuButton icon={Download} label="Download APP" onClick={() => handleMenuAction('download-app')} />
           <MenuButton icon={Phone} label="Customer support" onClick={() => handleMenuAction('customer-support')} isLast />
         </div>
 

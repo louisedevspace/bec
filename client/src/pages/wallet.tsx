@@ -12,11 +12,10 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 import {
-  Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight,
-  RefreshCw, Lock, Eye, EyeOff, Clock, Filter, Search, PieChart,
+  Wallet, ArrowDownLeft, ArrowUpRight,
+  RefreshCw, Lock, Eye, EyeOff, Clock, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
-  Plus, Send, CreditCard, Snowflake, BarChart3, Activity,
-  DollarSign, ArrowDown, ArrowUp, Info, X,
+  Plus, Send, Snowflake, Info, X,
   ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -112,7 +111,7 @@ interface WalletSummary {
 export default function WalletPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [hideBalances, setHideBalances] = useState(false);
-  const [activeTab, setActiveTab] = useState<"assets" | "history" | "overview">("overview");
+  const [activeTab, setActiveTab] = useState<"assets" | "history">("assets");
   const [txFilter, setTxFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
@@ -130,8 +129,8 @@ export default function WalletPage() {
     if (action && ["deposit", "withdraw", "convert", "portfolio"].includes(action)) {
       setActiveModal(action);
     }
-    if (tab && ["overview", "assets", "history"].includes(tab)) {
-      setActiveTab(tab as "overview" | "assets" | "history");
+    if (tab && ["assets", "history"].includes(tab)) {
+      setActiveTab(tab as "assets" | "history");
     }
     // Clean URL params after reading
     if (action || tab) {
@@ -338,7 +337,6 @@ export default function WalletPage() {
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex gap-1 mt-4 bg-[#111] rounded-xl border border-[#1e1e1e] p-1">
           {[
-            { id: "overview", label: "Overview", icon: PieChart },
             { id: "assets", label: "Assets", icon: Wallet },
             { id: "history", label: "History", icon: History },
           ].map(tab => (
@@ -356,173 +354,6 @@ export default function WalletPage() {
             </button>
           ))}
         </div>
-
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="mt-4 space-y-4">
-            {/* Portfolio Performance */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <TrendingUp size={14} className="text-green-400" />
-                Portfolio Performance
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Total Deposited</p>
-                  <p className="text-sm font-bold text-green-400">{bal(wallet.totalDeposited)}</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Total Withdrawn</p>
-                  <p className="text-sm font-bold text-red-400">{bal(wallet.totalWithdrawn)}</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Trade P&L</p>
-                  <p className={`text-sm font-bold ${wallet.tradePnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {wallet.tradePnl >= 0 ? '+' : ''}{bal(wallet.tradePnl)}
-                  </p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                  <p className="text-[10px] text-gray-500 mb-0.5">Futures P&L</p>
-                  <p className={`text-sm font-bold ${wallet.futuresPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {wallet.futuresPnl >= 0 ? '+' : ''}{bal(wallet.futuresPnl)}
-                  </p>
-                </div>
-              </div>
-              {/* Net P&L bar */}
-              <div className="mt-3 bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-gray-500">Estimated P&L</p>
-                  <p className={`text-base font-bold ${wallet.estimatedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {wallet.estimatedPnl >= 0 ? '+' : ''}{bal(wallet.estimatedPnl)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Fee Summary */}
-            {wallet.analytics?.fees && (
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <DollarSign size={14} className="text-amber-400" />
-                  Total Fees Paid
-                </h3>
-                <div className="bg-amber-500/5 rounded-xl border border-amber-500/10 p-3 mb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">All-time fees</span>
-                    <span className="text-lg font-bold text-amber-400">{bal(wallet.analytics.fees.total)}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#0a0a0a] rounded-lg border border-[#1e1e1e] p-2.5 text-center">
-                    <p className="text-xs font-bold text-white">{bal(wallet.analytics.fees.trading)}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Trading</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] rounded-lg border border-[#1e1e1e] p-2.5 text-center">
-                    <p className="text-xs font-bold text-white">{bal(wallet.analytics.fees.deposit)}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Deposit</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] rounded-lg border border-[#1e1e1e] p-2.5 text-center">
-                    <p className="text-xs font-bold text-white">{bal(wallet.analytics.fees.withdrawal)}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Withdrawal</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Top Assets */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <PieChart size={14} className="text-blue-400" />
-                Asset Allocation
-              </h3>
-              <div className="space-y-3">
-                {filteredAssets.slice(0, 5).map(asset => {
-                  const pct = wallet.totalValue > 0 ? (asset.usdValue / wallet.totalValue) * 100 : 0;
-                  return (
-                    <div key={asset.symbol} className="flex items-center gap-3">
-                      <CryptoIcon symbol={asset.symbol} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-white">{asset.symbol}</span>
-                          <span className="text-sm text-white tabular-nums">{bal(asset.usdValue)}</span>
-                        </div>
-                        <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500 w-10 text-right">{pct.toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
-                {filteredAssets.length === 0 && (
-                  <p className="text-gray-600 text-sm text-center py-4">No assets in wallet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Activity Summary */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <Activity size={14} className="text-gray-400" />
-                Activity Summary
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-xl font-bold text-white">{wallet.analytics?.portfolio?.totalAssets || filteredAssets.length}</p>
-                  <p className="text-[10px] text-gray-500">Assets Held</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-xl font-bold text-white">{wallet.analytics?.trading?.totalTrades || wallet.transactionCounts.trades}</p>
-                  <p className="text-[10px] text-gray-500">Total Trades</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-xl font-bold text-white">{wallet.transactionCounts.deposits}</p>
-                  <p className="text-[10px] text-gray-500">Deposits</p>
-                </div>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center">
-                  <p className="text-xl font-bold text-white">{wallet.transactionCounts.withdrawals}</p>
-                  <p className="text-[10px] text-gray-500">Withdrawals</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Staking Positions */}
-            {wallet.staking.length > 0 && (
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <TrendingUp size={14} className="text-purple-400" />
-                  Active Staking
-                </h3>
-                <div className="space-y-2">
-                  {wallet.staking.filter((s: any) => s.status === "active").map((s: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                      <div className="flex items-center gap-2">
-                        <CryptoIcon symbol={s.symbol} size="xs" />
-                        <div>
-                          <p className="text-sm font-medium text-white">{formatCryptoNumber(s.amount)} {s.symbol}</p>
-                          <p className="text-[10px] text-gray-500">{s.apy}% APY • {s.duration}d</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded">Active</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Transactions */}
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Clock size={14} className="text-gray-400" />
-                  Recent Transactions
-                </h3>
-                <button onClick={() => setActiveTab("history")} className="text-xs text-blue-400 hover:text-blue-300">View All →</button>
-              </div>
-              <TransactionList transactions={wallet.transactions.slice(0, 5)} hideBalances={hideBalances} />
-            </div>
-          </div>
-        )}
 
         {/* Assets Tab */}
         {activeTab === "assets" && (
