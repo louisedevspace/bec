@@ -4,8 +4,81 @@ import { updatePortfolioBalance, getTradingFeeRate, validateFinancialAmount } fr
 import LiveCryptoService from "../services/live-crypto-service";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 import { syncManager } from "../sync-manager";
+import { futuresTimeLimitsService, FuturesTimeLimitsConfig } from "../services/futures-time-limits.service";
 
 export default function registerFuturesRoutes(app: Express) {
+  // ─── Admin Futures Time Limits Routes ───────────────────────────────────────
+
+  // GET /api/admin/futures-time-limits — get current time-based limits config
+  app.get("/api/admin/futures-time-limits", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const config = await futuresTimeLimitsService.getConfigAsync();
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get futures time limits config" });
+    }
+  });
+
+  // PUT /api/admin/futures-time-limits — update time-based limits config
+  app.put("/api/admin/futures-time-limits", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const config = req.body as FuturesTimeLimitsConfig;
+
+      // Validation
+      if (!config || typeof config !== "object") {
+        return res.status(400).json({ message: "Invalid config format" });
+      }
+
+      if (!Array.isArray(config.limits) || config.limits.length === 0) {
+        return res.status(400).json({ message: "Limits array cannot be empty" });
+      }
+
+      // Validate each limit
+      for (const limit of config.limits) {
+        if (!Number.isInteger(limit.duration) || limit.duration <= 0) {
+          return res.status(400).json({
+            message: `Invalid duration: ${limit.duration}. Must be a positive integer.`,
+          });
+        }
+        if (typeof limit.minAmount !== "number" || limit.minAmount <= 0) {
+          return res.status(400).json({
+            message: `Invalid minAmount for duration ${limit.duration}. Must be a positive number.`,
+          });
+        }
+        if (typeof limit.isActive !== "boolean") {
+          return res.status(400).json({
+            message: `Invalid isActive for duration ${limit.duration}. Must be a boolean.`,
+          });
+        }
+      }
+
+      if (typeof config.defaultMinAmount !== "number" || config.defaultMinAmount <= 0) {
+        return res.status(400).json({ message: "defaultMinAmount must be a positive number" });
+      }
+
+      if (typeof config.enabled !== "boolean") {
+        return res.status(400).json({ message: "enabled must be a boolean" });
+      }
+
+      const updatedConfig = await futuresTimeLimitsService.updateConfig(config);
+      res.json(updatedConfig);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update futures time limits config" });
+    }
+  });
+
+  // ─── Public Futures Time Limits Route ───────────────────────────────────────
+
+  // GET /api/futures-time-limits — get time limits for client display
+  app.get("/api/futures-time-limits", requireAuth, async (req, res) => {
+    try {
+      const config = await futuresTimeLimitsService.getConfigAsync();
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get futures time limits" });
+    }
+  });
+
   // GET /api/futures-settings — get current user's futures min amount
   app.get("/api/futures-settings", requireAuth, async (req, res) => {
     try {
@@ -293,6 +366,44 @@ export default function registerFuturesRoutes(app: Express) {
       const validProfitRatios = [30, 40, 50, 60, 70, 80, 100];
       if (!validProfitRatios.includes(parseInt(profitRatio))) {
         return res.status(400).json({ message: "Invalid profit ratio" });
+      }
+
+      // Check time-based minimum amount
+      const parsedAmount = parseFloat(amount);
+      const parsedDuration = parseInt(duration);
+      const timeLimitsConfig = futuresTimeLimitsService.getConfig();
+
+      if (timeLimitsConfig.enabled) {
+        // Check if duration is active
+        if (!futuresTimeLimitsService.isDurationActive(parsedDuration)) {
+          return res.status(400).json({
+            message: `Trading for ${parsedDuration} second duration is currently disabled.`,
+            code: 'DURATION_DISABLED',
+          });
+        }
+
+        // Check minimum amount for this duration
+        const timeBasedMin = futuresTimeLimitsService.getMinAmountForDuration(parsedDuration);
+
+        // Get per-user minimum amount
+        const { data: userData } = await supabaseAdmin
+          .from("users")
+          .select("futures_min_amount")
+          .eq("id", userId)
+          .single();
+
+        const userMinAmount = userData?.futures_min_amount ? parseFloat(userData.futures_min_amount) : 50;
+
+        // Take the MAX of time-based limit and per-user limit
+        const effectiveMinAmount = Math.max(timeBasedMin, userMinAmount);
+
+        if (parsedAmount < effectiveMinAmount) {
+          return res.status(400).json({
+            message: `Minimum trade amount for ${parsedDuration}s duration is ${effectiveMinAmount} USDT`,
+            code: 'BELOW_TIME_LIMIT',
+            minAmount: effectiveMinAmount,
+          });
+        }
       }
 
       // Check balance

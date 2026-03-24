@@ -44,6 +44,18 @@ interface FuturesPairOption {
   quote_asset: string;
 }
 
+interface TimeLimitConfig {
+  duration: number;
+  minAmount: number;
+  isActive: boolean;
+}
+
+interface TimeLimitsResponse {
+  limits: TimeLimitConfig[];
+  defaultMinAmount: number;
+  enabled: boolean;
+}
+
 const durationOptions = [
   { value: 60, label: '60 Sec', profitRatio: 30 },
   { value: 120, label: '120 Sec', profitRatio: 40 },
@@ -72,6 +84,9 @@ export default function FuturesPage() {
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [minTradeAmount, setMinTradeAmount] = useState<number>(50);
   const [tradeLimits, setTradeLimits] = useState<{ is_enabled: boolean; min_amount: number; max_amount: number } | null>(null);
+  
+    // Time-based limits state
+    const [timeLimitsConfig, setTimeLimitsConfig] = useState<TimeLimitsResponse | null>(null);
 
   // Trade details modal state
   const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
@@ -92,6 +107,23 @@ export default function FuturesPage() {
 
   const selectedDuration = durationOptions.find(d => d.value === duration);
   const profitRatio = selectedDuration?.profitRatio || 30;
+
+  // Calculate effective minimum based on time-based limits
+  const getEffectiveMinimum = (durationValue: number) => {
+    if (!timeLimitsConfig?.enabled) return minTradeAmount;
+    const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue && l.isActive);
+    const timeBasedMin = limitForDuration?.minAmount ?? timeLimitsConfig.defaultMinAmount;
+    return Math.max(minTradeAmount, timeBasedMin);
+  };
+
+  const effectiveMinAmount = getEffectiveMinimum(duration);
+
+  // Check if a duration is active (available for selection)
+  const isDurationActive = (durationValue: number) => {
+    if (!timeLimitsConfig?.enabled) return true;
+    const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue);
+    return limitForDuration?.isActive ?? true;
+  };
 
   const fetchTrades = async () => {
     if (!user) return;
@@ -202,6 +234,17 @@ export default function FuturesPage() {
     } catch { /* keep defaults */ }
   };
 
+  // Fetch time-based limits
+  const fetchTimeLimits = async () => {
+    try {
+      const res = await fetch('/api/futures-time-limits');
+      if (res.ok) {
+        const data = await res.json();
+        setTimeLimitsConfig(data);
+      }
+    } catch { /* keep defaults */ }
+  };
+
   // Fetch available futures pairs
   useEffect(() => {
     fetch('/api/trading-pairs/futures')
@@ -221,6 +264,7 @@ export default function FuturesPage() {
     fetchTrades();
     fetchBalance();
     fetchFuturesSettings();
+    fetchTimeLimits();
   }, [user]);
 
   // Fetch trading limits when user or pair changes
@@ -315,11 +359,23 @@ export default function FuturesPage() {
       return;
     }
 
-    const effectiveMin = tradeLimits?.min_amount ? Math.max(minTradeAmount, tradeLimits.min_amount) : minTradeAmount;
+    // Check if selected duration is active
+    if (!isDurationActive(duration)) {
+      toast({
+        title: 'Error',
+        description: 'Selected duration is not available.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const effectiveMin = tradeLimits?.min_amount 
+      ? Math.max(effectiveMinAmount, tradeLimits.min_amount) 
+      : effectiveMinAmount;
     if (!amount || isNaN(tradeAmount) || tradeAmount < effectiveMin) {
       toast({
         title: 'Error',
-        description: `Minimum trade amount is ${effectiveMin} USDT.`,
+        description: `Minimum trade amount is ${effectiveMin} USDT for ${duration}s duration.`,
         variant: 'destructive',
       });
       return;
@@ -548,11 +604,25 @@ export default function FuturesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                    {durationOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value.toString()}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    {durationOptions.map((option) => {
+                      const isActive = isDurationActive(option.value);
+                      const minForDuration = getEffectiveMinimum(option.value);
+                      return (
+                        <SelectItem 
+                          key={option.value} 
+                          value={option.value.toString()}
+                          disabled={!isActive}
+                          className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
+                        >
+                          <span className="flex items-center justify-between w-full gap-2">
+                            <span>{option.label}</span>
+                            {timeLimitsConfig?.enabled && (
+                              <span className="text-[10px] text-gray-500">min ${minForDuration}</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -569,7 +639,7 @@ export default function FuturesPage() {
               <div className="bg-[#111] p-3 rounded-xl border border-[#2a2a2a] space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Minimum limit</span>
-                  <span className="text-gray-300 tabular-nums">{formatUsdNumber(minTradeAmount)} USDT</span>
+                  <span className="text-gray-300 tabular-nums">{formatUsdNumber(effectiveMinAmount)} USDT</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Available</span>
@@ -583,15 +653,17 @@ export default function FuturesPage() {
               {/* Action Button */}
               <Button
                 onClick={handleSubmitTrade}
-                disabled={!amount || parseFloat(amount) < minTradeAmount || parseFloat(amount) > availableBalance}
+                disabled={!amount || parseFloat(amount) < effectiveMinAmount || parseFloat(amount) > availableBalance || !isDurationActive(duration)}
                 className={`w-full font-bold py-3.5 text-sm rounded-xl transition-all shadow-lg ${
                   side === 'long'
                     ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 shadow-green-600/20'
                     : 'bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 shadow-red-600/20'
                 }`}
               >
-                {!amount || parseFloat(amount) < minTradeAmount
-                  ? `Min ${minTradeAmount} USDT`
+                {!isDurationActive(duration)
+                  ? 'Duration Not Available'
+                  : !amount || parseFloat(amount) < effectiveMinAmount
+                  ? `Min ${effectiveMinAmount} USDT`
                   : parseFloat(amount) > availableBalance
                   ? 'Insufficient Balance'
                   : `CONFIRM ${side.toUpperCase()}`}
