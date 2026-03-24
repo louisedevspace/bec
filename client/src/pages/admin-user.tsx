@@ -261,12 +261,14 @@ export default function AdminUsers() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.message || 'Failed to reveal password');
+        // Show the error inline instead of alert
+        setRevealedPasswords(prev => ({ ...prev, [userId]: data?.message || 'Not available' }));
+        return;
       }
 
-      setRevealedPasswords(prev => ({ ...prev, [userId]: data.password || '' }));
+      setRevealedPasswords(prev => ({ ...prev, [userId]: data.password || 'Empty' }));
     } catch (err: any) {
-      alert(err?.message || 'Failed to reveal password');
+      setRevealedPasswords(prev => ({ ...prev, [userId]: 'Error: ' + (err?.message || 'Failed') }));
     } finally {
       setRevealingPasswordFor(null);
     }
@@ -929,37 +931,31 @@ export default function AdminUsers() {
                               <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/15 mt-1">
                                 <div className="flex items-center justify-between">
                                   <span className="text-red-400 font-medium">Password Access</span>
-                                  {user.has_password_record ? (
-                                    <div className="flex items-center gap-1">
-                                      {revealedPasswords[user.id] ? (
-                                        <>
-                                          <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={revealedPasswords[user.id]}>
-                                            {revealedPasswords[user.id]}
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => hideRevealedPassword(user.id)}
-                                            className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-                                          >
-                                            Hide
-                                          </button>
-                                        </>
-                                      ) : (
+                                  <div className="flex items-center gap-1">
+                                    {revealedPasswords[user.id] ? (
+                                      <>
+                                        <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={revealedPasswords[user.id]}>
+                                          {revealedPasswords[user.id]}
+                                        </span>
                                         <button
                                           type="button"
-                                          onClick={() => revealPassword(user.id)}
-                                          disabled={revealingPasswordFor === user.id}
-                                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-60 transition-colors"
+                                          onClick={() => hideRevealedPassword(user.id)}
+                                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 transition-colors"
                                         >
-                                          {revealingPasswordFor === user.id ? 'Loading...' : 'Reveal'}
+                                          Hide
                                         </button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate">
-                                      Not synced
-                                    </span>
-                                  )}
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => revealPassword(user.id)}
+                                        disabled={revealingPasswordFor === user.id}
+                                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-60 transition-colors"
+                                      >
+                                        {revealingPasswordFor === user.id ? 'Loading...' : 'Reveal'}
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                                 {user.password_last_updated && (
                                   <p className="text-[10px] text-red-400/60 mt-1">Updated: {formatDate(user.password_last_updated)}</p>

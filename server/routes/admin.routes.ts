@@ -66,7 +66,7 @@ export default function registerAdminRoutes(app: Express) {
       }
 
       if (!passwordRecord || !passwordRecord.plaintext_password) {
-        return res.status(404).json({ message: "No password available for this user" });
+        return res.status(404).json({ message: "No password record found — password was set before sync was enabled. Use 'Change Password' to set a new password which will be synced." });
       }
 
       let decryptedPassword: string;
