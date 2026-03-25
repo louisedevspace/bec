@@ -379,9 +379,9 @@ export default function SupportPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+      <div className="flex-1 w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 max-w-7xl">
         {/* Left: Conversations List */}
-        <div className="lg:col-span-1 flex flex-col">
+        <div className={`lg:col-span-1 flex flex-col ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
           <button
             onClick={() => setShowNewConversationForm(true)}
             className="flex-shrink-0 w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 mb-4"
@@ -401,7 +401,7 @@ export default function SupportPage() {
                 {conversations.length === 0 ? 'No support conversations yet' : 'No matching conversations'}
               </div>
             ) : (
-              <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              <div className="overflow-y-auto flex-1">
                 {filteredConversations.map((conv) => {
                   const unread = getUnreadCount(conv);
                   return (
@@ -451,9 +451,17 @@ export default function SupportPage() {
         </div>
 
         {/* Right: Conversation Details */}
-        <div className="lg:col-span-2 flex flex-col">
+        <div className={`lg:col-span-2 flex flex-col ${selectedConversation ? "flex" : "hidden lg:flex"}`}>
           {selectedConversation ? (
             <>
+              {/* Back button for mobile */}
+              <button
+                onClick={() => setSelectedConversation(null)}
+                className="lg:hidden mb-3 flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm"
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+
               {/* Conversation Header */}
               <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 mb-4">
                 <div className="flex items-start justify-between mb-3">
@@ -510,8 +518,8 @@ export default function SupportPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto mb-4 space-y-3">
+              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 flex-1 flex flex-col overflow-hidden mb-4">
+                <div className="flex-1 overflow-y-auto mb-4 space-y-3 pr-2">
                   {selectedConversation.support_messages && selectedConversation.support_messages.length > 0 ? (
                     selectedConversation.support_messages.map(renderMessage)
                   ) : (

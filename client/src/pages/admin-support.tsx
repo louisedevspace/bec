@@ -11,9 +11,8 @@ import {
   MessageSquare, Send, User, Shield, Search, MessageCircle, ArrowLeft,
   AlertTriangle, CheckCircle, Clock, XCircle, ChevronDown, Filter,
   Zap, FileText, Tag, BarChart3, RefreshCw, CheckSquare, Square,
-  ArrowUpRight, Inbox, Loader2, Bot, Sparkles, Edit,
+  ArrowUpRight, Inbox, Loader2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useDataSync } from "@/hooks/use-data-sync";
 import { supabase } from "@/lib/supabaseClient";
@@ -83,7 +82,6 @@ export default function AdminSupportPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -126,32 +124,6 @@ export default function AdminSupportPage() {
       return res.json();
     },
     staleTime: Infinity,
-  });
-
-  // Auto-reply settings query
-  const { data: autoReplySettings } = useQuery({
-    queryKey: ['/api/admin/support/auto-reply/settings'],
-    queryFn: async () => {
-      const headers = await authHeaders();
-      const res = await fetch('/api/admin/support/auto-reply/settings', { headers });
-      if (!res.ok) return { enabled: false };
-      return res.json();
-    },
-    refetchInterval: 30000,
-  });
-  const autoReplyEnabled = autoReplySettings?.enabled ?? false;
-
-  // Suggestions for selected conversation
-  const { data: suggestions } = useQuery({
-    queryKey: ['/api/admin/support/auto-reply/suggestions', selectedConversation?.id],
-    queryFn: async () => {
-      const headers = await authHeaders();
-      const res = await fetch(`/api/admin/support/auto-reply/suggestions/${selectedConversation!.id}`, { headers });
-      if (!res.ok) return { suggestions: [] };
-      return res.json();
-    },
-    enabled: !!selectedConversation?.id,
-    refetchInterval: 10000,
   });
 
   // ─── Mutations ───────────────────────────────────────────────
@@ -294,35 +266,6 @@ export default function AdminSupportPage() {
     setShowTemplates(false);
   };
 
-  const handleToggleAutoReply = async (enabled: boolean) => {
-    const headers = await authHeaders();
-    await fetch('/api/admin/support/auto-reply/toggle', {
-      method: 'POST', headers,
-      body: JSON.stringify({ enabled })
-    });
-    queryClient.invalidateQueries({ queryKey: ['/api/admin/support/auto-reply/settings'] });
-    toast({ title: enabled ? 'Auto-Reply Enabled' : 'Auto-Reply Disabled' });
-  };
-
-  const handleSendSuggestion = async (suggestion: { response: string; ruleId: string }) => {
-    if (!selectedConversation) return;
-    try {
-      const headers = await authHeaders();
-      await fetch('/api/admin/support/auto-reply/send-suggestion', {
-        method: 'POST', headers,
-        body: JSON.stringify({
-          conversationId: selectedConversation.id,
-          message: suggestion.response,
-          ruleId: suggestion.ruleId,
-        })
-      });
-      toast({ title: 'Reply Sent', description: 'Suggested reply sent successfully' });
-      refetch();
-    } catch {
-      toast({ title: 'Error', description: 'Failed to send reply', variant: 'destructive' });
-    }
-  };
-
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => {
       const n = new Set(prev);
@@ -392,35 +335,9 @@ export default function AdminSupportPage() {
             <h1 className="text-2xl lg:text-3xl font-bold text-white">Support Center</h1>
             <p className="text-sm text-gray-500 mt-1">Manage customer conversations and provide assistance</p>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Auto-reply toggle */}
-            <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-blue-400 fill-current" />
-              <span className="text-sm text-gray-400">Auto-Reply</span>
-              <Switch 
-                checked={autoReplyEnabled} 
-                onCheckedChange={handleToggleAutoReply}
-                className="data-[state=checked]:bg-blue-500"
-              />
-              {autoReplyEnabled && <span className="text-xs text-emerald-400">Active</span>}
-            </div>
-            {/* Suggestions visibility toggle */}
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-yellow-400 fill-current" />
-              <span className="text-sm text-gray-400">Suggestions</span>
-              <Switch 
-                checked={showSuggestions} 
-                onCheckedChange={setShowSuggestions}
-                className="data-[state=checked]:bg-yellow-500"
-              />
-              <span className={`text-xs ${showSuggestions ? 'text-emerald-400' : 'text-gray-500'}`}>
-                {showSuggestions ? 'On' : 'Off'}
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => refetchAll()} className="bg-transparent border-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
-              <RefreshCw className="h-4 w-4 mr-1.5 fill-current" /> Refresh
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => refetchAll()} className="bg-transparent border-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
+            <RefreshCw className="h-4 w-4 mr-1.5 fill-current" /> Refresh
+          </Button>
         </div>
 
         {/* Stats Grid */}
@@ -448,10 +365,10 @@ export default function AdminSupportPage() {
         )}
 
         {/* Main Chat Layout */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-3 h-[68vh]">
+        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden" style={{ height: '70vh' }}>
+          <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-0">
             {/* ─── Left Sidebar: Ticket list ────────────────────── */}
-            <div className={`lg:border-r border-[#1e1e1e] flex flex-col min-h-0 ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
+            <div className={`lg:border-r border-[#1e1e1e] flex flex-col overflow-hidden ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
               {/* Search & Filters */}
               <div className="p-3 border-b border-[#1e1e1e] space-y-2">
                 <div className="flex gap-2">
@@ -592,7 +509,7 @@ export default function AdminSupportPage() {
             </div>
 
             {/* ─── Right: Chat area ─────────────────────────────── */}
-            <div className={`lg:col-span-2 flex flex-col min-h-0 overflow-hidden ${selectedConversation ? "flex" : "hidden lg:flex"}`}>
+            <div className={`lg:col-span-2 flex flex-col overflow-hidden ${selectedConversation ? "flex" : "hidden lg:flex"}`}>
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
@@ -741,38 +658,6 @@ export default function AdminSupportPage() {
                             ))}
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Auto-Reply Suggestions */}
-                  {showSuggestions && autoReplyEnabled && suggestions?.suggestions?.length > 0 && (
-                    <div className="px-4 py-2 border-t border-[#1e1e1e] bg-[#0a0a0a]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-current" />
-                        <span className="text-xs font-medium text-gray-400">Suggested Replies</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {suggestions.suggestions.map((s: { ruleId: string; response: string; confidence: number; category: string; matchedKeywords?: string[] }, i: number) => (
-                          <button key={i}
-                            onClick={() => handleSendSuggestion(s)}
-                            className="text-left text-xs bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 hover:border-blue-500/50 hover:bg-[#222] transition-colors max-w-xs"
-                          >
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <Badge className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/20">
-                                {s.category} · {Math.round(s.confidence * 100)}%
-                              </Badge>
-                            </div>
-                            <p className="text-gray-300 line-clamp-2">{s.response}</p>
-                          </button>
-                        ))}
-                        {/* Custom reply option */}
-                        <button
-                          onClick={() => document.querySelector<HTMLTextAreaElement>('[data-reply-input]')?.focus()}
-                          className="text-xs bg-[#1a1a1a] border border-dashed border-[#333] rounded-lg px-3 py-2 hover:border-blue-500/50 transition-colors text-gray-500 flex items-center gap-1.5"
-                        >
-                          <Edit className="w-3 h-3 fill-current" /> Custom Reply
-                        </button>
                       </div>
                     </div>
                   )}
