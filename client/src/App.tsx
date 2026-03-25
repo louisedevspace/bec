@@ -137,7 +137,19 @@ function Router() {
     }
   }, [location]);
 
-  // Redirect to /reset-password when Supabase fires PASSWORD_RECOVERY from email link
+  // Detect Supabase recovery token at mount by reading the URL hash directly.
+  // onAuthStateChange('PASSWORD_RECOVERY') fires during Supabase initialization —
+  // before React's useEffect runs — so the event-listener approach misses it.
+  // Reading window.location.hash synchronously at mount is the reliable fallback.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      setLocation('/reset-password');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the event listener as a secondary guard for cases where the token
+  // arrives after mount (e.g., deep-linking, future Supabase behaviour).
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
