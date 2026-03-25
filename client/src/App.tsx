@@ -20,6 +20,7 @@ import { NetworkStatusNotification } from "@/components/network-status";
 import HomePage from "@/pages/home";
 import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
+import ResetPasswordPage from './pages/reset-password';
 
 // Lazy load non-critical pages
 const AboutPage = lazy(() => import("@/pages/about"));
@@ -64,8 +65,8 @@ function Router() {
       setUser(currentUser);
       setIsAuthenticated(!!currentUser);
       
-      // If not authenticated and not on login/signup, redirect to login
-      if (!currentUser && location !== '/login' && location !== '/signup') {
+      // If not authenticated and not on login/signup/reset-password, redirect to login
+      if (!currentUser && location !== '/login' && location !== '/signup' && location !== '/reset-password') {
         setIsAdmin(false);
         setLoading(false);
         setLocation('/login');
@@ -136,6 +137,16 @@ function Router() {
     }
   }, [location]);
 
+  // Redirect to /reset-password when Supabase fires PASSWORD_RECOVERY from email link
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setLocation('/reset-password');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [setLocation]);
+
   // Memoize route components to prevent unnecessary re-renders
   const adminRedirect = useMemo(() => {
     return isAuthenticated && isAdmin
@@ -177,6 +188,7 @@ function Router() {
         <Switch>
           <Route path="/login" component={LoginPage} />
           <Route path="/signup" component={SignupPage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
           {/* Admin routes */}
           <Route path="/admin" component={adminRedirect} />
           <Route path="/admin/dashboard" component={isAuthenticated && isAdmin ? AdminDashboard : adminRedirect} />
