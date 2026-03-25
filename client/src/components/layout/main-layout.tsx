@@ -85,7 +85,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Memoize auth page check
-  const isAuthPage = useMemo(() => location === '/login' || location === '/signup', [location]);
+  const isAuthPage = useMemo(() => location === '/login' || location === '/signup' || location === '/reset-password', [location]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
