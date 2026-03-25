@@ -351,12 +351,67 @@ export default function registerAuthRoutes(app: Express) {
       if (currentUser?.role === "admin") {
         return res
           .status(403)
-          .json({
-            message: "Admin accounts cannot be deleted through this endpoint",
-          });
+          .json({ message: "Admin accounts cannot be deleted through this endpoint" });
       }
 
+      // Remove dependent rows in FK-safe order (children before parents).
+      // Must match the working admin delete route to avoid FK constraint violations.
+      const cleanupSteps: Array<{ table: string; column: string }> = [
+        { table: "user_passwords",       column: "user_id" },
+        { table: "user_news_seen",       column: "user_id" },
+        { table: "kyc_documents",        column: "user_id" },
+        { table: "kyc_verifications",    column: "user_id" },
+        { table: "portfolios",           column: "user_id" },
+        { table: "transactions",         column: "user_id" },
+        { table: "trades",               column: "user_id" },
+        { table: "futures_trades",       column: "user_id" },
+        { table: "staking_positions",    column: "user_id" },
+        { table: "loan_applications",    column: "user_id" },
+        { table: "deposit_requests",     column: "user_id" },
+        { table: "withdraw_requests",    column: "user_id" },
+        { table: "push_subscriptions",   column: "user_id" },
+        { table: "admin_notifications",  column: "user_id" },
+        { table: "support_conversations", column: "user_id" },
+        { table: "support_messages",     column: "sender_id" },
+      ];
 
+      for (const step of cleanupSteps) {
+        const { error: cleanupError } = await supabaseAdmin
+          .from(step.table)
+          .delete()
+          .eq(step.column, supabaseUserId);
+
+        if (cleanupError) {
+          console.error(`[delete-account] Failed to clean ${step.table}:`, cleanupError.message);
+          return res.status(500).json({
+            message: `Failed to remove data from ${step.table}`,
+            error: cleanupError.message,
+          });
+        }
+      }
+
+      const { error: deleteUserError } = await supabaseAdmin
+        .from("users")
+        .delete()
+        .eq("id", supabaseUserId);
+
+      if (deleteUserError) {
+        console.error("[delete-account] Failed to delete users row:", deleteUserError.message);
+        return res.status(500).json({
+          message: "Failed to delete user account",
+          error: deleteUserError.message,
+        });
+      }
+
+      // Also delete the Supabase Auth record so the user can no longer authenticate
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
+      } catch (authDeleteErr) {
+        // Log but don't fail — the users table row is already gone
+        console.error("Failed to delete Supabase Auth user:", (authDeleteErr as Error).message);
+      }
+
+      // Audit log recorded after successful deletion
       await logAuditEvent({
         userId: supabaseUserId,
         action: "USER_SELF_DELETED",
@@ -375,53 +430,11 @@ export default function registerAuthRoutes(app: Express) {
         userAgent,
         status: "success",
       });
-      const tablesToClean = [
-        "portfolios",
-        "transactions",
-        "trades",
-        "staking_positions",
-        "loan_applications",
-        "deposit_requests",
-        "withdraw_requests",
-        "kyc_documents",
-        "support_messages",
-        "user_passwords",
-      ];
-
-      for (const table of tablesToClean) {
-        try {
-          await supabaseAdmin
-            .from(table)
-            .delete()
-            .eq("user_id", supabaseUserId);
-        } catch {
-          // continue
-        }
-      }
-
-      const { error: deleteUserError } = await supabaseAdmin
-        .from("users")
-        .delete()
-        .eq("id", supabaseUserId);
-
-      if (deleteUserError) {
-        return res
-          .status(500)
-          .json({ message: "Failed to delete user account" });
-      }
-
-      // Also delete the Supabase Auth record so the user can no longer authenticate
-      try {
-        await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
-      } catch (authDeleteErr) {
-        console.error("Failed to delete Supabase Auth user:", (authDeleteErr as Error).message);
-      }
 
       res.json({ message: "Account deleted successfully" });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Server error" });
+      console.error("[delete-account] Unexpected error:", (error as Error).message);
+      res.status(500).json({ message: "Server error", error: (error as Error).message });
     }
   });
 
