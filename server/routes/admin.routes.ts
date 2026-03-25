@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { requireAuth, requireAdmin, supabaseAdmin, invalidateUserCache } from "./middleware";
 import { syncManager } from "../sync-manager";
 import supabase from "../supabaseClient";
 import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
@@ -735,6 +735,8 @@ export default function registerAdminRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to update user status" });
       }
 
+      // Invalidate user cache since is_active status changed
+      await invalidateUserCache(userId);
       await invalidateAdminUsersCache();
 
       res.json({

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { REDIS_KEYS, CACHE_TTL, cacheGetOrSet, cacheInvalidate, cacheInvalidatePattern } from "../utils/redis";
 
 function normalizeTradingFeeRate(value: unknown, unit?: unknown): string | null {
   if (value === undefined || value === null || value === "") return null;
@@ -18,64 +19,78 @@ function normalizeTradingFeeRate(value: unknown, unit?: unknown): string | null 
   return normalizedRate.toFixed(8);
 }
 
+/**
+ * Invalidate all trading pairs caches (call after any trading pair update)
+ */
+async function invalidateTradingPairsCache(): Promise<void> {
+  await Promise.all([
+    cacheInvalidate(REDIS_KEYS.TRADING_PAIRS),
+    cacheInvalidate(REDIS_KEYS.TRADING_PAIRS_SPOT),
+    cacheInvalidate(REDIS_KEYS.TRADING_PAIRS_FUTURES),
+    cacheInvalidatePattern(`${REDIS_KEYS.TRADING_FEE}*`),
+  ]);
+}
+
 export default function registerTradingPairsRoutes(app: Express) {
 
-  // GET /api/trading-pairs — public: returns enabled pairs for users
+  // GET /api/trading-pairs — public: returns enabled pairs for users (CACHED)
   app.get("/api/trading-pairs", async (_req, res) => {
     try {
-      const { data, error } = await supabaseAdmin
-        .from("trading_pairs")
-        .select("*")
-        .eq("is_enabled", true)
-        .order("sort_order", { ascending: true });
+      const data = await cacheGetOrSet(REDIS_KEYS.TRADING_PAIRS, CACHE_TTL.TRADING_PAIRS, async () => {
+        const { data, error } = await supabaseAdmin
+          .from("trading_pairs")
+          .select("*")
+          .eq("is_enabled", true)
+          .order("sort_order", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching trading pairs:", error);
-        return res.status(500).json({ message: "Failed to fetch trading pairs" });
-      }
+        if (error) throw error;
+        return data || [];
+      });
 
-      res.json(data || []);
+      res.json(data);
     } catch (error) {
       console.error("Error fetching trading pairs:", error);
       res.status(500).json({ message: "Failed to fetch trading pairs" });
     }
   });
 
-  // GET /api/trading-pairs/spot — returns enabled spot pairs
+  // GET /api/trading-pairs/spot — returns enabled spot pairs (CACHED)
   app.get("/api/trading-pairs/spot", async (_req, res) => {
     try {
-      const { data, error } = await supabaseAdmin
-        .from("trading_pairs")
-        .select("*")
-        .eq("is_enabled", true)
-        .in("pair_type", ["spot", "both"])
-        .order("sort_order", { ascending: true });
+      const data = await cacheGetOrSet(REDIS_KEYS.TRADING_PAIRS_SPOT, CACHE_TTL.TRADING_PAIRS, async () => {
+        const { data, error } = await supabaseAdmin
+          .from("trading_pairs")
+          .select("*")
+          .eq("is_enabled", true)
+          .in("pair_type", ["spot", "both"])
+          .order("sort_order", { ascending: true });
 
-      if (error) {
-        return res.status(500).json({ message: "Failed to fetch spot pairs" });
-      }
+        if (error) throw error;
+        return data || [];
+      });
 
-      res.json(data || []);
+      res.json(data);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch spot pairs" });
     }
   });
 
-  // GET /api/trading-pairs/futures — returns enabled futures pairs
+  // GET /api/trading-pairs/futures — returns enabled futures pairs (CACHED)
   app.get("/api/trading-pairs/futures", async (_req, res) => {
     try {
-      const { data, error } = await supabaseAdmin
-        .from("trading_pairs")
-        .select("*")
-        .eq("is_enabled", true)
-        .in("pair_type", ["futures", "both"])
-        .order("sort_order", { ascending: true });
+      const data = await cacheGetOrSet(REDIS_KEYS.TRADING_PAIRS_FUTURES, CACHE_TTL.TRADING_PAIRS, async () => {
+        const { data, error } = await supabaseAdmin
+          .from("trading_pairs")
+          .select("*")
+          .eq("is_enabled", true)
+          .in("pair_type", ["futures", "both"])
+          .order("sort_order", { ascending: true });
 
-      if (error) {
-        return res.status(500).json({ message: "Failed to fetch futures pairs" });
-      }
+        if (error) throw error;
+        return data || [];
+      });
 
-      res.json(data || []);
+      res.json(data);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch futures pairs" });
     }
@@ -142,6 +157,9 @@ export default function registerTradingPairsRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to create trading pair" });
       }
 
+      // Invalidate trading pairs cache after creating new pair
+      await invalidateTradingPairsCache();
+
       res.json(data);
     } catch (error) {
       console.error("Error creating trading pair:", error);
@@ -185,6 +203,9 @@ export default function registerTradingPairsRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to update trading pair" });
       }
 
+      // Invalidate trading pairs cache after update
+      await invalidateTradingPairsCache();
+
       res.json(data);
     } catch (error) {
       console.error("Error updating trading pair:", error);
@@ -209,6 +230,9 @@ export default function registerTradingPairsRoutes(app: Express) {
         console.error("Error deleting trading pair:", error);
         return res.status(500).json({ message: "Failed to delete trading pair" });
       }
+
+      // Invalidate trading pairs cache after delete
+      await invalidateTradingPairsCache();
 
       res.json({ message: "Trading pair deleted successfully" });
     } catch (error) {
@@ -246,6 +270,9 @@ export default function registerTradingPairsRoutes(app: Express) {
       if (error) {
         return res.status(500).json({ message: "Failed to toggle trading pair" });
       }
+
+      // Invalidate trading pairs cache after toggle
+      await invalidateTradingPairsCache();
 
       res.json(data);
     } catch (error) {
@@ -288,6 +315,9 @@ export default function registerTradingPairsRoutes(app: Express) {
         console.error("Error seeding trading pairs:", error);
         return res.status(500).json({ message: "Failed to seed trading pairs" });
       }
+
+      // Invalidate trading pairs cache after seeding
+      await invalidateTradingPairsCache();
 
       res.json({ message: "Trading pairs seeded successfully", count: data.length, pairs: data });
     } catch (error) {

@@ -8,6 +8,41 @@ import { syncManager } from "../sync-manager";
 import { logFinancialOperation, getClientIP, getUserAgent } from "../utils/security";
 import LiveCryptoService from "../services/live-crypto-service";
 
+/**
+ * Batch fetch users by IDs to avoid N+1 queries.
+ * Returns a Map of userId -> user details for O(1) lookup.
+ */
+async function batchFetchUserDetails(userIds: string[]): Promise<Map<string, { id: string; email: string; fullName: string | null; phone: string | null }>> {
+  const userMap = new Map<string, { id: string; email: string; fullName: string | null; phone: string | null }>();
+
+  if (userIds.length === 0) return userMap;
+
+  // Remove duplicates
+  const uniqueIds = [...new Set(userIds)];
+
+  try {
+    const { data: users, error } = await supabaseAdmin
+      .from('users')
+      .select('id, email, full_name, phone')
+      .in('id', uniqueIds);
+
+    if (error || !users) return userMap;
+
+    for (const user of users) {
+      userMap.set(user.id, {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        phone: user.phone,
+      });
+    }
+  } catch {
+    // Return empty map on error - individual orders will have null userDetails
+  }
+
+  return userMap;
+}
+
 export default function registerTradingRoutes(app: Express) {
   // GET /api/portfolio/:userId
   app.get("/api/portfolio/:userId", requireAuth, async (req, res) => {
@@ -329,21 +364,14 @@ export default function registerTradingRoutes(app: Express) {
         (t) => t.status === "pending_approval" || t.status === "pending"
       ) || [];
 
-      const ordersWithUserDetails = await Promise.all(
-        pendingOrders.map(async (trade) => {
-          try {
-            const user = await storage.getUser(trade.user_id);
-            return {
-              ...trade,
-              userDetails: user
-                ? { id: user.id, email: user.email, fullName: user.full_name, phone: user.phone }
-                : null,
-            };
-          } catch {
-            return { ...trade, userDetails: null };
-          }
-        })
-      );
+      // Batch fetch all users to avoid N+1 queries (this endpoint is polled every 5s)
+      const userIds = pendingOrders.map(trade => trade.user_id).filter(Boolean);
+      const userMap = await batchFetchUserDetails(userIds);
+
+      const ordersWithUserDetails = pendingOrders.map(trade => ({
+        ...trade,
+        userDetails: userMap.get(trade.user_id) || null,
+      }));
 
       res.json(ordersWithUserDetails);
     } catch (error) {
@@ -363,21 +391,14 @@ export default function registerTradingRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to fetch all orders" });
       }
 
-      const ordersWithUserDetails = await Promise.all(
-        trades.map(async (trade) => {
-          try {
-            const user = await storage.getUser(trade.user_id);
-            return {
-              ...trade,
-              userDetails: user
-                ? { id: user.id, email: user.email, fullName: user.full_name, phone: user.phone }
-                : null,
-            };
-          } catch {
-            return { ...trade, userDetails: null };
-          }
-        })
-      );
+      // Batch fetch all users to avoid N+1 queries
+      const userIds = trades.map(trade => trade.user_id).filter(Boolean);
+      const userMap = await batchFetchUserDetails(userIds);
+
+      const ordersWithUserDetails = trades.map(trade => ({
+        ...trade,
+        userDetails: userMap.get(trade.user_id) || null,
+      }));
 
       res.json(ordersWithUserDetails);
     } catch (error) {

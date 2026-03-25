@@ -9,38 +9,25 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
 import { useAdminNotifications, type AdminNotification } from '@/hooks/use-admin-notifications';
-import { useAdminPendingCounts, type PendingCounts } from '@/hooks/use-admin-pending-counts';
+import { useAdminPendingCounts, type BadgeKey } from '@/hooks/use-admin-pending-counts';
 
-// Map sidebar hrefs to notification categories (for admin notification events)
-const CATEGORY_MAP: Record<string, string> = {
-  '/admin/users': 'users',
-  '/admin/wallets': 'wallets',
-  '/admin/support': 'support',
+// Map sidebar hrefs to badge keys for acknowledgment tracking
+const HREF_TO_BADGE_KEY: Record<string, BadgeKey> = {
   '/admin/dashboard': 'dashboard',
-  '/admin/trading-pairs': 'trading_pairs',
+  '/admin/wallets': 'wallets',
+  '/admin/users': 'users',
+  '/admin/support': 'support',
 };
 
-// Compute pending badge count for each nav item from real DB counts
-function getPendingBadge(key: string | undefined, counts: PendingCounts): number {
-  if (!key) return 0;
-  switch (key) {
-    case 'dashboard': return counts.trades + counts.futures;
-    case 'wallets': return counts.deposits + counts.withdrawals;
-    case 'users': return counts.kyc + counts.loans;
-    case 'support': return counts.support;
-    default: return 0;
-  }
-}
-
 const navItems = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeKey: 'dashboard' },
-  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeKey: 'users' },
+  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, description: 'Overview & Orders', badgeKey: 'dashboard' as BadgeKey },
+  { label: 'Users', href: '/admin/users', icon: Users, description: 'Manage Users', badgeKey: 'users' as BadgeKey },
   { label: 'News', href: '/admin/news', icon: Megaphone, description: 'Announcements & Broadcasts' },
   { label: 'Notifications', href: '/admin/notifications/simple', icon: Megaphone, description: 'Send Notifications' },
   { label: 'Trading Pairs', href: '/admin/trading-pairs', icon: TrendingUp, description: 'Manage Trading Pairs' },
   { label: 'Staking', href: '/admin/staking', icon: Coins, description: 'Staking Management' },
-  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeKey: 'wallets' },
-  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeKey: 'support' },
+  { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeKey: 'wallets' as BadgeKey },
+  { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeKey: 'support' as BadgeKey },
   { label: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform Config' },
 ];
 
@@ -61,7 +48,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     markCategoryRead,
   } = useAdminNotifications(30000);
 
-  const { counts: pendingCounts, totalPending } = useAdminPendingCounts(15000);
+  const { counts: pendingCounts, totalPending, getBadgeCount, acknowledgeSection } = useAdminPendingCounts(15000);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -80,13 +67,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [bellOpen]);
 
-  // Auto-clear category badge when navigating to that section
+  // Auto-acknowledge section badge when navigating to that section
   useEffect(() => {
-    const cat = CATEGORY_MAP[location];
+    const badgeKey = HREF_TO_BADGE_KEY[location];
+    if (badgeKey) {
+      acknowledgeSection(badgeKey);
+    }
+    // Also mark notification category as read if applicable
+    const categoryMap: Record<string, string> = {
+      '/admin/users': 'users',
+      '/admin/wallets': 'wallets',
+      '/admin/support': 'support',
+      '/admin/dashboard': 'dashboard',
+    };
+    const cat = categoryMap[location];
     if (cat && categoryBadges[cat] && categoryBadges[cat] > 0) {
       markCategoryRead(cat);
     }
-  }, [location]);
+  }, [location, acknowledgeSection, categoryBadges, markCategoryRead]);
 
   const handleNotificationClick = async (n: AdminNotification) => {
     if (!n.is_read) await markAsRead(n.id);
@@ -290,12 +288,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {navItems.map(item => {
             const isActive = location.startsWith(item.href);
             const Icon = item.icon;
-            const badgeCount = getPendingBadge(item.badgeKey, pendingCounts);
+            const badgeCount = item.badgeKey ? getBadgeCount(item.badgeKey) : 0;
             return (
               <Link
                 href={item.href}
                 key={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  setSidebarOpen(false);
+                  // Acknowledge this section when clicked
+                  if (item.badgeKey) {
+                    acknowledgeSection(item.badgeKey);
+                  }
+                }}
                 className={`
                   group flex items-center gap-3 rounded-xl transition-all duration-200
                   ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'}

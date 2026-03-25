@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import { validateSession, getClientIP, getUserAgent, logAuditEvent, invalidateSession } from '../utils/security';
+import { getUserDataCached, invalidateUserCache, type CachedUserData } from '../services/user-cache.service';
 
 // Augment Express Request to include Supabase auth user and session info
 declare global {
@@ -73,6 +74,7 @@ function matchesInternalTaskSecret(headerValue: string | undefined): boolean {
 /**
  * Auth middleware — verifies Bearer token via Supabase and attaches user to req.
  * Also validates session for activity tracking and security.
+ * Uses Redis caching for user data to reduce DB queries.
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
@@ -95,18 +97,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     req.user = data.user;
 
-    // Check if user still exists in the users table (blocks deleted accounts)
-    const { data: userRecord, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, is_active')
-      .eq('id', data.user.id)
-      .maybeSingle();
+    // Use cached user data to avoid DB query on every request
+    const cachedUser = await getUserDataCached(data.user.id, async () => {
+      const { data: userRecord, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id, is_active, role, wallet_locked, email, full_name')
+        .eq('id', data.user.id)
+        .maybeSingle();
 
-    if (userError || !userRecord) {
+      if (userError || !userRecord) return null;
+      return userRecord;
+    });
+
+    if (!cachedUser) {
       return res.status(401).json({ message: 'Account has been deleted. Please contact support.' });
     }
 
-    if (userRecord.is_active === false) {
+    if (!cachedUser.isActive) {
       return res.status(401).json({ message: 'Account has been deactivated. Please contact support.' });
     }
 
@@ -189,20 +196,22 @@ export async function requireVerifiedUser(req: Request, res: Response, next: Nex
 
 /**
  * Check if user has admin role in the database.
+ * Uses Redis caching to reduce DB queries.
  */
 export async function hasAdminAccess(userId: string): Promise<boolean> {
   try {
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('role, is_active, wallet_locked')
+        .eq('id', userId)
+        .single();
 
-    if (error || !user) {
-      return false;
-    }
+      if (error || !user) return null;
+      return user;
+    });
 
-    return user.role === 'admin';
+    return cachedUser?.role === 'admin';
   } catch (error) {
     return false;
   }
@@ -211,6 +220,7 @@ export async function hasAdminAccess(userId: string): Promise<boolean> {
 /**
  * Wallet lock middleware — blocks financial operations when wallet is locked.
  * Must run after requireAuth. Admins bypass this check.
+ * Uses Redis caching to reduce DB queries.
  */
 export async function requireUnlockedWallet(req: Request, res: Response, next: NextFunction) {
   try {
@@ -219,13 +229,18 @@ export async function requireUnlockedWallet(req: Request, res: Response, next: N
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('wallet_locked, role')
-      .eq('id', userId)
-      .single();
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('wallet_locked, role, is_active')
+        .eq('id', userId)
+        .single();
 
-    if (error || !user) {
+      if (error || !user) return null;
+      return user;
+    });
+
+    if (!cachedUser) {
       return res.status(503).json({
         message: 'Unable to verify wallet status. Please try again later.',
         code: 'WALLET_STATUS_UNAVAILABLE',
@@ -233,11 +248,11 @@ export async function requireUnlockedWallet(req: Request, res: Response, next: N
     }
 
     // Admins bypass wallet lock
-    if (user.role === 'admin') {
+    if (cachedUser.role === 'admin') {
       return next();
     }
 
-    if (user.wallet_locked) {
+    if (cachedUser.walletLocked) {
       return res.status(403).json({
         message: 'Your wallet is currently locked. All financial operations are restricted. Please contact support for assistance.',
         code: 'WALLET_LOCKED',
@@ -287,3 +302,8 @@ export async function checkAssetFrozen(userId: string, symbol: string): Promise<
  * Export session invalidation for logout endpoints
  */
 export { invalidateSession };
+
+/**
+ * Export user cache invalidation for routes that update user data
+ */
+export { invalidateUserCache };

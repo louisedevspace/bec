@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
+import { REDIS_KEYS, CACHE_TTL, cacheGetOrSet, cacheInvalidate } from "../utils/redis";
+import { invalidateUserCache } from "../services/user-cache.service";
 
 export default function registerWalletRoutes(app: Express) {
 
@@ -10,126 +12,180 @@ export default function registerWalletRoutes(app: Express) {
    * GET /api/wallet/summary
    * Returns full wallet summary for the authenticated user:
    * - portfolio balances, total value, P&L, recent transactions
+   * CACHED: 30 seconds - reduces DB load on rapid refreshes
    */
   app.get("/api/wallet/summary", requireAuth, async (req, res) => {
     try {
       const userId = (req as any).user.id;
+      const cacheKey = `${REDIS_KEYS.WALLET_SUMMARY}${userId}`;
 
-      // Fetch data in parallel: aggregate queries (no limit, filtered) + transaction list queries (limited)
-      const [
-        portfolioRes, pricesRes, stakingRes,
-        // Aggregate queries — ALL matching records for accurate totals
-        allApprovedDepositsRes, allApprovedWithdrawalsRes, allCompletedTradesRes, allCompletedFuturesRes,
-        // All trades/futures (any status) for analytics
-        allTradesAnyStatusRes, allFuturesAnyStatusRes,
-        // Fee records from platform_fees
-        platformFeesRes,
-        // Transaction list queries — limited for display
-        recentDepositsRes, recentWithdrawalsRes, recentTradesRes, recentFuturesRes,
-      ] = await Promise.all([
-        supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
-        supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
-        supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
-        // Aggregates: only columns needed for math, status-filtered, no limit
-        // Filter out admin-hidden/deleted records so wallet totals are accurate
-        supabaseAdmin.from("deposit_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
-        supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
-        supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
-        supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
-        // All trades/futures regardless of status for total counts
-        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
-        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
-        // Platform fees for this user
-        supabaseAdmin.from("platform_fees").select("trade_type, fee_amount, fee_symbol, created_at").eq("user_id", userId),
-        // Transaction list: full columns, limited for display
-        supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at, fee_amount, fee_symbol, fee_rate").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
-        supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
-      ]);
+      const summary = await cacheGetOrSet(cacheKey, CACHE_TTL.WALLET_SUMMARY, async () => {
+        // Fetch data in parallel: aggregate queries (no limit, filtered) + transaction list queries (limited)
+        const [
+          portfolioRes, pricesRes, stakingRes,
+          // Aggregate queries — ALL matching records for accurate totals
+          allApprovedDepositsRes, allApprovedWithdrawalsRes, allCompletedTradesRes, allCompletedFuturesRes,
+          // All trades/futures (any status) for analytics
+          allTradesAnyStatusRes, allFuturesAnyStatusRes,
+          // Fee records from platform_fees
+          platformFeesRes,
+          // Transaction list queries — limited for display
+          recentDepositsRes, recentWithdrawalsRes, recentTradesRes, recentFuturesRes,
+        ] = await Promise.all([
+          supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
+          supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
+          supabaseAdmin.from("staking_positions").select("id, symbol, amount, apy, duration, status, created_at, end_date").eq("user_id", userId),
+          // Aggregates: only columns needed for math, status-filtered, no limit
+          // Filter out admin-hidden/deleted records so wallet totals are accurate
+          supabaseAdmin.from("deposit_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
+          supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
+          supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+          supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+          // All trades/futures regardless of status for total counts
+          supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+          supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+          // Platform fees for this user
+          supabaseAdmin.from("platform_fees").select("trade_type, fee_amount, fee_symbol, created_at").eq("user_id", userId),
+          // Transaction list: full columns, limited for display
+          supabaseAdmin.from("deposit_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
+          supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
+          supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at, fee_amount, fee_symbol, fee_rate").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
+          supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
+        ]);
 
-      if (portfolioRes.error) {
-        console.error("Wallet summary - portfolio query error:", portfolioRes.error);
-      }
+        if (portfolioRes.error) {
+          console.error("Wallet summary - portfolio query error:", portfolioRes.error);
+        }
 
-      const portfolio = portfolioRes.data || [];
-      const prices = pricesRes.data || [];
-      const staking = stakingRes.data || [];
-      // Aggregate data (all matching records)
-      const allApprovedDeposits = allApprovedDepositsRes.data || [];
-      const allApprovedWithdrawals = allApprovedWithdrawalsRes.data || [];
-      const allCompletedTrades = allCompletedTradesRes.data || [];
-      const allCompletedFutures = allCompletedFuturesRes.data || [];
-      // All trades/futures for analytics
-      const allTradesAny = allTradesAnyStatusRes.data || [];
-      const allFuturesAny = allFuturesAnyStatusRes.data || [];
-      const platformFees = platformFeesRes.data || [];
-      // Recent transactions for display
-      const deposits = recentDepositsRes.data || [];
-      const withdrawals = recentWithdrawalsRes.data || [];
-      const trades = recentTradesRes.data || [];
-      const futures = recentFuturesRes.data || [];
+        const portfolio = portfolioRes.data || [];
+        const prices = pricesRes.data || [];
+        const staking = stakingRes.data || [];
+        // Aggregate data (all matching records)
+        const allApprovedDeposits = allApprovedDepositsRes.data || [];
+        const allApprovedWithdrawals = allApprovedWithdrawalsRes.data || [];
+        const allCompletedTrades = allCompletedTradesRes.data || [];
+        const allCompletedFutures = allCompletedFuturesRes.data || [];
+        // All trades/futures for analytics
+        const allTradesAny = allTradesAnyStatusRes.data || [];
+        const allFuturesAny = allFuturesAnyStatusRes.data || [];
+        const platformFees = platformFeesRes.data || [];
+        // Recent transactions for display
+        const deposits = recentDepositsRes.data || [];
+        const withdrawals = recentWithdrawalsRes.data || [];
+        const trades = recentTradesRes.data || [];
+        const futures = recentFuturesRes.data || [];
 
-      // Build price map
-      const priceMap: Record<string, number> = {};
-      for (const p of prices) {
-        priceMap[p.symbol.toUpperCase()] = parseFloat(p.price || "0");
-      }
+        // Build price map
+        const priceMap: Record<string, number> = {};
+        for (const p of prices) {
+          priceMap[p.symbol.toUpperCase()] = parseFloat(p.price || "0");
+        }
 
-      // Calculate portfolio with USD values
-      let totalValue = 0;
-      const assets = portfolio.map((asset: any) => {
-        const available = parseFloat(asset.available || "0");
-        const frozen = parseFloat(asset.frozen || "0");
-        const total = available + frozen;
-        const sym = asset.symbol.toUpperCase();
-        const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-        const usdValue = total * price;
-        totalValue += usdValue;
+        // Calculate portfolio with USD values
+        let totalValue = 0;
+        const assets = portfolio.map((asset: any) => {
+          const available = parseFloat(asset.available || "0");
+          const frozen = parseFloat(asset.frozen || "0");
+          const total = available + frozen;
+          const sym = asset.symbol.toUpperCase();
+          const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+          const usdValue = total * price;
+          totalValue += usdValue;
 
+          return {
+            symbol: asset.symbol,
+            available,
+            frozen,
+            total,
+            price,
+            usdValue,
+            change24h: parseFloat(prices.find((p: any) => p.symbol.toUpperCase() === sym)?.change24h || "0"),
+          };
+        });
+
+        // Calculate total deposits (all approved — use NET amount actually credited to portfolio)
+        const totalDeposited = allApprovedDeposits
+          .reduce((sum: number, d: any) => {
+            const sym = (d.symbol || "USDT").toUpperCase();
+            const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+            // Use net_amount (after fee) since that's what was actually credited
+            const amt = parseFloat(d.net_amount || d.amount || "0");
+            return sum + amt * price;
+          }, 0);
+
+        // Calculate total withdrawals (all approved — use GROSS amount deducted from portfolio)
+        const totalWithdrawn = allApprovedWithdrawals
+          .reduce((sum: number, w: any) => {
+            const sym = (w.symbol || "USDT").toUpperCase();
+            const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
+            // Use full amount since that's what was deducted from portfolio
+            return sum + parseFloat(w.amount || "0") * price;
+          }, 0);
+
+        // Calculate trade P&L (all completed/approved — from aggregate query)
+        const tradePnl = allCompletedTrades
+          .reduce((sum: number, t: any) => {
+            const amt = parseFloat(t.amount || "0");
+            const price = parseFloat(t.price || "0");
+            return sum + (t.side === "sell" ? amt * price : -(amt * price));
+          }, 0);
+
+        // Calculate futures P&L (all completed/closed — from aggregate query)
+        const futuresPnl = allCompletedFutures
+          .reduce((sum: number, f: any) => sum + parseFloat(f.final_result || "0"), 0);
+
+        // Build unified transaction history
+        const allTransactions: any[] = [];
+
+        deposits.forEach((d: any) => {
+          allTransactions.push({
+            id: `dep-${d.id}`,
+            type: "deposit",
+            symbol: d.symbol || "USDT",
+            amount: parseFloat(d.amount || "0"),
+            feeAmount: parseFloat(d.fee_amount || "0"),
+            feeSymbol: d.fee_symbol || d.symbol || "USDT",
+            feeRate: parseFloat(d.fee_rate || "0"),
+            netAmount: parseFloat(d.net_amount || d.amount || "0"),
+            status: d.status,
+            date: d.submitted_at,
+          });
+        });
+
+        // Construct partial result - we'll continue building allTransactions outside
         return {
-          symbol: asset.symbol,
-          available,
-          frozen,
-          total,
-          price,
-          usdValue,
-          change24h: parseFloat(prices.find((p: any) => p.symbol.toUpperCase() === sym)?.change24h || "0"),
+          portfolio,
+          prices,
+          staking,
+          allApprovedDeposits,
+          allApprovedWithdrawals,
+          allCompletedTrades,
+          allCompletedFutures,
+          allTradesAny,
+          allFuturesAny,
+          platformFees,
+          deposits,
+          withdrawals,
+          trades,
+          futures,
+          priceMap,
+          assets,
+          totalValue,
+          totalDeposited,
+          totalWithdrawn,
+          tradePnl,
+          futuresPnl,
         };
       });
 
-      // Calculate total deposits (all approved — use NET amount actually credited to portfolio)
-      const totalDeposited = allApprovedDeposits
-        .reduce((sum: number, d: any) => {
-          const sym = (d.symbol || "USDT").toUpperCase();
-          const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-          // Use net_amount (after fee) since that's what was actually credited
-          const amt = parseFloat(d.net_amount || d.amount || "0");
-          return sum + amt * price;
-        }, 0);
+      // Continue building the response from cached/fetched data
+      const {
+        staking, allApprovedDeposits, allApprovedWithdrawals, allCompletedTrades, allCompletedFutures,
+        allTradesAny, allFuturesAny, platformFees, deposits, withdrawals, trades, futures,
+        priceMap, assets, totalValue, totalDeposited, totalWithdrawn, tradePnl, futuresPnl,
+      } = summary;
 
-      // Calculate total withdrawals (all approved — use GROSS amount deducted from portfolio)
-      const totalWithdrawn = allApprovedWithdrawals
-        .reduce((sum: number, w: any) => {
-          const sym = (w.symbol || "USDT").toUpperCase();
-          const price = sym === "USDT" ? 1 : (priceMap[sym] || 0);
-          // Use full amount since that's what was deducted from portfolio
-          return sum + parseFloat(w.amount || "0") * price;
-        }, 0);
-
-      // Calculate trade P&L (all completed/approved — from aggregate query)
-      const tradePnl = allCompletedTrades
-        .reduce((sum: number, t: any) => {
-          const amt = parseFloat(t.amount || "0");
-          const price = parseFloat(t.price || "0");
-          return sum + (t.side === "sell" ? amt * price : -(amt * price));
-        }, 0);
-
-      // Calculate futures P&L (all completed/closed — from aggregate query)
-      const futuresPnl = allCompletedFutures
-        .reduce((sum: number, f: any) => sum + parseFloat(f.final_result || "0"), 0);
-
-      // Build unified transaction history
+      // Build unified transaction history (continued from cached data)
       const allTransactions: any[] = [];
 
       deposits.forEach((d: any) => {
@@ -637,6 +693,9 @@ export default function registerWalletRoutes(app: Express) {
         .eq("id", userId);
 
       if (error) throw error;
+
+      // Invalidate user cache since wallet_locked status changed
+      await invalidateUserCache(userId);
 
       // Audit log
       await logAuditEvent({

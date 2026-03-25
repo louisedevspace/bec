@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './middleware';
 import LiveCryptoService from '../services/live-crypto-service';
+import { REDIS_KEYS, CACHE_TTL, cacheGetOrSet, cacheInvalidate, cacheInvalidatePattern } from '../utils/redis';
 
 /**
  * Validate a financial amount — must be a finite positive number.
@@ -29,19 +30,24 @@ export function isValidFinancialAmount(amount: any): boolean {
 }
 
 export async function getTradingFeeRate(symbol: string): Promise<number> {
-  const { data: pairData } = await supabaseAdmin
-    .from('trading_pairs')
-    .select('trading_fee')
-    .eq('symbol', symbol)
-    .maybeSingle();
+  const cacheKey = `${REDIS_KEYS.TRADING_FEE}${symbol}`;
 
-  const rawRate = parseFloat(pairData?.trading_fee || '0.001');
-  if (!Number.isFinite(rawRate) || rawRate < 0) return 0.001;
-  return rawRate;
+  return cacheGetOrSet<number>(cacheKey, CACHE_TTL.TRADING_FEE, async () => {
+    const { data: pairData } = await supabaseAdmin
+      .from('trading_pairs')
+      .select('trading_fee')
+      .eq('symbol', symbol)
+      .maybeSingle();
+
+    const rawRate = parseFloat(pairData?.trading_fee || '0.001');
+    if (!Number.isFinite(rawRate) || rawRate < 0) return 0.001;
+    return rawRate;
+  });
 }
 
 /**
  * Upsert a portfolio entry — update if exists, create if not.
+ * Also invalidates the portfolio and wallet summary cache for the user.
  */
 export async function updatePortfolioBalance(userId: string, symbol: string, newAvailable: string, newFrozen: string = '0') {
   const { data: existingPortfolio, error: fetchError } = await supabaseAdmin
@@ -56,6 +62,7 @@ export async function updatePortfolioBalance(userId: string, symbol: string, new
     throw fetchError;
   }
 
+  let result;
   if (existingPortfolio && existingPortfolio.id) {
     const { data, error } = await supabaseAdmin
       .from('portfolios')
@@ -64,7 +71,7 @@ export async function updatePortfolioBalance(userId: string, symbol: string, new
       .select()
       .single();
     if (error) throw error;
-    return data;
+    result = data;
   } else if (existingPortfolio && !existingPortfolio.id) {
     const { data, error } = await supabaseAdmin
       .from('portfolios')
@@ -74,7 +81,7 @@ export async function updatePortfolioBalance(userId: string, symbol: string, new
       .select()
       .single();
     if (error) throw error;
-    return data;
+    result = data;
   } else {
     const { data, error } = await supabaseAdmin
       .from('portfolios')
@@ -82,8 +89,16 @@ export async function updatePortfolioBalance(userId: string, symbol: string, new
       .select()
       .single();
     if (error) throw error;
-    return data;
+    result = data;
   }
+
+  // Invalidate portfolio and wallet summary caches for this user
+  await Promise.all([
+    cacheInvalidate(`${REDIS_KEYS.PORTFOLIO}${userId}`),
+    cacheInvalidate(`${REDIS_KEYS.WALLET_SUMMARY}${userId}`),
+  ]);
+
+  return result;
 }
 
 /**

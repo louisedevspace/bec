@@ -25,6 +25,27 @@ export const REDIS_KEYS = {
   ADMIN_NOTIF_COUNTS: 'cache:admin:notif-counts',
   WS_CHANNEL_PRICES: 'ws:prices',
   WS_CHANNEL_SYNC: 'ws:sync',
+  // New cache keys for performance optimization
+  USER_DATA: 'cache:user:', // cache:user:{userId} - role, active status, wallet lock
+  TRADING_FEE: 'cache:trading-fee:', // cache:trading-fee:{symbol}
+  TRADING_PAIRS: 'cache:trading-pairs', // All trading pairs
+  TRADING_PAIRS_SPOT: 'cache:trading-pairs:spot',
+  TRADING_PAIRS_FUTURES: 'cache:trading-pairs:futures',
+  WALLET_SUMMARY: 'cache:wallet-summary:', // cache:wallet-summary:{userId}
+  PORTFOLIO: 'cache:portfolio:', // cache:portfolio:{userId}
+  ADMIN_SUPPORT_UNREAD: 'cache:admin:support-unread',
+} as const;
+
+/**
+ * Cache TTL constants in seconds
+ */
+export const CACHE_TTL = {
+  USER_DATA: 60, // 60 seconds - user role/status rarely changes
+  TRADING_FEE: 300, // 5 minutes - fee rates rarely change
+  TRADING_PAIRS: 300, // 5 minutes - trading pairs rarely change
+  WALLET_SUMMARY: 30, // 30 seconds - financial data, short TTL
+  PORTFOLIO: 15, // 15 seconds - very short for balance accuracy
+  ADMIN_SUPPORT_UNREAD: 10, // 10 seconds - for badge count freshness
 } as const;
 
 /**
@@ -394,5 +415,143 @@ export function createRedisSubscriber(): Redis | null {
   } catch (error) {
     console.log('[Redis] Failed to create subscriber:', (error as Error).message);
     return null;
+  }
+}
+
+// ============================================================================
+// In-Memory Fallback Caches (used when Redis is unavailable)
+// ============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+// In-memory fallback caches
+const memoryCache = new Map<string, CacheEntry<any>>();
+
+// Clean up expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  memoryCache.forEach((entry, key) => {
+    if (entry.expiresAt < now) {
+      keysToDelete.push(key);
+    }
+  });
+  keysToDelete.forEach(key => memoryCache.delete(key));
+}, 5 * 60 * 1000);
+
+/**
+ * Get from cache with automatic fallback to memory cache
+ * Returns [data, fromCache] tuple
+ */
+export async function cacheGet<T>(key: string): Promise<T | null> {
+  // Try Redis first
+  const redisData = await redisGetJSON<T>(key);
+  if (redisData !== null) {
+    return redisData;
+  }
+
+  // Fall back to memory cache
+  const memEntry = memoryCache.get(key);
+  if (memEntry && memEntry.expiresAt > Date.now()) {
+    return memEntry.data;
+  }
+
+  // Clean up expired memory entry
+  if (memEntry) {
+    memoryCache.delete(key);
+  }
+
+  return null;
+}
+
+/**
+ * Set in cache with automatic fallback to memory cache
+ */
+export async function cacheSet<T>(key: string, data: T, ttlSeconds: number): Promise<void> {
+  // Try Redis first
+  const redisSuccess = await redisSetJSON(key, data, ttlSeconds);
+
+  // Always set memory cache as fallback
+  memoryCache.set(key, {
+    data,
+    expiresAt: Date.now() + (ttlSeconds * 1000),
+  });
+}
+
+/**
+ * Invalidate cache (both Redis and memory)
+ */
+export async function cacheInvalidate(key: string): Promise<void> {
+  await redisDel(key);
+  memoryCache.delete(key);
+}
+
+/**
+ * Invalidate cache by pattern (both Redis and memory)
+ */
+export async function cacheInvalidatePattern(pattern: string): Promise<void> {
+  await redisDelPattern(pattern);
+
+  // Also invalidate from memory cache
+  const regexPattern = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+  const keysToDelete: string[] = [];
+  memoryCache.forEach((_, key) => {
+    if (regexPattern.test(key)) {
+      keysToDelete.push(key);
+    }
+  });
+  keysToDelete.forEach(key => memoryCache.delete(key));
+}
+
+/**
+ * Get or set cache with callback - most common pattern
+ * Tries cache first, if miss calls the callback and caches the result
+ */
+export async function cacheGetOrSet<T>(
+  key: string,
+  ttlSeconds: number,
+  fetchFn: () => Promise<T>
+): Promise<T> {
+  // Try cache first
+  const cached = await cacheGet<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  // Cache miss - fetch fresh data
+  const data = await fetchFn();
+
+  // Only cache non-null data
+  if (data !== null && data !== undefined) {
+    await cacheSet(key, data, ttlSeconds);
+  }
+
+  return data;
+}
+
+/**
+ * Set multiple cache entries at once
+ */
+export async function cacheSetMulti(entries: Array<{ key: string; data: any; ttl: number }>): Promise<void> {
+  const client = getRedisClient();
+
+  if (client && isRedisAvailable) {
+    const pipeline = client.pipeline();
+    for (const { key, data, ttl } of entries) {
+      pipeline.setex(key, ttl, JSON.stringify(data));
+    }
+    await pipeline.exec().catch(() => {});
+  }
+
+  // Always set in memory cache as fallback
+  const now = Date.now();
+  for (const { key, data, ttl } of entries) {
+    memoryCache.set(key, {
+      data,
+      expiresAt: now + (ttl * 1000),
+    });
   }
 }
