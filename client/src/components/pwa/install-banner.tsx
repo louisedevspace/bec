@@ -82,31 +82,39 @@ export function InstallBanner() {
   if (!visible) return null;
 
   return (
-    <div 
-      ref={rootRef} 
-      role="region" 
-      aria-label="Install Becxus" 
-      aria-live="polite" 
-      className="fixed top-0 left-0 right-0 z-[1000] pointer-events-none" 
+    <div
+      ref={rootRef}
+      role="region"
+      aria-label="Install Becxus"
+      aria-live="polite"
+      className="fixed top-0 left-0 right-0 z-[1000] pointer-events-none"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="mx-auto max-w-3xl pointer-events-auto">
-        <div data-banner-content className="m-3 rounded-xl border border-[#1e1e1e] bg-[#111] text-white shadow-2xl shadow-black/50 transform transition-transform duration-300 ease-out translate-y-0">
+        <div
+          data-banner-content
+          className="relative m-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]/80 backdrop-blur-2xl text-white shadow-[0_8px_40px_rgba(0,0,0,0.6)] ring-1 ring-white/[0.04] transform transition-transform duration-300 ease-out translate-y-0"
+        >
+          {/* Top edge highlight */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          {/* Blue accent glow */}
+          <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
           <div className="flex items-center justify-between p-3 sm:p-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] flex items-center justify-center overflow-hidden">
+              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
                 <Logo className="w-full h-full" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold">Install {config.appName}</div>
+                <div className="text-sm font-semibold text-white">Install {config.appName}</div>
                 <div className="text-xs text-gray-400">Add to your home screen for a faster, app-like experience</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button aria-label="Install Becxus" onClick={onInstall} className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700">
+              <Button aria-label="Install Becxus" onClick={onInstall} className="h-8 px-3 text-xs bg-blue-500/90 hover:bg-blue-500 border border-blue-400/20 shadow-lg shadow-blue-500/20">
                 Install
               </Button>
-              <Button aria-label="Dismiss" onClick={onDismiss} variant="outline" className="h-8 px-3 text-xs bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]">
+              <Button aria-label="Dismiss" onClick={onDismiss} variant="outline" className="h-8 px-3 text-xs bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white">
                 Dismiss
               </Button>
             </div>
