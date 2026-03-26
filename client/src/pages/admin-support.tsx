@@ -20,7 +20,6 @@ import AdminLayout from "./admin-layout";
 import type { SupportMessage, SendSupportMessageData } from "@/types/support";
 import { compressAdminImage } from "@/lib/image-compress";
 import { getImageDisplayUrl, openImageViewer } from "@/lib/image";
-import { buildApiUrl } from "@/lib/config";
 
 // ─── Types ───────────────────────────────────────────────────────
 interface ConversationUser {
@@ -280,7 +279,7 @@ export default function AdminSupportPage() {
         const token = session?.access_token;
         if (!token) throw new Error("No authentication token");
 
-        const res = await fetch(buildApiUrl("/api/admin/support/upload-image"), {
+        const res = await fetch("/api/admin/support/upload-image", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: form,
