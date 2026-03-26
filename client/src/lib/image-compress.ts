@@ -21,8 +21,8 @@ const IMAGE_TYPES = new Set([
 
 function canvasCompress(
   file: File,
-  quality = 0.82,
-  maxDimension = 2048
+  quality = 0.75,
+  maxDimension = 1600
 ): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -88,8 +88,8 @@ export async function compressUserImage(file: File): Promise<File> {
     const imageCompression = (await import("browser-image-compression"))
       .default;
     const compressed = await imageCompression(file, {
-      maxSizeMB: 2,
-      maxWidthOrHeight: 2048,
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1600,
       useWebWorker: true,
       preserveExifData: true,
       fileType: file.type as any,

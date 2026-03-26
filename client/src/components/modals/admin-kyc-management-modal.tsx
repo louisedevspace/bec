@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { buildApiUrl } from '@/lib/config';
-import { buildImageViewerPath } from '@/lib/image';
+import { buildImageViewerPath, getImageDisplayUrl } from '@/lib/image';
 
 interface KYCVerification {
   id: number;
@@ -310,33 +310,9 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                           <div className="space-y-3">
                             <h4 className="font-semibold text-white">Documents</h4>
                             <div className="grid grid-cols-3 gap-2">
-                              {kyc.front_id_url && (
-                                <a 
-                                  href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
-                                  className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
-                                >
-                                  <FileText className="h-6 w-6 text-blue-400" />
-                                  <span className="text-xs mt-1 text-gray-400">Front ID</span>
-                                </a>
-                              )}
-                              {kyc.back_id_url && (
-                                <a 
-                                  href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
-                                  className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
-                                >
-                                  <FileText className="h-6 w-6 text-blue-400" />
-                                  <span className="text-xs mt-1 text-gray-400">Back ID</span>
-                                </a>
-                              )}
-                              {kyc.selfie_with_id_url && (
-                                <a 
-                                  href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
-                                  className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded hover:bg-[#1a1a1a] bg-[#111]"
-                                >
-                                  <Camera className="h-6 w-6 text-green-400" />
-                                  <span className="text-xs mt-1 text-gray-400">Selfie</span>
-                                </a>
-                              )}
+                              <DocThumbnail url={kyc.front_id_url} label="Front ID" />
+                              <DocThumbnail url={kyc.back_id_url} label="Back ID" />
+                              <DocThumbnail url={kyc.selfie_with_id_url} label="Selfie" />
                             </div>
                           </div>
                         </div>
@@ -398,33 +374,9 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                         <div className="space-y-3">
                           <h4 className="font-semibold text-white">Documents</h4>
                           <div className="grid grid-cols-3 gap-2">
-                            {kyc.front_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <FileText className="h-6 w-6 text-blue-400" />
-                                <span className="text-xs mt-1 text-gray-400">Front ID</span>
-                              </a>
-                            )}
-                            {kyc.back_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <FileText className="h-6 w-6 text-blue-400" />
-                                <span className="text-xs mt-1 text-gray-400">Back ID</span>
-                              </a>
-                            )}
-                            {kyc.selfie_with_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <Camera className="h-6 w-6 text-green-400" />
-                                <span className="text-xs mt-1 text-gray-400">Selfie</span>
-                              </a>
-                            )}
+                            <DocThumbnail url={kyc.front_id_url} label="Front ID" />
+                            <DocThumbnail url={kyc.back_id_url} label="Back ID" />
+                            <DocThumbnail url={kyc.selfie_with_id_url} label="Selfie" />
                           </div>
                         </div>
                       </div>
@@ -460,33 +412,9 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
                         <div className="space-y-3">
                           <h4 className="font-semibold text-white">Documents</h4>
                           <div className="grid grid-cols-3 gap-2">
-                            {kyc.front_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.front_id_url, 'Front ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <FileText className="h-6 w-6 text-blue-400" />
-                                <span className="text-xs mt-1 text-gray-400">Front ID</span>
-                              </a>
-                            )}
-                            {kyc.back_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.back_id_url, 'Back ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <FileText className="h-6 w-6 text-blue-400" />
-                                <span className="text-xs mt-1 text-gray-400">Back ID</span>
-                              </a>
-                            )}
-                            {kyc.selfie_with_id_url && (
-                              <a 
-                                href={buildImageViewerPath(kyc.selfie_with_id_url, 'Selfie With ID')}
-                                className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-                              >
-                                <Camera className="h-6 w-6 text-green-400" />
-                                <span className="text-xs mt-1 text-gray-400">Selfie</span>
-                              </a>
-                            )}
+                            <DocThumbnail url={kyc.front_id_url} label="Front ID" />
+                            <DocThumbnail url={kyc.back_id_url} label="Back ID" />
+                            <DocThumbnail url={kyc.selfie_with_id_url} label="Selfie" />
                           </div>
                         </div>
                       </div>
@@ -546,6 +474,35 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function DocThumbnail({ url, label }: { url: string | null; label: string }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  if (!url) return null;
+  return (
+    <a
+      href={buildImageViewerPath(url, label)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex flex-col items-center p-2 border border-[#1e1e1e] rounded-lg hover:bg-[#1a1a1a] bg-[#111] transition-colors group"
+    >
+      <div className="w-full h-16 bg-[#0a0a0a] rounded overflow-hidden mb-1 flex items-center justify-center">
+        {!imgFailed ? (
+          <img
+            src={getImageDisplayUrl(url)}
+            alt={label}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <FileText className="h-5 w-5 text-blue-400" />
+        )}
+      </div>
+      <span className="text-xs text-gray-400 group-hover:text-gray-300">{label}</span>
+    </a>
   );
 }
 

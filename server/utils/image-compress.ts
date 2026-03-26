@@ -91,8 +91,8 @@ export async function compressUserImage(
   mimeType: string
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   return compressImage(buffer, mimeType, {
-    quality: 82,
-    maxDimension: 2048,
+    quality: 72,
+    maxDimension: 1600,
     keepMetadata: true,
   });
 }
@@ -106,8 +106,8 @@ export async function compressAdminImage(
   mimeType: string
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   return compressImage(buffer, mimeType, {
-    quality: 82,
-    maxDimension: 2048,
+    quality: 72,
+    maxDimension: 1600,
     keepMetadata: false,
   });
 }
