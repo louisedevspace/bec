@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDate, formatTime } from '@/lib/date-utils';
 import { useLocation } from 'wouter';
-import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info, Paperclip, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
+import { compressUserImage } from '@/lib/image-compress';
+import { getImageDisplayUrl, openImageViewer } from '@/lib/image';
+import { buildApiUrl } from '@/lib/config';
 
 
 interface SupportConversation {
@@ -25,6 +28,7 @@ interface SupportMessage {
   message: string;
   sender_type: 'user' | 'admin';
   message_type?: 'text' | 'system' | 'image' | 'file';
+  attachment_url?: string;
   is_read?: boolean;
   created_at: string;
 }
@@ -38,6 +42,13 @@ async function authHeaders(): Promise<Record<string, string>> {
   };
 }
 
+async function authHeadersMultipart(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Authorization': `Bearer ${session?.access_token ?? ''}`,
+  };
+}
+
 export default function SupportPage() {
   const [, setLocation] = useLocation();
   const [conversations, setConversations] = useState<SupportConversation[]>([]);
@@ -45,6 +56,10 @@ export default function SupportPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,25 +117,77 @@ export default function SupportPage() {
     return () => clearInterval(interval);
   }, [fetchConversations]);
 
+  // Image upload handlers
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please select an image file'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return; }
+    setPendingImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPendingImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const clearPendingImage = () => {
+    setPendingImage(null);
+    setPendingImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   // Send message
   const handleSendMessage = async () => {
-    if (!message.trim() || !selectedConversation) return;
+    if ((!message.trim() && !pendingImage) || !selectedConversation) return;
 
     setSending(true);
     try {
+      let attachmentUrl: string | undefined;
+      let messageType: 'text' | 'image' = 'text';
+
+      // Upload image first if pending
+      if (pendingImage) {
+        setUploading(true);
+        try {
+          const compressed = await compressUserImage(pendingImage);
+          const formData = new FormData();
+          formData.append('file', compressed);
+
+          const uploadHeaders = await authHeadersMultipart();
+          const uploadRes = await fetch(buildApiUrl('/support/upload-image'), {
+            method: 'POST',
+            headers: uploadHeaders,
+            body: formData,
+          });
+
+          if (!uploadRes.ok) {
+            const err = await uploadRes.json().catch(() => ({ message: 'Upload failed' }));
+            alert(err.message || 'Failed to upload image');
+            return;
+          }
+
+          const data = await uploadRes.json();
+          attachmentUrl = data.attachmentUrl;
+          messageType = 'image';
+        } finally {
+          setUploading(false);
+        }
+      }
+
       const headers = await authHeaders();
-      const response = await fetch('/api/support/messages', {
+      const response = await fetch(buildApiUrl('/support/messages'), {
         method: 'POST',
         headers,
         body: JSON.stringify({
           conversationId: selectedConversation.id,
-          message,
+          message: message.trim() || '(Image)',
+          messageType,
+          attachmentUrl,
         }),
       });
 
       if (response.ok) {
         setMessage('');
-        // Immediately refetch to get updated conversation (status may change on reopen)
+        clearPendingImage();
         await fetchConversations(true);
       } else {
         const err = await response.json().catch(() => ({ message: 'Failed to send message' }));
@@ -311,7 +378,22 @@ export default function SupportPage() {
           {!isUser && (
             <p className="text-[10px] text-blue-400 font-medium mb-1">Support Agent</p>
           )}
-          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+          {/* Image attachment */}
+          {msg.message_type === 'image' && msg.attachment_url && (
+            <div className="mb-1">
+              <img
+                src={getImageDisplayUrl(msg.attachment_url)}
+                alt="Attachment"
+                className="max-w-64 max-h-48 rounded-lg cursor-pointer object-cover"
+                onClick={() => openImageViewer(msg.attachment_url, 'Support Attachment')}
+                loading="lazy"
+              />
+            </div>
+          )}
+          {/* Text content (skip placeholder for image-only) */}
+          {msg.message && msg.message !== '(Image)' && (
+            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+          )}
           {/* Link preview for first URL in message */}
           {firstUrl && (
             <div className="mt-2">
@@ -535,22 +617,45 @@ export default function SupportPage() {
                     This ticket has been closed. Start a new conversation if you need further help.
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={selectedConversation.status === 'resolved' ? 'Reply to reopen this ticket...' : 'Type your message...'}
-                      rows={2}
-                      className="flex-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!message.trim() || sending}
-                      className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white px-4 py-2 rounded-xl transition-colors flex items-center justify-center"
-                    >
-                      {sending ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
-                    </button>
+                  <div>
+                    {/* Image preview strip */}
+                    {pendingImagePreview && (
+                      <div className="flex items-center gap-2 mb-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-2">
+                        <img src={pendingImagePreview} alt="Preview" className="h-16 w-16 object-cover rounded-lg" />
+                        <span className="text-xs text-gray-400 flex-1 truncate">{pendingImage?.name}</span>
+                        <button onClick={clearPendingImage} className="p-1 hover:bg-[#1a1a1a] rounded-lg transition-colors">
+                          <X size={14} className="text-gray-500" />
+                        </button>
+                      </div>
+                    )}
+                    {/* Hidden file input */}
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                    <div className="flex gap-2">
+                      {/* Upload button */}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading || sending}
+                        className={`bg-[#0a0a0a] border border-[#1e1e1e] hover:text-white hover:bg-[#1a1a1a] px-3 rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 ${pendingImage ? 'text-blue-400 border-blue-500/30' : 'text-gray-400'}`}
+                        title="Attach image"
+                      >
+                        <Paperclip size={16} />
+                      </button>
+                      <textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={selectedConversation.status === 'resolved' ? 'Reply to reopen this ticket...' : 'Type your message...'}
+                        rows={2}
+                        className="flex-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={(!message.trim() && !pendingImage) || sending || uploading}
+                        className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white px-4 py-2 rounded-xl transition-colors flex items-center justify-center"
+                      >
+                        {sending || uploading ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

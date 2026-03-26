@@ -11,13 +11,16 @@ import {
   MessageSquare, Send, User, Shield, Search, MessageCircle, ArrowLeft,
   AlertTriangle, CheckCircle, Clock, XCircle, ChevronDown, Filter,
   Zap, FileText, Tag, BarChart3, RefreshCw, CheckSquare, Square,
-  ArrowUpRight, Inbox, Loader2,
+  ArrowUpRight, Inbox, Loader2, Paperclip, X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDataSync } from "@/hooks/use-data-sync";
 import { supabase } from "@/lib/supabaseClient";
 import AdminLayout from "./admin-layout";
 import type { SupportMessage, SendSupportMessageData } from "@/types/support";
+import { compressAdminImage } from "@/lib/image-compress";
+import { getImageDisplayUrl, openImageViewer } from "@/lib/image";
+import { buildApiUrl } from "@/lib/config";
 
 // ─── Types ───────────────────────────────────────────────────────
 interface ConversationUser {
@@ -82,6 +85,10 @@ export default function AdminSupportPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -255,10 +262,77 @@ export default function AdminSupportPage() {
   }, [conversations, searchTerm, filterStatus, filterPriority, filterCategory]);
 
   // ─── Handlers ────────────────────────────────────────────────
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !selectedConversation || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate({ conversationId: selectedConversation.id, message: message.trim(), messageType: "text" });
+    if ((!message.trim() && !pendingImage) || !selectedConversation || sendMessageMutation.isPending || uploading) return;
+
+    let messageType: "text" | "image" = "text";
+    let attachmentUrl: string | undefined;
+
+    if (pendingImage) {
+      try {
+        setUploading(true);
+        const compressed = await compressAdminImage(pendingImage);
+        const form = new FormData();
+        form.append("image", compressed);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error("No authentication token");
+
+        const res = await fetch(buildApiUrl("/api/admin/support/upload-image"), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: "Upload failed" }));
+          throw new Error(err.message || "Upload failed");
+        }
+        const data = await res.json();
+        attachmentUrl = data.attachmentUrl;
+        messageType = "image";
+        clearPendingImage();
+      } catch (err: any) {
+        toast({ title: "Image upload failed", description: err.message, variant: "destructive" });
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    const text = message.trim() || (messageType === "image" ? "(Image)" : "");
+    if (!text) return;
+
+    sendMessageMutation.mutate({
+      conversationId: selectedConversation.id,
+      message: text,
+      messageType,
+      attachmentUrl,
+    });
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Only image files are allowed", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be under 5 MB", variant: "destructive" });
+      return;
+    }
+    setPendingImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPendingImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const clearPendingImage = () => {
+    setPendingImage(null);
+    setPendingImagePreview(null);
   };
 
   const handleTemplateSelect = (templateMessage: string) => {
@@ -612,7 +686,21 @@ export default function AdminSupportPage() {
                                   <div className={`px-3.5 py-2.5 rounded-2xl text-sm ${
                                     isAdmin ? "bg-blue-600 text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-300 rounded-bl-md border border-[#2a2a2a]"
                                   }`}>
-                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.message}</p>
+                                    {msg.message_type === "image" && msg.attachment_url && (
+                                      <div className="mb-1">
+                                        <img
+                                          src={getImageDisplayUrl(msg.attachment_url)}
+                                          alt="Attachment"
+                                          className="max-w-64 max-h-48 rounded-lg cursor-pointer object-cover"
+                                          onClick={() => openImageViewer(msg.attachment_url!, "Support Attachment")}
+                                          loading="lazy"
+                                          decoding="async"
+                                        />
+                                      </div>
+                                    )}
+                                    {msg.message && msg.message !== "(Image)" && (
+                                      <p className="whitespace-pre-wrap leading-relaxed">{msg.message}</p>
+                                    )}
                                   </div>
                                   <div className={`flex items-center gap-1.5 text-[10px] text-gray-500 ${isAdmin ? "justify-end" : "justify-start"}`}>
                                     {isAutoReply && (
@@ -664,6 +752,29 @@ export default function AdminSupportPage() {
 
                   {/* Message Input */}
                   <form onSubmit={handleSendMessage} className="p-3 border-t border-[#1e1e1e]">
+                    {/* Image preview strip */}
+                    {pendingImagePreview && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <div className="relative inline-block">
+                          <img src={pendingImagePreview} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-[#2a2a2a]" />
+                          <button
+                            type="button"
+                            onClick={clearPendingImage}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-500 truncate max-w-[200px]">{pendingImage?.name}</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
                     <div className="flex items-end gap-2">
                       <Button
                         type="button"
@@ -675,6 +786,17 @@ export default function AdminSupportPage() {
                       >
                         <FileText className="h-4 w-4 fill-current" />
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="rounded-xl self-end h-10 px-3 border-[#1e1e1e] text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                        title="Attach Image"
+                      >
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Paperclip className="h-4 w-4 fill-current" />}
+                      </Button>
                       <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
@@ -682,17 +804,17 @@ export default function AdminSupportPage() {
                         rows={1}
                         data-reply-input
                         className="flex-1 resize-none rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-sm min-h-[40px] max-h-24 text-white placeholder:text-gray-500 focus:border-[#2a2a2a]"
-                        disabled={sendMessageMutation.isPending}
+                        disabled={sendMessageMutation.isPending || uploading}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (message.trim()) handleSendMessage(e); }
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (message.trim() || pendingImage) handleSendMessage(e); }
                         }}
                       />
                       <Button
                         type="submit"
-                        disabled={!message.trim() || sendMessageMutation.isPending}
+                        disabled={(!message.trim() && !pendingImage) || sendMessageMutation.isPending || uploading}
                         className="rounded-xl bg-blue-600 hover:bg-blue-700 self-end h-10 w-10 p-0 flex-shrink-0"
                       >
-                        {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Send className="h-4 w-4 fill-current" />}
+                        {sendMessageMutation.isPending || uploading ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Send className="h-4 w-4 fill-current" />}
                       </Button>
                     </div>
                   </form>

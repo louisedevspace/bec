@@ -1,8 +1,24 @@
 import type { Express } from "express";
+import multer from "multer";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
 import { adminNotificationService } from "../services/admin-notification.service";
 import { autoReplyService } from "../services/auto-reply.service";
+import { buildInternalAssetPath } from "../../shared/supabase-storage";
+import { sanitizeUploadFileName } from "../utils/uploads";
+import { compressUserImage, compressAdminImage } from "../utils/image-compress";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) {
+      cb(new Error("Only image uploads are allowed"));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 // ─── Auto-categorization helpers ─────────────────────────────────
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -72,7 +88,7 @@ export default function registerSupportRoutes(app: Express) {
         .select(`
           *,
           support_messages (
-            id, message, sender_type, created_at, is_read, sender_id, message_type
+            id, message, sender_type, created_at, is_read, sender_id, message_type, attachment_url
           )
         `)
         .eq("user_id", userId)
@@ -398,6 +414,50 @@ export default function registerSupportRoutes(app: Express) {
     }
   });
 
+  // ─── Ensure support-attachments bucket ──────────────────────────
+  async function ensureSupportAttachmentsBucket() {
+    const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+    if (listError) throw new Error(`Unable to verify storage buckets: ${listError.message}`);
+
+    const existing = buckets?.find((b) => b.name === "support-attachments" || b.id === "support-attachments");
+    if (existing) return;
+
+    const { error: createError } = await supabaseAdmin.storage.createBucket("support-attachments", {
+      public: false,
+      fileSizeLimit: 5 * 1024 * 1024,
+      allowedMimeTypes: ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"],
+    });
+
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new Error(`Failed to create support-attachments bucket: ${createError.message}`);
+    }
+  }
+
+  // POST /api/support/upload-image — user uploads image for support chat
+  app.post("/api/support/upload-image", requireAuth, upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No image file provided" });
+
+      const userId = req.user.id;
+      const { buffer: compressedBuffer, mimeType: compressedMime } =
+        await compressUserImage(file.buffer, file.mimetype);
+
+      const filePath = `${userId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
+      await ensureSupportAttachmentsBucket();
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("support-attachments")
+        .upload(filePath, compressedBuffer, { contentType: compressedMime, upsert: false });
+
+      if (uploadError) return res.status(500).json({ message: "Failed to upload image" });
+
+      res.json({ attachmentUrl: buildInternalAssetPath("support-attachments", filePath) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
   // ====================================================================
   //  ADMIN ENDPOINTS
   // ====================================================================
@@ -410,7 +470,7 @@ export default function registerSupportRoutes(app: Express) {
         .select(`
           *,
           support_messages (
-            id, message, sender_type, created_at, is_read, sender_id, message_type
+            id, message, sender_type, created_at, is_read, sender_id, message_type, attachment_url
           )
         `)
         .order("last_message_at", { ascending: false });
@@ -512,6 +572,31 @@ export default function registerSupportRoutes(app: Express) {
       res.json(supportMessage);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/support/upload-image — admin uploads image for support chat
+  app.post("/api/admin/support/upload-image", requireAuth, requireAdmin, upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No image file provided" });
+
+      const adminId = req.user.id;
+      const { buffer: compressedBuffer, mimeType: compressedMime } =
+        await compressAdminImage(file.buffer, file.mimetype);
+
+      const filePath = `admin/${adminId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
+      await ensureSupportAttachmentsBucket();
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("support-attachments")
+        .upload(filePath, compressedBuffer, { contentType: compressedMime, upsert: false });
+
+      if (uploadError) return res.status(500).json({ message: "Failed to upload image" });
+
+      res.json({ attachmentUrl: buildInternalAssetPath("support-attachments", filePath) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upload image" });
     }
   });
 
