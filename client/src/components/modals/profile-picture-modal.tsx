@@ -4,6 +4,7 @@ import { X, Upload, Camera, User, CheckCircle, AlertCircle, RotateCcw } from 'lu
 import { supabase } from '../../lib/supabaseClient';
 import { getImageDisplayUrl } from '@/lib/image';
 import { buildInternalAssetPath } from '../../../../shared/supabase-storage';
+import { compressUserImage } from '@/lib/image-compress';
 
 interface ProfilePictureModalProps {
   isOpen: boolean;
@@ -182,9 +183,10 @@ export function ProfilePictureModal({
       const filePath = `${userId}/${fileName}`;
 
       // Upload file to Supabase Storage
+      const compressedFile = await compressUserImage(selectedFile);
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, selectedFile, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });

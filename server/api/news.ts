@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../routes/middleware';
 import { requireAdmin, requireAuth } from '../routes/middleware';
 import type { Express } from 'express';
 import { buildInternalAssetPath } from '../../shared/supabase-storage';
+import { compressAdminImage } from '../utils/image-compress';
 
 const router = Router();
 
@@ -79,14 +80,16 @@ router.post('/upload-image', requireAuth, requireAdmin, upload.single('file'), a
     const ext = (file.originalname.split('.').pop() || 'png').toLowerCase();
     const fileName = `${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
     const filePath = `uploads/${fileName}`;
+    const { buffer: compressedBuffer, mimeType: compressedMime } =
+      await compressAdminImage(file.buffer, file.mimetype);
 
     try {
       await ensureNewsImagesBucket();
 
       const { error: uploadError } = await supabaseAdmin.storage
         .from('news-images')
-        .upload(filePath, file.buffer, {
-          contentType: file.mimetype,
+        .upload(filePath, compressedBuffer, {
+          contentType: compressedMime,
           cacheControl: '3600',
           upsert: false,
         });

@@ -10,6 +10,7 @@ import { adminNotificationService } from "../services/admin-notification.service
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
 import { validateFinancialAmount, validatePaginationParams } from "./helpers";
+import { compressUserImage } from "../utils/image-compress";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -260,10 +261,12 @@ export default function registerLoansRoutes(app: Express) {
       // Upload documents
       const documentUrls: string[] = [];
       for (const file of files) {
+        const { buffer: compressedBuffer, mimeType: compressedMime } =
+          await compressUserImage(file.buffer, file.mimetype);
         const fileName = `${userId}/${Date.now()}_${sanitizeUploadFileName(file.originalname)}`;
         const { data, error } = await supabaseAdmin.storage
           .from("loan-documents")
-          .upload(fileName, file.buffer, { contentType: file.mimetype });
+          .upload(fileName, compressedBuffer, { contentType: compressedMime });
 
         if (error) {
           return res.status(500).json({ message: "Failed to upload document" });
@@ -326,10 +329,12 @@ export default function registerLoansRoutes(app: Express) {
     const userId = req.user.id;
     if (!file) return res.status(400).json({ message: "No file provided" });
 
+    const { buffer: compressedBuffer, mimeType: compressedMime } =
+      await compressUserImage(file.buffer, file.mimetype);
     const filePath = `${userId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
     const { error } = await supabase.storage
       .from("loan-documents")
-      .upload(filePath, file.buffer, { contentType: file.mimetype });
+      .upload(filePath, compressedBuffer, { contentType: compressedMime });
 
     if (error) return res.status(500).json({ message: "Upload failed", error });
 

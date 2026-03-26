@@ -8,6 +8,7 @@ import { adminNotificationService } from "../services/admin-notification.service
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
 import { getServerConfig } from "../config";
+import { compressAdminImage } from "../utils/image-compress";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -242,10 +243,12 @@ export default function registerWithdrawalsRoutes(app: Express) {
         let adminScreenshotUrl = null;
 
         if (action === "approve" && req.file) {
+          const { buffer: compressedBuffer, mimeType: compressedMime } =
+            await compressAdminImage(req.file.buffer, req.file.mimetype);
           const filePath = `${Date.now()}-${sanitizeUploadFileName(req.file.originalname)}`;
           const { error: uploadError } = await supabase.storage
             .from("withdraw-screenshots")
-            .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, cacheControl: "3600" });
+            .upload(filePath, compressedBuffer, { contentType: compressedMime, cacheControl: "3600" });
 
           if (uploadError) {
             return res.status(500).json({ message: "Failed to upload screenshot" });

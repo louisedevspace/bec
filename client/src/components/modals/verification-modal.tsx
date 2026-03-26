@@ -10,6 +10,7 @@ import { Upload, FileText, Camera, User, CheckCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { buildApiUrl } from "@/lib/config";
 import { buildInternalAssetPath } from '../../../../shared/supabase-storage';
+import { compressUserImage } from '@/lib/image-compress';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -83,9 +84,10 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       
       console.log('🔍 Front ID path:', frontIdPath);
       
+      const compressedFrontId = await compressUserImage(documents.frontId!);
       const { data: frontIdData, error: frontIdError } = await supabase.storage
         .from('kyc-documents')
-        .upload(frontIdPath, documents.frontId!, {
+        .upload(frontIdPath, compressedFrontId, {
           cacheControl: '3600',
           upsert: true
         });
@@ -106,9 +108,10 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       
       console.log('🔍 Back ID path:', backIdPath);
       
+      const compressedBackId = await compressUserImage(documents.backId!);
       const { data: backIdData, error: backIdError } = await supabase.storage
         .from('kyc-documents')
-        .upload(backIdPath, documents.backId!, {
+        .upload(backIdPath, compressedBackId, {
           cacheControl: '3600',
           upsert: true
         });
@@ -129,9 +132,10 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
       
       console.log('🔍 Selfie path:', selfiePath);
       
+      const compressedSelfie = await compressUserImage(documents.selfieWithId!);
       const { data: selfieData, error: selfieError } = await supabase.storage
         .from('kyc-documents')
-        .upload(selfiePath, documents.selfieWithId!, {
+        .upload(selfiePath, compressedSelfie, {
           cacheControl: '3600',
           upsert: true
         });

@@ -8,6 +8,7 @@ import { adminNotificationService } from "../services/admin-notification.service
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
 import { getServerConfig } from "../config";
+import { compressUserImage } from "../utils/image-compress";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -30,11 +31,15 @@ export default function registerDepositsRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid amount" });
       }
 
+      // Compress before upload — preserves EXIF so deposit proof is authentic
+      const { buffer: compressedBuffer, mimeType: compressedMime } =
+        await compressUserImage(file.buffer, file.mimetype);
+
       // Upload screenshot
       const filePath = `${userId}/${Date.now()}-${sanitizeUploadFileName(file.originalname)}`;
       const { error: uploadError } = await supabase.storage
         .from("deposit-screenshots")
-        .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: false });
+        .upload(filePath, compressedBuffer, { contentType: compressedMime, upsert: false });
 
       if (uploadError) {
         return res.status(500).json({ message: "Failed to upload screenshot" });
