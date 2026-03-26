@@ -384,7 +384,7 @@ export default function SupportPage() {
               <img
                 src={getImageDisplayUrl(msg.attachment_url)}
                 alt="Attachment"
-                className="max-w-64 max-h-48 rounded-lg cursor-pointer object-cover"
+                className="w-auto max-w-full sm:max-w-[16rem] md:max-w-xs max-h-52 rounded-lg cursor-pointer object-cover"
                 onClick={() => openImageViewer(msg.attachment_url, 'Support Attachment')}
                 loading="lazy"
               />
