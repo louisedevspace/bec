@@ -273,7 +273,7 @@ export default function AdminSupportPage() {
         setUploading(true);
         const compressed = await compressAdminImage(pendingImage);
         const form = new FormData();
-        form.append("image", compressed);
+        form.append("file", compressed);
 
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
