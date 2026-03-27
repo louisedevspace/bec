@@ -247,6 +247,16 @@ export default function AdminNews() {
   useEffect(() => { fetchNews(1); }, [searchQuery, filterType, filterPriority, filterCategory, filterStatus]);
   useEffect(() => { fetchStats(); fetchCategories(); fetchTemplates(); }, []);
 
+  // Auto-refresh news metrics every 30 seconds when on manage or analytics tab
+  useEffect(() => {
+    if (activeTab !== 'manage' && activeTab !== 'analytics') return;
+    const interval = setInterval(() => {
+      fetchNews(page);
+      fetchStats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [activeTab, page, fetchNews, fetchStats]);
+
   const handleSearch = (val: string) => {
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
@@ -778,8 +788,8 @@ export default function AdminNews() {
                     const status = getStatusInfo(news);
                     return (
                       <Card key={news.id} className={`bg-[#111] border-[#1e1e1e] transition-all ${selectedIds.has(news.id) ? 'ring-1 ring-blue-500/50' : ''}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start gap-2 sm:gap-3">
                             {/* Checkbox */}
                             <input type="checkbox" checked={selectedIds.has(news.id)}
                               onChange={() => toggleSelect(news.id)}
@@ -787,11 +797,11 @@ export default function AdminNews() {
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
                                 {news.is_pinned && <Pin className="w-3.5 h-3.5 text-yellow-400 shrink-0 fill-current" />}
-                                <h3 className="text-white font-semibold truncate">{news.title}</h3>
+                                <h3 className="text-white font-semibold text-sm sm:text-base truncate">{news.title}</h3>
                               </div>
-                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mb-2">
                                 <Badge className={`text-[10px] px-1.5 py-0 border ${status.cls}`}>{status.label}</Badge>
                                 <Badge className={`text-[10px] px-1.5 py-0 border ${getPriorityColor(news.priority)}`}>{news.priority}</Badge>
                                 <Badge className="text-[10px] px-1.5 py-0 bg-[#1a1a1a] text-gray-400 border-[#333]">{getTypeLabel(news.type)}</Badge>
@@ -802,17 +812,45 @@ export default function AdminNews() {
                                   <Badge className="text-[10px] px-1.5 py-0 bg-cyan-500/15 text-cyan-400 border-cyan-500/30">A/B: {news.ab_variant}</Badge>
                                 )}
                               </div>
-                              <p className="text-gray-500 text-sm line-clamp-1 mb-2">{news.content}</p>
-                              <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                              <p className="text-gray-500 text-xs sm:text-sm line-clamp-1 mb-2">{news.content}</p>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                                 <span className="flex items-center gap-1"><Users className="w-3 h-3 fill-current" /> {news.target_users}</span>
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3 fill-current" /> {fmtDate(news.created_at)}</span>
                                 <span className="flex items-center gap-1"><EyeIcon className="w-3 h-3 fill-current" /> {fmtNum(news.view_count || 0)} views</span>
                                 <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3 fill-current" /> {fmtNum(news.click_count || 0)} clicks</span>
                               </div>
+
+                              {/* Actions - inline on mobile */}
+                              <div className="flex items-center gap-0.5 sm:hidden mt-2 pt-2 border-t border-[#1e1e1e] -mx-1 flex-wrap">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                  onClick={() => openAnalytics(news)} title="Analytics">
+                                  <BarChart3 className="w-3.5 h-3.5 fill-current" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                  onClick={() => togglePin(news.id, !news.is_pinned)} title={news.is_pinned ? 'Unpin' : 'Pin'}>
+                                  <Pin className={`w-3.5 h-3.5 fill-current ${news.is_pinned ? 'text-yellow-400' : ''}`} />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                  onClick={() => duplicateNews(news.id)} title="Duplicate">
+                                  <Copy className="w-3.5 h-3.5 fill-current" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                  onClick={() => toggleActive(news.id, !news.is_active)} title={news.is_active ? 'Deactivate' : 'Activate'}>
+                                  {news.is_active ? <EyeOff className="w-3.5 h-3.5 fill-current" /> : <Eye className="w-3.5 h-3.5 fill-current" />}
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-400 hover:bg-[#1a1a1a]"
+                                  onClick={() => openEdit(news)} title="Edit">
+                                  <Edit className="w-3.5 h-3.5 fill-current" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-red-400 hover:bg-[#1a1a1a]"
+                                  onClick={() => handleDelete(news.id)} title="Delete">
+                                  <Trash2 className="w-3.5 h-3.5 fill-current" />
+                                </Button>
+                              </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 shrink-0">
+                            {/* Actions - desktop only */}
+                            <div className="hidden sm:flex items-center gap-1 shrink-0">
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
                                 onClick={() => openAnalytics(news)} title="Analytics">
                                 <BarChart3 className="w-3.5 h-3.5 fill-current" />
@@ -1003,19 +1041,19 @@ export default function AdminNews() {
                     ) : (
                       <div className="space-y-2">
                         {[...newsList].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 5).map(n => (
-                          <div key={n.id} className="flex items-center gap-3 bg-[#0a0a0a] rounded p-2.5 border border-[#1e1e1e]">
+                          <div key={n.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-[#0a0a0a] rounded p-2.5 border border-[#1e1e1e]">
                             <div className="flex-1 min-w-0">
                               <p className="text-white text-sm font-medium truncate">{n.title}</p>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-gray-500 shrink-0">
+                            <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-500 shrink-0">
                               <span>{fmtNum(n.view_count || 0)} views</span>
                               <span>{fmtNum(n.click_count || 0)} clicks</span>
                               <span>{(n.view_count || 0) > 0 ? (((n.click_count || 0) / (n.view_count || 1)) * 100).toFixed(1) : '0.0'}% CTR</span>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white"
+                                onClick={() => openAnalytics(n)}>
+                                <BarChart3 className="w-3.5 h-3.5 fill-current" />
+                              </Button>
                             </div>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white"
-                              onClick={() => openAnalytics(n)}>
-                              <BarChart3 className="w-3.5 h-3.5 fill-current" />
-                            </Button>
                           </div>
                         ))}
                       </div>
