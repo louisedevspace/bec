@@ -441,8 +441,8 @@ export default function registerAdminRoutes(app: Express) {
             { table: "kyc_verifications", column: "user_id" },
             { table: "deposit_requests", column: "user_id" },
             { table: "withdraw_requests", column: "user_id" },
-            { table: "support_conversations", column: "user_id" },
             { table: "support_messages", column: "sender_id" },
+            { table: "support_conversations", column: "user_id" },
             { table: "admin_notifications", column: "user_id" },
           ];
 
