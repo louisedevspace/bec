@@ -665,20 +665,22 @@ export default function AdminNews() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-[#1a1a1a] border border-[#1e1e1e]">
-            <TabsTrigger value="manage" className="data-[state=active]:bg-[#333] text-gray-300">
-              <Layers className="w-4 h-4 mr-1.5 fill-current" /> Manage
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="data-[state=active]:bg-[#333] text-gray-300">
-              <FileText className="w-4 h-4 mr-1.5 fill-current" /> Templates
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="data-[state=active]:bg-[#333] text-gray-300">
-              <Tag className="w-4 h-4 mr-1.5 fill-current" /> Categories
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-[#333] text-gray-300">
-              <BarChart3 className="w-4 h-4 mr-1.5 fill-current" /> Analytics
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <TabsList className="bg-[#1a1a1a] border border-[#1e1e1e] w-max">
+              <TabsTrigger value="manage" className="data-[state=active]:bg-[#333] text-gray-300">
+                <Layers className="w-4 h-4 mr-1.5 fill-current" /> Manage
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="data-[state=active]:bg-[#333] text-gray-300">
+                <FileText className="w-4 h-4 mr-1.5 fill-current" /> Templates
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="data-[state=active]:bg-[#333] text-gray-300">
+                <Tag className="w-4 h-4 mr-1.5 fill-current" /> Categories
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-[#333] text-gray-300">
+                <BarChart3 className="w-4 h-4 mr-1.5 fill-current" /> Analytics
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ─── MANAGE TAB ─────────────────────────────── */}
           <TabsContent value="manage" className="space-y-4 mt-4">
