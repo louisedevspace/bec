@@ -193,10 +193,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </nav>
       )}
 
-      {/* Mobile top bar - logo + notification bell */}
+      {/* Mobile top bar - logo only */}
       {!isAuthPage && (
         <div
-          className={`flex md:hidden items-center justify-between px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
+          className={`flex md:hidden items-center justify-center px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
             isDark
               ? 'bg-[#0a0a0a]/80 shadow-black/20'
               : 'bg-white/80 shadow-gray-300/30'
@@ -205,44 +205,17 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         >
           {/* Gradient bottom border */}
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
-          
+
           {/* Logo Area */}
           <a href="/" className="flex items-center gap-2.5">
             <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shadow-md ${
-              isDark 
-                ? 'bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] shadow-black/30' 
+              isDark
+                ? 'bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] border border-[#2a2a2a] shadow-black/30'
                 : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 shadow-blue-200/30'
             }`}>
               <Logo className="w-6 h-6" />
             </div>
-            <span className={`font-bold text-lg tracking-tight bg-clip-text text-transparent ${
-              isDark 
-                ? 'bg-gradient-to-r from-white to-gray-300' 
-                : 'bg-gradient-to-r from-gray-900 to-gray-800'
-            }`}>
-              Becxus
-            </span>
           </a>
-
-          {/* Notification Bell */}
-          <button
-            onClick={() => { setNotifCount(0); setLocation('/wallet'); }}
-            className={`relative p-2.5 rounded-xl transition-all duration-300 touch-manipulation ${
-              isDark 
-                ? 'bg-[#1a1a1a]/60 border border-[#2a2a2a]/50 text-gray-400 hover:text-white hover:bg-[#1a1a1a] hover:border-[#3a3a3a] active:bg-[#222]' 
-                : 'bg-gray-100/60 border border-gray-200/50 text-gray-700 hover:text-gray-900 hover:bg-gray-100 hover:border-gray-300 active:bg-gray-200'
-            }`}
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5" />
-            {notifCount > 0 && (
-              <span className={`absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse border-2 ${
-                isDark ? 'border-[#0a0a0a]' : 'border-white'
-              }`}>
-                {notifCount > 99 ? '99+' : notifCount}
-              </span>
-            )}
-          </button>
         </div>
       )}
 

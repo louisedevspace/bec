@@ -104,7 +104,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Mobile Top Bar */}
-      <header className="lg:hidden fixed left-0 right-0 z-50 bg-[#111]/95 backdrop-blur-md border-b border-[#1e1e1e] shadow-sm" style={{ top: 'var(--pwa-banner-top, 0px)' }}>
+      <header className="lg:hidden fixed left-0 right-0 z-50 bg-[#111]/95 backdrop-blur-md border-b border-[#1e1e1e] shadow-sm" style={{ top: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <button
@@ -148,7 +148,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {/* Panel */}
           <div
             className="absolute left-2 right-2 bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden max-h-[70vh]"
-            style={{ top: 'calc(var(--pwa-banner-top, 0px) + 60px)' }}
+            style={{ top: 'calc(var(--pwa-banner-top, 0px) + 60px + env(safe-area-inset-top, 0px))' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -484,7 +484,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6 lg:p-8 pt-[72px] lg:pt-6 min-h-[calc(100vh-4rem)] bg-[#0a0a0a]">
+        {/* Mobile spacer: accounts for fixed admin header + safe-area-inset-top */}
+        <div className="lg:hidden" style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))' }} />
+        <main className="p-4 md:p-6 lg:p-8 lg:pt-6 min-h-[calc(100vh-4rem)] bg-[#0a0a0a]">
           {children}
         </main>
       </div>
