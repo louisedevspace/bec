@@ -441,8 +441,6 @@ export default function registerAdminRoutes(app: Express) {
             { table: "kyc_verifications", column: "user_id" },
             { table: "deposit_requests", column: "user_id" },
             { table: "withdraw_requests", column: "user_id" },
-            { table: "support_messages", column: "sender_id" },
-            { table: "support_conversations", column: "user_id" },
             { table: "admin_notifications", column: "user_id" },
           ];
 
@@ -458,6 +456,54 @@ export default function registerAdminRoutes(app: Express) {
                 error: cleanupError.message,
               });
             }
+          }
+
+          // Delete support messages from conversations owned by this user
+          // (includes admin replies where sender_id != userId but conversation belongs to user)
+          const { data: userConversations } = await supabaseAdmin
+            .from("support_conversations")
+            .select("id")
+            .eq("user_id", userId);
+
+          if (userConversations && userConversations.length > 0) {
+            const convoIds = userConversations.map((c: any) => c.id);
+            const { error: msgError } = await supabaseAdmin
+              .from("support_messages")
+              .delete()
+              .in("conversation_id", convoIds);
+
+            if (msgError) {
+              return res.status(500).json({
+                message: "Failed to clean up support_messages before user deletion",
+                error: msgError.message,
+              });
+            }
+          }
+
+          // Also delete any messages sent by this user in other conversations
+          const { error: senderMsgError } = await supabaseAdmin
+            .from("support_messages")
+            .delete()
+            .eq("sender_id", userId);
+
+          if (senderMsgError) {
+            return res.status(500).json({
+              message: "Failed to clean up support_messages (sender) before user deletion",
+              error: senderMsgError.message,
+            });
+          }
+
+          // Now safe to delete conversations
+          const { error: convoError } = await supabaseAdmin
+            .from("support_conversations")
+            .delete()
+            .eq("user_id", userId);
+
+          if (convoError) {
+            return res.status(500).json({
+              message: "Failed to clean up support_conversations before user deletion",
+              error: convoError.message,
+            });
           }
 
           const { error: deleteUserError } = await supabaseAdmin
