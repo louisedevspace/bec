@@ -197,6 +197,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const lastVolumeRef = useRef<any>(null);
   const chartTypeRef = useRef<ExtendedChartType>(chartType);
   const lastTickTimeRef = useRef(0);
+  const needsInitialScrollRef = useRef(true);
 
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
@@ -236,18 +237,11 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         }))
       : [];
 
-    // Store last candle for real-time updates
-    if (mainData.length > 0) {
-      lastCandleRef.current = mainData[mainData.length - 1];
-    }
-    if (volumeData.length > 0) {
-      lastVolumeRef.current = volumeData[volumeData.length - 1];
-    }
-
     return { mainData, volumeData };
   }, [candles, chartType, colors]);
 
-  // Initialize and update chart
+  // Effect 1: Create chart instance and series (structural changes only).
+  // Runs when chart type, theme, or timeframe changes — NOT on data refetches.
   useEffect(() => {
     if (!chartContainerRef.current || isLoading) return;
 
@@ -296,27 +290,23 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
     chartRef.current = chart;
 
-    // Add volume series (background layer)
-    if (processedData.volumeData.length > 0) {
-      const volumeSeries = chart.addSeries(HistogramSeries, {
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-        lastValueVisible: false,
-        priceLineVisible: false,
-      });
+    // Add volume series (background layer) — always create it so data effect can fill it
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
 
-      chart.priceScale('volume').applyOptions({
-        scaleMargins: { top: 0.8, bottom: 0 },
-      });
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
 
-      volumeSeries.setData(processedData.volumeData as any);
-      volumeSeriesRef.current = volumeSeries;
-    }
+    volumeSeriesRef.current = volumeSeries;
 
     // Add main series based on chart type
     if (chartType === "line") {
-      // Use AreaSeries with curved line for smooth professional look
-      const areaSeries = chart.addSeries(AreaSeries, {
+      seriesRef.current = chart.addSeries(AreaSeries, {
         topColor: colors.areaTop,
         bottomColor: colors.areaBottom,
         lineColor: colors.lineColor,
@@ -333,10 +323,8 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         priceLineColor: colors.priceLineColor,
         priceLineWidth: 1,
       });
-      areaSeries.setData(processedData.mainData as any);
-      seriesRef.current = areaSeries;
     } else if (chartType === "ohlc") {
-      const barSeries = chart.addSeries(BarSeries, {
+      seriesRef.current = chart.addSeries(BarSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
         thinBars: false,
@@ -345,11 +333,9 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         priceLineColor: colors.priceLineColor,
         priceLineWidth: 1,
       });
-      barSeries.setData(processedData.mainData as any);
-      seriesRef.current = barSeries;
     } else {
       // Candlestick (also used for Heikin-Ashi, Renko)
-      const candleSeries = chart.addSeries(CandlestickSeries, {
+      seriesRef.current = chart.addSeries(CandlestickSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
         wickVisible: true,
@@ -363,19 +349,53 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         priceLineColor: colors.priceLineColor,
         priceLineWidth: 1,
       });
-      candleSeries.setData(processedData.mainData as any);
-      seriesRef.current = candleSeries;
     }
 
-    chart.timeScale().fitContent();
+    // Mark that next data load should scroll to recent candles
+    needsInitialScrollRef.current = true;
 
     return () => {
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
+        seriesRef.current = null;
+        volumeSeriesRef.current = null;
       }
     };
-  }, [processedData, chartType, isLoading, colors, timeframe]);
+  }, [chartType, isLoading, colors, timeframe]);
+
+  // Effect 2: Load/update data on existing chart — does NOT recreate the chart.
+  // Runs when processedData changes (including periodic refetches).
+  // Preserves user's zoom/scroll position on refetches.
+  useEffect(() => {
+    if (!seriesRef.current || !processedData.mainData.length) return;
+
+    // Update series data
+    seriesRef.current.setData(processedData.mainData as any);
+    if (volumeSeriesRef.current && processedData.volumeData.length > 0) {
+      volumeSeriesRef.current.setData(processedData.volumeData as any);
+    }
+
+    // Update last candle/volume refs for real-time updates
+    if (processedData.mainData.length > 0) {
+      lastCandleRef.current = processedData.mainData[processedData.mainData.length - 1];
+    }
+    if (processedData.volumeData.length > 0) {
+      lastVolumeRef.current = processedData.volumeData[processedData.volumeData.length - 1];
+    }
+
+    // Only scroll on initial load or structural changes — not on data refetches
+    if (needsInitialScrollRef.current && chartRef.current) {
+      needsInitialScrollRef.current = false;
+      // Show the last ~80 candles for a focused view of recent price action
+      const totalBars = processedData.mainData.length;
+      const visibleBars = Math.min(80, totalBars);
+      chartRef.current.timeScale().setVisibleLogicalRange({
+        from: totalBars - visibleBars - 0.5,
+        to: totalBars + 4.5,
+      });
+    }
+  }, [processedData]);
 
   // Binance real-time kline callback
   const handleBinanceKline = useCallback((kline: BinanceKlineUpdate) => {
