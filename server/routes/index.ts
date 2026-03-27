@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLinkPreviewRoutes(app);
   registerAutoReplyRoutes(app);
 
-  // Live price updates every 30 seconds
+  // Live price updates every 5 seconds for real-time chart movement
   setInterval(async () => {
     try {
       const cryptoService = LiveCryptoService.getInstance();
@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating live prices:", error);
     }
-  }, 30000);
+  }, 5000);
 
   // Initialize Redis Pub/Sub for WebSocket cross-instance broadcasting
   initWebSocketPubSub().catch((error) => {

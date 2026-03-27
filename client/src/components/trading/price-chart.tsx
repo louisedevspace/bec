@@ -178,7 +178,7 @@ function calculateRenko(candles: any[], brickSize?: number): OHLCData[] {
 export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
-  const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 100);
+  const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 300);
   const { isDark } = useTheme();
   const { subscribe, isConnected } = useWebSocket("/ws");
   
@@ -187,9 +187,15 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const seriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const lastCandleRef = useRef<any>(null);
+  const currentChartTypeRef = useRef<ExtendedChartType>(chartType);
+  const timeframeRef = useRef<ChartTimeframe>(timeframe);
   
   // Get current theme colors
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
+
+  // Keep refs in sync
+  useEffect(() => { currentChartTypeRef.current = chartType; }, [chartType]);
+  useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
 
   // Process chart data based on chart type
   const processedData = useMemo(() => {
@@ -368,44 +374,77 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   // Real-time price updates via WebSocket
   useEffect(() => {
     if (!isConnected || !seriesRef.current || chartType === 'renko') return;
-    
+
+    // Timeframe durations in seconds for candle boundary detection
+    const TIMEFRAME_SECONDS: Record<string, number> = {
+      '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800,
+    };
+
     const unsubscribe = subscribe('price_update', (priceData: any) => {
       if (!priceData || !seriesRef.current || !lastCandleRef.current) return;
-      
+
       // Extract symbol from the current trading pair (e.g., "BTC" from "BTCUSDT")
       const symbolBase = symbol.replace('USDT', '').toUpperCase();
-      
+
       // Find matching price from the update
-      const matchingPrice = priceData.find?.((p: any) => 
-        p.symbol?.toUpperCase() === symbolBase || 
+      const matchingPrice = priceData.find?.((p: any) =>
+        p.symbol?.toUpperCase() === symbolBase ||
         p.symbol?.toUpperCase() === symbol.toUpperCase()
       );
-      
+
       if (!matchingPrice?.price) return;
-      
+
       const newPrice = parseFloat(matchingPrice.price);
       const lastCandle = lastCandleRef.current;
-      
-      if (chartType === 'line') {
-        // Update line chart with new close price
-        seriesRef.current.update({
-          time: lastCandle.time,
-          value: newPrice,
-        });
+      const tf = timeframeRef.current;
+      const tfSeconds = TIMEFRAME_SECONDS[tf] || 3600;
+
+      // Check if we need to create a new candle (timeframe boundary crossed)
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const currentCandleEnd = (lastCandle.time as number) + tfSeconds;
+
+      if (currentChartTypeRef.current === 'line') {
+        if (nowSeconds >= currentCandleEnd) {
+          // Create new data point for line chart
+          const newTime = (Math.floor(nowSeconds / tfSeconds) * tfSeconds) as UTCTimestamp;
+          const newPoint = { time: newTime, value: newPrice };
+          seriesRef.current.update(newPoint);
+          lastCandleRef.current = newPoint;
+        } else {
+          seriesRef.current.update({
+            time: lastCandle.time,
+            value: newPrice,
+          });
+          lastCandleRef.current = { ...lastCandle, value: newPrice };
+        }
       } else {
-        // Update OHLC candle
-        const updatedCandle = {
-          time: lastCandle.time,
-          open: lastCandle.open,
-          high: Math.max(lastCandle.high, newPrice),
-          low: Math.min(lastCandle.low, newPrice),
-          close: newPrice,
-        };
-        seriesRef.current.update(updatedCandle);
-        lastCandleRef.current = updatedCandle;
+        if (nowSeconds >= currentCandleEnd) {
+          // Create a new candle at the next boundary
+          const newTime = (Math.floor(nowSeconds / tfSeconds) * tfSeconds) as UTCTimestamp;
+          const newCandle = {
+            time: newTime,
+            open: newPrice,
+            high: newPrice,
+            low: newPrice,
+            close: newPrice,
+          };
+          seriesRef.current.update(newCandle);
+          lastCandleRef.current = newCandle;
+        } else {
+          // Update existing candle
+          const updatedCandle = {
+            time: lastCandle.time,
+            open: lastCandle.open,
+            high: Math.max(lastCandle.high, newPrice),
+            low: Math.min(lastCandle.low, newPrice),
+            close: newPrice,
+          };
+          seriesRef.current.update(updatedCandle);
+          lastCandleRef.current = updatedCandle;
+        }
       }
     });
-    
+
     return unsubscribe;
   }, [isConnected, subscribe, symbol, chartType]);
 

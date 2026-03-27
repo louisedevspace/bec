@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -91,6 +91,9 @@ export default function FuturesPage() {
   const [selectedTrade, setSelectedTrade] = useState<FuturesTrade | null>(null);
   const [selectedTradeNumber, setSelectedTradeNumber] = useState<number>(0);
   const [activeTradeTab, setActiveTradeTab] = useState<"open" | "closed">("open");
+  const [sideFilter, setSideFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   // Dynamic pair state
   const [futuresPairs, setFuturesPairs] = useState<FuturesPairOption[]>([]);
@@ -528,135 +531,135 @@ export default function FuturesPage() {
         <div className="flex flex-col lg:flex-row gap-2">
           {/* Trading Form */}
           <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
-            <div className="space-y-3 lg:space-y-4 flex-1 flex flex-col">
-              {/* Trade Type Selection */}
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => setSide('long')}
-                  className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                    side === 'long' 
-                      ? 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20' 
-                      : 'bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 border border-[#2a2a2a]'
-                  }`}
-                >
-                  <TrendingUp className="w-4 h-4 mr-1.5" />
-                  LONG
-                </Button>
-                <Button
-                  onClick={() => setSide('short')}
-                  className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                    side === 'short' 
-                      ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20' 
-                      : 'bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 border border-[#2a2a2a]'
-                  }`}
-                >
-                  <TrendingDown className="w-4 h-4 mr-1.5" />
-                  SHORT
-                </Button>
-              </div>
+            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+              <h3 className="text-sm font-semibold text-white mb-4">Futures Trading</h3>
+              <div className="space-y-4">
+                {/* Long/Short Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSide('long')}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      side === 'long'
+                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
+                        : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
+                    }`}
+                  >
+                    LONG
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSide('short')}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      side === 'short'
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
+                    }`}
+                  >
+                    SHORT
+                  </button>
+                </div>
 
-              {/* Transaction Mode */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-gray-500 uppercase tracking-wider">Transaction mode</Label>
-                <Select defaultValue="usdt">
-                  <SelectTrigger className="bg-[#111] border-[#2a2a2a] h-10 rounded-xl text-sm hover:border-[#3a3a3a] transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                    <SelectItem value="usdt">USDT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Trade Description */}
+                <div className="bg-[#0a0a0a] rounded-xl px-3 py-2 border border-[#1e1e1e]">
+                  <p className="text-[11px] text-gray-400">
+                    {side === 'long' ? `Open Long position on ${baseAsset}` : `Open Short position on ${baseAsset}`} at market price
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-1">Profit Rate: {profitRatio.toFixed(2)}%</p>
+                </div>
 
-              {/* Purchase Quantity */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-gray-500 uppercase tracking-wider">Purchase quantity</Label>
-                <div className="relative">
+                {/* Transaction Mode */}
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Transaction Mode</label>
+                  <Select defaultValue="usdt">
+                    <SelectTrigger className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm focus:ring-1 focus:ring-gray-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                      <SelectItem value="usdt">USDT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Amount (USDT)</label>
                   <Input
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="bg-[#111] border-[#2a2a2a] pr-14 h-10 rounded-xl text-sm hover:border-[#3a3a3a] focus:border-blue-500/50 transition-colors"
+                    className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-gray-600 focus:ring-1 focus:ring-gray-600"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs font-medium">
-                    USDT
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Duration</label>
+                  <Select value={duration.toString()} onValueChange={(value) => setDuration(parseInt(value))}>
+                    <SelectTrigger className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm focus:ring-1 focus:ring-gray-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                      {durationOptions.map((option) => {
+                        const isActive = isDurationActive(option.value);
+                        const minForDuration = getEffectiveMinimum(option.value);
+                        return (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value.toString()}
+                            disabled={!isActive}
+                            className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
+                          >
+                            <span className="flex items-center justify-between w-full gap-2">
+                              <span>{option.label}</span>
+                              {timeLimitsConfig?.enabled && (
+                                <span className="text-[10px] text-gray-500">min ${minForDuration}</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Available Balance */}
+                <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
+                  <span className="text-gray-500 text-xs">Available</span>
+                  <span className="text-white text-xs font-medium tabular-nums">
+                    {formatUsdNumber(availableBalance)} USDT
                   </span>
                 </div>
-              </div>
 
-              {/* Choose the node (Duration) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-gray-500 uppercase tracking-wider">Choose the node</Label>
-                <Select value={duration.toString()} onValueChange={(value) => setDuration(parseInt(value))}>
-                  <SelectTrigger className="bg-[#111] border-[#2a2a2a] h-10 rounded-xl text-sm hover:border-[#3a3a3a] transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                    {durationOptions.map((option) => {
-                      const isActive = isDurationActive(option.value);
-                      const minForDuration = getEffectiveMinimum(option.value);
-                      return (
-                        <SelectItem 
-                          key={option.value} 
-                          value={option.value.toString()}
-                          disabled={!isActive}
-                          className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
-                        >
-                          <span className="flex items-center justify-between w-full gap-2">
-                            <span>{option.label}</span>
-                            {timeLimitsConfig?.enabled && (
-                              <span className="text-[10px] text-gray-500">min ${minForDuration}</span>
-                            )}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Profit Rate */}
-              <div className="bg-[#111] p-3 rounded-xl border border-[#2a2a2a]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Profit rate</span>
-                  <span className="text-sm font-semibold text-green-400">{profitRatio.toFixed(2)}%</span>
+                {/* Min Limit Info */}
+                <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
+                  <span className="text-gray-500 text-xs">Minimum</span>
+                  <span className="text-gray-300 text-xs font-medium tabular-nums">
+                    {formatUsdNumber(effectiveMinAmount)} USDT
+                  </span>
                 </div>
+
+                {/* Submit Button */}
+                <button
+                  type="button"
+                  onClick={handleSubmitTrade}
+                  disabled={!amount || parseFloat(amount) < effectiveMinAmount || parseFloat(amount) > availableBalance || !isDurationActive(duration)}
+                  className={`w-full py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
+                    side === 'long'
+                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25'
+                      : 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/25'
+                  }`}
+                >
+                  {!isDurationActive(duration)
+                    ? 'Duration Not Available'
+                    : !amount || parseFloat(amount) < effectiveMinAmount
+                    ? `Min ${effectiveMinAmount} USDT`
+                    : parseFloat(amount) > availableBalance
+                    ? 'Insufficient Balance'
+                    : `CONFIRM ${side.toUpperCase()}`}
+                </button>
               </div>
-
-              {/* Limits and Availability */}
-              <div className="bg-[#111] p-3 rounded-xl border border-[#2a2a2a] space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Minimum limit</span>
-                  <span className="text-gray-300 tabular-nums">{formatUsdNumber(effectiveMinAmount)} USDT</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Available</span>
-                  <span className="text-white font-medium tabular-nums">{formatUsdNumber(availableBalance)} USDT</span>
-                </div>
-              </div>
-
-              {/* Spacer to push button to bottom on desktop */}
-              <div className="flex-1 min-h-2" />
-
-              {/* Action Button */}
-              <Button
-                onClick={handleSubmitTrade}
-                disabled={!amount || parseFloat(amount) < effectiveMinAmount || parseFloat(amount) > availableBalance || !isDurationActive(duration)}
-                className={`w-full font-bold py-3.5 text-sm rounded-xl transition-all shadow-lg ${
-                  side === 'long'
-                    ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 shadow-green-600/20'
-                    : 'bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 shadow-red-600/20'
-                }`}
-              >
-                {!isDurationActive(duration)
-                  ? 'Duration Not Available'
-                  : !amount || parseFloat(amount) < effectiveMinAmount
-                  ? `Min ${effectiveMinAmount} USDT`
-                  : parseFloat(amount) > availableBalance
-                  ? 'Insufficient Balance'
-                  : `CONFIRM ${side.toUpperCase()}`}
-              </Button>
             </div>
           </div>
 
@@ -699,6 +702,42 @@ export default function FuturesPage() {
                     Trade History
                   </button>
                 </div>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  {/* Side Filter */}
+                  <select
+                    value={sideFilter}
+                    onChange={e => setSideFilter(e.target.value)}
+                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="all">All Sides</option>
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                  </select>
+
+                  {/* Status Filter (history tab only) */}
+                  {activeTradeTab === "closed" && (
+                    <select
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                      className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="completed">Completed</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  )}
+
+                  {/* Sort */}
+                  <button
+                    onClick={() => setSortOrder(s => s === "newest" ? "oldest" : "newest")}
+                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors"
+                  >
+                    {sortOrder === "newest" ? "Newest" : "Oldest"}
+                  </button>
+                </div>
               </div>
 
               {/* Order List */}
@@ -718,9 +757,26 @@ export default function FuturesPage() {
                     ))}
                   </div>
                 ) : (() => {
-                  const filtered = activeTradeTab === "open"
+                  let filtered = activeTradeTab === "open"
                     ? trades.filter(t => t.status === 'pending')
                     : trades.filter(t => t.status !== 'pending');
+
+                  // Apply side filter
+                  if (sideFilter !== "all") {
+                    filtered = filtered.filter(t => t.side === sideFilter);
+                  }
+
+                  // Apply status filter (history tab only)
+                  if (activeTradeTab === "closed" && statusFilter !== "all") {
+                    filtered = filtered.filter(t => t.status === statusFilter);
+                  }
+
+                  // Apply sort
+                  filtered.sort((a, b) => {
+                    const da = new Date(a.created_at).getTime();
+                    const db = new Date(b.created_at).getTime();
+                    return sortOrder === "newest" ? db - da : da - db;
+                  });
 
                   if (filtered.length === 0) {
                     return (
