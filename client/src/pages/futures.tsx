@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Settings, TrendingUp, TrendingDown, BarChart3, User, Home, PieChart, RefreshCw, Info, ChevronDown } from 'lucide-react';
 import { OrderBook } from '@/components/trading/order-book';
+import { PriceChart } from '@/components/trading/price-chart';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
 import { FutureTradeTimerModal } from '@/components/modals/future-trade-timer-modal';
 import { formatUsdNumber } from '@/utils/format-utils';
@@ -510,11 +511,24 @@ export default function FuturesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full">
-        {/* Trading Area - grows to fill available space */}
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-          {/* Left Section - Trading Form */}
-          <div className="lg:w-[420px] xl:w-[460px] flex-shrink-0 border-r border-[#1a1a1a] p-3 lg:p-5 flex flex-col">
+      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full px-2 py-2 gap-2 min-h-0 overflow-hidden">
+        {/* Top Row: Price Chart + Order Book (same as Exchange) */}
+        <div className="flex flex-col lg:flex-row gap-2 flex-1 min-h-0 overflow-hidden">
+          {/* Price Chart - Center/Main */}
+          <div className="flex-1 order-1 min-h-[300px] lg:min-h-0 max-h-[400px] lg:max-h-none overflow-hidden">
+            <PriceChart symbol={baseAsset} className="h-full w-full" />
+          </div>
+
+          {/* Order Book - Right Sidebar */}
+          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 min-h-[280px] max-h-[400px] lg:max-h-none overflow-hidden">
+            <OrderBook pair={currentPair} className="h-full" />
+          </div>
+        </div>
+
+        {/* Bottom Row: Trading Form + Trade History */}
+        <div className="flex flex-col lg:flex-row gap-2">
+          {/* Trading Form */}
+          <div className="lg:w-[420px] xl:w-[460px] flex-shrink-0">
             <div className="space-y-3 lg:space-y-4 flex-1 flex flex-col">
               {/* Trade Type Selection */}
               <div className="flex space-x-2">
@@ -647,26 +661,8 @@ export default function FuturesPage() {
             </div>
           </div>
 
-          {/* Right Section - Order Book */}
-          <div className="flex-1 p-3 lg:p-5 flex flex-col min-h-[300px] lg:min-h-0">
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] flex-1 flex flex-col overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between flex-shrink-0">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
-                  Order Book
-                </h3>
-                <span className="text-[10px] text-gray-600 uppercase tracking-wider">Live</span>
-              </div>
-              <div className="flex-1 min-h-0">
-                <OrderBook pair={currentPair} className="h-full border-0 bg-transparent" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Section - Transaction History */}
-        <div className="flex-shrink-0 border-t border-[#1a1a1a]">
-          <div className="p-3 lg:p-5">
+          {/* Trade History */}
+          <div className="flex-1">
             <Tabs defaultValue="transaction" className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-[#111] mb-3 h-9 rounded-xl p-0.5">
                 <TabsTrigger value="transaction" className="data-[state=active]:bg-[#2a2a2a] data-[state=active]:text-white text-xs rounded-lg text-gray-500 transition-all h-full">
