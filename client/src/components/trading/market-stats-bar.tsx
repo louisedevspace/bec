@@ -14,8 +14,9 @@ export function MarketStatsBar({ symbol, className }: MarketStatsBarProps) {
   const price = parseFloat(data.price || "0");
   const change = parseFloat(data.change24h || "0");
   const volume = parseFloat(data.volume24h || "0");
-  const high = price * (1 + Math.abs(change) / 100 / 2);
-  const low = price * (1 - Math.abs(change) / 100 / 2);
+  // Use real 24h high/low from Binance when available, otherwise estimate
+  const high = data.high24h ? parseFloat(data.high24h) : price * (1 + Math.abs(change) / 100 / 2);
+  const low = data.low24h ? parseFloat(data.low24h) : price * (1 - Math.abs(change) / 100 / 2);
   const isPositive = change >= 0;
 
   const fmt = (v: number, decimals = 2) => {

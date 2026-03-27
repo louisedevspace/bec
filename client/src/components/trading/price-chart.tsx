@@ -289,7 +289,6 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         secondsVisible: timeframe === '1m',
         borderVisible: false,
         rightOffset: 5,
-        minBarSpacing: 1,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -353,6 +352,8 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
+        wickVisible: true,
+        borderVisible: true,
         borderUpColor: colors.upColor,
         borderDownColor: colors.downColor,
         wickUpColor: colors.upColor,

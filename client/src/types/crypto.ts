@@ -4,6 +4,8 @@
   price: string;
   change24h: string;
   volume24h: string;
+  high24h?: string;
+  low24h?: string;
   updatedAt: string;
 }
 
