@@ -8,11 +8,14 @@ import {
   IChartApi,
   ISeriesApi,
   CandlestickSeries,
-  LineSeries,
+  AreaSeries,
   BarSeries,
   HistogramSeries,
   ColorType,
   CrosshairMode,
+  LineType,
+  LastPriceAnimationMode,
+  LineStyle,
   UTCTimestamp,
 } from "lightweight-charts";
 import { BarChart3, TrendingUp, Activity, Layers, Grid3X3, Wifi, WifiOff } from "lucide-react";
@@ -43,6 +46,11 @@ const getChartColors = (isDark: boolean) => ({
   downColor: '#ef4444',
   volumeUp: isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)',
   volumeDown: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)',
+  // Area/line gradient for smooth area chart
+  areaTop: isDark ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.3)',
+  areaBottom: isDark ? 'rgba(59, 130, 246, 0.02)' : 'rgba(59, 130, 246, 0.02)',
+  lineColor: isDark ? '#3b82f6' : '#2563eb',
+  priceLineColor: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(37, 99, 235, 0.5)',
 });
 
 interface PriceChartProps {
@@ -252,33 +260,36 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     }
 
     const container = chartContainerRef.current;
-    const { width, height } = container.getBoundingClientRect();
 
     const chart = createChart(container, {
-      width: Math.max(200, width),
-      height: Math.max(200, height),
+      autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: colors.background },
         textColor: colors.text,
         attributionLogo: false,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       },
       grid: {
-        vertLines: { color: colors.grid },
-        horzLines: { color: colors.grid },
+        vertLines: { color: colors.grid, style: LineStyle.SparseDotted },
+        horzLines: { color: colors.grid, style: LineStyle.SparseDotted },
       },
       crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: colors.crosshair, width: 1, style: 2 },
-        horzLine: { color: colors.crosshair, width: 1, style: 2 },
+        mode: CrosshairMode.Magnet,
+        vertLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair },
+        horzLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair },
       },
       rightPriceScale: {
         borderColor: colors.border,
         scaleMargins: { top: 0.1, bottom: 0.2 },
+        borderVisible: false,
       },
       timeScale: {
         borderColor: colors.border,
         timeVisible: true,
-        secondsVisible: false,
+        secondsVisible: timeframe === '1m',
+        borderVisible: false,
+        rightOffset: 5,
+        minBarSpacing: 1,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
@@ -291,6 +302,8 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       const volumeSeries = chart.addSeries(HistogramSeries, {
         priceFormat: { type: 'volume' },
         priceScaleId: 'volume',
+        lastValueVisible: false,
+        priceLineVisible: false,
       });
 
       chart.priceScale('volume').applyOptions({
@@ -301,27 +314,42 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       volumeSeriesRef.current = volumeSeries;
     }
 
-    // Add main series
+    // Add main series based on chart type
     if (chartType === "line") {
-      const lineSeries = chart.addSeries(LineSeries, {
-        color: colors.crosshair,
+      // Use AreaSeries with curved line for smooth professional look
+      const areaSeries = chart.addSeries(AreaSeries, {
+        topColor: colors.areaTop,
+        bottomColor: colors.areaBottom,
+        lineColor: colors.lineColor,
         lineWidth: 2,
+        lineType: LineType.Curved,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
         crosshairMarkerBorderColor: colors.background,
-        crosshairMarkerBackgroundColor: colors.crosshair,
+        crosshairMarkerBackgroundColor: colors.lineColor,
+        crosshairMarkerBorderWidth: 2,
+        lastPriceAnimation: LastPriceAnimationMode.Continuous,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dashed,
+        priceLineColor: colors.priceLineColor,
+        priceLineWidth: 1,
       });
-      lineSeries.setData(processedData.mainData as any);
-      seriesRef.current = lineSeries;
+      areaSeries.setData(processedData.mainData as any);
+      seriesRef.current = areaSeries;
     } else if (chartType === "ohlc") {
       const barSeries = chart.addSeries(BarSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
         thinBars: false,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dashed,
+        priceLineColor: colors.priceLineColor,
+        priceLineWidth: 1,
       });
       barSeries.setData(processedData.mainData as any);
       seriesRef.current = barSeries;
     } else {
+      // Candlestick (also used for Heikin-Ashi, Renko)
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
@@ -329,6 +357,10 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         borderDownColor: colors.downColor,
         wickUpColor: colors.upColor,
         wickDownColor: colors.downColor,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dashed,
+        priceLineColor: colors.priceLineColor,
+        priceLineWidth: 1,
       });
       candleSeries.setData(processedData.mainData as any);
       seriesRef.current = candleSeries;
@@ -336,30 +368,13 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
     chart.timeScale().fitContent();
 
-    // Handle resize
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        const { width, height } = chartContainerRef.current.getBoundingClientRect();
-        chartRef.current.applyOptions({
-          width: Math.max(200, width),
-          height: Math.max(200, height),
-        });
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(container);
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
       }
     };
-  }, [processedData, chartType, isLoading, colors]);
+  }, [processedData, chartType, isLoading, colors, timeframe]);
 
   // Binance real-time kline callback
   const handleBinanceKline = useCallback((kline: BinanceKlineUpdate) => {
