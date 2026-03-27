@@ -70,6 +70,17 @@ const TIMEFRAMES: { label: string; value: ChartTimeframe }[] = [
 
 type ExtendedChartType = "candlestick" | "line" | "ohlc" | "heikin-ashi" | "renko";
 
+// Seconds per timeframe interval — used to detect when a tick belongs to the next candle period
+const INTERVAL_SECONDS: Record<ChartTimeframe, number> = {
+  '1m': 60,
+  '5m': 300,
+  '15m': 900,
+  '1h': 3600,
+  '4h': 14400,
+  '1d': 86400,
+  '1w': 604800,
+};
+
 const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarChart3 }[] = [
   { label: "Candles", value: "candlestick", icon: BarChart3 },
   { label: "Line", value: "line", icon: TrendingUp },
@@ -196,13 +207,15 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const lastCandleRef = useRef<any>(null);
   const lastVolumeRef = useRef<any>(null);
   const chartTypeRef = useRef<ExtendedChartType>(chartType);
+  const timeframeRef = useRef<ChartTimeframe>(timeframe);
   const lastTickTimeRef = useRef(0);
   const needsInitialScrollRef = useRef(true);
 
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
-  // Keep chart type ref in sync
+  // Keep refs in sync without triggering reconnections
   useEffect(() => { chartTypeRef.current = chartType; }, [chartType]);
+  useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
 
   // Process chart data based on chart type
   const processedData = useMemo(() => {
@@ -354,6 +367,12 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     // Mark that next data load should scroll to recent candles
     needsInitialScrollRef.current = true;
 
+    // Clear stale data refs — prevents real-time handlers (handleTick, handleBinanceKline)
+    // from using leftovers from the previous chart instance before Effect 2 loads fresh data.
+    // Both handlers guard with `if (!lastCandleRef.current) return;` so they'll no-op safely.
+    lastCandleRef.current = null;
+    lastVolumeRef.current = null;
+
     return () => {
       if (chartRef.current) {
         chartRef.current.remove();
@@ -500,6 +519,14 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     // Only apply tick updates for candlestick, OHLC, and line modes
     // Heikin-Ashi needs full OHLCV; Renko needs full recalculation
     if (ct === 'renko' || ct === 'heikin-ashi') return;
+
+    // Boundary guard: skip ticks that belong to the NEXT candle period.
+    // After a candle period ends, aggTrade ticks arrive ~0-2s before the first
+    // kline of the new period. Without this check, those ticks would corrupt the
+    // completed candle's close/high/low with prices from the next period.
+    const intervalSec = INTERVAL_SECONDS[timeframeRef.current] || 60;
+    const candleEndTime = (lastCandleRef.current.time as number) + intervalSec;
+    if (tick.time >= candleEndTime) return;
 
     // Throttle chart redraws to ~20fps for performance
     const now = performance.now();
