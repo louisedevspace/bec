@@ -395,11 +395,14 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       volumeSeriesRef.current.setData(processedData.volumeData as any);
     }
 
-    // Update last candle/volume refs for real-time updates
-    if (processedData.mainData.length > 0) {
+    // Update last candle/volume refs for real-time updates.
+    // Only set refs when they're null (initial load or after chart recreation).
+    // On refetches, the real-time handlers already have more current data —
+    // overwriting with historical data would cause a brief stale-price flash.
+    if (!lastCandleRef.current && processedData.mainData.length > 0) {
       lastCandleRef.current = processedData.mainData[processedData.mainData.length - 1];
     }
-    if (processedData.volumeData.length > 0) {
+    if (!lastVolumeRef.current && processedData.volumeData.length > 0) {
       lastVolumeRef.current = processedData.volumeData[processedData.volumeData.length - 1];
     }
 
@@ -502,8 +505,9 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         ? (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)')
         : (isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)');
 
-      const lastVolTime = lastVolumeRef.current?.time as number;
-      const volTime = candleTime > lastVolTime ? candleTime : lastVolumeRef.current.time;
+      // Use kline time; fall back to last volume time if updating the same candle
+      const lastVolTime = lastVolumeRef.current?.time as number | undefined;
+      const volTime = (!lastVolTime || candleTime > lastVolTime) ? candleTime : lastVolumeRef.current.time;
 
       const volUpdate = { time: volTime, value: kline.volume, color: volColor };
       volumeSeriesRef.current.update(volUpdate as any);
@@ -538,13 +542,17 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       seriesRef.current.update(updated);
       lastCandleRef.current = updated;
     } else {
-      // Candlestick / OHLC: update close, adjust high/low with trade price
+      // Candlestick / OHLC: update ONLY close price from individual ticks.
+      // high/low are set exclusively by the kline handler which has Binance's
+      // authoritative aggregated OHLC. Using Math.max/Math.min here would
+      // permanently inflate the candle range from transient tick spikes and
+      // could never contract, causing erratic $1000+ false movements.
       const prev = lastCandleRef.current;
       const updated = {
         time: prev.time,
         open: prev.open,
-        high: Math.max(prev.high, tick.price),
-        low: Math.min(prev.low, tick.price),
+        high: prev.high,
+        low: prev.low,
         close: tick.price,
       };
       seriesRef.current.update(updated);
