@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
-import { useBinanceStream, type BinanceKlineUpdate } from "@/hooks/use-binance-stream";
+import { useBinanceStream, type BinanceKlineUpdate, type BinanceTick } from "@/hooks/use-binance-stream";
 import { useTheme } from "@/hooks/use-theme";
 import type { ChartTimeframe } from "@/types/chart";
 import {
@@ -188,6 +188,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const lastCandleRef = useRef<any>(null);
   const lastVolumeRef = useRef<any>(null);
   const chartTypeRef = useRef<ExtendedChartType>(chartType);
+  const lastTickTimeRef = useRef(0);
 
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
@@ -455,8 +456,41 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     }
   }, [isDark]);
 
-  // Connect to Binance WebSocket stream
-  const { isConnected: binanceConnected } = useBinanceStream(symbol, timeframe, handleBinanceKline);
+  // Sub-second trade tick callback — updates current candle close price between kline snapshots
+  const handleTick = useCallback((tick: BinanceTick) => {
+    if (!seriesRef.current || !lastCandleRef.current) return;
+
+    const ct = chartTypeRef.current;
+    // Only apply tick updates for candlestick, OHLC, and line modes
+    // Heikin-Ashi needs full OHLCV; Renko needs full recalculation
+    if (ct === 'renko' || ct === 'heikin-ashi') return;
+
+    // Throttle chart redraws to ~20fps for performance
+    const now = performance.now();
+    if (now - lastTickTimeRef.current < 50) return;
+    lastTickTimeRef.current = now;
+
+    if (ct === 'line') {
+      const updated = { time: lastCandleRef.current.time, value: tick.price };
+      seriesRef.current.update(updated);
+      lastCandleRef.current = updated;
+    } else {
+      // Candlestick / OHLC: update close, adjust high/low with trade price
+      const prev = lastCandleRef.current;
+      const updated = {
+        time: prev.time,
+        open: prev.open,
+        high: Math.max(prev.high, tick.price),
+        low: Math.min(prev.low, tick.price),
+        close: tick.price,
+      };
+      seriesRef.current.update(updated);
+      lastCandleRef.current = updated;
+    }
+  }, []);
+
+  // Connect to Binance WebSocket stream (kline + aggTrade combined)
+  const { isConnected: binanceConnected } = useBinanceStream(symbol, timeframe, handleBinanceKline, handleTick);
 
   if (isLoading) {
     return (
