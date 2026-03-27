@@ -213,10 +213,10 @@ export default function AdminUserDetailPage() {
             <ArrowLeft size={14} className="fill-current" /> Back to Users
           </button>
 
-          <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             {/* User Identity */}
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-[#2a2a2a] flex items-center justify-center text-xl font-bold text-white">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-[#2a2a2a] flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
                 {(u.full_name || u.username || "?")[0].toUpperCase()}
               </div>
               <div>

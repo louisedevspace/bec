@@ -334,14 +334,14 @@ function UserDetailView({
     <div className="space-y-4">
       {/* User Header */}
       <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl flex items-center justify-center flex-shrink-0">
               <span className="text-lg font-bold text-white">{(detail.user?.username || detail.user?.email || "?")[0].toUpperCase()}</span>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">{detail.user?.username || detail.user?.email}</h2>
-              <p className="text-xs text-gray-500">{detail.user?.email} • {detail.user?.full_name || 'N/A'}</p>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-white truncate">{detail.user?.username || detail.user?.email}</h2>
+              <p className="text-xs text-gray-500 truncate">{detail.user?.email} • {detail.user?.full_name || 'N/A'}</p>
             </div>
           </div>
           <button

@@ -23,7 +23,7 @@ function applyTheme(theme: Theme) {
   // Update meta theme-color for mobile browser chrome
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#f8fafc');
+    meta.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
   }
 }
 

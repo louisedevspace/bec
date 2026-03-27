@@ -449,23 +449,23 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center w-full">
             <InputOTP
               maxLength={6}
               pattern={REGEXP_ONLY_DIGITS}
               value={otpCode}
               onChange={(value) => setOtpCode(value)}
             >
-              <InputOTPGroup className="gap-2">
-                <InputOTPSlot index={0} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
-                <InputOTPSlot index={1} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
-                <InputOTPSlot index={2} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
+              <InputOTPGroup className="gap-1 sm:gap-2">
+                <InputOTPSlot index={0} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={1} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={2} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
               </InputOTPGroup>
-              <div className="flex items-center justify-center w-4 text-gray-600">-</div>
-              <InputOTPGroup className="gap-2">
-                <InputOTPSlot index={3} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
-                <InputOTPSlot index={4} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
-                <InputOTPSlot index={5} className="w-12 h-14 text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-xl" />
+              <div className="flex items-center justify-center w-3 sm:w-4 text-gray-600">-</div>
+              <InputOTPGroup className="gap-1 sm:gap-2">
+                <InputOTPSlot index={3} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={4} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={5} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
               </InputOTPGroup>
             </InputOTP>
           </div>

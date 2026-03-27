@@ -91,13 +91,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
-        <nav 
+        <nav
           className={`hidden md:flex items-center justify-between px-6 h-16 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
-            isDark 
-              ? 'bg-[#0a0a0a]/80 shadow-black/20' 
+            isDark
+              ? 'bg-[#0a0a0a]/80 shadow-black/20'
               : 'bg-white/80 shadow-gray-300/30'
           }`}
-          style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
+          style={{ marginTop: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           {/* Gradient bottom border */}
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
@@ -195,13 +195,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile top bar - logo + notification bell */}
       {!isAuthPage && (
-        <div 
+        <div
           className={`flex md:hidden items-center justify-between px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
-            isDark 
-              ? 'bg-[#0a0a0a]/80 shadow-black/20' 
+            isDark
+              ? 'bg-[#0a0a0a]/80 shadow-black/20'
               : 'bg-white/80 shadow-gray-300/30'
           }`}
-          style={{ marginTop: 'var(--pwa-banner-top, 0px)' }}
+          style={{ marginTop: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           {/* Gradient bottom border */}
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
@@ -246,7 +246,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className={isAuthPage ? "" : "pb-16 md:pb-0"}>
+      <main
+        className={isAuthPage ? "" : "md:pb-0"}
+        style={isAuthPage ? undefined : { paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         {children}
       </main>
       {/* Bottom Navigation - mobile only */}
