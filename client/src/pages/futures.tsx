@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { Settings, TrendingUp, TrendingDown, BarChart3, User, Home, PieChart, RefreshCw, Info, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, Info, ChevronDown } from 'lucide-react';
 import { OrderBook } from '@/components/trading/order-book';
 import { PriceChart } from '@/components/trading/price-chart';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
@@ -92,6 +90,7 @@ export default function FuturesPage() {
   const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<FuturesTrade | null>(null);
   const [selectedTradeNumber, setSelectedTradeNumber] = useState<number>(0);
+  const [activeTradeTab, setActiveTradeTab] = useState<"open" | "closed">("open");
 
   // Dynamic pair state
   const [futuresPairs, setFuturesPairs] = useState<FuturesPairOption[]>([]);
@@ -443,75 +442,75 @@ export default function FuturesPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
-      {/* Top Header */}
-      <div className="bg-[#111] border-b border-[#222] px-4 md:px-6 py-2.5 flex-shrink-0">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3 md:space-x-4 relative">
-            <span className="text-sm font-semibold text-gray-300">Futures</span>
-            <button
-              onClick={() => setShowPairMenu(!showPairMenu)}
-              className="flex items-center space-x-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
-              <CryptoIcon symbol={currentPair.split('/')[0]} size="xs" />
-              <span className="text-sm font-medium text-white">{currentPair}</span>
-              <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Pair Dropdown */}
-            {showPairMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
-                <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-xl overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    {futuresPairs.length > 0 ? futuresPairs.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => { setCurrentPair(p.symbol); setShowPairMenu(false); }}
-                        className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[#222] transition-colors ${
-                          p.symbol === currentPair ? 'bg-[#222] text-white' : 'text-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <CryptoIcon symbol={p.base_asset} size="xs" />
-                          <span className="font-semibold text-sm">{p.base_asset}</span>
-                          <span className="text-gray-600">/</span>
-                          <span className="text-gray-400 text-sm">{p.quote_asset}</span>
-                        </div>
-                        {p.symbol === currentPair && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                        )}
-                      </button>
-                    )) : (
-                      <div className="px-4 py-3 text-gray-500 text-xs">No futures pairs available</div>
-                    )}
-                  </div>
+      {/* Trading Pair Header */}
+      <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e]">
+        <div className="w-full px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 relative">
+              <CryptoIcon symbol={baseAsset} size="lg" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowPairMenu(!showPairMenu)}
+                    className="bg-[#1a1a1a] text-white text-sm font-semibold px-3 py-1 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors flex items-center gap-1.5"
+                  >
+                    {currentPair}
+                    <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
+                  </button>
+                  <span className="text-gray-500 text-xs hidden sm:inline">Futures Trading</span>
                 </div>
-              </>
-            )}
-          </div>
-          <div className="text-center">
-            <div className="text-base md:text-lg font-bold text-green-400 tabular-nums">
-              {getFormattedPrice(baseAsset)} <span className="text-xs text-gray-500 font-normal">{quoteAsset}</span>
+                <p className="text-gray-500 text-[11px] mt-0.5">{baseAsset} / Tether</p>
+              </div>
+
+              {/* Pair Dropdown */}
+              {showPairMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
+                  <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-xl overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      {futuresPairs.length > 0 ? futuresPairs.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setCurrentPair(p.symbol); setShowPairMenu(false); }}
+                          className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[#222] transition-colors ${
+                            p.symbol === currentPair ? 'bg-[#222] text-white' : 'text-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CryptoIcon symbol={p.base_asset} size="xs" />
+                            <span className="font-semibold text-sm">{p.base_asset}</span>
+                            <span className="text-gray-600">/</span>
+                            <span className="text-gray-400 text-sm">{p.quote_asset}</span>
+                          </div>
+                          {p.symbol === currentPair && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          )}
+                        </button>
+                      )) : (
+                        <div className="px-4 py-3 text-gray-500 text-xs">No futures pairs available</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} className="text-green-400" />
+              <span className="text-green-400 font-bold text-lg md:text-xl tabular-nums">
+                {getFormattedPrice(baseAsset)}
+              </span>
+              <span className="text-gray-500 text-xs">{quoteAsset}</span>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button onClick={() => { fetchTrades(); fetchBalance(); }} className="p-1.5 rounded-lg hover:bg-[#222] transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
-            </button>
-          </div>
         </div>
-      </div>
-
-      {/* Market Stats Bar */}
-      <div className="bg-[#111] border-b border-[#1e1e1e] flex-shrink-0">
-        <div className="max-w-[1600px] mx-auto">
+        {/* Market Stats Bar */}
+        <div className="border-t border-[#1e1e1e]">
           <MarketStatsBar symbol={baseAsset} />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full px-2 py-2 gap-2 min-h-0 overflow-hidden">
+      {/* Main Trading Area - Binance-like Layout */}
+      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
         {/* Top Row: Price Chart + Order Book (same as Exchange) */}
         <div className="flex flex-col lg:flex-row gap-2 flex-1 min-h-0 overflow-hidden">
           {/* Price Chart - Center/Main */}
@@ -525,10 +524,10 @@ export default function FuturesPage() {
           </div>
         </div>
 
-        {/* Bottom Row: Trading Form + Trade History */}
+        {/* Bottom Row: Trading Form + Order Management */}
         <div className="flex flex-col lg:flex-row gap-2">
           {/* Trading Form */}
-          <div className="lg:w-[420px] xl:w-[460px] flex-shrink-0">
+          <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
             <div className="space-y-3 lg:space-y-4 flex-1 flex flex-col">
               {/* Trade Type Selection */}
               <div className="flex space-x-2">
@@ -661,123 +660,151 @@ export default function FuturesPage() {
             </div>
           </div>
 
-          {/* Trade History */}
+          {/* Order Management */}
           <div className="flex-1">
-            <Tabs defaultValue="transaction" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-[#111] mb-3 h-9 rounded-xl p-0.5">
-                <TabsTrigger value="transaction" className="data-[state=active]:bg-[#2a2a2a] data-[state=active]:text-white text-xs rounded-lg text-gray-500 transition-all h-full">
-                  Open Positions
-                </TabsTrigger>
-                <TabsTrigger value="closed" className="data-[state=active]:bg-[#2a2a2a] data-[state=active]:text-white text-xs rounded-lg text-gray-500 transition-all h-full">
-                  Closed Trades
-                </TabsTrigger>
-              </TabsList>
+            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e]">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">Order Management</h3>
+                  <button onClick={() => { fetchTrades(); fetchBalance(); }} className="p-1.5 rounded-lg hover:bg-[#222] transition-colors" title="Refresh">
+                    <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
+                  </button>
+                </div>
 
-              <TabsContent value="transaction" className="mt-0">
+                {/* Tabs */}
+                <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 border border-[#1e1e1e]">
+                  <button
+                    onClick={() => setActiveTradeTab("open")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                      activeTradeTab === "open"
+                        ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
+                        : "text-gray-500 hover:text-gray-300"
+                    }`}
+                  >
+                    Open Positions
+                    {trades.filter(t => t.status === 'pending').length > 0 && (
+                      <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">
+                        {trades.filter(t => t.status === 'pending').length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTradeTab("closed")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                      activeTradeTab === "closed"
+                        ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
+                        : "text-gray-500 hover:text-gray-300"
+                    }`}
+                  >
+                    Trade History
+                  </button>
+                </div>
+              </div>
+
+              {/* Order List */}
+              <div className="px-4 pb-2">
                 {isLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mx-auto"></div>
-                    <div className="text-gray-500 mt-2 text-xs">Loading...</div>
-                  </div>
-                ) : trades.filter(trade => trade.status === 'pending').length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-600 text-sm">No open positions</div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-48 lg:max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                    {trades.filter(trade => trade.status === 'pending').map((trade) => (
-                      <div key={trade.id} className="bg-[#111] border border-[#1e1e1e] p-3 rounded-xl hover:border-[#2a2a2a] transition-colors">
-                        <div className="flex justify-between items-center gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
-                              <span className="font-medium text-sm text-white">{trade.symbol}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                              }`}>
-                                {trade.side.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
-                              {formatUsdNumber(trade.amount)} USDT
-                            </div>
+                  <div className="space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="bg-[#0a0a0a] rounded-xl p-4 border border-[#1e1e1e] animate-pulse">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-2">
+                            <div className="h-4 w-28 bg-[#1a1a1a] rounded" />
+                            <div className="h-3 w-20 bg-[#1a1a1a] rounded" />
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-xs text-yellow-500 font-medium bg-yellow-500/10 px-2 py-0.5 rounded">Pending</span>
-                            <button
-                              onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
-                              className="p-1 rounded-lg hover:bg-[#222] transition-colors"
-                            >
-                              <Info className="h-3.5 w-3.5 text-gray-500" />
-                            </button>
-                          </div>
+                          <div className="h-5 w-16 bg-[#1a1a1a] rounded-full" />
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="closed" className="mt-0">
-                {isLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mx-auto"></div>
-                    <div className="text-gray-500 mt-2 text-xs">Loading...</div>
                   </div>
                 ) : (() => {
-                  const closedTrades = trades.filter(trade => trade.status !== 'pending');
-                  return closedTrades.length === 0;
-                })() ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-600 text-sm">No closed trades</div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-48 lg:max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                    {trades.filter(trade => trade.status !== 'pending').map((trade) => (
-                      <div key={trade.id} className="bg-[#111] border border-[#1e1e1e] p-3 rounded-xl hover:border-[#2a2a2a] transition-colors">
-                        <div className="flex justify-between items-center gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
-                              <span className="font-medium text-sm text-white">{trade.symbol}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                  const filtered = activeTradeTab === "open"
+                    ? trades.filter(t => t.status === 'pending')
+                    : trades.filter(t => t.status !== 'pending');
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-10">
+                        <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mx-auto mb-3 flex items-center justify-center">
+                          <Info size={20} className="text-gray-600" />
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          {activeTradeTab === "open" ? "No open positions" : "No trade history"}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-1">
+                          {activeTradeTab === "open"
+                            ? "Your active futures positions will appear here"
+                            : "Your completed futures trades will appear here"
+                          }
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+                      {filtered.map((trade) => (
+                        <div key={trade.id} className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                                trade.side === 'long' ? 'bg-green-500/10' : 'bg-red-500/10'
                               }`}>
-                                {trade.side.toUpperCase()}
+                                {trade.side === 'long'
+                                  ? <TrendingUp size={14} className="text-green-500" />
+                                  : <TrendingDown size={14} className="text-red-500" />
+                                }
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
+                                  <span className="text-white font-medium text-sm">{trade.symbol}</span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                    trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                                  }`}>
+                                    {trade.side.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
+                                  {formatUsdNumber(trade.amount)} USDT · {trade.duration}s
+                                  {trade.profit_loss !== undefined && trade.status !== 'pending' && (
+                                    <span className={`ml-2 font-medium ${
+                                      trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                      {trade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(trade.profit_loss))}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <div className="text-right mr-1">
+                                <div className="text-[10px] text-gray-600">{formatDateTime(trade.created_at)}</div>
+                              </div>
+                              <span className={`text-[10px] font-medium px-2 py-1 rounded-full ${
+                                trade.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400' :
+                                trade.status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                                trade.status === 'rejected' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
+                              }`}>
+                                {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
                               </span>
+                              <button
+                                onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
+                                className="p-1 rounded-lg hover:bg-[#222] transition-colors"
+                                title="Trade details"
+                              >
+                                <Info className="h-3.5 w-3.5 text-gray-500" />
+                              </button>
                             </div>
-                            <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
-                              {formatUsdNumber(trade.amount)} USDT
-                              {trade.profit_loss !== undefined && (
-                                <span className={`ml-2 font-medium ${
-                                  trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
-                                }`}>
-                                  {trade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(trade.profit_loss))}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                              trade.status === 'completed' ? 'bg-green-500/10 text-green-400' : 
-                              trade.status === 'rejected' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
-                            }`}>
-                              {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
-                            </span>
-                            <button
-                              onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
-                              className="p-1 rounded-lg hover:bg-[#222] transition-colors"
-                            >
-                              <Info className="h-3.5 w-3.5 text-gray-500" />
-                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       </div>
