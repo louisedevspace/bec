@@ -396,13 +396,14 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     }
 
     // Update last candle/volume refs for real-time updates.
-    // Only set refs when they're null (initial load or after chart recreation).
-    // On refetches, the real-time handlers already have more current data —
-    // overwriting with historical data would cause a brief stale-price flash.
-    if (!lastCandleRef.current && processedData.mainData.length > 0) {
+    // ALWAYS sync refs with the latest processedData so real-time handlers
+    // target the correct (latest) candle. Without this, after a refetch adds
+    // new candles via setData(), the ref would still point at an old candle,
+    // causing tick/kline updates to corrupt already-closed historical candles.
+    if (processedData.mainData.length > 0) {
       lastCandleRef.current = processedData.mainData[processedData.mainData.length - 1];
     }
-    if (!lastVolumeRef.current && processedData.volumeData.length > 0) {
+    if (processedData.volumeData.length > 0) {
       lastVolumeRef.current = processedData.volumeData[processedData.volumeData.length - 1];
     }
 
@@ -542,17 +543,16 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       seriesRef.current.update(updated);
       lastCandleRef.current = updated;
     } else {
-      // Candlestick / OHLC: update ONLY close price from individual ticks.
-      // high/low are set exclusively by the kline handler which has Binance's
-      // authoritative aggregated OHLC. Using Math.max/Math.min here would
-      // permanently inflate the candle range from transient tick spikes and
-      // could never contract, causing erratic $1000+ false movements.
+      // Candlestick / OHLC: update close and ensure high/low encompass the trade.
+      // The kline handler resets OHLC to Binance's authoritative values every ~2s,
+      // so any tick-caused expansion is temporary and bounded. Without Math.max/min,
+      // the close can exceed high/low, rendering broken candles with body outside wicks.
       const prev = lastCandleRef.current;
       const updated = {
         time: prev.time,
         open: prev.open,
-        high: prev.high,
-        low: prev.low,
+        high: Math.max(prev.high, tick.price),
+        low: Math.min(prev.low, tick.price),
         close: tick.price,
       };
       seriesRef.current.update(updated);
