@@ -25,6 +25,17 @@ const BINANCE_INTERVALS: Record<ChartTimeframe, string> = {
   '4h': '4h', '1d': '1d', '1w': '1w',
 };
 
+function killSocket(ws: WebSocket | null) {
+  if (!ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    ws.close();
+  }
+}
+
 export function useBinanceStream(
   symbol: string,
   interval: ChartTimeframe,
@@ -38,7 +49,6 @@ export function useBinanceStream(
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
-  const intentionalCloseRef = useRef(false);
   const useFallbackRef = useRef(false);
 
   useEffect(() => { onKlineRef.current = onKlineUpdate; }, [onKlineUpdate]);
@@ -48,21 +58,17 @@ export function useBinanceStream(
     if (!symbol) return;
 
     mountedRef.current = true;
-    intentionalCloseRef.current = false;
 
     const pair = symbol.toLowerCase() + 'usdt';
     const binanceInterval = BINANCE_INTERVALS[interval];
-    // Combined stream: kline + trade
     const streams = `${pair}@kline_${binanceInterval}/${pair}@trade`;
 
     function connect() {
-      if (wsRef.current) {
-        intentionalCloseRef.current = true;
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      // Detach old socket — handlers nulled so its onclose/onerror become no-ops
+      killSocket(wsRef.current);
+      wsRef.current = null;
 
-      intentionalCloseRef.current = false;
+      if (!mountedRef.current) return;
 
       try {
         const base = useFallbackRef.current ? WS_FALLBACK : WS_PRIMARY;
@@ -70,18 +76,17 @@ export function useBinanceStream(
         wsRef.current = ws;
 
         ws.onopen = () => {
-          if (!mountedRef.current) { ws.close(); return; }
+          if (wsRef.current !== ws) return;
           setIsConnected(true);
           reconnectAttempts.current = 0;
           useFallbackRef.current = false;
         };
 
         ws.onmessage = (event) => {
-          if (!mountedRef.current) return;
+          if (wsRef.current !== ws) return;
           try {
             const msg = JSON.parse(event.data);
 
-            // Kline event
             if (msg.e === 'kline' && msg.k) {
               const k = msg.k;
               onKlineRef.current({
@@ -95,7 +100,6 @@ export function useBinanceStream(
               });
             }
 
-            // Trade event
             if (msg.e === 'trade' && onTickRef.current) {
               onTickRef.current({
                 price: parseFloat(msg.p),
@@ -107,19 +111,20 @@ export function useBinanceStream(
         };
 
         ws.onclose = () => {
+          if (wsRef.current !== ws) return; // stale socket, ignore
+          wsRef.current = null;
           setIsConnected(false);
 
-          if (intentionalCloseRef.current || !mountedRef.current) return;
+          if (!mountedRef.current) return;
 
           useFallbackRef.current = !useFallbackRef.current;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
           reconnectAttempts.current++;
-          reconnectTimer.current = setTimeout(() => {
-            if (mountedRef.current) connect();
-          }, delay);
+          reconnectTimer.current = setTimeout(connect, delay);
         };
 
         ws.onerror = () => {
+          if (wsRef.current !== ws) return;
           ws.close();
         };
       } catch { /* ignore */ }
@@ -129,12 +134,9 @@ export function useBinanceStream(
 
     return () => {
       mountedRef.current = false;
-      intentionalCloseRef.current = true;
       clearTimeout(reconnectTimer.current);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      killSocket(wsRef.current);
+      wsRef.current = null;
     };
   }, [symbol, interval]);
 

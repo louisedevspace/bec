@@ -24,7 +24,6 @@ const shared = {
   reconnectTimer: undefined as ReturnType<typeof setTimeout> | undefined,
   reconnectAttempts: 0,
   connected: false,
-  intentionalClose: false,
   useFallback: false,
   livePrices: {} as Record<string, Partial<CryptoPrice>>,
   lastUpdate: 0,
@@ -37,13 +36,20 @@ function notifySubscribers() {
 }
 
 function connectShared() {
+  // Detach old socket — its onclose/onerror become no-ops
   if (shared.ws) {
-    shared.intentionalClose = true;
-    shared.ws.close();
+    const old = shared.ws;
+    old.onopen = null;
+    old.onmessage = null;
+    old.onclose = null;
+    old.onerror = null;
+    if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
+      old.close();
+    }
     shared.ws = null;
   }
 
-  shared.intentionalClose = false;
+  if (shared.refCount <= 0) return;
 
   try {
     const url = shared.useFallback ? BINANCE_WS_FALLBACK : BINANCE_WS_PRIMARY;
@@ -51,6 +57,7 @@ function connectShared() {
     shared.ws = ws;
 
     ws.onopen = () => {
+      if (shared.ws !== ws) return; // stale socket
       shared.connected = true;
       shared.reconnectAttempts = 0;
       shared.useFallback = false;
@@ -58,6 +65,8 @@ function connectShared() {
     };
 
     ws.onmessage = (event) => {
+      if (shared.ws !== ws) return;
+
       // Throttle to ~4fps
       const now = performance.now();
       if (now - shared.lastUpdate < 250) return;
@@ -88,12 +97,14 @@ function connectShared() {
     };
 
     ws.onclose = () => {
+      // Ignore if this is a stale (replaced) socket
+      if (shared.ws !== ws) return;
+      shared.ws = null;
       shared.connected = false;
       notifySubscribers();
 
-      if (shared.intentionalClose || shared.refCount <= 0) return;
+      if (shared.refCount <= 0) return;
 
-      // Toggle fallback on each retry
       shared.useFallback = !shared.useFallback;
       const delay = Math.min(1000 * Math.pow(2, shared.reconnectAttempts), 30000);
       shared.reconnectAttempts++;
@@ -101,8 +112,8 @@ function connectShared() {
     };
 
     ws.onerror = () => {
-      shared.intentionalClose = false;
-      ws.close();
+      if (shared.ws !== ws) return;
+      ws.close(); // will trigger onclose above
     };
   } catch { /* ignore */ }
 }
@@ -121,10 +132,16 @@ function subscribeSingleton(listener: Listener) {
 
     if (shared.refCount <= 0) {
       shared.refCount = 0;
-      shared.intentionalClose = true;
       clearTimeout(shared.reconnectTimer);
       if (shared.ws) {
-        shared.ws.close();
+        const old = shared.ws;
+        old.onopen = null;
+        old.onmessage = null;
+        old.onclose = null;
+        old.onerror = null;
+        if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
+          old.close();
+        }
         shared.ws = null;
       }
     }
