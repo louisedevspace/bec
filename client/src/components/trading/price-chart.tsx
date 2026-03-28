@@ -69,21 +69,21 @@ const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarCh
   { label: "Renko", value: "renko", icon: Grid3X3 },
 ];
 
-// Chart color palette — dark theme follows TradingView's standard
+// Chart color palette — matches app's dark theme (#111 bg, #1e1e1e grid)
 const getChartColors = (isDark: boolean) => ({
-  background: isDark ? "#131722" : "#ffffff",
-  text: isDark ? "#d1d4dc" : "#374151",
-  grid: isDark ? "#2a2e39" : "#e5e7eb",
-  border: isDark ? "#2a2e39" : "#d1d5db",
-  crosshair: isDark ? "#758696" : "#9B7DFF",
-  upColor: "#26a69a",
-  downColor: "#ef5350",
-  volumeUp: "rgba(38,166,154,0.5)",
-  volumeDown: "rgba(239,83,80,0.5)",
-  areaTop: isDark ? "rgba(38,166,154,0.28)" : "rgba(38,166,154,0.3)",
-  areaBottom: isDark ? "rgba(38,166,154,0.02)" : "rgba(38,166,154,0.02)",
-  lineColor: "#26a69a",
-  priceLineColor: "#2962FF",
+  background: isDark ? "#111111" : "#ffffff",
+  text: isDark ? "#9ca3af" : "#374151",
+  grid: isDark ? "#1e1e1e" : "#e5e7eb",
+  border: isDark ? "#1e1e1e" : "#d1d5db",
+  crosshair: isDark ? "#6b7280" : "#9B7DFF",
+  upColor: "#22c55e",
+  downColor: "#ef4444",
+  volumeUp: "rgba(34,197,94,0.4)",
+  volumeDown: "rgba(239,68,68,0.4)",
+  areaTop: isDark ? "rgba(34,197,94,0.28)" : "rgba(34,197,94,0.3)",
+  areaBottom: isDark ? "rgba(34,197,94,0.02)" : "rgba(34,197,94,0.02)",
+  lineColor: "#22c55e",
+  priceLineColor: "#3b82f6",
 });
 
 /* ─── Helpers ─── */
@@ -196,20 +196,20 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const sym = symbolRef.current;
     if ("open" in data) {
       const up = data.close >= data.open;
-      const c = up ? "#26a69a" : "#ef5350";
+      const c = up ? "#22c55e" : "#ef4444";
       legendRef.current.innerHTML =
-        `<span style="color:#787b86;font-weight:600">${sym}/USDT</span>` +
+        `<span style="color:#6b7280;font-weight:600">${sym}/USDT</span>` +
         `<span style="margin-left:10px">` +
-        `<span style="color:#787b86">O</span> <span style="color:${c}">${formatPrice(data.open)}</span> ` +
-        `<span style="color:#787b86">H</span> <span style="color:${c}">${formatPrice(data.high)}</span> ` +
-        `<span style="color:#787b86">L</span> <span style="color:${c}">${formatPrice(data.low)}</span> ` +
-        `<span style="color:#787b86">C</span> <span style="color:${c}">${formatPrice(data.close)}</span>` +
+        `<span style="color:#6b7280">O</span> <span style="color:${c}">${formatPrice(data.open)}</span> ` +
+        `<span style="color:#6b7280">H</span> <span style="color:${c}">${formatPrice(data.high)}</span> ` +
+        `<span style="color:#6b7280">L</span> <span style="color:${c}">${formatPrice(data.low)}</span> ` +
+        `<span style="color:#6b7280">C</span> <span style="color:${c}">${formatPrice(data.close)}</span>` +
         `</span>` +
-        (data.volume != null ? `<span style="color:#787b86;margin-left:10px">V ${formatVolume(data.volume)}</span>` : "");
+        (data.volume != null ? `<span style="color:#6b7280;margin-left:10px">V ${formatVolume(data.volume)}</span>` : "");
     } else if ("value" in data) {
       legendRef.current.innerHTML =
-        `<span style="color:#787b86;font-weight:600">${sym}/USDT</span>` +
-        `<span style="color:#d1d4dc;margin-left:10px">${formatPrice(data.value)}</span>`;
+        `<span style="color:#6b7280;font-weight:600">${sym}/USDT</span>` +
+        `<span style="color:#9ca3af;margin-left:10px">${formatPrice(data.value)}</span>`;
     }
   }, []);
 
@@ -221,20 +221,20 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const d = new Date(time * 1000);
     const timeStr = d.toLocaleDateString() + " " + d.toLocaleTimeString();
 
-    let html = `<div style="color:#787b86;margin-bottom:4px;font-size:11px">${timeStr}</div>`;
+    let html = `<div style="color:#6b7280;margin-bottom:4px;font-size:11px">${timeStr}</div>`;
     if ("open" in mainData) {
       const up = mainData.close >= mainData.open;
-      const c = up ? "#26a69a" : "#ef5350";
+      const c = up ? "#22c55e" : "#ef4444";
       html +=
         `<div>O: <span style="color:${c}">${formatPrice(mainData.open)}</span></div>` +
         `<div>H: <span style="color:${c}">${formatPrice(mainData.high)}</span></div>` +
         `<div>L: <span style="color:${c}">${formatPrice(mainData.low)}</span></div>` +
         `<div>C: <span style="color:${c}">${formatPrice(mainData.close)}</span></div>`;
     } else if ("value" in mainData) {
-      html += `<div>Price: <span style="color:#d1d4dc">${formatPrice(mainData.value)}</span></div>`;
+      html += `<div>Price: <span style="color:#9ca3af">${formatPrice(mainData.value)}</span></div>`;
     }
     if (volValue != null) {
-      html += `<div style="color:#787b86">Vol: ${formatVolume(volValue)}</div>`;
+      html += `<div style="color:#6b7280">Vol: ${formatVolume(volValue)}</div>`;
     }
 
     tip.innerHTML = html;
@@ -450,7 +450,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const livePrice = "close" in lastMain ? (lastMain as OHLCData).close : (lastMain as SingleValueData).value;
     priceLineRef.current = seriesRef.current.createPriceLine({
       price: livePrice,
-      color: "#2962FF",
+      color: "#3b82f6",
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       axisLabelVisible: true,
@@ -515,7 +515,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
     // Volume bar
     if (volumeSeriesRef.current && ct !== "renko") {
-      const volColor = kline.close >= kline.open ? "rgba(38,166,154,0.5)" : "rgba(239,83,80,0.5)";
+      const volColor = kline.close >= kline.open ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)";
       const lastVolTime = lastVolumeRef.current?.time as number | undefined;
       const volTime = (!lastVolTime || candleTime > lastVolTime) ? candleTime : lastVolumeRef.current.time;
       const vol = { time: volTime, value: kline.volume, color: volColor };
@@ -582,7 +582,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
   if (isLoading) {
     return (
-      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-white border-gray-200"} ${className || ""}`}>
+      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? "bg-[#111] border-[#1e1e1e]" : "bg-white border-gray-200"} ${className || ""}`}>
         <div className="text-center">
           <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? "text-gray-600" : "text-gray-400"}`} />
           <p className={`text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>Loading chart...</p>
@@ -592,10 +592,10 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   }
 
   return (
-    <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-white border-gray-200"} ${className || ""}`}>
+    <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? "bg-[#111] border-[#1e1e1e]" : "bg-white border-gray-200"} ${className || ""}`}>
 
       {/* ── Toolbar ── */}
-      <div className={`flex items-center justify-between px-3 py-2 border-b flex-shrink-0 ${isDark ? "border-[#2a2e39]" : "border-gray-200"}`}>
+      <div className={`flex items-center justify-between px-3 py-2 border-b flex-shrink-0 ${isDark ? "border-[#1e1e1e]" : "border-gray-200"}`}>
         {/* Timeframes */}
         <div className="flex items-center gap-0.5 overflow-x-auto">
           <div className="flex items-center gap-1 mr-1.5 flex-shrink-0" title={binanceConnected ? "Live stream connected" : "Connecting..."}>
@@ -609,7 +609,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setTimeframe(tf.value)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                 timeframe === tf.value
-                  ? isDark ? "bg-[#2a2e39] text-white border border-[#363a45]" : "bg-gray-100 text-gray-900 border border-gray-300"
+                  ? isDark ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]" : "bg-gray-100 text-gray-900 border border-gray-300"
                   : isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -625,7 +625,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setChartType(ct.value)}
               className={`p-1.5 rounded transition-colors ${
                 chartType === ct.value
-                  ? isDark ? "bg-[#2a2e39] text-white border border-[#363a45]" : "bg-gray-100 text-gray-900 border border-gray-300"
+                  ? isDark ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]" : "bg-gray-100 text-gray-900 border border-gray-300"
                   : isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"
               }`}
               title={ct.label}
@@ -665,9 +665,9 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
           className="absolute z-20 pointer-events-none select-none rounded-lg px-3 py-2 text-xs leading-relaxed shadow-xl"
           style={{
             display: "none",
-            background: isDark ? "rgba(19,23,34,0.94)" : "rgba(255,255,255,0.96)",
-            border: `1px solid ${isDark ? "#2a2e39" : "#d1d5db"}`,
-            color: isDark ? "#d1d4dc" : "#374151",
+            background: isDark ? "rgba(17,17,17,0.94)" : "rgba(255,255,255,0.96)",
+            border: `1px solid ${isDark ? "#1e1e1e" : "#d1d5db"}`,
+            color: isDark ? "#9ca3af" : "#374151",
             minWidth: 150,
             backdropFilter: "blur(8px)",
           }}
