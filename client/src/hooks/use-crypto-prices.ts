@@ -4,54 +4,40 @@ import { cryptoApi } from "@/services/crypto-api";
 import { useWebSocket } from "./use-websocket";
 import type { CryptoPrice } from "@/types/crypto";
 
-const SYMBOL_MAP: Record<string, { binance: string; coingecko: string }> = {
-  BTC: { binance: "BTCUSDT", coingecko: "bitcoin" },
-  ETH: { binance: "ETHUSDT", coingecko: "ethereum" },
-  USDT: { binance: "USDTUSDT", coingecko: "tether" },
-  BNB: { binance: "BNBUSDT", coingecko: "binancecoin" },
-  TRX: { binance: "TRXUSDT", coingecko: "tron" },
-  DOGE: { binance: "DOGEUSDT", coingecko: "dogecoin" },
-  BCH: { binance: "BCHUSDT", coingecko: "bitcoin-cash" },
-  DASH: { binance: "DASHUSDT", coingecko: "dash" },
-  DOT: { binance: "DOTUSDT", coingecko: "polkadot" },
-  LTC: { binance: "LTCUSDT", coingecko: "litecoin" },
-  XRP: { binance: "XRPUSDT", coingecko: "ripple" },
-  ADA: { binance: "ADAUSDT", coingecko: "cardano" },
-  SOL: { binance: "SOLUSDT", coingecko: "solana" },
-  AVAX: { binance: "AVAXUSDT", coingecko: "avalanche-2" },
-  MATIC: { binance: "MATICUSDT", coingecko: "matic-network" },
-  SHIB: { binance: "SHIBUSDT", coingecko: "shiba-inu" },
-  LINK: { binance: "LINKUSDT", coingecko: "chainlink" },
-  XMR: { binance: "XMRUSDT", coingecko: "monero" },
-  XLM: { binance: "XLMUSDT", coingecko: "stellar" },
-  ATOM: { binance: "ATOMUSDT", coingecko: "cosmos" },
-  FIL: { binance: "FILUSDT", coingecko: "filecoin" },
-  APT: { binance: "APTUSDT", coingecko: "aptos" },
-  SUI: { binance: "SUIUSDT", coingecko: "sui" },
-  ARB: { binance: "ARBUSDT", coingecko: "arbitrum" },
-  OP: { binance: "OPUSDT", coingecko: "optimism" },
-  PEPE: { binance: "PEPEUSDT", coingecko: "pepe" },
-  INJ: { binance: "INJUSDT", coingecko: "injective-protocol" }
+// CoinCap WebSocket — free, no key, sub-second updates
+const COINCAP_WS = 'wss://ws.coincap.io/prices?assets=';
+
+// Map ticker symbols → CoinCap IDs
+const SYMBOL_TO_COINCAP: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binance-coin', SOL: 'solana',
+  XRP: 'xrp', ADA: 'cardano', DOT: 'polkadot', DOGE: 'dogecoin',
+  AVAX: 'avalanche', LINK: 'chainlink', LTC: 'litecoin', MATIC: 'polygon',
+  ATOM: 'cosmos', TRX: 'tron', SHIB: 'shiba-inu', BCH: 'bitcoin-cash',
+  DASH: 'dash', XMR: 'monero', XLM: 'stellar', FIL: 'filecoin',
+  APT: 'aptos', SUI: 'sui', ARB: 'arbitrum', OP: 'optimism',
+  PEPE: 'pepe', INJ: 'injective-protocol',
+  USDT: 'tether',
 };
 
-// Reverse lookup: "BTCUSDT" → "BTC"
-const BINANCE_TO_SYMBOL: Record<string, string> = {};
-for (const [sym, val] of Object.entries(SYMBOL_MAP)) {
-  BINANCE_TO_SYMBOL[val.binance] = sym;
+// Reverse lookup: "bitcoin" → "BTC"
+const COINCAP_TO_SYMBOL: Record<string, string> = {};
+for (const [sym, coinCapId] of Object.entries(SYMBOL_TO_COINCAP)) {
+  COINCAP_TO_SYMBOL[coinCapId] = sym;
 }
 
-const BINANCE_WS = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
+// Build the CoinCap WebSocket URL with all asset IDs
+const ALL_COINCAP_IDS = Object.values(SYMBOL_TO_COINCAP).filter(id => id !== 'tether').join(',');
 
 export function useCryptoPrices() {
   const [prices, setPrices] = useState<CryptoPrice[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const { subscribe, isConnected: wsConnected } = useWebSocket("/ws");
   const livePricesRef = useRef<Record<string, CryptoPrice>>({});
-  const binanceWsRef = useRef<WebSocket | null>(null);
+  const coinCapWsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
-  const lastBinanceUpdateRef = useRef(0);
+  const lastUpdateRef = useRef(0);
 
   // Initial price fetch (also provides change24h and volume24h)
   const { data: initialPrices, isLoading, error } = useQuery({
@@ -80,7 +66,7 @@ export function useCryptoPrices() {
     }
   }, [initialPrices, mergeLivePrices]);
 
-  // Subscribe to server WebSocket (fallback if Binance WS fails)
+  // Subscribe to server WebSocket (fallback if CoinCap WS fails)
   useEffect(() => {
     const unsubscribe = subscribe("price_update", (updatedPrices: CryptoPrice[]) => {
       setPrices((prev) => mergeLivePrices(updatedPrices, livePricesRef.current));
@@ -88,21 +74,19 @@ export function useCryptoPrices() {
     return unsubscribe;
   }, [subscribe, mergeLivePrices]);
 
-  // Direct Binance WebSocket: !miniTicker@arr — all symbols, every ~1 second
-  // This provides real-time price updates for all supported coins on a single connection.
-  // Fields used: s (symbol), c (close/last price), P (24h price change percent), v (volume)
+  // CoinCap WebSocket — all assets on a single connection, ~1 update/sec
   useEffect(() => {
     mountedRef.current = true;
 
     function connect() {
-      if (binanceWsRef.current) {
-        binanceWsRef.current.close();
-        binanceWsRef.current = null;
+      if (coinCapWsRef.current) {
+        coinCapWsRef.current.close();
+        coinCapWsRef.current = null;
       }
 
       try {
-        const ws = new WebSocket(BINANCE_WS);
-        binanceWsRef.current = ws;
+        const ws = new WebSocket(`${COINCAP_WS}${ALL_COINCAP_IDS}`);
+        coinCapWsRef.current = ws;
 
         ws.onopen = () => {
           if (!mountedRef.current) return;
@@ -114,34 +98,23 @@ export function useCryptoPrices() {
           if (!mountedRef.current) return;
 
           // Throttle state updates to ~4fps (250ms) to avoid excessive React re-renders
-          // since miniTicker fires every second for ALL symbols
           const now = performance.now();
-          if (now - lastBinanceUpdateRef.current < 250) return;
-          lastBinanceUpdateRef.current = now;
+          if (now - lastUpdateRef.current < 250) return;
+          lastUpdateRef.current = now;
 
           try {
-            const tickers: any[] = JSON.parse(event.data);
-            if (!Array.isArray(tickers)) return;
+            // CoinCap sends { "bitcoin": "67234.12", "ethereum": "3421.50", ... }
+            const data: Record<string, string> = JSON.parse(event.data);
+            if (typeof data !== 'object') return;
 
             const updates: Record<string, Partial<CryptoPrice>> = {};
-            for (const t of tickers) {
-              const sym = BINANCE_TO_SYMBOL[t.s];
+            for (const [coinCapId, priceStr] of Object.entries(data)) {
+              const sym = COINCAP_TO_SYMBOL[coinCapId];
               if (!sym) continue;
-
-              // miniTicker fields: c=close, o=open, h=high, l=low, v=baseVol, q=quoteVol
-              const closePrice = parseFloat(t.c);
-              const openPrice = parseFloat(t.o);
-              const change24h = openPrice > 0
-                ? (((closePrice - openPrice) / openPrice) * 100).toFixed(2)
-                : "0";
 
               updates[sym] = {
                 symbol: sym,
-                price: t.c,
-                change24h,
-                volume24h: t.q || "0",
-                high24h: t.h,
-                low24h: t.l,
+                price: priceStr,
                 updatedAt: new Date().toISOString(),
               };
             }
@@ -153,9 +126,7 @@ export function useCryptoPrices() {
                 if (prev.length === 0) return prev;
                 return prev.map((p) => {
                   const u = updates[p.symbol];
-                  return u
-                    ? { ...p, ...u }
-                    : p;
+                  return u ? { ...p, ...u } : p;
                 });
               });
             }
@@ -188,9 +159,9 @@ export function useCryptoPrices() {
     return () => {
       mountedRef.current = false;
       clearTimeout(reconnectTimer.current);
-      if (binanceWsRef.current) {
-        binanceWsRef.current.close();
-        binanceWsRef.current = null;
+      if (coinCapWsRef.current) {
+        coinCapWsRef.current.close();
+        coinCapWsRef.current = null;
       }
     };
   }, []);
