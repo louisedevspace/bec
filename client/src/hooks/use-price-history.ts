@@ -3,6 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { CandlestickData, ChartTimeframe } from "@/types/chart";
 
 const REFETCH_INTERVALS: Record<ChartTimeframe, number> = {
+  "1s": 10000,
   "1m": 60000,
   "5m": 120000,
   "15m": 300000,
@@ -12,17 +13,16 @@ const REFETCH_INTERVALS: Record<ChartTimeframe, number> = {
   "1w": 3600000,
 };
 
-// All REST calls go through the server proxy which calls MEXC → Binance → synthetic.
-// Direct browser→MEXC is blocked by CORS.
-async function fetchFromServer(symbol: string, interval: ChartTimeframe, limit: number): Promise<CandlestickData[]> {
-  const res = await apiRequest("GET", `/api/crypto/price-history/${symbol}?interval=${interval}&limit=${limit}`);
-  return res.json();
-}
-
 export function usePriceHistory(symbol: string, interval: ChartTimeframe = "1h", limit: number = 500) {
+  // Map 1s → 1m on the server (no exchange supports 1s klines)
+  const serverInterval = interval === "1s" ? "1m" : interval;
+
   return useQuery<CandlestickData[]>({
-    queryKey: ["/api/crypto/price-history", symbol, interval, limit],
-    queryFn: () => fetchFromServer(symbol, interval, limit),
+    queryKey: ["/api/crypto/price-history", symbol, serverInterval, limit],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/crypto/price-history/${symbol}?interval=${serverInterval}&limit=${limit}`);
+      return res.json();
+    },
     enabled: !!symbol,
     staleTime: 30000,
     refetchInterval: REFETCH_INTERVALS[interval] || 600000,

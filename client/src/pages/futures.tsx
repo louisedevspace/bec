@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -71,20 +70,20 @@ export default function FuturesPage() {
   const { getFormattedPrice, getPriceBySymbol } = useCryptoPrices();
   const [trades, setTrades] = useState<FuturesTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Trading form state
   const [side, setSide] = useState<'long' | 'short'>('long');
   const [amount, setAmount] = useState('');
-  
+
   // Timer modal state
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [timerTradeData, setTimerTradeData] = useState<any>(null);
   const [duration, setDuration] = useState<number>(60);
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [tradeLimits, setTradeLimits] = useState<{ is_enabled: boolean; min_amount: number; max_amount: number } | null>(null);
-  
-    // Time-based limits state
-    const [timeLimitsConfig, setTimeLimitsConfig] = useState<TimeLimitsResponse | null>(null);
+
+  // Time-based limits state
+  const [timeLimitsConfig, setTimeLimitsConfig] = useState<TimeLimitsResponse | null>(null);
 
   // Trade details modal state
   const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
@@ -103,14 +102,12 @@ export default function FuturesPage() {
   const baseAsset = currentPair.split('/')[0];
   const quoteAsset = currentPair.split('/')[1];
 
-  // Get live current price for selected pair
   const livePrice = getPriceBySymbol(baseAsset);
   const currentPrice = livePrice ? parseFloat(livePrice.price) : 0;
 
   const selectedDuration = durationOptions.find(d => d.value === duration);
   const profitRatio = selectedDuration?.profitRatio || 30;
 
-  // Calculate effective minimum based on time-based limits only
   const getEffectiveMinimum = (durationValue: number) => {
     if (!timeLimitsConfig?.enabled) return timeLimitsConfig?.defaultMinAmount ?? 50;
     const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue && l.isActive);
@@ -119,7 +116,6 @@ export default function FuturesPage() {
 
   const effectiveMinAmount = getEffectiveMinimum(duration);
 
-  // Check if a duration is active (available for selection)
   const isDurationActive = (durationValue: number) => {
     if (!timeLimitsConfig?.enabled) return true;
     const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue);
@@ -128,34 +124,20 @@ export default function FuturesPage() {
 
   const fetchTrades = async () => {
     if (!user) return;
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
+      if (!token) throw new Error('No authentication token available');
 
-      console.log('🔄 Fetching futures trades...');
       const response = await fetch(`/api/future-trades?t=${Date.now()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
-      if (!response.ok) {
-        throw new Error('Failed to fetch trades');
-      }
+      if (!response.ok) throw new Error('Failed to fetch trades');
       const data = await response.json();
       setTrades(data || []);
     } catch (error) {
       console.error('Error fetching trades:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch trades.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to fetch trades.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -163,37 +145,24 @@ export default function FuturesPage() {
 
   const fetchBalance = async () => {
     if (!user) return;
-    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
+      if (!token) throw new Error('No authentication token available');
 
       const response = await fetch(`/api/portfolio/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
-      
       if (response.ok) {
         const data = await response.json();
         const usdtBalance = data.find((p: any) => p.symbol === 'USDT');
-        const balance = usdtBalance ? parseFloat(usdtBalance.available) : 0;
-        setAvailableBalance(balance);
-      } else {
-        console.error('Portfolio API error:', response.status);
+        setAvailableBalance(usdtBalance ? parseFloat(usdtBalance.available) : 0);
       }
     } catch (error) {
       console.error('Error fetching balance:', error);
     }
   };
 
-
-  // Fetch trading limits for current pair
   const fetchTradingLimits = async () => {
     if (!user) return;
     try {
@@ -206,15 +175,10 @@ export default function FuturesPage() {
       if (res.ok) {
         const data = await res.json();
         setTradeLimits(data);
-        // Use the higher of old min setting and new limits min
-        if (data?.min_amount) {
-          // Trading limits from admin can still apply as a floor
-        }
       }
     } catch { /* keep defaults */ }
   };
 
-  // Fetch time-based limits
   const fetchTimeLimits = async () => {
     try {
       const res = await fetch('/api/futures-time-limits');
@@ -225,59 +189,33 @@ export default function FuturesPage() {
     } catch { /* keep defaults */ }
   };
 
-  // Fetch available futures pairs
   useEffect(() => {
     fetch('/api/trading-pairs/futures')
       .then(res => res.ok ? res.json() : [])
       .then((data: FuturesPairOption[]) => {
         if (data.length > 0) {
           setFuturesPairs(data);
-          if (!data.find(p => p.symbol === currentPair)) {
-            setCurrentPair(data[0].symbol);
-          }
+          if (!data.find(p => p.symbol === currentPair)) setCurrentPair(data[0].symbol);
         }
       })
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetchTrades();
-    fetchBalance();
-    fetchTimeLimits();
-  }, [user]);
-
-  // Fetch trading limits when user or pair changes
-  useEffect(() => {
-    fetchTradingLimits();
-  }, [user, currentPair]);
-
-  // Auto-refresh trades every 10 seconds to show real-time updates
+  useEffect(() => { fetchTrades(); fetchBalance(); fetchTimeLimits(); }, [user]);
+  useEffect(() => { fetchTradingLimits(); }, [user, currentPair]);
   useEffect(() => {
     if (!user) return;
-    
-    const interval = setInterval(() => {
-      fetchTrades();
-    }, 10000); // Refresh every 10 seconds
-
+    const interval = setInterval(fetchTrades, 10000);
     return () => clearInterval(interval);
   }, [user]);
-
-  // Refresh trades when user returns to the tab
   useEffect(() => {
     if (!user) return;
-    
-    const handleFocus = () => {
-      fetchTrades();
-    };
-
+    const handleFocus = () => fetchTrades();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [user]);
 
-  const handleTradeSubmitted = () => {
-    fetchTrades();
-    fetchBalance();
-  };
+  const handleTradeSubmitted = () => { fetchTrades(); fetchBalance(); };
 
   const handleShowTradeDetails = (trade: FuturesTrade, tradeNumber: number) => {
     setSelectedTrade(trade);
@@ -285,123 +223,71 @@ export default function FuturesPage() {
     setShowTradeDetailsModal(true);
   };
 
-  // Helper function to format dates consistently in user's timezone
   const formatDateTime = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
-    
     try {
       let date;
-      
-      // Normalize to UTC interpretation
       if (!dateString.includes('Z')) {
         const cleanDateString = dateString.replace(/[+-]\d{2}:\d{2}$/, '');
         date = new Date(cleanDateString + 'Z');
       } else {
         date = new Date(dateString);
       }
-      
       if (isNaN(date.getTime())) return 'Invalid Date';
-      
       return date.toLocaleString(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
       });
-    } catch {
-      return 'Invalid Date';
-    }
+    } catch { return 'Invalid Date'; }
   };
 
   const handleSubmitTrade = async () => {
     if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to place a trade.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'You must be logged in to place a trade.', variant: 'destructive' });
       return;
     }
 
     const tradeAmount = parseFloat(amount);
 
-    // Check trading limits from admin settings
     if (tradeLimits && !tradeLimits.is_enabled) {
-      toast({
-        title: 'Trading Restricted',
-        description: `Futures trading is currently disabled for ${currentPair}.`,
-        variant: 'destructive',
-      });
+      toast({ title: 'Trading Restricted', description: `Futures trading is currently disabled for ${currentPair}.`, variant: 'destructive' });
       return;
     }
 
-    // Check if selected duration is active
     if (!isDurationActive(duration)) {
-      toast({
-        title: 'Error',
-        description: 'Selected duration is not available.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Selected duration is not available.', variant: 'destructive' });
       return;
     }
 
-    const effectiveMin = tradeLimits?.min_amount 
-      ? Math.max(effectiveMinAmount, tradeLimits.min_amount) 
+    const effectiveMin = tradeLimits?.min_amount
+      ? Math.max(effectiveMinAmount, tradeLimits.min_amount)
       : effectiveMinAmount;
     if (!amount || isNaN(tradeAmount) || tradeAmount < effectiveMin) {
-      toast({
-        title: 'Error',
-        description: `Minimum trade amount is ${effectiveMin} USDT for ${duration}s duration.`,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: `Minimum trade amount is ${effectiveMin} USDT for ${duration}s duration.`, variant: 'destructive' });
       return;
     }
 
     if (tradeLimits?.max_amount && tradeAmount > tradeLimits.max_amount) {
-      toast({
-        title: 'Error',
-        description: `Maximum trade amount is ${tradeLimits.max_amount} USDT.`,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: `Maximum trade amount is ${tradeLimits.max_amount} USDT.`, variant: 'destructive' });
       return;
     }
 
     if (tradeAmount > availableBalance) {
-      toast({
-        title: 'Error',
-        description: 'Insufficient balance.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Insufficient balance.', variant: 'destructive' });
       return;
     }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
+      if (!token) throw new Error('No authentication token available');
 
-      // Optimistically update UI immediately
       setAmount('');
-      
+
       const response = await fetch('/api/future-trade/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          symbol: currentPair,
-          amount: tradeAmount,
-          duration,
-          side,
-          profitRatio,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ symbol: currentPair, amount: tradeAmount, duration, side, profitRatio }),
       });
 
       if (!response.ok) {
@@ -410,38 +296,24 @@ export default function FuturesPage() {
       }
 
       const responseData = await response.json();
-      
-      // Show timer modal with trade data
+
       setTimerTradeData({
         id: responseData.trade?.id || Date.now(),
-        symbol: currentPair,
-        side,
-        amount: tradeAmount.toString(),
-        price: currentPrice.toString(),
-        duration,
+        symbol: currentPair, side, amount: tradeAmount.toString(),
+        price: currentPrice.toString(), duration,
         currentPrice: currentPrice.toString(),
-        profit_ratio: profitRatio // Add the profit ratio from selected duration
+        profit_ratio: profitRatio,
       });
       setShowTimerModal(true);
-
       handleTradeSubmitted();
-
-      // Refresh trades and balance in background
       fetchTrades();
       fetchBalance();
     } catch (error) {
       console.error('Error submitting trade:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to submit trade.',
-        variant: 'destructive',
-      });
-      // Restore amount on error
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to submit trade.', variant: 'destructive' });
       setAmount(tradeAmount.toString());
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
@@ -465,7 +337,6 @@ export default function FuturesPage() {
                 <p className="text-gray-500 text-[11px] mt-0.5">{baseAsset} / Tether</p>
               </div>
 
-              {/* Pair Dropdown */}
               {showPairMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
@@ -485,9 +356,7 @@ export default function FuturesPage() {
                             <span className="text-gray-600">/</span>
                             <span className="text-gray-400 text-sm">{p.quote_asset}</span>
                           </div>
-                          {p.symbol === currentPair && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                          )}
+                          {p.symbol === currentPair && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                         </button>
                       )) : (
                         <div className="px-4 py-3 text-gray-500 text-xs">No futures pairs available</div>
@@ -506,58 +375,43 @@ export default function FuturesPage() {
             </div>
           </div>
         </div>
-        {/* Market Stats Bar */}
         <div className="border-t border-[#1e1e1e]">
           <MarketStatsBar symbol={baseAsset} />
         </div>
       </div>
 
-      {/* Main Trading Area - Binance-like Layout */}
-      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
-        {/* Top Row: Price Chart + Order Book - fixed height prevents layout shifts */}
+      {/* Main Trading Area */}
+      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
+        {/* Top Row: Chart + Order Book - identical layout to exchange */}
         <div className="flex flex-col lg:flex-row gap-2 lg:h-[520px] flex-shrink-0">
-          {/* Price Chart - Center/Main - explicit heights per breakpoint */}
-          <div className="flex-1 order-1 h-[350px] lg:h-full min-h-0 overflow-hidden" style={{ contain: 'layout style' }}>
+          {/* Price Chart */}
+          <div className="flex-1 order-1 h-[350px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
             <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 
-          {/* Order Book - Right Sidebar - explicit heights per breakpoint */}
-          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 h-[380px] lg:h-full min-h-0 overflow-hidden" style={{ contain: 'layout style' }}>
+          {/* Order Book */}
+          <div className="lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] h-[420px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
             <OrderBook pair={currentPair} className="h-full" />
           </div>
         </div>
 
-        {/* Bottom Row: Trading Form + Order Management */}
+        {/* Bottom Row: Futures Trading Form + Order Management */}
         <div className="flex flex-col lg:flex-row gap-2">
-          {/* Trading Form */}
+          {/* Futures Trading Form */}
           <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
             <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Futures Trading</h3>
               <div className="space-y-4">
                 {/* Long/Short Buttons */}
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSide('long')}
+                  <button type="button" onClick={() => setSide('long')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      side === 'long'
-                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                        : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
-                    }`}
-                  >
-                    LONG
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSide('short')}
+                      side === 'long' ? 'bg-green-500 text-white shadow-lg shadow-green-500/25' : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
+                    }`}>LONG</button>
+                  <button type="button" onClick={() => setSide('short')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      side === 'short'
-                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
-                    }`}
-                  >
-                    SHORT
-                  </button>
+                      side === 'short' ? 'bg-red-500 text-white shadow-lg shadow-red-500/25' : 'bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:bg-[#222]'
+                    }`}>SHORT</button>
                 </div>
 
                 {/* Trade Description */}
@@ -584,13 +438,9 @@ export default function FuturesPage() {
                 {/* Amount */}
                 <div>
                   <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-1.5 block">Amount (USDT)</label>
-                  <Input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-gray-600 focus:ring-1 focus:ring-gray-600"
-                  />
+                    className="h-10 bg-[#0a0a0a] border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-gray-600 focus:ring-1 focus:ring-gray-600" />
                 </div>
 
                 {/* Duration */}
@@ -605,12 +455,8 @@ export default function FuturesPage() {
                         const isActive = isDurationActive(option.value);
                         const minForDuration = getEffectiveMinimum(option.value);
                         return (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value.toString()}
-                            disabled={!isActive}
-                            className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
-                          >
+                          <SelectItem key={option.value} value={option.value.toString()}
+                            disabled={!isActive} className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}>
                             <span className="flex items-center justify-between w-full gap-2">
                               <span>{option.label}</span>
                               {timeLimitsConfig?.enabled && (
@@ -627,36 +473,24 @@ export default function FuturesPage() {
                 {/* Available Balance */}
                 <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
                   <span className="text-gray-500 text-xs">Available</span>
-                  <span className="text-white text-xs font-medium tabular-nums">
-                    {formatUsdNumber(availableBalance)} USDT
-                  </span>
+                  <span className="text-white text-xs font-medium tabular-nums">{formatUsdNumber(availableBalance)} USDT</span>
                 </div>
 
                 {/* Min Limit Info */}
                 <div className="flex justify-between items-center bg-[#0a0a0a] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
                   <span className="text-gray-500 text-xs">Minimum</span>
-                  <span className="text-gray-300 text-xs font-medium tabular-nums">
-                    {formatUsdNumber(effectiveMinAmount)} USDT
-                  </span>
+                  <span className="text-gray-300 text-xs font-medium tabular-nums">{formatUsdNumber(effectiveMinAmount)} USDT</span>
                 </div>
 
                 {/* Submit Button */}
-                <button
-                  type="button"
-                  onClick={handleSubmitTrade}
+                <button type="button" onClick={handleSubmitTrade}
                   disabled={!amount || parseFloat(amount) < effectiveMinAmount || parseFloat(amount) > availableBalance || !isDurationActive(duration)}
                   className={`w-full py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
-                    side === 'long'
-                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25'
-                      : 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/25'
-                  }`}
-                >
-                  {!isDurationActive(duration)
-                    ? 'Duration Not Available'
-                    : !amount || parseFloat(amount) < effectiveMinAmount
-                    ? `Min ${effectiveMinAmount} USDT`
-                    : parseFloat(amount) > availableBalance
-                    ? 'Insufficient Balance'
+                    side === 'long' ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/25' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/25'
+                  }`}>
+                  {!isDurationActive(duration) ? 'Duration Not Available'
+                    : !amount || parseFloat(amount) < effectiveMinAmount ? `Min ${effectiveMinAmount} USDT`
+                    : parseFloat(amount) > availableBalance ? 'Insufficient Balance'
                     : `CONFIRM ${side.toUpperCase()}`}
                 </button>
               </div>
@@ -676,14 +510,10 @@ export default function FuturesPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 border border-[#1e1e1e]">
-                  <button
-                    onClick={() => setActiveTradeTab("open")}
+                  <button onClick={() => setActiveTradeTab("open")}
                     className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                      activeTradeTab === "open"
-                        ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
-                        : "text-gray-500 hover:text-gray-300"
-                    }`}
-                  >
+                      activeTradeTab === "open" ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]" : "text-gray-500 hover:text-gray-300"
+                    }`}>
                     Open Positions
                     {trades.filter(t => t.status === 'pending').length > 0 && (
                       <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">
@@ -691,50 +521,33 @@ export default function FuturesPage() {
                       </span>
                     )}
                   </button>
-                  <button
-                    onClick={() => setActiveTradeTab("closed")}
+                  <button onClick={() => setActiveTradeTab("closed")}
                     className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                      activeTradeTab === "closed"
-                        ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
-                        : "text-gray-500 hover:text-gray-300"
-                    }`}
-                  >
+                      activeTradeTab === "closed" ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]" : "text-gray-500 hover:text-gray-300"
+                    }`}>
                     Trade History
                   </button>
                 </div>
 
                 {/* Filters Row */}
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  {/* Side Filter */}
-                  <select
-                    value={sideFilter}
-                    onChange={e => setSideFilter(e.target.value)}
-                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
-                  >
+                  <select value={sideFilter} onChange={e => setSideFilter(e.target.value)}
+                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer">
                     <option value="all">All Sides</option>
                     <option value="long">Long</option>
                     <option value="short">Short</option>
                   </select>
-
-                  {/* Status Filter (history tab only) */}
                   {activeTradeTab === "closed" && (
-                    <select
-                      value={statusFilter}
-                      onChange={e => setStatusFilter(e.target.value)}
-                      className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
-                    >
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                      className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer">
                       <option value="all">All Status</option>
                       <option value="completed">Completed</option>
                       <option value="approved">Approved</option>
                       <option value="rejected">Rejected</option>
                     </select>
                   )}
-
-                  {/* Sort */}
-                  <button
-                    onClick={() => setSortOrder(s => s === "newest" ? "oldest" : "newest")}
-                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors"
-                  >
+                  <button onClick={() => setSortOrder(s => s === "newest" ? "oldest" : "newest")}
+                    className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors">
                     {sortOrder === "newest" ? "Newest" : "Oldest"}
                   </button>
                 </div>
@@ -761,17 +574,9 @@ export default function FuturesPage() {
                     ? trades.filter(t => t.status === 'pending')
                     : trades.filter(t => t.status !== 'pending');
 
-                  // Apply side filter
-                  if (sideFilter !== "all") {
-                    filtered = filtered.filter(t => t.side === sideFilter);
-                  }
+                  if (sideFilter !== "all") filtered = filtered.filter(t => t.side === sideFilter);
+                  if (activeTradeTab === "closed" && statusFilter !== "all") filtered = filtered.filter(t => t.status === statusFilter);
 
-                  // Apply status filter (history tab only)
-                  if (activeTradeTab === "closed" && statusFilter !== "all") {
-                    filtered = filtered.filter(t => t.status === statusFilter);
-                  }
-
-                  // Apply sort
                   filtered.sort((a, b) => {
                     const da = new Date(a.created_at).getTime();
                     const db = new Date(b.created_at).getTime();
@@ -784,14 +589,9 @@ export default function FuturesPage() {
                         <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mx-auto mb-3 flex items-center justify-center">
                           <Info size={20} className="text-gray-600" />
                         </div>
-                        <p className="text-gray-400 text-sm">
-                          {activeTradeTab === "open" ? "No open positions" : "No trade history"}
-                        </p>
+                        <p className="text-gray-400 text-sm">{activeTradeTab === "open" ? "No open positions" : "No trade history"}</p>
                         <p className="text-gray-600 text-xs mt-1">
-                          {activeTradeTab === "open"
-                            ? "Your active futures positions will appear here"
-                            : "Your completed futures trades will appear here"
-                          }
+                          {activeTradeTab === "open" ? "Your active futures positions will appear here" : "Your completed futures trades will appear here"}
                         </p>
                       </div>
                     );
@@ -803,37 +603,27 @@ export default function FuturesPage() {
                         <div key={trade.id} className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                                trade.side === 'long' ? 'bg-green-500/10' : 'bg-red-500/10'
-                              }`}>
-                                {trade.side === 'long'
-                                  ? <TrendingUp size={14} className="text-green-500" />
-                                  : <TrendingDown size={14} className="text-red-500" />
-                                }
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${trade.side === 'long' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                {trade.side === 'long' ? <TrendingUp size={14} className="text-green-500" /> : <TrendingDown size={14} className="text-red-500" />}
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   <CryptoIcon symbol={trade.symbol.split('/')[0]} size="xs" />
                                   <span className="text-white font-medium text-sm">{trade.symbol}</span>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                    trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                                  }`}>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${trade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                                     {trade.side.toUpperCase()}
                                   </span>
                                 </div>
                                 <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
                                   {formatUsdNumber(trade.amount)} USDT · {trade.duration}s
                                   {trade.profit_loss !== undefined && trade.status !== 'pending' && (
-                                    <span className={`ml-2 font-medium ${
-                                      trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
-                                    }`}>
+                                    <span className={`ml-2 font-medium ${trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                       {trade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(trade.profit_loss))}
                                     </span>
                                   )}
                                 </div>
                               </div>
                             </div>
-
                             <div className="flex items-center gap-2">
                               <div className="text-right mr-1">
                                 <div className="text-[10px] text-gray-600">{formatDateTime(trade.created_at)}</div>
@@ -845,11 +635,8 @@ export default function FuturesPage() {
                               }`}>
                                 {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
                               </span>
-                              <button
-                                onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
-                                className="p-1 rounded-lg hover:bg-[#222] transition-colors"
-                                title="Trade details"
-                              >
+                              <button onClick={() => handleShowTradeDetails(trade, trades.length - trades.indexOf(trade))}
+                                className="p-1 rounded-lg hover:bg-[#222] transition-colors" title="Trade details">
                                 <Info className="h-3.5 w-3.5 text-gray-500" />
                               </button>
                             </div>
@@ -869,14 +656,8 @@ export default function FuturesPage() {
       {timerTradeData && (
         <FutureTradeTimerModal
           isOpen={showTimerModal}
-          onClose={() => {
-            setShowTimerModal(false);
-            setTimerTradeData(null);
-          }}
-          onComplete={() => {
-            // Refresh trades and balance when trade completes
-            handleTradeSubmitted();
-          }}
+          onClose={() => { setShowTimerModal(false); setTimerTradeData(null); }}
+          onComplete={() => handleTradeSubmitted()}
           tradeData={timerTradeData}
         />
       )}
@@ -887,10 +668,8 @@ export default function FuturesPage() {
           <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-5 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-base font-semibold text-white">Trade Details</h3>
-              <button
-                onClick={() => setShowTradeDetailsModal(false)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-gray-400 transition-colors text-lg"
-              >
+              <button onClick={() => setShowTradeDetailsModal(false)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-gray-400 transition-colors text-lg">
                 ×
               </button>
             </div>
@@ -904,9 +683,7 @@ export default function FuturesPage() {
                     <span className="text-white font-semibold text-sm">{selectedTrade.symbol}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                       selectedTrade.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                    }`}>
-                      {selectedTrade.side.toUpperCase()}
-                    </span>
+                    }`}>{selectedTrade.side.toUpperCase()}</span>
                   </div>
                   <span className="text-[10px] text-gray-500">Trade #{selectedTradeNumber}</span>
                 </div>
@@ -914,24 +691,18 @@ export default function FuturesPage() {
                   selectedTrade.status === 'completed' ? 'bg-green-500/10 text-green-400' :
                   selectedTrade.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
                   selectedTrade.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-blue-500/10 text-blue-400'
-                }`}>
-                  {selectedTrade.status.charAt(0).toUpperCase() + selectedTrade.status.slice(1)}
-                </div>
+                }`}>{selectedTrade.status.charAt(0).toUpperCase() + selectedTrade.status.slice(1)}</div>
               </div>
 
               {/* Timestamps */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Opened</label>
-                  <div className="text-white text-xs mt-0.5">
-                    {formatDateTime(selectedTrade.created_at)}
-                  </div>
+                  <div className="text-white text-xs mt-0.5">{formatDateTime(selectedTrade.created_at)}</div>
                 </div>
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Closed</label>
-                  <div className="text-white text-xs mt-0.5">
-                    {formatDateTime(selectedTrade.expires_at)}
-                  </div>
+                  <div className="text-white text-xs mt-0.5">{formatDateTime(selectedTrade.expires_at)}</div>
                 </div>
               </div>
 
@@ -939,9 +710,7 @@ export default function FuturesPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
-                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
-                    {formatUsdNumber(selectedTrade.amount)}
-                  </div>
+                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">{formatUsdNumber(selectedTrade.amount)}</div>
                   <span className="text-[10px] text-gray-600">USDT</span>
                 </div>
                 <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
@@ -970,16 +739,12 @@ export default function FuturesPage() {
                 </div>
               </div>
 
-              {/* Trade Result - only for completed trades */}
+              {/* Trade Result - completed trades */}
               {selectedTrade.status === 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
                 <>
                   <div className="border-t border-[#1e1e1e] my-2" />
-
-                  {/* Result Card */}
                   <div className={`rounded-xl p-3 border ${
-                    selectedTrade.profit_loss >= 0
-                      ? 'bg-green-500/5 border-green-500/20'
-                      : 'bg-red-500/5 border-red-500/20'
+                    selectedTrade.profit_loss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
@@ -989,51 +754,40 @@ export default function FuturesPage() {
                         {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(selectedTrade.profit_loss)} USDT
                       </span>
                     </div>
-
-                    {/* Fee info (subtle) */}
                     {parseFloat(selectedTrade.fee_amount || '0') > 0 && (
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-gray-500">Fee {selectedTrade.fee_rate ? `(${(parseFloat(selectedTrade.fee_rate) * 100).toFixed(2)}%)` : ''}</span>
-                        <span className="text-[10px] text-gray-500 tabular-nums">
-                          -{formatUsdNumber(parseFloat(selectedTrade.fee_amount || '0'))} USDT
-                        </span>
+                        <span className="text-[10px] text-gray-500 tabular-nums">-{formatUsdNumber(parseFloat(selectedTrade.fee_amount || '0'))} USDT</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Balance Impact */}
                   {selectedTrade.trade_intervals?.balance_before != null && (
-                  <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Balance Before</span>
-                        <span className="text-xs text-gray-300 tabular-nums">
-                          {formatUsdNumber(selectedTrade.trade_intervals.balance_before!)} USDT
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance After</span>
-                        <span className="text-sm text-white font-bold tabular-nums">
-                          {formatUsdNumber(selectedTrade.trade_intervals.balance_after ?? (selectedTrade.trade_intervals.balance_before! + selectedTrade.profit_loss))} USDT
-                        </span>
+                    <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Balance Before</span>
+                          <span className="text-xs text-gray-300 tabular-nums">{formatUsdNumber(selectedTrade.trade_intervals.balance_before!)} USDT</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance After</span>
+                          <span className="text-sm text-white font-bold tabular-nums">
+                            {formatUsdNumber(selectedTrade.trade_intervals.balance_after ?? (selectedTrade.trade_intervals.balance_before! + selectedTrade.profit_loss))} USDT
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
                   )}
                 </>
               )}
 
-              {/* Simple P&L for non-completed or trades without breakdown */}
+              {/* Simple P&L for non-completed */}
               {selectedTrade.status !== 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
                 <div className={`rounded-xl p-3 border ${
-                  selectedTrade.profit_loss >= 0
-                    ? 'bg-green-500/5 border-green-500/20'
-                    : 'bg-red-500/5 border-red-500/20'
+                  selectedTrade.profit_loss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
                 }`}>
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Profit/Loss</label>
-                  <div className={`font-semibold text-base mt-0.5 tabular-nums ${
-                    selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}>
+                  <div className={`font-semibold text-base mt-0.5 tabular-nums ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
                   </div>
                 </div>
@@ -1041,17 +795,14 @@ export default function FuturesPage() {
             </div>
 
             <div className="mt-5">
-              <Button
-                onClick={() => setShowTradeDetailsModal(false)}
-                className="w-full bg-[#1e1e1e] hover:bg-[#2a2a2a] text-white rounded-xl py-2.5 text-sm border border-[#2a2a2a]"
-              >
+              <Button onClick={() => setShowTradeDetailsModal(false)}
+                className="w-full bg-[#1e1e1e] hover:bg-[#2a2a2a] text-white rounded-xl py-2.5 text-sm border border-[#2a2a2a]">
                 Close
               </Button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

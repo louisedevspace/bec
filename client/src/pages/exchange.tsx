@@ -74,7 +74,6 @@ export default function ExchangePage() {
                 <p className="text-gray-500 text-[11px] mt-0.5">{cryptoName} / Tether</p>
               </div>
 
-              {/* Pair Dropdown */}
               {showPairMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
@@ -94,9 +93,7 @@ export default function ExchangePage() {
                             <span className="text-gray-600">/</span>
                             <span className="text-gray-400 text-sm">{p.quote_asset}</span>
                           </div>
-                          {p.symbol === currentPair && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                          )}
+                          {p.symbol === currentPair && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                         </button>
                       )) : (
                         <div className="px-4 py-3 text-gray-500 text-xs">No pairs available</div>
@@ -115,35 +112,31 @@ export default function ExchangePage() {
             </div>
           </div>
         </div>
-        {/* Market Stats Bar */}
         <div className="border-t border-[#1e1e1e]">
           <MarketStatsBar symbol={baseAsset} />
         </div>
       </div>
 
-      {/* Main Trading Area - Binance-like Layout */}
-      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
-        {/* Top Row: Chart + Order Book - fixed height prevents layout shifts */}
+      {/* Main Trading Area */}
+      <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
+        {/* Top Row: Chart + Order Book */}
         <div className="flex flex-col lg:flex-row gap-2 lg:h-[520px] flex-shrink-0">
-          {/* Price Chart - Center/Main - explicit heights per breakpoint */}
-          <div className="flex-1 order-1 h-[350px] lg:h-full min-h-0 overflow-hidden" style={{ contain: 'layout style' }}>
+          {/* Price Chart */}
+          <div className="flex-1 order-1 h-[350px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
             <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 
-          {/* Order Book - Right Sidebar - explicit heights per breakpoint */}
-          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 h-[380px] lg:h-full min-h-0 overflow-hidden" style={{ contain: 'layout style' }}>
+          {/* Order Book */}
+          <div className="lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] h-[420px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
             <OrderBook pair={currentPair} className="h-full" onPriceSelect={setSelectedPrice} />
           </div>
         </div>
 
         {/* Bottom Row: Trading Form + Order Management */}
         <div className="flex flex-col lg:flex-row gap-2">
-          {/* Trading Form */}
           <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
             <TradingForm pair={currentPair} type="spot" tradingFeeRate={tradingFeeRate} suggestedPrice={selectedPrice} />
           </div>
-
-          {/* Order Management */}
           <div className="flex-1">
             <OrderManagement />
           </div>

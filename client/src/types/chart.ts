@@ -7,5 +7,5 @@ export interface CandlestickData {
   volume: number;
 }
 
-export type ChartTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
+export type ChartTimeframe = "1s" | "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
 export type ChartType = "candlestick" | "line" | "area";
