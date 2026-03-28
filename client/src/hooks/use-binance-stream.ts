@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChartTimeframe } from '@/types/chart';
 
 export interface BinanceKlineUpdate {
@@ -38,106 +38,139 @@ export function useBinanceStream(
   const pingTimer = useRef<ReturnType<typeof setInterval>>();
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
+  const intentionalCloseRef = useRef(false);
   const lastKlineTimeRef = useRef(0);
 
   useEffect(() => { onKlineRef.current = onKlineUpdate; }, [onKlineUpdate]);
   useEffect(() => { onTickRef.current = onTick; }, [onTick]);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     if (!symbol) return;
 
-    if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
-    if (pingTimer.current) { clearInterval(pingTimer.current); pingTimer.current = undefined; }
+    mountedRef.current = true;
+    intentionalCloseRef.current = false;
 
     const pair = `${symbol.toUpperCase()}USDT`;
     const mexcInterval = MEXC_INTERVALS[interval];
 
-    try {
-      const ws = new WebSocket(MEXC_WS);
-      wsRef.current = ws;
+    function connect() {
+      // Clean up any existing connection
+      if (wsRef.current) {
+        intentionalCloseRef.current = true;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (pingTimer.current) {
+        clearInterval(pingTimer.current);
+        pingTimer.current = undefined;
+      }
 
-      ws.onopen = () => {
-        if (!mountedRef.current) return;
-        setIsConnected(true);
-        reconnectAttempts.current = 0;
-        lastKlineTimeRef.current = 0;
+      // Reset flag before opening new connection
+      intentionalCloseRef.current = false;
 
-        ws.send(JSON.stringify({
-          method: 'SUBSCRIPTION',
-          params: [`spot@public.kline.v3.api@${mexcInterval}@${pair}`],
-        }));
-        ws.send(JSON.stringify({
-          method: 'SUBSCRIPTION',
-          params: [`spot@public.deals.v3.api@${pair}`],
-        }));
+      try {
+        const ws = new WebSocket(MEXC_WS);
+        wsRef.current = ws;
 
-        pingTimer.current = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ method: 'PING' }));
-        }, 20000);
-      };
+        ws.onopen = () => {
+          if (!mountedRef.current) { ws.close(); return; }
+          setIsConnected(true);
+          reconnectAttempts.current = 0;
+          lastKlineTimeRef.current = 0;
 
-      ws.onmessage = (event) => {
-        if (!mountedRef.current) return;
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.msg === 'PONG' || msg.id !== undefined) return;
+          ws.send(JSON.stringify({
+            method: 'SUBSCRIPTION',
+            params: [`spot@public.kline.v3.api@${mexcInterval}@${pair}`],
+          }));
+          ws.send(JSON.stringify({
+            method: 'SUBSCRIPTION',
+            params: [`spot@public.deals.v3.api@${pair}`],
+          }));
 
-          if (msg.c && msg.c.includes('kline') && msg.d?.k) {
-            const k = msg.d.k;
-            const openTimeMs = typeof k.t === 'number' ? k.t : parseInt(k.t);
-            const openTimeSec = Math.floor(openTimeMs / 1000);
-            const isClosed = lastKlineTimeRef.current > 0 && openTimeSec !== lastKlineTimeRef.current;
-            lastKlineTimeRef.current = openTimeSec;
+          pingTimer.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ method: 'PING' }));
+          }, 20000);
+        };
 
-            onKlineRef.current({
-              time: openTimeSec,
-              open: parseFloat(k.o),
-              high: parseFloat(k.h),
-              low: parseFloat(k.l),
-              close: parseFloat(k.c),
-              volume: parseFloat(k.v || k.q || '0'),
-              isClosed,
-            });
-          }
+        ws.onmessage = (event) => {
+          if (!mountedRef.current) return;
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.msg === 'PONG' || msg.id !== undefined) return;
 
-          if (msg.c && msg.c.includes('deals') && msg.d?.deals) {
-            const deals = msg.d.deals;
-            if (!Array.isArray(deals) || deals.length === 0) return;
-            const latest = deals[deals.length - 1];
-            if (onTickRef.current && latest) {
-              onTickRef.current({
-                price: parseFloat(latest.p),
-                quantity: parseFloat(latest.v || '0'),
-                time: Math.floor((latest.t || Date.now()) / 1000),
+            if (msg.c && msg.c.includes('kline') && msg.d?.k) {
+              const k = msg.d.k;
+              const openTimeMs = typeof k.t === 'number' ? k.t : parseInt(k.t);
+              const openTimeSec = Math.floor(openTimeMs / 1000);
+              const isClosed = lastKlineTimeRef.current > 0 && openTimeSec !== lastKlineTimeRef.current;
+              lastKlineTimeRef.current = openTimeSec;
+
+              onKlineRef.current({
+                time: openTimeSec,
+                open: parseFloat(k.o),
+                high: parseFloat(k.h),
+                low: parseFloat(k.l),
+                close: parseFloat(k.c),
+                volume: parseFloat(k.v || k.q || '0'),
+                isClosed,
               });
             }
+
+            if (msg.c && msg.c.includes('deals') && msg.d?.deals) {
+              const deals = msg.d.deals;
+              if (!Array.isArray(deals) || deals.length === 0) return;
+              const latest = deals[deals.length - 1];
+              if (onTickRef.current && latest) {
+                onTickRef.current({
+                  price: parseFloat(latest.p),
+                  quantity: parseFloat(latest.v || '0'),
+                  time: Math.floor((latest.t || Date.now()) / 1000),
+                });
+              }
+            }
+          } catch { /* ignore */ }
+        };
+
+        ws.onclose = () => {
+          if (pingTimer.current) {
+            clearInterval(pingTimer.current);
+            pingTimer.current = undefined;
           }
-        } catch { /* ignore */ }
-      };
+          setIsConnected(false);
 
-      ws.onclose = () => {
-        if (!mountedRef.current) return;
-        setIsConnected(false);
-        if (pingTimer.current) { clearInterval(pingTimer.current); pingTimer.current = undefined; }
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-        reconnectAttempts.current++;
-        reconnectTimer.current = setTimeout(() => { if (mountedRef.current) connect(); }, delay);
-      };
+          // Do NOT reconnect if close was intentional or component unmounted
+          if (intentionalCloseRef.current || !mountedRef.current) return;
 
-      ws.onerror = () => { if (!mountedRef.current) return; ws.close(); };
-    } catch { /* ignore */ }
-  }, [symbol, interval]);
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+          reconnectAttempts.current++;
+          reconnectTimer.current = setTimeout(() => {
+            if (mountedRef.current) connect();
+          }, delay);
+        };
 
-  useEffect(() => {
-    mountedRef.current = true;
+        ws.onerror = () => {
+          // Let onclose handle reconnection
+          ws.close();
+        };
+      } catch { /* ignore */ }
+    }
+
     connect();
+
     return () => {
       mountedRef.current = false;
+      intentionalCloseRef.current = true;
       clearTimeout(reconnectTimer.current);
-      if (pingTimer.current) clearInterval(pingTimer.current);
-      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+      if (pingTimer.current) {
+        clearInterval(pingTimer.current);
+        pingTimer.current = undefined;
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [connect]);
+  }, [symbol, interval]);
 
   return { isConnected };
 }
