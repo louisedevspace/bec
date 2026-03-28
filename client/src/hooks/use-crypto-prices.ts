@@ -85,11 +85,10 @@ export function useCryptoPrices() {
           setIsConnected(true);
           reconnectAttempts.current = 0;
 
-          // Subscribe to miniTicker for each pair
-          const params = SUPPORTED_SYMBOLS.map(s => `spot@public.miniTicker.v3.api@${s}USDT`);
+          // Subscribe to ALL miniTickers in one channel (plural) — avoids 30-channel limit
           ws.send(JSON.stringify({
             method: 'SUBSCRIPTION',
-            params,
+            params: ['spot@public.miniTickers.v3.api'],
           }));
 
           // MEXC requires ping every 30s to keep connection alive
@@ -114,26 +113,37 @@ export function useCryptoPrices() {
             // Ignore PONG and subscription confirmations
             if (msg.msg === 'PONG' || msg.id !== undefined) return;
 
-            // Handle miniTicker data
-            // MEXC miniTicker: { c: "spot@public.miniTicker.v3.api@BTCUSDT", d: { s: "BTCUSDT", p: "67234.12", ... } }
+            // Handle miniTicker / miniTickers data
+            // Bulk: { c: "spot@public.miniTickers.v3.api", d: [{ s:"BTCUSDT", c:"67234", ... }, ...] }
+            // Single: { c: "spot@public.miniTicker.v3.api@BTCUSDT", d: { s:"BTCUSDT", c:"67234", ... } }
             if (msg.c && msg.c.includes('miniTicker') && msg.d) {
-              const d = msg.d;
-              const pairStr = d.s || ''; // e.g. "BTCUSDT"
-              const sym = pairStr.replace('USDT', '');
-              if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) return;
+              const tickers = Array.isArray(msg.d) ? msg.d : [msg.d];
+              const updates: Record<string, Partial<CryptoPrice>> = {};
 
-              const update: Partial<CryptoPrice> = {
-                symbol: sym,
-                price: d.c || d.p || '', // c = close/last price
-                updatedAt: new Date().toISOString(),
-              };
+              for (const d of tickers) {
+                const pairStr = d.s || ''; // e.g. "BTCUSDT"
+                if (!pairStr.endsWith('USDT')) continue;
+                const sym = pairStr.replace('USDT', '');
+                if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) continue;
 
-              livePricesRef.current[sym] = update as CryptoPrice;
+                updates[sym] = {
+                  symbol: sym,
+                  price: d.c || d.p || '', // c = close/last price
+                  updatedAt: new Date().toISOString(),
+                };
+              }
 
-              setPrices((prev) => {
-                if (prev.length === 0) return prev;
-                return prev.map((p) => p.symbol === sym ? { ...p, ...update } : p);
-              });
+              if (Object.keys(updates).length > 0) {
+                Object.assign(livePricesRef.current, updates);
+
+                setPrices((prev) => {
+                  if (prev.length === 0) return prev;
+                  return prev.map((p) => {
+                    const u = updates[p.symbol];
+                    return u ? { ...p, ...u } : p;
+                  });
+                });
+              }
             }
           } catch {
             // Ignore parse errors

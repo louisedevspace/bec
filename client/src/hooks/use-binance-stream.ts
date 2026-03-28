@@ -46,6 +46,8 @@ export function useBinanceStream(
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
 
+  const lastKlineTimeRef = useRef(0);
+
   // Keep callback refs updated without causing reconnect
   useEffect(() => { onKlineRef.current = onKlineUpdate; }, [onKlineUpdate]);
   useEffect(() => { onTickRef.current = onTick; }, [onTick]);
@@ -75,13 +77,13 @@ export function useBinanceStream(
         setIsConnected(true);
         reconnectAttempts.current = 0;
 
-        // Subscribe to kline stream
+        // Subscribe to kline stream — MEXC format: @interval@symbol
         ws.send(JSON.stringify({
           method: 'SUBSCRIPTION',
-          params: [`spot@public.kline.v3.api@${pair}@${mexcInterval}`],
+          params: [`spot@public.kline.v3.api@${mexcInterval}@${pair}`],
         }));
 
-        // Subscribe to deals/trades stream for ticks
+        // Subscribe to deals/trades stream for sub-second ticks
         ws.send(JSON.stringify({
           method: 'SUBSCRIPTION',
           params: [`spot@public.deals.v3.api@${pair}`],
@@ -103,19 +105,26 @@ export function useBinanceStream(
           // Handle PONG response (ignore)
           if (msg.msg === 'PONG' || msg.id !== undefined) return;
 
-          // Handle kline data
+          // Handle kline data — MEXC: { c: "spot@public.kline.v3.api@...", d: { k: { t, o, h, l, c, v, T } } }
           if (msg.c && msg.c.includes('kline')) {
             const k = msg.d?.k;
             if (!k) return;
 
+            const openTimeMs = typeof k.t === 'number' ? k.t : parseInt(k.t);
+            const openTimeSec = Math.floor(openTimeMs / 1000);
+
+            // Detect candle close: when open time changes, previous candle closed
+            const isClosed = lastKlineTimeRef.current > 0 && openTimeSec !== lastKlineTimeRef.current;
+            lastKlineTimeRef.current = openTimeSec;
+
             const kline: BinanceKlineUpdate = {
-              time: Math.floor(k.t / 1000),  // Convert ms → seconds for lightweight-charts
+              time: openTimeSec,
               open: parseFloat(k.o),
               high: parseFloat(k.h),
               low: parseFloat(k.l),
               close: parseFloat(k.c),
-              volume: parseFloat(k.v || '0'),
-              isClosed: k.x === true,
+              volume: parseFloat(k.v || k.q || '0'),
+              isClosed,
             };
             onKlineRef.current(kline);
           }
