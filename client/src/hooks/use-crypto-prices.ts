@@ -4,37 +4,25 @@ import { cryptoApi } from "@/services/crypto-api";
 import { useWebSocket } from "./use-websocket";
 import type { CryptoPrice } from "@/types/crypto";
 
-// CoinCap WebSocket — free, no key, sub-second updates
-const COINCAP_WS = 'wss://ws.coincap.io/prices?assets=';
+// MEXC WebSocket — free, no key, real-time miniTicker
+const MEXC_WS = 'wss://wbs.mexc.com/ws';
 
-// Map ticker symbols → CoinCap IDs
-const SYMBOL_TO_COINCAP: Record<string, string> = {
-  BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binance-coin', SOL: 'solana',
-  XRP: 'xrp', ADA: 'cardano', DOT: 'polkadot', DOGE: 'dogecoin',
-  AVAX: 'avalanche', LINK: 'chainlink', LTC: 'litecoin', MATIC: 'polygon',
-  ATOM: 'cosmos', TRX: 'tron', SHIB: 'shiba-inu', BCH: 'bitcoin-cash',
-  DASH: 'dash', XMR: 'monero', XLM: 'stellar', FIL: 'filecoin',
-  APT: 'aptos', SUI: 'sui', ARB: 'arbitrum', OP: 'optimism',
-  PEPE: 'pepe', INJ: 'injective-protocol',
-  USDT: 'tether',
-};
-
-// Reverse lookup: "bitcoin" → "BTC"
-const COINCAP_TO_SYMBOL: Record<string, string> = {};
-for (const [sym, coinCapId] of Object.entries(SYMBOL_TO_COINCAP)) {
-  COINCAP_TO_SYMBOL[coinCapId] = sym;
-}
-
-// Build the CoinCap WebSocket URL with all asset IDs
-const ALL_COINCAP_IDS = Object.values(SYMBOL_TO_COINCAP).filter(id => id !== 'tether').join(',');
+// All supported trading pairs for MEXC subscription
+const SUPPORTED_SYMBOLS = [
+  'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'DOGE',
+  'AVAX', 'LINK', 'LTC', 'MATIC', 'ATOM', 'TRX', 'SHIB', 'BCH',
+  'DASH', 'XMR', 'XLM', 'FIL', 'APT', 'SUI', 'ARB', 'OP',
+  'PEPE', 'INJ',
+];
 
 export function useCryptoPrices() {
   const [prices, setPrices] = useState<CryptoPrice[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const { subscribe, isConnected: wsConnected } = useWebSocket("/ws");
   const livePricesRef = useRef<Record<string, CryptoPrice>>({});
-  const coinCapWsRef = useRef<WebSocket | null>(null);
+  const mexcWsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const pingTimer = useRef<ReturnType<typeof setInterval>>();
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
   const lastUpdateRef = useRef(0);
@@ -66,7 +54,7 @@ export function useCryptoPrices() {
     }
   }, [initialPrices, mergeLivePrices]);
 
-  // Subscribe to server WebSocket (fallback if CoinCap WS fails)
+  // Subscribe to server WebSocket (fallback)
   useEffect(() => {
     const unsubscribe = subscribe("price_update", (updatedPrices: CryptoPrice[]) => {
       setPrices((prev) => mergeLivePrices(updatedPrices, livePricesRef.current));
@@ -74,60 +62,77 @@ export function useCryptoPrices() {
     return unsubscribe;
   }, [subscribe, mergeLivePrices]);
 
-  // CoinCap WebSocket — all assets on a single connection, ~1 update/sec
+  // MEXC WebSocket — subscribe to miniTicker for all pairs
   useEffect(() => {
     mountedRef.current = true;
 
     function connect() {
-      if (coinCapWsRef.current) {
-        coinCapWsRef.current.close();
-        coinCapWsRef.current = null;
+      if (mexcWsRef.current) {
+        mexcWsRef.current.close();
+        mexcWsRef.current = null;
+      }
+      if (pingTimer.current) {
+        clearInterval(pingTimer.current);
+        pingTimer.current = undefined;
       }
 
       try {
-        const ws = new WebSocket(`${COINCAP_WS}${ALL_COINCAP_IDS}`);
-        coinCapWsRef.current = ws;
+        const ws = new WebSocket(MEXC_WS);
+        mexcWsRef.current = ws;
 
         ws.onopen = () => {
           if (!mountedRef.current) return;
           setIsConnected(true);
           reconnectAttempts.current = 0;
+
+          // Subscribe to miniTicker for each pair
+          const params = SUPPORTED_SYMBOLS.map(s => `spot@public.miniTicker.v3.api@${s}USDT`);
+          ws.send(JSON.stringify({
+            method: 'SUBSCRIPTION',
+            params,
+          }));
+
+          // MEXC requires ping every 30s to keep connection alive
+          pingTimer.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ method: 'PING' }));
+            }
+          }, 20000);
         };
 
         ws.onmessage = (event) => {
           if (!mountedRef.current) return;
 
-          // Throttle state updates to ~4fps (250ms) to avoid excessive React re-renders
+          // Throttle state updates to ~4fps (250ms)
           const now = performance.now();
           if (now - lastUpdateRef.current < 250) return;
           lastUpdateRef.current = now;
 
           try {
-            // CoinCap sends { "bitcoin": "67234.12", "ethereum": "3421.50", ... }
-            const data: Record<string, string> = JSON.parse(event.data);
-            if (typeof data !== 'object') return;
+            const msg = JSON.parse(event.data);
 
-            const updates: Record<string, Partial<CryptoPrice>> = {};
-            for (const [coinCapId, priceStr] of Object.entries(data)) {
-              const sym = COINCAP_TO_SYMBOL[coinCapId];
-              if (!sym) continue;
+            // Ignore PONG and subscription confirmations
+            if (msg.msg === 'PONG' || msg.id !== undefined) return;
 
-              updates[sym] = {
+            // Handle miniTicker data
+            // MEXC miniTicker: { c: "spot@public.miniTicker.v3.api@BTCUSDT", d: { s: "BTCUSDT", p: "67234.12", ... } }
+            if (msg.c && msg.c.includes('miniTicker') && msg.d) {
+              const d = msg.d;
+              const pairStr = d.s || ''; // e.g. "BTCUSDT"
+              const sym = pairStr.replace('USDT', '');
+              if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) return;
+
+              const update: Partial<CryptoPrice> = {
                 symbol: sym,
-                price: priceStr,
+                price: d.c || d.p || '', // c = close/last price
                 updatedAt: new Date().toISOString(),
               };
-            }
 
-            if (Object.keys(updates).length > 0) {
-              Object.assign(livePricesRef.current, updates);
+              livePricesRef.current[sym] = update as CryptoPrice;
 
               setPrices((prev) => {
                 if (prev.length === 0) return prev;
-                return prev.map((p) => {
-                  const u = updates[p.symbol];
-                  return u ? { ...p, ...u } : p;
-                });
+                return prev.map((p) => p.symbol === sym ? { ...p, ...update } : p);
               });
             }
           } catch {
@@ -138,6 +143,10 @@ export function useCryptoPrices() {
         ws.onclose = () => {
           if (!mountedRef.current) return;
           setIsConnected(false);
+          if (pingTimer.current) {
+            clearInterval(pingTimer.current);
+            pingTimer.current = undefined;
+          }
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
           reconnectAttempts.current++;
           reconnectTimer.current = setTimeout(() => {
@@ -159,9 +168,13 @@ export function useCryptoPrices() {
     return () => {
       mountedRef.current = false;
       clearTimeout(reconnectTimer.current);
-      if (coinCapWsRef.current) {
-        coinCapWsRef.current.close();
-        coinCapWsRef.current = null;
+      if (pingTimer.current) {
+        clearInterval(pingTimer.current);
+        pingTimer.current = undefined;
+      }
+      if (mexcWsRef.current) {
+        mexcWsRef.current.close();
+        mexcWsRef.current = null;
       }
     };
   }, []);

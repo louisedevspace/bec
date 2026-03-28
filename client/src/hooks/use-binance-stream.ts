@@ -17,31 +17,19 @@ export interface BinanceTick {
   time: number;      // Trade time in seconds
 }
 
-const COINCAP_WS = 'wss://ws.coincap.io/prices?assets=';
+// MEXC WebSocket — free, no API key, real-time klines + trades
+const MEXC_WS = 'wss://wbs.mexc.com/ws';
 
-// CoinCap uses lowercase full names; map from our ticker symbols
-const SYMBOL_TO_COINCAP: Record<string, string> = {
-  BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binance-coin', SOL: 'solana',
-  XRP: 'xrp', ADA: 'cardano', DOT: 'polkadot', DOGE: 'dogecoin',
-  AVAX: 'avalanche', LINK: 'chainlink', LTC: 'litecoin', MATIC: 'polygon',
-  ATOM: 'cosmos', TRX: 'tron', SHIB: 'shiba-inu', BCH: 'bitcoin-cash',
-  DASH: 'dash', XMR: 'monero', XLM: 'stellar', FIL: 'filecoin',
-  APT: 'aptos', SUI: 'sui', ARB: 'arbitrum', OP: 'optimism',
-  PEPE: 'pepe', INJ: 'injective-protocol',
-};
-
-const INTERVAL_SECONDS: Record<ChartTimeframe, number> = {
-  '1m': 60, '5m': 300, '15m': 900, '1h': 3600,
-  '4h': 14400, '1d': 86400, '1w': 604800,
+// MEXC uses same interval strings as Binance for klines
+const MEXC_INTERVALS: Record<ChartTimeframe, string> = {
+  '1m': 'Min1', '5m': 'Min5', '15m': 'Min15', '1h': 'Min60',
+  '4h': 'Hour4', '1d': 'Day1', '1w': 'Week1',
 };
 
 /**
- * Real-time price stream using CoinCap WebSocket.
- * Builds OHLCV candles locally from price ticks — this eliminates the
- * wick desync bug caused by Binance kline snapshots overwriting tick data.
- *
- * CoinCap sends price updates every ~500ms per asset, completely free,
- * no API key required.
+ * Real-time price stream using MEXC WebSocket.
+ * MEXC provides proper kline streams with OHLCV data directly,
+ * eliminating wick desync issues.
  */
 export function useBinanceStream(
   symbol: string,
@@ -54,26 +42,13 @@ export function useBinanceStream(
   const onTickRef = useRef(onTick);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const pingTimer = useRef<ReturnType<typeof setInterval>>();
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
-
-  // Local candle builder state
-  const currentCandleRef = useRef<{
-    time: number; open: number; high: number; low: number; close: number; volume: number;
-  } | null>(null);
-  const intervalRef = useRef(interval);
-  const symbolRef = useRef(symbol);
 
   // Keep callback refs updated without causing reconnect
   useEffect(() => { onKlineRef.current = onKlineUpdate; }, [onKlineUpdate]);
   useEffect(() => { onTickRef.current = onTick; }, [onTick]);
-  useEffect(() => { intervalRef.current = interval; }, [interval]);
-  useEffect(() => { symbolRef.current = symbol; }, [symbol]);
-
-  // Reset candle when interval or symbol changes
-  useEffect(() => {
-    currentCandleRef.current = null;
-  }, [interval, symbol]);
 
   const connect = useCallback(() => {
     if (!symbol) return;
@@ -83,77 +58,83 @@ export function useBinanceStream(
       wsRef.current.close();
       wsRef.current = null;
     }
+    if (pingTimer.current) {
+      clearInterval(pingTimer.current);
+      pingTimer.current = undefined;
+    }
 
-    const coincapId = SYMBOL_TO_COINCAP[symbol.toUpperCase()] || symbol.toLowerCase();
-    const url = `${COINCAP_WS}${coincapId}`;
+    const pair = `${symbol.toUpperCase()}USDT`;
+    const mexcInterval = MEXC_INTERVALS[interval];
 
     try {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(MEXC_WS);
       wsRef.current = ws;
 
       ws.onopen = () => {
         if (!mountedRef.current) return;
         setIsConnected(true);
         reconnectAttempts.current = 0;
+
+        // Subscribe to kline stream
+        ws.send(JSON.stringify({
+          method: 'SUBSCRIPTION',
+          params: [`spot@public.kline.v3.api@${pair}@${mexcInterval}`],
+        }));
+
+        // Subscribe to deals/trades stream for ticks
+        ws.send(JSON.stringify({
+          method: 'SUBSCRIPTION',
+          params: [`spot@public.deals.v3.api@${pair}`],
+        }));
+
+        // MEXC requires ping every 30s to keep connection alive
+        pingTimer.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ method: 'PING' }));
+          }
+        }, 20000);
       };
 
       ws.onmessage = (event) => {
         if (!mountedRef.current) return;
         try {
-          const data = JSON.parse(event.data);
-          // CoinCap sends { "<coincap-id>": "<price>" }
-          const coincapId = SYMBOL_TO_COINCAP[symbolRef.current.toUpperCase()] || symbolRef.current.toLowerCase();
-          const priceStr = data[coincapId];
-          if (!priceStr) return;
+          const msg = JSON.parse(event.data);
 
-          const price = parseFloat(priceStr);
-          if (isNaN(price) || price <= 0) return;
+          // Handle PONG response (ignore)
+          if (msg.msg === 'PONG' || msg.id !== undefined) return;
 
-          const nowSec = Math.floor(Date.now() / 1000);
+          // Handle kline data
+          if (msg.c && msg.c.includes('kline')) {
+            const k = msg.d?.k;
+            if (!k) return;
 
-          // Emit tick
-          if (onTickRef.current) {
-            onTickRef.current({
-              price,
-              quantity: 0,
-              time: nowSec,
-            });
+            const kline: BinanceKlineUpdate = {
+              time: Math.floor(k.t / 1000),  // Convert ms → seconds for lightweight-charts
+              open: parseFloat(k.o),
+              high: parseFloat(k.h),
+              low: parseFloat(k.l),
+              close: parseFloat(k.c),
+              volume: parseFloat(k.v || '0'),
+              isClosed: k.x === true,
+            };
+            onKlineRef.current(kline);
           }
 
-          // Build candle locally
-          const intSec = INTERVAL_SECONDS[intervalRef.current] || 60;
-          const candleStart = Math.floor(nowSec / intSec) * intSec;
-          const candle = currentCandleRef.current;
+          // Handle trade/deals data for ticks
+          if (msg.c && msg.c.includes('deals')) {
+            const deals = msg.d?.deals;
+            if (!deals || !Array.isArray(deals) || deals.length === 0) return;
 
-          if (!candle || candle.time !== candleStart) {
-            // Emit closing signal for previous candle
-            if (candle) {
-              onKlineRef.current({
-                ...candle,
-                isClosed: true,
+            // Use the most recent trade
+            const latest = deals[deals.length - 1];
+            if (onTickRef.current && latest) {
+              onTickRef.current({
+                price: parseFloat(latest.p),
+                quantity: parseFloat(latest.v || '0'),
+                time: Math.floor((latest.t || Date.now()) / 1000),
               });
             }
-            // Start new candle
-            currentCandleRef.current = {
-              time: candleStart,
-              open: price,
-              high: price,
-              low: price,
-              close: price,
-              volume: 0,
-            };
-          } else {
-            // Update current candle — only GROW high/low, never shrink
-            candle.high = Math.max(candle.high, price);
-            candle.low = Math.min(candle.low, price);
-            candle.close = price;
           }
-
-          // Emit in-progress kline update
-          onKlineRef.current({
-            ...currentCandleRef.current!,
-            isClosed: false,
-          });
         } catch {
           // Ignore parse errors
         }
@@ -162,6 +143,10 @@ export function useBinanceStream(
       ws.onclose = () => {
         if (!mountedRef.current) return;
         setIsConnected(false);
+        if (pingTimer.current) {
+          clearInterval(pingTimer.current);
+          pingTimer.current = undefined;
+        }
         // Exponential backoff: 1s, 2s, 4s, 8s … max 30s
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
         reconnectAttempts.current++;
@@ -187,6 +172,10 @@ export function useBinanceStream(
     return () => {
       mountedRef.current = false;
       clearTimeout(reconnectTimer.current);
+      if (pingTimer.current) {
+        clearInterval(pingTimer.current);
+        pingTimer.current = undefined;
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;

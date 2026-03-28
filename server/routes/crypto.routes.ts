@@ -238,50 +238,33 @@ export default function registerCryptoRoutes(app: Express) {
         return res.json(cached.data);
       }
 
-      // Try CoinCap candles API first (free, no key, fast)
+      // MEXC klines intervals (week uses uppercase W)
+      const MEXC_INTERVALS: Record<string, string> = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h',
+        '4h': '4h', '1d': '1d', '1w': '1W',
+      };
+
+      // Try MEXC klines API first (free, no key, Binance-compatible format)
       let candles: any[] = [];
       try {
-        const COINCAP_MAP: Record<string, string> = {
-          BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binance-coin', SOL: 'solana',
-          XRP: 'xrp', ADA: 'cardano', DOT: 'polkadot', DOGE: 'dogecoin',
-          AVAX: 'avalanche', LINK: 'chainlink', LTC: 'litecoin', MATIC: 'polygon',
-          ATOM: 'cosmos', TRX: 'tron', SHIB: 'shiba-inu', BCH: 'bitcoin-cash',
-          DASH: 'dash', XMR: 'monero', XLM: 'stellar', FIL: 'filecoin',
-          APT: 'aptos', SUI: 'sui', ARB: 'arbitrum', OP: 'optimism',
-          PEPE: 'pepe', INJ: 'injective-protocol',
-        };
-        const COINCAP_INTERVALS: Record<string, string> = {
-          '1m': 'm1', '5m': 'm5', '15m': 'm15', '1h': 'h1',
-          '4h': 'h4', '1d': 'd1', '1w': 'w1',
-        };
-        const INTERVAL_MS: Record<string, number> = {
-          '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000,
-          '4h': 14400000, '1d': 86400000, '1w': 604800000,
-        };
-
-        const baseId = COINCAP_MAP[symbol];
-        const ccInterval = COINCAP_INTERVALS[interval];
-        if (baseId && ccInterval) {
-          const end = Date.now();
-          const start = end - (limit * (INTERVAL_MS[interval] || 3600000));
-          const coinCapUrl = `https://api.coincap.io/v2/candles?exchange=binance&interval=${ccInterval}&baseId=${baseId}&quoteId=tether&start=${start}&end=${end}`;
-          const coinCapRes = await fetch(coinCapUrl);
-          if (coinCapRes.ok) {
-            const json = await coinCapRes.json();
-            if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-              candles = json.data.map((k: any) => ({
-                time: k.period,
-                open: parseFloat(k.open),
-                high: parseFloat(k.high),
-                low: parseFloat(k.low),
-                close: parseFloat(k.close),
-                volume: parseFloat(k.volume),
-              }));
-            }
+        const mexcInterval = MEXC_INTERVALS[interval] || interval;
+        const mexcUrl = `https://api.mexc.com/api/v3/klines?symbol=${symbol}USDT&interval=${mexcInterval}&limit=${limit}`;
+        const mexcRes = await fetch(mexcUrl);
+        if (mexcRes.ok) {
+          const raw = await mexcRes.json();
+          if (Array.isArray(raw) && raw.length > 0) {
+            candles = raw.map((k: any[]) => ({
+              time: k[0],
+              open: parseFloat(k[1]),
+              high: parseFloat(k[2]),
+              low: parseFloat(k[3]),
+              close: parseFloat(k[4]),
+              volume: parseFloat(k[5]),
+            }));
           }
         }
       } catch (e) {
-        console.warn("CoinCap candles failed for", symbol, (e as Error).message);
+        console.warn("MEXC klines failed for", symbol, (e as Error).message);
       }
 
       // Fallback: try Binance klines API

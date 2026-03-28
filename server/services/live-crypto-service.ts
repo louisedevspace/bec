@@ -37,14 +37,29 @@ class LiveCryptoService {
   }
 
   /**
-   * Fetch live crypto prices with dual mechanism: Binance first, then CoinGecko fallback
+   * Fetch live crypto prices with dual mechanism: MEXC first, then Binance, then CoinGecko fallback
    */
   private async fetchLivePrices(): Promise<CryptoPriceData[]> {
-    // Try Binance first
+    // Try MEXC first (free, no key, Binance-compatible)
     try {
-      console.log('🔄 Fetching prices from Binance...');
+      console.log('🔄 Fetching prices from MEXC...');
+      const mexcPrices = await this.fetchFromMexc();
+      const hasUsdt = mexcPrices.some(p => p.symbol === 'USDT');
+      if (!hasUsdt) {
+        mexcPrices.push({ symbol: 'USDT', price: '1.00', change24h: '0.00', volume24h: '0' });
+      }
+      if (mexcPrices.length > 0) {
+        console.log(`✅ Successfully fetched ${mexcPrices.length} prices from MEXC`);
+        return mexcPrices;
+      }
+    } catch (error) {
+      console.warn('⚠️ MEXC API failed, trying Binance fallback:', error instanceof Error ? error.message : String(error));
+    }
+
+    // Fallback to Binance
+    try {
+      console.log('🔄 Fetching prices from Binance (fallback)...');
       const binancePrices = await this.fetchFromBinance();
-      // Always add USDT as $1.00 (no Binance pair for it)
       const hasUsdt = binancePrices.some(p => p.symbol === 'USDT');
       if (!hasUsdt) {
         binancePrices.push({ symbol: 'USDT', price: '1.00', change24h: '0.00', volume24h: '0' });
@@ -64,9 +79,48 @@ class LiveCryptoService {
       console.log(`✅ Successfully fetched ${coingeckoPrices.length} prices from CoinGecko`);
       return coingeckoPrices;
     } catch (error) {
-      console.error('❌ Both Binance and CoinGecko failed:', error);
+      console.error('❌ All price sources failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Fetch prices from MEXC API (Binance-compatible format)
+   */
+  private async fetchFromMexc(): Promise<CryptoPriceData[]> {
+    const mexcSymbols = this.getBinanceSymbols(); // Same format: BTCUSDT, ETHUSDT, etc.
+    // MEXC ticker/24hr supports multiple symbols via repeated symbol params or single request for all
+    // Fetch all tickers at once (weight: 40) then filter
+    const response = await axios.get(
+      `https://api.mexc.com/api/v3/ticker/24hr`,
+      {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Becxus/1.0'
+        }
+      }
+    );
+
+    const prices: CryptoPriceData[] = [];
+    const symbolSet = new Set(mexcSymbols);
+
+    if (Array.isArray(response.data)) {
+      for (const ticker of response.data) {
+        if (!symbolSet.has(ticker.symbol)) continue;
+        const symbol = this.getSymbolFromBinanceTicker(ticker.symbol);
+        if (symbol && ticker.lastPrice) {
+          prices.push({
+            symbol,
+            price: ticker.lastPrice,
+            change24h: ticker.priceChangePercent ? parseFloat(ticker.priceChangePercent).toFixed(2) : '0.00',
+            volume24h: ticker.volume ? parseFloat(ticker.volume).toFixed(0) : '0'
+          });
+        }
+      }
+    }
+
+    return prices;
   }
 
   /**

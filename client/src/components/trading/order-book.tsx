@@ -98,7 +98,7 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
   };
 
   return (
-    <div className={`${className} flex flex-col h-full overflow-hidden`}>
+    <div className={`${className} flex flex-col h-full overflow-hidden`} style={{ contain: 'layout size' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-2 py-1.5 flex-shrink-0">
         <span className="text-xs font-semibold text-white">Order Book</span>

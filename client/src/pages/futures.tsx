@@ -515,14 +515,14 @@ export default function FuturesPage() {
       {/* Main Trading Area - Binance-like Layout */}
       <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0 overflow-hidden">
         {/* Top Row: Price Chart + Order Book - fixed height prevents layout shifts */}
-        <div className="flex flex-col lg:flex-row gap-2 h-[400px] lg:h-[520px] flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-2 h-[400px] lg:h-[520px] flex-shrink-0" style={{ contain: 'strict' }}>
           {/* Price Chart - Center/Main - fixed height container */}
-          <div className="flex-1 order-1 h-[400px] lg:h-full overflow-hidden">
+          <div className="flex-1 order-1 h-full min-h-0 overflow-hidden">
             <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 
           {/* Order Book - Right Sidebar - fixed height prevents layout shifts */}
-          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 h-[380px] lg:h-full overflow-hidden">
+          <div className="lg:w-[480px] xl:w-[560px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] p-2 h-full min-h-0 overflow-hidden">
             <OrderBook pair={currentPair} className="h-full" />
           </div>
         </div>

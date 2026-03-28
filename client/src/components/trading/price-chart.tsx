@@ -582,10 +582,19 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
   if (isLoading) {
     return (
-      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? "bg-[#111] border-[#1e1e1e]" : "bg-white border-gray-200"} ${className || ""}`}>
-        <div className="text-center">
-          <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? "text-gray-600" : "text-gray-400"}`} />
-          <p className={`text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>Loading chart...</p>
+      <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? "bg-[#111] border-[#1e1e1e]" : "bg-white border-gray-200"} ${className || ""}`}>
+        <div className="flex items-center justify-between px-3 py-2 border-b flex-shrink-0" style={{ borderColor: isDark ? '#1e1e1e' : '#e5e7eb' }}>
+          <div className="flex gap-1">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="w-7 h-6 rounded bg-[#1a1a1a] animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <div className="text-center">
+            <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? "text-gray-600" : "text-gray-400"}`} />
+            <p className={`text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>Loading chart...</p>
+          </div>
         </div>
       </div>
     );
@@ -637,7 +646,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       </div>
 
       {/* ── Chart Area (relative container for legend + tooltip overlays) ── */}
-      <div className="flex-1 min-h-[240px] relative">
+      <div className="flex-1 min-h-0 relative" style={{ contain: 'strict' }}>
 
         {/* Legend overlay — top-left, shows live OHLCV */}
         <div
