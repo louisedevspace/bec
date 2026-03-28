@@ -17,10 +17,12 @@ import {
   LastPriceAnimationMode,
   LineStyle,
   UTCTimestamp,
+  type IPriceLine,
 } from "lightweight-charts";
 import { BarChart3, TrendingUp, Activity, Layers, Grid3X3, Wifi, WifiOff } from "lucide-react";
 
-// Data types for TradingView charts
+/* ─── Types ─── */
+
 interface OHLCData {
   time: UTCTimestamp;
   open: number;
@@ -35,28 +37,19 @@ interface SingleValueData {
   color?: string;
 }
 
-// Theme-based chart colors
-const getChartColors = (isDark: boolean) => ({
-  background: isDark ? '#111111' : '#ffffff',
-  text: isDark ? '#6b7280' : '#374151',
-  grid: isDark ? '#1e1e1e' : '#e5e7eb',
-  border: isDark ? '#1e1e1e' : '#d1d5db',
-  crosshair: '#3b82f6',
-  upColor: '#22c55e',
-  downColor: '#ef4444',
-  volumeUp: isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)',
-  volumeDown: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)',
-  // Area/line gradient for smooth area chart
-  areaTop: isDark ? 'rgba(59, 130, 246, 0.28)' : 'rgba(59, 130, 246, 0.3)',
-  areaBottom: isDark ? 'rgba(59, 130, 246, 0.02)' : 'rgba(59, 130, 246, 0.02)',
-  lineColor: isDark ? '#3b82f6' : '#2563eb',
-  priceLineColor: isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(37, 99, 235, 0.5)',
-});
-
 interface PriceChartProps {
   symbol: string;
   className?: string;
 }
+
+/* ─── Constants ─── */
+
+type ExtendedChartType = "candlestick" | "line" | "ohlc" | "heikin-ashi" | "renko";
+
+const INTERVAL_SECONDS: Record<ChartTimeframe, number> = {
+  "1m": 60, "5m": 300, "15m": 900, "1h": 3600,
+  "4h": 14400, "1d": 86400, "1w": 604800,
+};
 
 const TIMEFRAMES: { label: string; value: ChartTimeframe }[] = [
   { label: "1m", value: "1m" },
@@ -68,19 +61,6 @@ const TIMEFRAMES: { label: string; value: ChartTimeframe }[] = [
   { label: "1W", value: "1w" },
 ];
 
-type ExtendedChartType = "candlestick" | "line" | "ohlc" | "heikin-ashi" | "renko";
-
-// Seconds per timeframe interval — used to detect when a tick belongs to the next candle period
-const INTERVAL_SECONDS: Record<ChartTimeframe, number> = {
-  '1m': 60,
-  '5m': 300,
-  '15m': 900,
-  '1h': 3600,
-  '4h': 14400,
-  '1d': 86400,
-  '1w': 604800,
-};
-
 const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarChart3 }[] = [
   { label: "Candles", value: "candlestick", icon: BarChart3 },
   { label: "Line", value: "line", icon: TrendingUp },
@@ -89,110 +69,91 @@ const CHART_TYPES: { label: string; value: ExtendedChartType; icon: typeof BarCh
   { label: "Renko", value: "renko", icon: Grid3X3 },
 ];
 
-// Calculate Heikin-Ashi values from regular OHLC data
+// Chart color palette — dark theme follows TradingView's standard
+const getChartColors = (isDark: boolean) => ({
+  background: isDark ? "#131722" : "#ffffff",
+  text: isDark ? "#d1d4dc" : "#374151",
+  grid: isDark ? "#2a2e39" : "#e5e7eb",
+  border: isDark ? "#2a2e39" : "#d1d5db",
+  crosshair: isDark ? "#758696" : "#9B7DFF",
+  upColor: "#26a69a",
+  downColor: "#ef5350",
+  volumeUp: "rgba(38,166,154,0.5)",
+  volumeDown: "rgba(239,83,80,0.5)",
+  areaTop: isDark ? "rgba(38,166,154,0.28)" : "rgba(38,166,154,0.3)",
+  areaBottom: isDark ? "rgba(38,166,154,0.02)" : "rgba(38,166,154,0.02)",
+  lineColor: "#26a69a",
+  priceLineColor: "#2962FF",
+});
+
+/* ─── Helpers ─── */
+
+function formatPrice(p: number): string {
+  if (p >= 10000) return p.toFixed(2);
+  if (p >= 100) return p.toFixed(3);
+  if (p >= 1) return p.toFixed(4);
+  if (p >= 0.01) return p.toFixed(6);
+  return p.toFixed(8);
+}
+
+function formatVolume(v: number): string {
+  if (v >= 1e9) return (v / 1e9).toFixed(2) + "B";
+  if (v >= 1e6) return (v / 1e6).toFixed(2) + "M";
+  if (v >= 1e3) return (v / 1e3).toFixed(2) + "K";
+  return v.toFixed(2);
+}
+
 function calculateHeikinAshi(candles: any[]): OHLCData[] {
   if (!candles.length) return [];
-
   const result: OHLCData[] = [];
   let prevHA = { open: candles[0].open, close: candles[0].close };
-
   for (let i = 0; i < candles.length; i++) {
     const c = candles[i];
     const haClose = (c.open + c.high + c.low + c.close) / 4;
     const haOpen = i === 0 ? (c.open + c.close) / 2 : (prevHA.open + prevHA.close) / 2;
     const haHigh = Math.max(c.high, haOpen, haClose);
     const haLow = Math.min(c.low, haOpen, haClose);
-
-    result.push({
-      time: Math.floor(c.time / 1000) as UTCTimestamp,
-      open: haOpen,
-      high: haHigh,
-      low: haLow,
-      close: haClose,
-    });
-
+    result.push({ time: Math.floor(c.time / 1000) as UTCTimestamp, open: haOpen, high: haHigh, low: haLow, close: haClose });
     prevHA = { open: haOpen, close: haClose };
   }
-
   return result;
 }
 
-// Calculate Renko bricks
 function calculateRenko(candles: any[], brickSize?: number): OHLCData[] {
   if (!candles.length) return [];
-
-  const prices = candles.map(c => c.close);
-  const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
-  const autoSize = brickSize || Math.max(1, (maxPrice - minPrice) * 0.02);
-
+  const prices = candles.map((c: any) => c.close);
+  const autoSize = brickSize || Math.max(1, (Math.max(...prices) - Math.min(...prices)) * 0.02);
   const bricks: OHLCData[] = [];
-  let currentPrice = candles[0].close;
-  let direction: 'up' | 'down' | null = null;
-  let brickIndex = 0;
-
+  let current = candles[0].close;
+  let dir: "up" | "down" | null = null;
+  let idx = 0;
   for (const candle of candles) {
-    const price = candle.close;
-
+    const p = candle.close;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
-      if (direction === null || direction === 'up') {
-        if (price >= currentPrice + autoSize) {
-          bricks.push({
-            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
-            open: currentPrice,
-            close: currentPrice + autoSize,
-            high: currentPrice + autoSize,
-            low: currentPrice,
-          });
-          currentPrice += autoSize;
-          direction = 'up';
-          brickIndex++;
-        } else if (price <= currentPrice - autoSize * 2) {
-          bricks.push({
-            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
-            open: currentPrice,
-            close: currentPrice - autoSize,
-            high: currentPrice,
-            low: currentPrice - autoSize,
-          });
-          currentPrice -= autoSize;
-          direction = 'down';
-          brickIndex++;
-        } else {
-          break;
-        }
+      if (dir === null || dir === "up") {
+        if (p >= current + autoSize) {
+          bricks.push({ time: (Math.floor(candle.time / 1000) + idx) as any, open: current, close: current + autoSize, high: current + autoSize, low: current });
+          current += autoSize; dir = "up"; idx++;
+        } else if (p <= current - autoSize * 2) {
+          bricks.push({ time: (Math.floor(candle.time / 1000) + idx) as any, open: current, close: current - autoSize, high: current, low: current - autoSize });
+          current -= autoSize; dir = "down"; idx++;
+        } else break;
       } else {
-        if (price <= currentPrice - autoSize) {
-          bricks.push({
-            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
-            open: currentPrice,
-            close: currentPrice - autoSize,
-            high: currentPrice,
-            low: currentPrice - autoSize,
-          });
-          currentPrice -= autoSize;
-          direction = 'down';
-          brickIndex++;
-        } else if (price >= currentPrice + autoSize * 2) {
-          bricks.push({
-            time: (Math.floor(candle.time / 1000) + brickIndex) as any,
-            open: currentPrice,
-            close: currentPrice + autoSize,
-            high: currentPrice + autoSize,
-            low: currentPrice,
-          });
-          currentPrice += autoSize;
-          direction = 'up';
-          brickIndex++;
-        } else {
-          break;
-        }
+        if (p <= current - autoSize) {
+          bricks.push({ time: (Math.floor(candle.time / 1000) + idx) as any, open: current, close: current - autoSize, high: current, low: current - autoSize });
+          current -= autoSize; dir = "down"; idx++;
+        } else if (p >= current + autoSize * 2) {
+          bricks.push({ time: (Math.floor(candle.time / 1000) + idx) as any, open: current, close: current + autoSize, high: current + autoSize, low: current });
+          current += autoSize; dir = "up"; idx++;
+        } else break;
       }
     }
   }
-
   return bricks.slice(-200);
 }
+
+/* ─── Component ─── */
 
 export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
@@ -200,45 +161,117 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 500);
   const { isDark } = useTheme();
 
+  // DOM refs
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Chart instance refs
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
+  const priceLineRef = useRef<IPriceLine | null>(null);
+
+  // Data tracking refs
   const lastCandleRef = useRef<any>(null);
   const lastVolumeRef = useRef<any>(null);
   const chartTypeRef = useRef<ExtendedChartType>(chartType);
   const timeframeRef = useRef<ChartTimeframe>(timeframe);
+  const symbolRef = useRef(symbol);
   const lastTickTimeRef = useRef(0);
   const needsInitialScrollRef = useRef(true);
+  const isHoveredRef = useRef(false);
 
   const colors = useMemo(() => getChartColors(isDark), [isDark]);
 
-  // Keep refs in sync without triggering reconnections
+  // Keep refs in sync
   useEffect(() => { chartTypeRef.current = chartType; }, [chartType]);
   useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
+  useEffect(() => { symbolRef.current = symbol; }, [symbol]);
 
-  // Process chart data based on chart type
+  /* ── Legend / Tooltip DOM updaters (no React re-renders) ── */
+
+  const updateLegend = useCallback((data: any) => {
+    if (!legendRef.current) return;
+    const sym = symbolRef.current;
+    if ("open" in data) {
+      const up = data.close >= data.open;
+      const c = up ? "#26a69a" : "#ef5350";
+      legendRef.current.innerHTML =
+        `<span style="color:#787b86;font-weight:600">${sym}/USDT</span>` +
+        `<span style="margin-left:10px">` +
+        `<span style="color:#787b86">O</span> <span style="color:${c}">${formatPrice(data.open)}</span> ` +
+        `<span style="color:#787b86">H</span> <span style="color:${c}">${formatPrice(data.high)}</span> ` +
+        `<span style="color:#787b86">L</span> <span style="color:${c}">${formatPrice(data.low)}</span> ` +
+        `<span style="color:#787b86">C</span> <span style="color:${c}">${formatPrice(data.close)}</span>` +
+        `</span>` +
+        (data.volume != null ? `<span style="color:#787b86;margin-left:10px">V ${formatVolume(data.volume)}</span>` : "");
+    } else if ("value" in data) {
+      legendRef.current.innerHTML =
+        `<span style="color:#787b86;font-weight:600">${sym}/USDT</span>` +
+        `<span style="color:#d1d4dc;margin-left:10px">${formatPrice(data.value)}</span>`;
+    }
+  }, []);
+
+  const updateTooltip = useCallback((x: number, y: number, time: number, mainData: any, volValue?: number) => {
+    const tip = tooltipRef.current;
+    const container = chartContainerRef.current;
+    if (!tip || !container) return;
+
+    const d = new Date(time * 1000);
+    const timeStr = d.toLocaleDateString() + " " + d.toLocaleTimeString();
+
+    let html = `<div style="color:#787b86;margin-bottom:4px;font-size:11px">${timeStr}</div>`;
+    if ("open" in mainData) {
+      const up = mainData.close >= mainData.open;
+      const c = up ? "#26a69a" : "#ef5350";
+      html +=
+        `<div>O: <span style="color:${c}">${formatPrice(mainData.open)}</span></div>` +
+        `<div>H: <span style="color:${c}">${formatPrice(mainData.high)}</span></div>` +
+        `<div>L: <span style="color:${c}">${formatPrice(mainData.low)}</span></div>` +
+        `<div>C: <span style="color:${c}">${formatPrice(mainData.close)}</span></div>`;
+    } else if ("value" in mainData) {
+      html += `<div>Price: <span style="color:#d1d4dc">${formatPrice(mainData.value)}</span></div>`;
+    }
+    if (volValue != null) {
+      html += `<div style="color:#787b86">Vol: ${formatVolume(volValue)}</div>`;
+    }
+
+    tip.innerHTML = html;
+    tip.style.display = "block";
+
+    // Position within bounds
+    const W = 170;
+    const H = tip.offsetHeight || 110;
+    let left = x + 16;
+    let top = y - 10;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    if (left + W > cw) left = x - W - 8;
+    if (top + H > ch) top = ch - H - 4;
+    if (top < 0) top = 4;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  }, []);
+
+  const hideTooltip = useCallback(() => {
+    if (tooltipRef.current) tooltipRef.current.style.display = "none";
+  }, []);
+
+  /* ── Process raw candle data by chart type ── */
+
   const processedData = useMemo(() => {
     if (!candles?.length) return { mainData: [], volumeData: [] };
 
     let mainData: OHLCData[] | SingleValueData[];
-
-    if (chartType === "heikin-ashi") {
-      mainData = calculateHeikinAshi(candles);
-    } else if (chartType === "renko") {
-      mainData = calculateRenko(candles);
-    } else if (chartType === "line") {
-      mainData = candles.map((c: any) => ({
-        time: Math.floor(c.time / 1000) as UTCTimestamp,
-        value: c.close,
-      }));
+    if (chartType === "heikin-ashi") mainData = calculateHeikinAshi(candles);
+    else if (chartType === "renko") mainData = calculateRenko(candles);
+    else if (chartType === "line") {
+      mainData = candles.map((c: any) => ({ time: Math.floor(c.time / 1000) as UTCTimestamp, value: c.close }));
     } else {
       mainData = candles.map((c: any) => ({
         time: Math.floor(c.time / 1000) as UTCTimestamp,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
+        open: c.open, high: c.high, low: c.low, close: c.close,
       }));
     }
 
@@ -253,21 +286,23 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     return { mainData, volumeData };
   }, [candles, chartType, colors]);
 
-  // Effect 1: Create chart instance and series (structural changes only).
-  // Runs when chart type, theme, or timeframe changes — NOT on data refetches.
+  /* ── Effect 1: Create chart, series, crosshair subscription ── */
+
   useEffect(() => {
     if (!chartContainerRef.current || isLoading) return;
 
-    // Clean up existing chart
+    // Tear down previous chart
     if (chartRef.current) {
       chartRef.current.remove();
       chartRef.current = null;
       seriesRef.current = null;
       volumeSeriesRef.current = null;
+      priceLineRef.current = null;
     }
 
     const container = chartContainerRef.current;
 
+    // Create chart with watermark & crosshair
     const chart = createChart(container, {
       autoSize: true,
       layout: {
@@ -276,12 +311,18 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         attributionLogo: false,
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       },
+      watermark: {
+        visible: true,
+        text: `${symbol}USDT`,
+        fontSize: 48,
+        color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+      },
       grid: {
         vertLines: { color: colors.grid, style: LineStyle.SparseDotted },
         horzLines: { color: colors.grid, style: LineStyle.SparseDotted },
       },
       crosshair: {
-        mode: CrosshairMode.Magnet,
+        mode: CrosshairMode.Normal,
         vertLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair },
         horzLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair },
       },
@@ -293,31 +334,26 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       timeScale: {
         borderColor: colors.border,
         timeVisible: true,
-        secondsVisible: timeframe === '1m',
+        secondsVisible: timeframe === "1m",
         borderVisible: false,
         rightOffset: 5,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
-
     chartRef.current = chart;
 
-    // Add volume series (background layer) — always create it so data effect can fill it
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
+    // Volume histogram (background pane)
+    const volSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "volume",
       lastValueVisible: false,
       priceLineVisible: false,
     });
+    chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    volumeSeriesRef.current = volSeries;
 
-    chart.priceScale('volume').applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    });
-
-    volumeSeriesRef.current = volumeSeries;
-
-    // Add main series based on chart type
+    // Main price series
     if (chartType === "line") {
       seriesRef.current = chart.addSeries(AreaSeries, {
         topColor: colors.areaTop,
@@ -331,23 +367,16 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         crosshairMarkerBackgroundColor: colors.lineColor,
         crosshairMarkerBorderWidth: 2,
         lastPriceAnimation: LastPriceAnimationMode.Continuous,
-        priceLineVisible: true,
-        priceLineStyle: LineStyle.Dashed,
-        priceLineColor: colors.priceLineColor,
-        priceLineWidth: 1,
+        priceLineVisible: false,
       });
     } else if (chartType === "ohlc") {
       seriesRef.current = chart.addSeries(BarSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
         thinBars: false,
-        priceLineVisible: true,
-        priceLineStyle: LineStyle.Dashed,
-        priceLineColor: colors.priceLineColor,
-        priceLineWidth: 1,
+        priceLineVisible: false,
       });
     } else {
-      // Candlestick (also used for Heikin-Ashi, Renko)
       seriesRef.current = chart.addSeries(CandlestickSeries, {
         upColor: colors.upColor,
         downColor: colors.downColor,
@@ -357,19 +386,31 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         borderDownColor: colors.downColor,
         wickUpColor: colors.upColor,
         wickDownColor: colors.downColor,
-        priceLineVisible: true,
-        priceLineStyle: LineStyle.Dashed,
-        priceLineColor: colors.priceLineColor,
-        priceLineWidth: 1,
+        priceLineVisible: false,
       });
     }
 
-    // Mark that next data load should scroll to recent candles
-    needsInitialScrollRef.current = true;
+    // Crosshair move → update legend + tooltip
+    const mainSeries = seriesRef.current;
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.point || param.point.x < 0 || param.point.y < 0 || !param.time) {
+        // Cursor left chart → revert legend to live data, hide tooltip
+        isHoveredRef.current = false;
+        hideTooltip();
+        if (lastCandleRef.current) updateLegend(lastCandleRef.current);
+        return;
+      }
+      isHoveredRef.current = true;
+      const cd = param.seriesData.get(mainSeries) as any;
+      const vd = param.seriesData.get(volSeries) as any;
+      if (cd) {
+        updateLegend({ ...cd, volume: vd?.value });
+        updateTooltip(param.point.x, param.point.y, param.time as number, cd, vd?.value);
+      }
+    });
 
-    // Clear stale data refs — prevents real-time handlers (handleTick, handleBinanceKline)
-    // from using leftovers from the previous chart instance before Effect 2 loads fresh data.
-    // Both handlers guard with `if (!lastCandleRef.current) return;` so they'll no-op safely.
+    // Prepare for data load
+    needsInitialScrollRef.current = true;
     lastCandleRef.current = null;
     lastVolumeRef.current = null;
 
@@ -379,174 +420,142 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         chartRef.current = null;
         seriesRef.current = null;
         volumeSeriesRef.current = null;
+        priceLineRef.current = null;
       }
     };
-  }, [chartType, isLoading, colors, timeframe]);
+  }, [chartType, isLoading, colors, timeframe, symbol, isDark, updateLegend, updateTooltip, hideTooltip]);
 
-  // Effect 2: Load/update data on existing chart — does NOT recreate the chart.
-  // Runs when processedData changes (including periodic refetches).
-  // Preserves user's zoom/scroll position on refetches.
+  /* ── Effect 2: Load data into chart, create price line, scroll ── */
+
   useEffect(() => {
     if (!seriesRef.current || !processedData.mainData.length) return;
 
-    // Update series data
+    // Set full historical data
     seriesRef.current.setData(processedData.mainData as any);
     if (volumeSeriesRef.current && processedData.volumeData.length > 0) {
       volumeSeriesRef.current.setData(processedData.volumeData as any);
     }
 
-    // Update last candle/volume refs for real-time updates.
-    // ALWAYS sync refs with the latest processedData so real-time handlers
-    // target the correct (latest) candle. Without this, after a refetch adds
-    // new candles via setData(), the ref would still point at an old candle,
-    // causing tick/kline updates to corrupt already-closed historical candles.
-    if (processedData.mainData.length > 0) {
-      lastCandleRef.current = processedData.mainData[processedData.mainData.length - 1];
-    }
+    // Sync tracking refs to the latest candle
+    const lastMain = processedData.mainData[processedData.mainData.length - 1];
+    lastCandleRef.current = lastMain;
     if (processedData.volumeData.length > 0) {
       lastVolumeRef.current = processedData.volumeData[processedData.volumeData.length - 1];
     }
 
-    // Only scroll on initial load or structural changes — not on data refetches
+    // Create / recreate the live price line on the main series
+    if (priceLineRef.current) {
+      try { seriesRef.current.removePriceLine(priceLineRef.current); } catch { /* already removed */ }
+    }
+    const livePrice = "close" in lastMain ? (lastMain as OHLCData).close : (lastMain as SingleValueData).value;
+    priceLineRef.current = seriesRef.current.createPriceLine({
+      price: livePrice,
+      color: "#2962FF",
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: "",
+    });
+
+    // Update legend with the latest candle
+    if (!isHoveredRef.current) updateLegend(lastMain);
+
+    // Scroll to recent candles on initial load only
     if (needsInitialScrollRef.current && chartRef.current) {
       needsInitialScrollRef.current = false;
-      // Show the last ~80 candles for a focused view of recent price action
-      const totalBars = processedData.mainData.length;
-      const visibleBars = Math.min(80, totalBars);
+      const total = processedData.mainData.length;
+      const visible = Math.min(80, total);
       chartRef.current.timeScale().setVisibleLogicalRange({
-        from: totalBars - visibleBars - 0.5,
-        to: totalBars + 4.5,
+        from: total - visible - 0.5,
+        to: total + 4.5,
       });
     }
-  }, [processedData]);
+  }, [processedData, updateLegend]);
 
-  // Binance real-time kline callback
+  /* ── Binance real-time kline callback ── */
+
   const handleBinanceKline = useCallback((kline: BinanceKlineUpdate) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
-
     const ct = chartTypeRef.current;
-
-    // Skip real-time for renko (needs full recalculation)
-    if (ct === 'renko') return;
+    if (ct === "renko") return;
 
     const candleTime = kline.time as UTCTimestamp;
 
-    if (ct === 'line') {
+    if (ct === "line") {
       const lastTime = lastCandleRef.current.time as number;
-      if (candleTime > lastTime) {
-        // New candle period
-        const newPoint = { time: candleTime, value: kline.close };
-        seriesRef.current.update(newPoint);
-        lastCandleRef.current = newPoint;
-      } else {
-        // Update current point
-        seriesRef.current.update({ time: lastCandleRef.current.time, value: kline.close });
-        lastCandleRef.current = { ...lastCandleRef.current, value: kline.close };
-      }
-    } else if (ct === 'heikin-ashi') {
-      // Heikin-Ashi: approximate real-time update
+      const point = candleTime > lastTime
+        ? { time: candleTime, value: kline.close }
+        : { time: lastCandleRef.current.time, value: kline.close };
+      seriesRef.current.update(point);
+      lastCandleRef.current = point;
+    } else if (ct === "heikin-ashi") {
       const prev = lastCandleRef.current;
       const haClose = (kline.open + kline.high + kline.low + kline.close) / 4;
       const haOpen = (prev.open + prev.close) / 2;
       const lastTime = prev.time as number;
-
-      if (candleTime > lastTime) {
-        const newCandle = {
-          time: candleTime,
-          open: haOpen,
-          high: Math.max(kline.high, haOpen, haClose),
-          low: Math.min(kline.low, haOpen, haClose),
-          close: haClose,
-        };
-        seriesRef.current.update(newCandle);
-        lastCandleRef.current = newCandle;
-      } else {
-        const updated = {
-          time: prev.time,
-          open: prev.open,
-          high: Math.max(prev.high, kline.high, haClose),
-          low: Math.min(prev.low, kline.low, haClose),
-          close: haClose,
-        };
-        seriesRef.current.update(updated);
-        lastCandleRef.current = updated;
-      }
+      const candle = candleTime > lastTime
+        ? { time: candleTime, open: haOpen, high: Math.max(kline.high, haOpen, haClose), low: Math.min(kline.low, haOpen, haClose), close: haClose }
+        : { time: prev.time, open: prev.open, high: Math.max(prev.high, kline.high, haClose), low: Math.min(prev.low, kline.low, haClose), close: haClose };
+      seriesRef.current.update(candle);
+      lastCandleRef.current = candle;
     } else {
       // Candlestick / OHLC
       const lastTime = lastCandleRef.current.time as number;
-
-      if (candleTime > lastTime) {
-        // New candle
-        const newCandle = {
-          time: candleTime,
-          open: kline.open,
-          high: kline.high,
-          low: kline.low,
-          close: kline.close,
-        };
-        seriesRef.current.update(newCandle);
-        lastCandleRef.current = newCandle;
-      } else {
-        // Update current candle with Binance's aggregated OHLC
-        const updated = {
-          time: lastCandleRef.current.time,
-          open: kline.open,
-          high: kline.high,
-          low: kline.low,
-          close: kline.close,
-        };
-        seriesRef.current.update(updated);
-        lastCandleRef.current = updated;
-      }
+      const prev = lastCandleRef.current;
+      const candle = candleTime > lastTime
+        // New candle period — start fresh from kline data
+        ? { time: candleTime, open: kline.open, high: kline.high, low: kline.low, close: kline.close }
+        // Same candle — only GROW high/low, never shrink mid-period.
+        // Kline snapshots can lag behind the latest ticks by ~0.5-2s,
+        // so replacing high/low would cause visible shrink→expand flicker.
+        : { time: prev.time, open: prev.open, high: Math.max(prev.high, kline.high), low: Math.min(prev.low, kline.low), close: kline.close };
+      seriesRef.current.update(candle);
+      lastCandleRef.current = candle;
     }
 
-    // Update volume bar
-    if (volumeSeriesRef.current && ct !== 'renko') {
-      const volColor = kline.close >= kline.open
-        ? (isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)')
-        : (isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)');
-
-      // Use kline time; fall back to last volume time if updating the same candle
+    // Volume bar
+    if (volumeSeriesRef.current && ct !== "renko") {
+      const volColor = kline.close >= kline.open ? "rgba(38,166,154,0.5)" : "rgba(239,83,80,0.5)";
       const lastVolTime = lastVolumeRef.current?.time as number | undefined;
       const volTime = (!lastVolTime || candleTime > lastVolTime) ? candleTime : lastVolumeRef.current.time;
-
-      const volUpdate = { time: volTime, value: kline.volume, color: volColor };
-      volumeSeriesRef.current.update(volUpdate as any);
-      lastVolumeRef.current = volUpdate;
+      const vol = { time: volTime, value: kline.volume, color: volColor };
+      volumeSeriesRef.current.update(vol as any);
+      lastVolumeRef.current = vol;
     }
-  }, [isDark]);
 
-  // Sub-second trade tick callback — updates current candle close price between kline snapshots
+    // Update live price line
+    if (priceLineRef.current) priceLineRef.current.applyOptions({ price: kline.close });
+
+    // Update legend when not hovering
+    if (!isHoveredRef.current) {
+      const c = lastCandleRef.current;
+      updateLegend("open" in c ? { ...c, volume: kline.volume } : c);
+    }
+  }, [updateLegend]);
+
+  /* ── Sub-second trade tick callback ── */
+
   const handleTick = useCallback((tick: BinanceTick) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
-
     const ct = chartTypeRef.current;
-    // Only apply tick updates for candlestick, OHLC, and line modes
-    // Heikin-Ashi needs full OHLCV; Renko needs full recalculation
-    if (ct === 'renko' || ct === 'heikin-ashi') return;
+    if (ct === "renko" || ct === "heikin-ashi") return;
 
-    // Boundary guard: skip ticks that belong to the NEXT candle period.
-    // After a candle period ends, aggTrade ticks arrive ~0-2s before the first
-    // kline of the new period. Without this check, those ticks would corrupt the
-    // completed candle's close/high/low with prices from the next period.
+    // Boundary guard — don't let ticks from the next candle corrupt the current one
     const intervalSec = INTERVAL_SECONDS[timeframeRef.current] || 60;
     const candleEndTime = (lastCandleRef.current.time as number) + intervalSec;
     if (tick.time >= candleEndTime) return;
 
-    // Throttle chart redraws to ~20fps for performance
+    // Throttle to ~20 fps
     const now = performance.now();
     if (now - lastTickTimeRef.current < 50) return;
     lastTickTimeRef.current = now;
 
-    if (ct === 'line') {
-      const updated = { time: lastCandleRef.current.time, value: tick.price };
-      seriesRef.current.update(updated);
-      lastCandleRef.current = updated;
+    if (ct === "line") {
+      const pt = { time: lastCandleRef.current.time, value: tick.price };
+      seriesRef.current.update(pt);
+      lastCandleRef.current = pt;
     } else {
-      // Candlestick / OHLC: update close and ensure high/low encompass the trade.
-      // The kline handler resets OHLC to Binance's authoritative values every ~2s,
-      // so any tick-caused expansion is temporary and bounded. Without Math.max/min,
-      // the close can exceed high/low, rendering broken candles with body outside wicks.
+      // Ensure high/low always encompass close — kline resets every ~2s
       const prev = lastCandleRef.current;
       const updated = {
         time: prev.time,
@@ -558,35 +567,41 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       seriesRef.current.update(updated);
       lastCandleRef.current = updated;
     }
-  }, []);
 
-  // Connect to Binance WebSocket stream (kline + aggTrade combined)
+    // Update live price line
+    if (priceLineRef.current) priceLineRef.current.applyOptions({ price: tick.price });
+
+    // Update legend when not hovering
+    if (!isHoveredRef.current) updateLegend(lastCandleRef.current);
+  }, [updateLegend]);
+
+  // Connect Binance WebSocket
   const { isConnected: binanceConnected } = useBinanceStream(symbol, timeframe, handleBinanceKline, handleTick);
+
+  /* ── Render ── */
 
   if (isLoading) {
     return (
-      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? 'bg-[#111] border-[#1e1e1e]' : 'bg-white border-gray-200'} ${className || ""}`}>
+      <div className={`rounded-2xl border p-4 flex items-center justify-center ${isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-white border-gray-200"} ${className || ""}`}>
         <div className="text-center">
-          <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Loading chart...</p>
+          <BarChart3 size={24} className={`mx-auto mb-2 animate-pulse ${isDark ? "text-gray-600" : "text-gray-400"}`} />
+          <p className={`text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}>Loading chart...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? 'bg-[#111] border-[#1e1e1e]' : 'bg-white border-gray-200'} ${className || ""}`}>
-      {/* Toolbar */}
-      <div className={`flex items-center justify-between px-3 py-2 border-b flex-shrink-0 ${isDark ? 'border-[#1e1e1e]' : 'border-gray-200'}`}>
+    <div className={`rounded-2xl border flex flex-col overflow-hidden ${isDark ? "bg-[#131722] border-[#2a2e39]" : "bg-white border-gray-200"} ${className || ""}`}>
+
+      {/* ── Toolbar ── */}
+      <div className={`flex items-center justify-between px-3 py-2 border-b flex-shrink-0 ${isDark ? "border-[#2a2e39]" : "border-gray-200"}`}>
         {/* Timeframes */}
         <div className="flex items-center gap-0.5 overflow-x-auto">
-          {/* Live indicator */}
-          <div className="flex items-center gap-1 mr-1.5 flex-shrink-0" title={binanceConnected ? 'Live stream connected' : 'Connecting...'}>
-            {binanceConnected ? (
-              <Wifi size={12} className="text-emerald-400" />
-            ) : (
-              <WifiOff size={12} className="text-gray-500 animate-pulse" />
-            )}
+          <div className="flex items-center gap-1 mr-1.5 flex-shrink-0" title={binanceConnected ? "Live stream connected" : "Connecting..."}>
+            {binanceConnected
+              ? <Wifi size={12} className="text-emerald-400" />
+              : <WifiOff size={12} className="text-gray-500 animate-pulse" />}
           </div>
           {TIMEFRAMES.map((tf) => (
             <button
@@ -594,19 +609,15 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setTimeframe(tf.value)}
               className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                 timeframe === tf.value
-                  ? isDark
-                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
-                    : "bg-gray-100 text-gray-900 border border-gray-300"
-                  : isDark
-                    ? "text-gray-500 hover:text-gray-300"
-                    : "text-gray-500 hover:text-gray-700"
+                  ? isDark ? "bg-[#2a2e39] text-white border border-[#363a45]" : "bg-gray-100 text-gray-900 border border-gray-300"
+                  : isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {tf.label}
             </button>
           ))}
         </div>
-        {/* Chart Type */}
+        {/* Chart type selector */}
         <div className="flex gap-0.5 flex-shrink-0">
           {CHART_TYPES.map((ct) => (
             <button
@@ -614,12 +625,8 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
               onClick={() => setChartType(ct.value)}
               className={`p-1.5 rounded transition-colors ${
                 chartType === ct.value
-                  ? isDark
-                    ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
-                    : "bg-gray-100 text-gray-900 border border-gray-300"
-                  : isDark
-                    ? "text-gray-500 hover:text-gray-300"
-                    : "text-gray-500 hover:text-gray-700"
+                  ? isDark ? "bg-[#2a2e39] text-white border border-[#363a45]" : "bg-gray-100 text-gray-900 border border-gray-300"
+                  : isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"
               }`}
               title={ct.label}
             >
@@ -629,20 +636,42 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         </div>
       </div>
 
-      {/* Chart Container */}
-      <div
-        ref={chartContainerRef}
-        className="flex-1 min-h-[240px] touch-manipulation"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          WebkitTransform: 'translateZ(0)',
-        }}
-      >
-        {(!candles || candles.length === 0) && !isLoading && (
-          <div className="h-full flex items-center justify-center" style={{ minHeight: '240px' }}>
-            <p className={`text-sm ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>No data available</p>
-          </div>
-        )}
+      {/* ── Chart Area (relative container for legend + tooltip overlays) ── */}
+      <div className="flex-1 min-h-[240px] relative">
+
+        {/* Legend overlay — top-left, shows live OHLCV */}
+        <div
+          ref={legendRef}
+          className="absolute top-2 left-3 z-10 text-[11px] leading-relaxed pointer-events-none select-none"
+          style={{ fontFamily: "monospace" }}
+        />
+
+        {/* Chart mount point */}
+        <div
+          ref={chartContainerRef}
+          className="absolute inset-0 touch-manipulation"
+          style={{ WebkitOverflowScrolling: "touch", WebkitTransform: "translateZ(0)" }}
+        >
+          {(!candles || candles.length === 0) && !isLoading && (
+            <div className="h-full flex items-center justify-center">
+              <p className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>No data available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Tooltip overlay — positioned dynamically by crosshair callback */}
+        <div
+          ref={tooltipRef}
+          className="absolute z-20 pointer-events-none select-none rounded-lg px-3 py-2 text-xs leading-relaxed shadow-xl"
+          style={{
+            display: "none",
+            background: isDark ? "rgba(19,23,34,0.94)" : "rgba(255,255,255,0.96)",
+            border: `1px solid ${isDark ? "#2a2e39" : "#d1d5db"}`,
+            color: isDark ? "#d1d4dc" : "#374151",
+            minWidth: 150,
+            backdropFilter: "blur(8px)",
+          }}
+        />
       </div>
     </div>
   );
