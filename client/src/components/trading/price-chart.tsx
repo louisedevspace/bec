@@ -646,7 +646,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       </div>
 
       {/* ── Chart Area (relative container for legend + tooltip overlays) ── */}
-      <div className="flex-1 min-h-0 relative" style={{ contain: 'strict' }}>
+      <div className="flex-1 min-h-0 relative">
 
         {/* Legend overlay — top-left, shows live OHLCV */}
         <div
