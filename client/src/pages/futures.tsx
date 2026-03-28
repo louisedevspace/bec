@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { TrendingUp, TrendingDown, RefreshCw, Info, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, Info, ChevronDown, BarChart3 } from 'lucide-react';
 import { OrderBook } from '@/components/trading/order-book';
 import { PriceChart } from '@/components/trading/price-chart';
 import { useCryptoPrices } from '@/hooks/use-crypto-prices';
@@ -98,6 +98,7 @@ export default function FuturesPage() {
   const [futuresPairs, setFuturesPairs] = useState<FuturesPairOption[]>([]);
   const [currentPair, setCurrentPair] = useState('BTC/USDT');
   const [showPairMenu, setShowPairMenu] = useState(false);
+  const [showMobileChart, setShowMobileChart] = useState(false);
 
   const baseAsset = currentPair.split('/')[0];
   const quoteAsset = currentPair.split('/')[1];
@@ -384,8 +385,17 @@ export default function FuturesPage() {
       <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
         {/* Top Row: Chart + Order Book - identical layout to exchange */}
         <div className="flex flex-col lg:flex-row gap-2 lg:h-[520px] flex-shrink-0">
+          {/* Mobile Chart Toggle */}
+          <button
+            onClick={() => setShowMobileChart(!showMobileChart)}
+            className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#2a2a2a] transition-colors order-0"
+          >
+            <BarChart3 size={16} />
+            <span className="text-xs font-medium">{showMobileChart ? "Hide Chart" : "Show Chart"}</span>
+          </button>
+
           {/* Price Chart */}
-          <div className="flex-1 order-1 h-[350px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
+          <div className={`flex-1 order-1 lg:h-full min-h-0 ${showMobileChart ? 'h-[350px]' : 'hidden lg:block lg:h-full'}`} style={{ contain: 'layout style' }}>
             <PriceChart symbol={baseAsset} className="h-full w-full" />
           </div>
 

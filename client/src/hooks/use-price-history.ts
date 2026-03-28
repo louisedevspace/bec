@@ -18,7 +18,7 @@ export function usePriceHistory(symbol: string, interval: ChartTimeframe = "1h",
   const serverInterval = interval === "1s" ? "1m" : interval;
 
   return useQuery<CandlestickData[]>({
-    queryKey: ["/api/crypto/price-history", symbol, serverInterval, limit],
+    queryKey: ["/api/crypto/price-history", symbol, interval, serverInterval, limit],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/crypto/price-history/${symbol}?interval=${serverInterval}&limit=${limit}`);
       return res.json();

@@ -73,7 +73,7 @@ function calculateHeikinAshi(candles: any[]): any[] {
 }
 
 export function PriceChart({ symbol, className }: PriceChartProps) {
-  const [timeframe, setTimeframe] = useState<ChartTimeframe>("1h");
+  const [timeframe, setTimeframe] = useState<ChartTimeframe>("1s");
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 500);
   const { isDark } = useTheme();
