@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import OrderBookService from "@/services/order-book-service";
 import type { OrderBookEntry } from "@/types/crypto";
@@ -26,7 +26,7 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
     totalBidVolume: "0",
     totalAskVolume: "0",
   });
-  const [rows] = useState(15);
+  const FIXED_ROWS = 12;
 
   useEffect(() => {
     const symbol = pair.split("/")[0];
@@ -46,27 +46,32 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
     return () => clearInterval(interval);
   }, [pair, prices]);
 
-  // Calculate depth data
+  // Calculate depth data — always pad to FIXED_ROWS entries
   const { displayAsks, displayBids, spreadPct, maxAskVol, maxBidVol, bidRatio } = useMemo(() => {
-    const asks = orderBook.asks.slice(0, rows).reverse();
-    const bids = orderBook.bids.slice(0, rows);
+    const asks = orderBook.asks.slice(0, FIXED_ROWS).reverse();
+    const bids = orderBook.bids.slice(0, FIXED_ROWS);
 
     let cumAsk = 0;
     const asksWithCum = asks.map((a) => {
       const amt = parseFloat(a.amount);
       cumAsk += amt;
-      return { ...a, cumTotal: cumAsk, numAmount: amt };
+      return { ...a, cumTotal: cumAsk, numAmount: amt, isEmpty: false };
     });
 
     let cumBid = 0;
     const bidsWithCum = bids.map((b) => {
       const amt = parseFloat(b.amount);
       cumBid += amt;
-      return { ...b, cumTotal: cumBid, numAmount: amt };
+      return { ...b, cumTotal: cumBid, numAmount: amt, isEmpty: false };
     });
 
-    const maxA = Math.max(...asksWithCum.map((a) => a.cumTotal), 1);
-    const maxB = Math.max(...bidsWithCum.map((b) => b.cumTotal), 1);
+    // Pad with empty placeholders to always have FIXED_ROWS entries
+    const emptyEntry = { price: "", amount: "", cumTotal: 0, numAmount: 0, isEmpty: true };
+    while (asksWithCum.length < FIXED_ROWS) asksWithCum.unshift({ ...emptyEntry });
+    while (bidsWithCum.length < FIXED_ROWS) bidsWithCum.push({ ...emptyEntry });
+
+    const maxA = Math.max(...asksWithCum.filter(a => !a.isEmpty).map((a) => a.cumTotal), 1);
+    const maxB = Math.max(...bidsWithCum.filter(b => !b.isEmpty).map((b) => b.cumTotal), 1);
 
     const bestAsk = asks.length > 0 ? parseFloat(asks[asks.length - 1].price) : 0;
     const bestBid = bids.length > 0 ? parseFloat(bids[0].price) : 0;
@@ -86,7 +91,7 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
       maxBidVol: maxB,
       bidRatio: ratio,
     };
-  }, [orderBook, rows]);
+  }, [orderBook]);
 
   const handleClick = (price: string) => {
     onPriceSelect?.(price);
@@ -136,13 +141,26 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
           {/* Asks List - fixed row height prevents layout shift */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {[...displayAsks].reverse().map((ask, i) => {
+              if (ask.isEmpty) {
+                return (
+                  <div
+                    key={`ask-empty-${i}`}
+                    className="relative flex text-[11px] px-1"
+                    style={{ height: `${100 / FIXED_ROWS}%` }}
+                  >
+                    <span className="flex-1 flex items-center text-transparent select-none tabular-nums">—</span>
+                    <span className="flex-1 flex items-center justify-end text-transparent select-none tabular-nums">—</span>
+                    <span className="flex-1 flex items-center justify-end text-transparent select-none tabular-nums">—</span>
+                  </div>
+                );
+              }
               const depthPct = (ask.cumTotal / maxAskVol) * 100;
               return (
                 <div
                   key={i}
                   onClick={() => handleClick(ask.price)}
-                  className="relative flex text-[10px] px-1 cursor-pointer hover:brightness-125 transition-all"
-                  style={{ height: `${100 / rows}%` }}
+                  className="relative flex text-[11px] px-1 cursor-pointer hover:brightness-125 transition-all"
+                  style={{ height: `${100 / FIXED_ROWS}%` }}
                 >
                   {/* Volume depth bar */}
                   <div
@@ -173,13 +191,26 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
           {/* Bids List - fixed row height prevents layout shift */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {displayBids.map((bid, i) => {
+              if (bid.isEmpty) {
+                return (
+                  <div
+                    key={`bid-empty-${i}`}
+                    className="relative flex text-[11px] px-1"
+                    style={{ height: `${100 / FIXED_ROWS}%` }}
+                  >
+                    <span className="flex-1 flex items-center text-transparent select-none tabular-nums">—</span>
+                    <span className="flex-1 flex items-center justify-end text-transparent select-none tabular-nums">—</span>
+                    <span className="flex-1 flex items-center justify-end text-transparent select-none tabular-nums">—</span>
+                  </div>
+                );
+              }
               const depthPct = (bid.cumTotal / maxBidVol) * 100;
               return (
                 <div
                   key={i}
                   onClick={() => handleClick(bid.price)}
-                  className="relative flex text-[10px] px-1 cursor-pointer hover:brightness-125 transition-all"
-                  style={{ height: `${100 / rows}%` }}
+                  className="relative flex text-[11px] px-1 cursor-pointer hover:brightness-125 transition-all"
+                  style={{ height: `${100 / FIXED_ROWS}%` }}
                 >
                   {/* Volume depth bar */}
                   <div
