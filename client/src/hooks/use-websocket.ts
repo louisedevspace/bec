@@ -69,6 +69,11 @@ export function useWebSocket(url: string) {
     return () => {
       cleaned = true;
       if (ws.current) {
+        // Null handlers before closing so stale socket doesn't fire events
+        ws.current.onopen = null;
+        ws.current.onmessage = null;
+        ws.current.onclose = null;
+        ws.current.onerror = null;
         ws.current.close();
         ws.current = null;
       }

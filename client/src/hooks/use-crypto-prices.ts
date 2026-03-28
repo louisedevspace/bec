@@ -22,6 +22,7 @@ type Listener = () => void;
 const shared = {
   ws: null as WebSocket | null,
   reconnectTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  teardownTimer: undefined as ReturnType<typeof setTimeout> | undefined,
   reconnectAttempts: 0,
   connected: false,
   useFallback: false,
@@ -122,6 +123,12 @@ function subscribeSingleton(listener: Listener) {
   shared.subscribers.add(listener);
   shared.refCount++;
 
+  // Cancel any pending teardown (React strict-mode unsubscribe/resubscribe cycle)
+  if (shared.teardownTimer) {
+    clearTimeout(shared.teardownTimer);
+    shared.teardownTimer = undefined;
+  }
+
   if (shared.refCount === 1 && !shared.ws) {
     connectShared();
   }
@@ -132,18 +139,22 @@ function subscribeSingleton(listener: Listener) {
 
     if (shared.refCount <= 0) {
       shared.refCount = 0;
-      clearTimeout(shared.reconnectTimer);
-      if (shared.ws) {
-        const old = shared.ws;
-        old.onopen = null;
-        old.onmessage = null;
-        old.onclose = null;
-        old.onerror = null;
-        if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
-          old.close();
+      // Debounce teardown — React strict-mode will resubscribe within ~50ms
+      shared.teardownTimer = setTimeout(() => {
+        if (shared.refCount > 0) return; // resubscribed in time
+        clearTimeout(shared.reconnectTimer);
+        if (shared.ws) {
+          const old = shared.ws;
+          old.onopen = null;
+          old.onmessage = null;
+          old.onclose = null;
+          old.onerror = null;
+          if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
+            old.close();
+          }
+          shared.ws = null;
         }
-        shared.ws = null;
-      }
+      }, 100);
     }
   };
 }
