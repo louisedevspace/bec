@@ -394,15 +394,17 @@ export default function FuturesPage() {
             <span className="text-xs font-medium">{showMobileChart ? "Hide Chart" : "Show Chart"}</span>
           </button>
 
-          {/* Price Chart — hidden on mobile unless toggled, always visible on lg+ */}
-          <div className={`flex-1 order-1 min-h-0 relative z-10 lg:block lg:h-full ${showMobileChart ? 'block h-[350px]' : 'hidden'}`} style={{ contain: 'layout style' }}>
-            <div className="h-full w-full lg:hidden">
-              {showMobileChart && <PriceChart symbol={baseAsset} className="h-full w-full" />}
-            </div>
-            <div className="h-full w-full hidden lg:block">
+          {/* Price Chart — Desktop: always visible */}
+          <div className="flex-1 order-1 min-h-0 relative z-10 hidden lg:block lg:h-full" style={{ contain: 'layout style' }}>
+            <PriceChart symbol={baseAsset} className="h-full w-full" />
+          </div>
+
+          {/* Price Chart — Mobile: only when toggled (mounts fresh with real 350px height) */}
+          {showMobileChart && (
+            <div className="order-1 relative z-10 h-[350px] lg:hidden">
               <PriceChart symbol={baseAsset} className="h-full w-full" />
             </div>
-          </div>
+          )}
 
           {/* Order Book */}
           <div className="lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] h-[420px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
