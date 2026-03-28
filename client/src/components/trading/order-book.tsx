@@ -93,7 +93,7 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
   };
 
   return (
-    <div className={`${className} flex flex-col`}>
+    <div className={`${className} flex flex-col h-full overflow-hidden`}>
       {/* Header */}
       <div className="flex items-center justify-between px-2 py-1.5 flex-shrink-0">
         <span className="text-xs font-semibold text-white">Order Book</span>
@@ -119,7 +119,7 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
         </div>
       </div>
 
-      {/* Order Book Content - Side by Side */}
+      {/* Order Book Content - Side by Side, fixed layout */}
       <div className="flex-1 flex flex-row gap-1 min-h-0 overflow-hidden">
         {/* Sell Orders Panel (Asks) - Left */}
         <div className="flex-1 flex flex-col min-w-0 border-r border-[#1e1e1e]">
@@ -133,27 +133,25 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
             <span className="flex-1 text-right">Amt</span>
             <span className="flex-1 text-right">Total</span>
           </div>
-          {/* Asks List */}
-          <div 
-            className="flex-1 min-h-0 flex flex-col justify-start overflow-y-auto touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          {/* Asks List - fixed row height prevents layout shift */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             {[...displayAsks].reverse().map((ask, i) => {
               const depthPct = (ask.cumTotal / maxAskVol) * 100;
               return (
                 <div
                   key={i}
                   onClick={() => handleClick(ask.price)}
-                  className="relative flex text-[10px] px-1 py-[2px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
+                  className="relative flex text-[10px] px-1 cursor-pointer hover:brightness-125 transition-all"
+                  style={{ height: `${100 / rows}%` }}
                 >
                   {/* Volume depth bar */}
                   <div
                     className="absolute inset-y-0 right-0 bg-red-500/10"
                     style={{ width: `${depthPct}%` }}
                   />
-                  <span className="relative flex-1 text-red-400 font-medium tabular-nums truncate">{ask.price}</span>
-                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate">{ask.amount}</span>
-                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate">{ask.cumTotal.toFixed(2)}</span>
+                  <span className="relative flex-1 text-red-400 font-medium tabular-nums truncate flex items-center">{ask.price}</span>
+                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate flex items-center justify-end">{ask.amount}</span>
+                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate flex items-center justify-end">{ask.cumTotal.toFixed(2)}</span>
                 </div>
               );
             })}
@@ -172,27 +170,25 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
             <span className="flex-1 text-right">Amt</span>
             <span className="flex-1 text-right">Total</span>
           </div>
-          {/* Bids List */}
-          <div 
-            className="flex-1 min-h-0 flex flex-col overflow-y-auto touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          {/* Bids List - fixed row height prevents layout shift */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             {displayBids.map((bid, i) => {
               const depthPct = (bid.cumTotal / maxBidVol) * 100;
               return (
                 <div
                   key={i}
                   onClick={() => handleClick(bid.price)}
-                  className="relative flex text-[10px] px-1 py-[2px] cursor-pointer hover:brightness-125 transition-all flex-shrink-0"
+                  className="relative flex text-[10px] px-1 cursor-pointer hover:brightness-125 transition-all"
+                  style={{ height: `${100 / rows}%` }}
                 >
                   {/* Volume depth bar */}
                   <div
                     className="absolute inset-y-0 right-0 bg-green-500/10"
                     style={{ width: `${depthPct}%` }}
                   />
-                  <span className="relative flex-1 text-green-400 font-medium tabular-nums truncate">{bid.price}</span>
-                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate">{bid.amount}</span>
-                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate">{bid.cumTotal.toFixed(2)}</span>
+                  <span className="relative flex-1 text-green-400 font-medium tabular-nums truncate flex items-center">{bid.price}</span>
+                  <span className="relative flex-1 text-right text-gray-300 tabular-nums truncate flex items-center justify-end">{bid.amount}</span>
+                  <span className="relative flex-1 text-right text-gray-500 tabular-nums truncate flex items-center justify-end">{bid.cumTotal.toFixed(2)}</span>
                 </div>
               );
             })}
