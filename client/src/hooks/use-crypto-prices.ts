@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { cryptoApi } from "@/services/crypto-api";
 import { useWebSocket } from "./use-websocket";
 import type { CryptoPrice } from "@/types/crypto";
 
-// MEXC WebSocket — free, no key, real-time miniTicker
-const MEXC_WS = 'wss://wbs.mexc.com/ws';
+// Binance WebSocket — all miniTickers in one stream
+const BINANCE_WS_PRIMARY = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
+const BINANCE_WS_FALLBACK = 'wss://stream.binance.com:443/ws/!miniTicker@arr';
 
 const SUPPORTED_SYMBOLS = [
   'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'DOGE',
@@ -14,17 +15,17 @@ const SUPPORTED_SYMBOLS = [
   'PEPE', 'INJ',
 ];
 
-// ── Singleton MEXC WebSocket manager ──
+// ── Singleton Binance WebSocket manager ──
 // Shared across all useCryptoPrices() consumers — only ONE connection.
 type Listener = () => void;
 
 const shared = {
   ws: null as WebSocket | null,
-  pingTimer: undefined as ReturnType<typeof setInterval> | undefined,
   reconnectTimer: undefined as ReturnType<typeof setTimeout> | undefined,
   reconnectAttempts: 0,
   connected: false,
   intentionalClose: false,
+  useFallback: false,
   livePrices: {} as Record<string, Partial<CryptoPrice>>,
   lastUpdate: 0,
   subscribers: new Set<Listener>(),
@@ -41,32 +42,18 @@ function connectShared() {
     shared.ws.close();
     shared.ws = null;
   }
-  if (shared.pingTimer) {
-    clearInterval(shared.pingTimer);
-    shared.pingTimer = undefined;
-  }
 
   shared.intentionalClose = false;
 
   try {
-    const ws = new WebSocket(MEXC_WS);
+    const url = shared.useFallback ? BINANCE_WS_FALLBACK : BINANCE_WS_PRIMARY;
+    const ws = new WebSocket(url);
     shared.ws = ws;
 
     ws.onopen = () => {
       shared.connected = true;
       shared.reconnectAttempts = 0;
-
-      ws.send(JSON.stringify({
-        method: 'SUBSCRIPTION',
-        params: ['spot@public.miniTickers.v3.api'],
-      }));
-
-      shared.pingTimer = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ method: 'PING' }));
-        }
-      }, 20000);
-
+      shared.useFallback = false;
       notifySubscribers();
     };
 
@@ -77,42 +64,37 @@ function connectShared() {
       shared.lastUpdate = now;
 
       try {
-        const msg = JSON.parse(event.data);
-        if (msg.msg === 'PONG' || msg.id !== undefined) return;
+        const tickers: any[] = JSON.parse(event.data);
+        if (!Array.isArray(tickers)) return;
 
-        if (msg.c && msg.c.includes('miniTicker') && msg.d) {
-          const tickers = Array.isArray(msg.d) ? msg.d : [msg.d];
-          let changed = false;
+        let changed = false;
 
-          for (const d of tickers) {
-            const pairStr = d.s || '';
-            if (!pairStr.endsWith('USDT')) continue;
-            const sym = pairStr.replace('USDT', '');
-            if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) continue;
+        for (const d of tickers) {
+          const pairStr = d.s || ''; // e.g. "BTCUSDT"
+          if (!pairStr.endsWith('USDT')) continue;
+          const sym = pairStr.replace('USDT', '');
+          if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) continue;
 
-            shared.livePrices[sym] = {
-              symbol: sym,
-              price: d.c || d.p || '',
-              updatedAt: new Date().toISOString(),
-            };
-            changed = true;
-          }
-
-          if (changed) notifySubscribers();
+          shared.livePrices[sym] = {
+            symbol: sym,
+            price: d.c || '', // c = close price
+            updatedAt: new Date().toISOString(),
+          };
+          changed = true;
         }
+
+        if (changed) notifySubscribers();
       } catch { /* ignore */ }
     };
 
     ws.onclose = () => {
       shared.connected = false;
-      if (shared.pingTimer) {
-        clearInterval(shared.pingTimer);
-        shared.pingTimer = undefined;
-      }
       notifySubscribers();
 
-      // Only reconnect if close was not intentional and there are active subscribers
       if (shared.intentionalClose || shared.refCount <= 0) return;
+
+      // Toggle fallback on each retry
+      shared.useFallback = !shared.useFallback;
       const delay = Math.min(1000 * Math.pow(2, shared.reconnectAttempts), 30000);
       shared.reconnectAttempts++;
       shared.reconnectTimer = setTimeout(connectShared, delay);
@@ -129,7 +111,6 @@ function subscribeSingleton(listener: Listener) {
   shared.subscribers.add(listener);
   shared.refCount++;
 
-  // Open connection on first subscriber
   if (shared.refCount === 1 && !shared.ws) {
     connectShared();
   }
@@ -138,15 +119,10 @@ function subscribeSingleton(listener: Listener) {
     shared.subscribers.delete(listener);
     shared.refCount--;
 
-    // Close connection when last subscriber leaves
     if (shared.refCount <= 0) {
       shared.refCount = 0;
       shared.intentionalClose = true;
       clearTimeout(shared.reconnectTimer);
-      if (shared.pingTimer) {
-        clearInterval(shared.pingTimer);
-        shared.pingTimer = undefined;
-      }
       if (shared.ws) {
         shared.ws.close();
         shared.ws = null;
@@ -166,7 +142,7 @@ export function useCryptoPrices() {
   const [isConnected, setIsConnected] = useState(false);
   const { subscribe, isConnected: wsConnected } = useWebSocket("/ws");
 
-  // Subscribe to singleton MEXC WS
+  // Subscribe to singleton Binance WS
   const livePrices = useSyncExternalStore(subscribeSingleton, getLivePricesSnapshot);
 
   // Sync connection state
