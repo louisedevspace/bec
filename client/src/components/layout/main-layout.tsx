@@ -88,7 +88,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const isAuthPage = useMemo(() => location === '/login' || location === '/signup' || location === '/reset-password', [location]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
         <nav
@@ -220,7 +220,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           {/* Notification Bell */}
           <button
             onClick={() => { setNotifCount(0); setLocation('/wallet'); }}
-            className={`relative p-2 rounded-xl transition-all duration-300 ${
+            className={`relative p-2 mr-1 rounded-xl transition-all duration-300 ${
               isDark
                 ? 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80'
                 : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/80'
@@ -229,7 +229,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           >
             <Bell className="h-5 w-5" />
             {notifCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-0.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}
