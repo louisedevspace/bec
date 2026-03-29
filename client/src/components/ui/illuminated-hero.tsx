@@ -79,15 +79,9 @@ export function IlluminatedHero({ onStartTrading }: IlluminatedHeroProps) {
 
         <button
           onClick={onStartTrading}
-          className={cn(
-            'group relative px-10 py-3.5 rounded-xl font-semibold text-sm tracking-wide text-white overflow-hidden transition-all duration-300',
-            'bg-gradient-to-r from-blue-600 to-blue-500',
-            'hover:from-blue-500 hover:to-blue-400 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-[1.03]',
-            'active:scale-[0.98]',
-          )}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg shadow-blue-500/20 transition-all text-sm"
         >
-          <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-          <span className="relative">START TRADING</span>
+          START TRADING
         </button>
       </div>
 

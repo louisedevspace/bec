@@ -128,8 +128,7 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
 
   html, body {
     overflow-x: hidden;
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: none;
   }
 
   html {
