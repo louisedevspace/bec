@@ -603,7 +603,7 @@ export default function registerFuturesRoutes(app: Express) {
       }
 
       if (!shouldWin) {
-        const lossPercentage = 0.7 + Math.random() * 0.2;
+        const lossPercentage = trade.profit_ratio / 100;
         profitLoss = -(tradeAmount * lossPercentage);
         isWin = false;
         const priceChange = (Math.random() - 0.5) * 0.02;
@@ -622,10 +622,10 @@ export default function registerFuturesRoutes(app: Express) {
             : currentPrice * (1 - Math.abs(priceChange));
       }
 
-      // Apply trading fee
+      // Apply trading fee (added to losses, subtracted from wins)
       const feeRate = await getTradingFeeRate(trade.symbol);
       const feeAmount = tradeAmount * feeRate;
-      const netProfitLoss = profitLoss - feeAmount;
+      const netProfitLoss = isWin ? profitLoss - feeAmount : profitLoss;
 
       // Balance was already reduced by tradeAmount at submission time (locked funds).
       // Now return: tradeAmount (original stake) + netProfitLoss (profit minus fee, or negative for loss)
@@ -803,8 +803,7 @@ export default function registerFuturesRoutes(app: Express) {
           }
 
           if (!shouldWin) {
-            profitLoss = -trade.amount;
-            const lossPercentage = 0.7 + Math.random() * 0.2;
+            const lossPercentage = trade.profit_ratio / 100;
             profitLoss = -(trade.amount * lossPercentage);
             const priceChange = (Math.random() - 0.5) * 0.02;
             exitPrice =
@@ -821,10 +820,10 @@ export default function registerFuturesRoutes(app: Express) {
                 : currentPrice * (1 - Math.abs(priceChange));
           }
 
-          // Apply trading fee
+          // Apply trading fee (added to losses, subtracted from wins)
           const feeRate = await getTradingFeeRate(trade.symbol);
           const feeAmount = trade.amount * feeRate;
-          const netProfitLoss = profitLoss - feeAmount;
+          const netProfitLoss = shouldWin ? profitLoss - feeAmount : profitLoss;
 
           // Balance was already reduced by trade.amount at submission (locked funds)
           const returnAmount = trade.amount + netProfitLoss;

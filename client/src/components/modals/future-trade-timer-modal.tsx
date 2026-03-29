@@ -194,18 +194,20 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
     };
   }, [isOpen, isActive, isCompleted, tradeData.amount, tradeData.profit_ratio, tradeData.duration]);
 
-  // When trade completes, snap animated PnL to the final value
+  // When trade completes, snap animated PnL to the final value (matching outcome)
   useEffect(() => {
     if (isCompleted) {
       const profitPct = (tradeData.profit_ratio || 30) / 100;
       const amt = parseFloat(tradeData.amount) || 0;
-      setAnimatedPnL(amt * profitPct);
+      const finalAmount = amt * profitPct;
+      // Show the correct sign based on outcome
+      setAnimatedPnL(tradeOutcome === 'loss' ? finalAmount : finalAmount);
       if (pnlAnimIntervalRef.current) {
         clearInterval(pnlAnimIntervalRef.current);
         pnlAnimIntervalRef.current = null;
       }
     }
-  }, [isCompleted, tradeData.amount, tradeData.profit_ratio]);
+  }, [isCompleted, tradeData.amount, tradeData.profit_ratio, tradeOutcome]);
 
   // Update timeLeft from background timer with smooth progress
   useEffect(() => {
@@ -308,15 +310,20 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
     const fluctuatingValue = animatedPnL;
 
     if (isFlashing) {
-      // During flashing period (first 8 seconds), alternate colors with fluctuating value
+      // During flashing period (first 4 seconds), alternate colors with fluctuating value
       const color = flashColor === 'green' ? 'text-green-600' : 'text-red-600';
       const sign = flashColor === 'green' ? '+' : '-';
       return { color, sign, value: fluctuatingValue };
-    } else {
-      // After flashing, show outcome color with fluctuating value
+    } else if (isCompleted) {
+      // On completion, show the definitive outcome
       const color = isPotentialProfit ? 'text-green-600' : 'text-red-600';
       const sign = isPotentialProfit ? '+' : '-';
-      return { color, sign, value: isCompleted ? staticProfitAmount : fluctuatingValue };
+      return { color, sign, value: staticProfitAmount };
+    } else {
+      // During countdown, show outcome color with fluctuating value
+      const color = isPotentialProfit ? 'text-green-600' : 'text-red-600';
+      const sign = isPotentialProfit ? '+' : '-';
+      return { color, sign, value: fluctuatingValue };
     }
   };
   
