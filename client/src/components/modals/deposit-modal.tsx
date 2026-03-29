@@ -13,6 +13,7 @@ import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { cryptoApi } from "@/services/crypto-api";
 import { supabase } from "@/lib/supabase";
 import { buildApiUrl } from "@/lib/config";
+import { compressUserImage } from "@/lib/image-compress";
 
 const GENERIC_DEPOSIT_PLACEHOLDER = "0x000000000";
 
@@ -221,7 +222,8 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       const formData = new FormData();
       formData.append('symbol', selectedCrypto);
       formData.append('amount', amount);
-      formData.append('screenshot', screenshot);
+      const compressedScreenshot = await compressUserImage(screenshot);
+      formData.append('screenshot', compressedScreenshot);
 
       const response = await fetch(buildApiUrl('/deposit-requests'), {
         method: 'POST',

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
 import { openImageViewer } from "@/lib/image";
+import { compressAdminImage } from "@/lib/image-compress";
 
 interface WithdrawRequest {
   id: number;
@@ -163,7 +164,8 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
     formData.append('requireReverification', requireReverification.toString());
     
     if (screenshotFile) {
-      formData.append('screenshot', screenshotFile);
+      const compressedScreenshot = await compressAdminImage(screenshotFile);
+      formData.append('screenshot', compressedScreenshot);
     }
 
     reviewMutation.mutate(formData);

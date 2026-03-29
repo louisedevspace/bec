@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '../../lib/supabaseClient';
+import { compressUserImage } from '@/lib/image-compress';
 
 interface LoanApplicationModalProps {
   isOpen: boolean;
@@ -87,9 +88,10 @@ export const LoanApplicationModal: React.FC<LoanApplicationModalProps> = ({
       }
       
       // Add documents to form data (server expects 'documents' field)
-      documents.forEach((file) => {
-        formData.append('documents', file);
-      });
+      for (const file of documents) {
+        const compressed = await compressUserImage(file);
+        formData.append('documents', compressed);
+      }
 
       const response = await fetch('/api/loan/submit', {
         method: 'POST',

@@ -13,6 +13,7 @@ import { Upload, FileText, Camera, User } from "lucide-react";
 import type { LoanApplication } from "@/types/crypto";
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { compressUserImage } from '@/lib/image-compress';
 
 export default function LoanPage() {
   const [formData, setFormData] = useState({
@@ -104,9 +105,10 @@ export default function LoanPage() {
       for (const key of Object.keys(documents) as (keyof typeof documents)[]) {
         const file = documents[key];
         if (file) {
+          const compressed = await compressUserImage(file);
           const formData = new FormData();
           formData.append('userId', loanId); // Use unique UUID as folder name
-          formData.append('file', file);
+          formData.append('file', compressed);
           const res = await axios.post('/api/upload-loan-doc', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
