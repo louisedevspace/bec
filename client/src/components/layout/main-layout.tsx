@@ -92,7 +92,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
         <nav
-          className={`hidden md:flex items-center justify-between px-6 h-16 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
+          className={`hidden lg:flex items-center justify-between px-6 h-16 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
             isDark
               ? 'bg-[#0a0a0a]/80 shadow-black/20'
               : 'bg-white/80 shadow-gray-300/30'
@@ -193,10 +193,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </nav>
       )}
 
-      {/* Mobile top bar - logo only */}
+      {/* Mobile/Tablet top bar - logo + bell */}
       {!isAuthPage && (
         <div
-          className={`flex md:hidden items-center justify-center px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
+          className={`flex lg:hidden items-center justify-between px-4 h-14 backdrop-blur-xl sticky top-0 z-50 shadow-lg ${
             isDark
               ? 'bg-[#0a0a0a]/80 shadow-black/20'
               : 'bg-white/80 shadow-gray-300/30'
@@ -216,11 +216,29 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <Logo className="w-6 h-6" />
             </div>
           </a>
+
+          {/* Notification Bell */}
+          <button
+            onClick={() => { setNotifCount(0); setLocation('/wallet'); }}
+            className={`relative p-2 rounded-xl transition-all duration-300 ${
+              isDark
+                ? 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]/80'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/80'
+            }`}
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            {notifCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                {notifCount > 99 ? '99+' : notifCount}
+              </span>
+            )}
+          </button>
         </div>
       )}
 
       <main
-        className={isAuthPage ? "" : "md:pb-0"}
+        className={isAuthPage ? "" : "lg:pb-0"}
         style={isAuthPage ? undefined : { paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {children}

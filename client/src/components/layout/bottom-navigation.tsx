@@ -58,7 +58,7 @@ export function BottomNavigation() {
   const isAdminActive = useMemo(() => location.startsWith('/admin'), [location]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#1e1e1e] z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#1e1e1e] z-40 lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="h-16 overflow-x-auto scrollbar-hide flex items-center">
         <div className="flex h-full min-w-max">
           {navItems.map(({ path, icon: Icon, label }) => {

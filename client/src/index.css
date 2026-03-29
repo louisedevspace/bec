@@ -126,6 +126,18 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
     @apply border-border;
   }
 
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  html {
+    background-color: #0a0a0a;
+  }
+  html:not(.dark) {
+    background-color: #f8fafc;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
