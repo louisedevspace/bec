@@ -8,31 +8,50 @@
   100% { opacity: 1; }
 }
 @keyframes onloadbgt {
-  0% { translate: 0 -70%; opacity: 0.3; }
-  100% { translate: 0 -64%; opacity: 0.8; }
+  0% { translate: 0 -72%; opacity: 0.3; }
+  100% { translate: 0 -66%; opacity: 0.85; }
 }
 @keyframes onloadbgb {
-  0% { translate: 0 70%; opacity: 0.3; }
-  100% { translate: 0 64%; opacity: 0.8; }
+  0% { translate: 0 72%; opacity: 0.3; }
+  100% { translate: 0 66%; opacity: 0.85; }
 }
 
-/* Illuminated Hero glow blob shadows (dark mode) */
-.dark .shadow-bgt {
-  box-shadow: 0 0 160px 80px rgba(59, 130, 246, 0.25),
-              0 0 80px 40px rgba(147, 51, 234, 0.15);
+/* ── Illuminated Hero: Eclipse Spheres ──
+   Opaque dark circles with outer rim glow — like a solar eclipse.
+   The sphere body is solid dark, glow bleeds OUTSIDE the circle edge. */
+
+/* Dark mode spheres: solid black body, warm amber/orange outer rim glow */
+.sphere-dark {
+  background: radial-gradient(circle, #050505 0%, #000 70%, #000 100%);
 }
-.dark .shadow-bgb {
-  box-shadow: 0 0 160px 80px rgba(147, 51, 234, 0.2),
-              0 0 80px 40px rgba(59, 130, 246, 0.15);
+.sphere-glow-dark-top {
+  box-shadow:
+    0  40px 80px -20px rgba(207, 155, 80, 0.5),
+    0  30px 120px 0px rgba(180, 120, 50, 0.3),
+    0  20px 200px 20px rgba(140, 80, 30, 0.2);
 }
-/* Light mode: blue/purple glow blobs — visible on white */
-.shadow-bgt-light {
-  box-shadow: 0 0 200px 100px rgba(59, 130, 246, 0.18),
-              0 0 100px 50px rgba(99, 102, 241, 0.12);
+.sphere-glow-dark-bottom {
+  box-shadow:
+    0 -40px 80px -20px rgba(207, 155, 80, 0.5),
+    0 -30px 120px 0px rgba(180, 120, 50, 0.3),
+    0 -20px 200px 20px rgba(140, 80, 30, 0.2);
 }
-.shadow-bgb-light {
-  box-shadow: 0 0 200px 100px rgba(99, 102, 241, 0.15),
-              0 0 100px 50px rgba(59, 130, 246, 0.12);
+
+/* Light mode spheres: soft grey body, blue/indigo outer rim glow */
+.sphere-light {
+  background: radial-gradient(circle, #e8ecf1 0%, #dde3ea 70%, #d5dce5 100%);
+}
+.sphere-glow-light-top {
+  box-shadow:
+    0  40px 80px -20px rgba(59, 130, 246, 0.35),
+    0  30px 120px 0px rgba(99, 102, 241, 0.2),
+    0  20px 200px 20px rgba(79, 70, 229, 0.12);
+}
+.sphere-glow-light-bottom {
+  box-shadow:
+    0 -40px 80px -20px rgba(59, 130, 246, 0.35),
+    0 -30px 120px 0px rgba(99, 102, 241, 0.2),
+    0 -20px 200px 20px rgba(79, 70, 229, 0.12);
 }
 
 /* ============================================================
