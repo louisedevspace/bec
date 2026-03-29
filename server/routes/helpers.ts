@@ -39,7 +39,8 @@ export async function getTradingFeeRate(symbol: string): Promise<number> {
       .eq('symbol', symbol)
       .maybeSingle();
 
-    const rawRate = parseFloat(pairData?.trading_fee || '0.001');
+    if (pairData?.trading_fee == null) return 0.001;
+    const rawRate = parseFloat(pairData.trading_fee);
     if (!Number.isFinite(rawRate) || rawRate < 0) return 0.001;
     return rawRate;
   });
