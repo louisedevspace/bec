@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/use-theme';
 import logo from '@/assets/logo.png';
 
 interface IlluminatedHeroProps {
@@ -6,44 +7,76 @@ interface IlluminatedHeroProps {
 }
 
 export function IlluminatedHero({ onStartTrading }: IlluminatedHeroProps) {
+  const { isDark } = useTheme();
+
   return (
-    <div className="hero-glow-section relative flex w-full items-center justify-center overflow-hidden bg-black text-white px-4 py-14 border-b border-[#1e1e1e]">
-      {/* Eclipse spheres — solid dark circles with outer rim glow */}
+    <div
+      className={cn(
+        'hero-glow-section relative flex w-full items-center justify-center overflow-hidden px-4 py-14 border-b',
+        isDark ? 'bg-black text-white border-[#1e1e1e]' : 'bg-[#f0f2f5] text-slate-900 border-slate-200',
+      )}
+    >
+      {/* Eclipse spheres */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute left-1/2 -translate-x-1/2 w-[800px] h-[800px] md:w-[1000px] md:h-[1000px] rounded-full sphere-dark sphere-glow-top opacity-0 animate-[onloadbgt_1s_ease-in-out_forwards]" />
-        <div className="absolute left-1/2 -translate-x-1/2 w-[800px] h-[800px] md:w-[1000px] md:h-[1000px] rounded-full sphere-dark sphere-glow-bottom opacity-0 animate-[onloadbgb_1s_ease-in-out_forwards]" />
+        <div
+          className={cn(
+            'absolute left-1/2 -translate-x-1/2 w-[800px] h-[800px] md:w-[1000px] md:h-[1000px] rounded-full',
+            'opacity-0 animate-[onloadbgt_1s_ease-in-out_forwards]',
+            isDark ? 'sphere-dark sphere-glow-dark-top' : 'sphere-light sphere-glow-light-top',
+          )}
+        />
+        <div
+          className={cn(
+            'absolute left-1/2 -translate-x-1/2 w-[800px] h-[800px] md:w-[1000px] md:h-[1000px] rounded-full',
+            'opacity-0 animate-[onloadbgb_1s_ease-in-out_forwards]',
+            isDark ? 'sphere-dark sphere-glow-dark-bottom' : 'sphere-light sphere-glow-light-bottom',
+          )}
+        />
       </div>
 
       {/* Content */}
       <div className="relative z-10 text-center max-w-4xl mx-auto">
-        {/* Logo */}
         <div className="mb-6">
-          <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mx-auto mb-5 flex items-center justify-center overflow-hidden shadow-lg">
+          <div
+            className={cn(
+              'w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center overflow-hidden shadow-lg',
+              isDark ? 'bg-[#1a1a1a] border border-[#2a2a2a]' : 'bg-white border border-slate-200',
+            )}
+          >
             <img src={logo} alt="Logo" className="w-full h-full object-contain" />
           </div>
         </div>
 
-        {/* Headline */}
-        <h1 className="text-2xl md:text-4xl font-bold mb-1 tracking-tight text-white">
+        <h1
+          className={cn(
+            'text-2xl md:text-4xl font-bold mb-1 tracking-tight',
+            isDark ? 'text-white' : 'text-slate-800',
+          )}
+        >
           TRADE WITH CONFIDENCE
         </h1>
 
-        {/* Illuminated glow text — always uses the warm amber SVG filter */}
+        {/* Illuminated glow text — separate SVG filter per theme */}
         <div
-          className="text-2xl md:text-4xl font-bold mb-4 tracking-tight"
-          style={{ filter: 'url(#glow-hero)' }}
+          className="text-2xl md:text-4xl font-bold mb-4 tracking-tight hero-glow-text"
+          style={{ filter: isDark ? 'url(#glow-dark)' : 'url(#glow-light)' }}
         >
-          <span className="relative inline-block text-amber-100">
+          <span className={isDark ? 'text-amber-100' : 'text-blue-600'}>
             GROW WITH US
           </span>
         </div>
 
-        {/* Subtitle */}
-        <p className="max-w-xl mx-auto text-sm md:text-base font-semibold bg-gradient-to-t from-[#86868b] to-[#bdc2c9] bg-clip-text text-transparent mb-8">
+        <p
+          className={cn(
+            'max-w-xl mx-auto text-sm md:text-base font-semibold mb-8',
+            isDark
+              ? 'bg-gradient-to-t from-[#86868b] to-[#bdc2c9] bg-clip-text text-transparent'
+              : 'text-slate-500',
+          )}
+        >
           GLOBAL REPRESENTATIVE ENCRYPTED MONEY TRADING PLATFORM
         </p>
 
-        {/* CTA Button */}
         <button
           onClick={onStartTrading}
           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg shadow-blue-500/20 transition-all text-sm"
@@ -52,10 +85,11 @@ export function IlluminatedHero({ onStartTrading }: IlluminatedHeroProps) {
         </button>
       </div>
 
-      {/* SVG Glow Filter — warm amber/orange illumination */}
+      {/* SVG Glow Filters — both rendered, only one active via inline style */}
       <svg className="absolute" width="0" height="0" aria-hidden="true">
         <defs>
-          <filter id="glow-hero" colorInterpolationFilters="sRGB" x="-50%" y="-200%" width="200%" height="500%">
+          {/* Dark: warm amber glow (light text on dark bg) */}
+          <filter id="glow-dark" colorInterpolationFilters="sRGB" x="-50%" y="-200%" width="200%" height="500%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur4" />
             <feGaussianBlur in="SourceGraphic" stdDeviation="19" result="blur19" />
             <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur9" />
@@ -75,6 +109,34 @@ export function IlluminatedHero({ onStartTrading }: IlluminatedHeroProps) {
             <feMerge>
               <feMergeNode in="l0" /><feMergeNode in="l1" /><feMergeNode in="l2" />
               <feMergeNode in="l3" /><feMergeNode in="l4" /><feMergeNode in="l5" />
+              <feMergeNode in="l0" /><feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Light: blue/indigo glow (dark text on light bg) */}
+          <filter id="glow-light" colorInterpolationFilters="sRGB" x="-50%" y="-200%" width="200%" height="500%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur4" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur14" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur8" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="24" result="blur24" />
+            {/* Tight inner glow — deep blue */}
+            <feColorMatrix in="blur4" result="c0" type="matrix" values="0.15 0 0 0 0  0 0.25 0 0 0  0 0 0.95 0 0  0 0 0 0.85 0" />
+            <feOffset in="c0" result="l0" dx="0" dy="0" />
+            {/* Mid spread — indigo */}
+            <feColorMatrix in="blur14" result="c1" type="matrix" values="0.20 0 0 0 0  0 0.15 0 0 0  0 0 0.90 0 0  0 0 0 0.7 0" />
+            <feOffset in="c1" result="l1" dx="0" dy="2" />
+            {/* Wide bloom — purple */}
+            <feColorMatrix in="blur8" result="c2" type="matrix" values="0.30 0 0 0 0  0 0.10 0 0 0  0 0 0.85 0 0  0 0 0 0.5 0" />
+            <feOffset in="c2" result="l2" dx="0" dy="2" />
+            {/* Outer haze */}
+            <feColorMatrix in="blur24" result="c3" type="matrix" values="0.25 0 0 0 0  0 0.20 0 0 0  0 0 0.80 0 0  0 0 0 0.6 0" />
+            <feOffset in="c3" result="l3" dx="0" dy="4" />
+            {/* Deep drop */}
+            <feColorMatrix in="blur24" result="c4" type="matrix" values="0.15 0 0 0 0  0 0.08 0 0 0  0 0 0.60 0 0  0 0 0 0.4 0" />
+            <feOffset in="c4" result="l4" dx="0" dy="16" />
+            <feMerge>
+              <feMergeNode in="l0" /><feMergeNode in="l1" /><feMergeNode in="l2" />
+              <feMergeNode in="l3" /><feMergeNode in="l4" />
               <feMergeNode in="l0" /><feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
