@@ -3,10 +3,10 @@ import { CryptoList } from "@/components/crypto/crypto-list";
 import { lazy, Suspense, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLocation } from "wouter";
-import { 
-  Wallet, 
-  ArrowRightLeft, 
-  CreditCard, 
+import {
+  Wallet,
+  ArrowRightLeft,
+  CreditCard,
   UserPlus,
   Banknote,
   PieChart,
@@ -15,7 +15,7 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { IlluminatedHero } from "@/components/ui/illuminated-hero";
 
 const StakingModal = lazy(() =>
   import("@/components/modals/staking-modal").then((m) => ({
@@ -85,28 +85,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen steel-gradient-bg">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#111] to-[#0a0a0a] px-4 py-14 text-center border-b border-[#1e1e1e]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/5 via-transparent to-transparent" />
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="mb-8">
-            <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mx-auto mb-5 flex items-center justify-center overflow-hidden shadow-lg">
-              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <h1 className="text-2xl md:text-4xl font-bold mb-3 text-white tracking-tight">
-              TRADE WITH CONFIDENCE, GROW WITH US
-            </h1>
-            <p className="text-gray-500 text-sm md:text-base max-w-xl mx-auto">
-              GLOBAL REPRESENTATIVE ENCRYPTED MONEY TRADING PLATFORM
-            </p>
-          </div>
-          <button
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg shadow-blue-500/20 transition-all text-sm"
-            onClick={handleStartTrading}
-          >
-            START TRADING
-          </button>
-        </div>
-      </section>
+      <IlluminatedHero onStartTrading={handleStartTrading} />
 
       <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-5">
         {/* Welcome Card */}

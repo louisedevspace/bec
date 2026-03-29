@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Illuminated Hero Keyframes ── */
+@keyframes onloadopacity {
+  24% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes onloadbgt {
+  0% { translate: 0 -70%; opacity: 0.3; }
+  100% { translate: 0 -64%; opacity: 0.8; }
+}
+@keyframes onloadbgb {
+  0% { translate: 0 70%; opacity: 0.3; }
+  100% { translate: 0 64%; opacity: 0.8; }
+}
+
+/* Illuminated Hero glow blob shadows (dark mode) */
+.dark .shadow-bgt {
+  box-shadow: 0 0 160px 80px rgba(59, 130, 246, 0.25),
+              0 0 80px 40px rgba(147, 51, 234, 0.15);
+}
+.dark .shadow-bgb {
+  box-shadow: 0 0 160px 80px rgba(147, 51, 234, 0.2),
+              0 0 80px 40px rgba(59, 130, 246, 0.15);
+}
+/* Light mode: softer glow */
+html:not(.dark) .shadow-bgt {
+  box-shadow: 0 0 160px 80px rgba(59, 130, 246, 0.12),
+              0 0 80px 40px rgba(147, 51, 234, 0.08);
+}
+html:not(.dark) .shadow-bgb {
+  box-shadow: 0 0 160px 80px rgba(147, 51, 234, 0.10),
+              0 0 80px 40px rgba(59, 130, 246, 0.08);
+}
+
 /* ============================================================
    LIGHT THEME (default :root values)
    ============================================================ */
@@ -648,4 +681,15 @@ html:not(.dark) [class*="bg-"][class*="/20"] .lucide {
 html:not(.dark) [data-active="true"] .lucide,
 html:not(.dark) .bg-blue-500\/10 .lucide {
   fill-opacity: 0.35;
+}
+
+/* ── Illuminated Hero light-mode text overrides ── */
+html:not(.dark) .filter-\[url\(\#glow-4\)\] {
+  filter: none; /* glow is invisible on white, remove it */
+}
+html:not(.dark) .filter-\[url\(\#glow-4\)\] [data-text]::before {
+  background: linear-gradient(0deg, #1e293b 0%, #334155 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #334155;
 }
