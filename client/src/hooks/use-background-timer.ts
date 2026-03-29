@@ -139,8 +139,8 @@ export function useBackgroundTimer() {
         
         if (currentTrade && currentTrade.status === 'completed') {
           // Trade already completed by server
-          const isWin = currentTrade.profit_loss > 0;
-          const finalProfitLoss = currentTrade.profit_loss;
+          const isWin = currentTrade.final_result === 'win' || (currentTrade.final_result == null && currentTrade.profit_loss > 0);
+          const finalProfitLoss = parseFloat(currentTrade.profit_loss) || 0;
           
           toast({
             title: 'Trade Complete',
@@ -209,8 +209,8 @@ export function useBackgroundTimer() {
             const trades = await checkRes.json();
             const completedTrade = trades.find((t: any) => t.id === tradeId && t.status === 'completed');
             if (completedTrade) {
-              const isWin = completedTrade.profit_loss > 0;
-              const finalProfitLoss = completedTrade.profit_loss;
+              const isWin = completedTrade.final_result === 'win' || (completedTrade.final_result == null && completedTrade.profit_loss > 0);
+              const finalProfitLoss = parseFloat(completedTrade.profit_loss) || 0;
               toast({
                 title: 'Trade Complete',
                 description: isWin

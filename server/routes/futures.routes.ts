@@ -645,6 +645,8 @@ export default function registerFuturesRoutes(app: Express) {
             status: "completed",
             exit_price: exitPrice.toString(),
             profit_loss: netProfitLoss.toString(),
+            final_result: isWin ? 'win' : 'loss',
+            final_profit: Math.abs(netProfitLoss).toString(),
             fee_amount: feeAmount.toFixed(8),
             fee_rate: feeRate.toString(),
             trade_intervals: { balance_before: balanceBeforeTrade, balance_after: newBalance },
@@ -664,6 +666,8 @@ export default function registerFuturesRoutes(app: Express) {
             status: "completed",
             exit_price: exitPrice.toString(),
             profit_loss: netProfitLoss.toString(),
+            final_result: isWin ? 'win' : 'loss',
+            final_profit: Math.abs(netProfitLoss).toString(),
           })
           .eq("id", tradeId)
           .eq("status", "pending"); // Only update if still pending
@@ -786,6 +790,7 @@ export default function registerFuturesRoutes(app: Express) {
           const availableBalance = portfolio ? parseFloat(portfolio.available) : 0;
 
           let profitLoss = 0;
+          let isWin = false;
           let exitPrice = currentPrice;
 
           // Determine outcome: forced result (admin override) takes absolute priority
@@ -806,6 +811,7 @@ export default function registerFuturesRoutes(app: Express) {
           if (!shouldWin) {
             const lossPercentage = trade.profit_ratio / 100;
             profitLoss = -(trade.amount * lossPercentage);
+            isWin = false;
             const priceChange = (Math.random() - 0.5) * 0.02;
             exitPrice =
               trade.side === "long"
@@ -814,6 +820,7 @@ export default function registerFuturesRoutes(app: Express) {
           } else {
             const profitPercentage = trade.profit_ratio / 100;
             profitLoss = trade.amount * profitPercentage;
+            isWin = true;
             const priceChange = (Math.random() - 0.5) * 0.02;
             exitPrice =
               trade.side === "long"
@@ -842,6 +849,8 @@ export default function registerFuturesRoutes(app: Express) {
                 status: "completed",
                 exit_price: exitPrice,
                 profit_loss: netProfitLoss,
+                final_result: isWin ? 'win' : 'loss',
+                final_profit: Math.abs(netProfitLoss),
                 fee_amount: feeAmount.toFixed(8),
                 fee_rate: feeRate.toString(),
                 trade_intervals: { balance_before: balanceBeforeTrade, balance_after: newBalance },
@@ -860,6 +869,8 @@ export default function registerFuturesRoutes(app: Express) {
                 status: "completed",
                 exit_price: exitPrice,
                 profit_loss: netProfitLoss,
+                final_result: isWin ? 'win' : 'loss',
+                final_profit: Math.abs(netProfitLoss),
               })
               .eq("id", trade.id)
               .eq("status", "pending");

@@ -28,6 +28,8 @@ interface FuturesTrade {
   is_loss?: boolean;
   loss_amount?: number;
   profit_loss?: number;
+  final_result?: 'win' | 'loss';
+  final_profit?: number;
   fee_amount?: string;
   fee_rate?: string;
   trade_intervals?: { balance_before?: number; balance_after?: number };
@@ -121,6 +123,13 @@ export default function FuturesPage() {
     if (!timeLimitsConfig?.enabled) return true;
     const limitForDuration = timeLimitsConfig.limits.find(l => l.duration === durationValue);
     return limitForDuration?.isActive ?? true;
+  };
+
+  // Helper: determine if a completed trade was a win
+  const isTradeWin = (trade: FuturesTrade) => {
+    if (trade.final_result === 'win') return true;
+    if (trade.final_result === 'loss') return false;
+    return (trade.profit_loss ?? 0) >= 0;
   };
 
   const fetchTrades = async () => {
@@ -634,8 +643,8 @@ export default function FuturesPage() {
                                 <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
                                   {formatUsdNumber(trade.amount)} USDT · {trade.duration}s
                                   {trade.profit_loss !== undefined && trade.status !== 'pending' && (
-                                    <span className={`ml-2 font-medium ${trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                      {trade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(trade.profit_loss))}
+                                    <span className={`ml-2 font-medium ${isTradeWin(trade) ? 'text-green-400' : 'text-red-400'}`}>
+                                      {isTradeWin(trade) ? '+' : '-'}{formatUsdNumber(Math.abs(trade.profit_loss))}
                                     </span>
                                   )}
                                 </div>
@@ -761,14 +770,14 @@ export default function FuturesPage() {
                 <>
                   <div className="border-t border-[#1e1e1e] my-2" />
                   <div className={`rounded-xl p-3 border ${
-                    selectedTrade.profit_loss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
+                    isTradeWin(selectedTrade) ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                        {selectedTrade.profit_loss >= 0 ? 'Profit' : 'Loss'}
+                        {isTradeWin(selectedTrade) ? 'Profit' : 'Loss'}
                       </span>
-                      <span className={`text-base tabular-nums font-bold ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(selectedTrade.profit_loss)} USDT
+                      <span className={`text-base tabular-nums font-bold ${isTradeWin(selectedTrade) ? 'text-green-400' : 'text-red-400'}`}>
+                        {isTradeWin(selectedTrade) ? '+' : '-'}{formatUsdNumber(Math.abs(selectedTrade.profit_loss!))} USDT
                       </span>
                     </div>
                     {parseFloat(selectedTrade.fee_amount || '0') > 0 && (
@@ -801,11 +810,11 @@ export default function FuturesPage() {
               {/* Simple P&L for non-completed */}
               {selectedTrade.status !== 'completed' && selectedTrade.profit_loss !== undefined && selectedTrade.profit_loss !== null && (
                 <div className={`rounded-xl p-3 border ${
-                  selectedTrade.profit_loss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
+                  isTradeWin(selectedTrade) ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
                 }`}>
                   <label className="text-[10px] text-gray-500 uppercase tracking-wider">Profit/Loss</label>
-                  <div className={`font-semibold text-base mt-0.5 tabular-nums ${selectedTrade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {selectedTrade.profit_loss >= 0 ? '+' : ''}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
+                  <div className={`font-semibold text-base mt-0.5 tabular-nums ${isTradeWin(selectedTrade) ? 'text-green-400' : 'text-red-400'}`}>
+                    {isTradeWin(selectedTrade) ? '+' : '-'}{formatUsdNumber(Math.abs(selectedTrade.profit_loss))} USDT
                   </div>
                 </div>
               )}
