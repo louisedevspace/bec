@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Coins, Users, TrendingUp, Clock, DollarSign, Search, RefreshCw,
-  ChevronDown, ChevronUp, CheckCircle, Timer, Trash2, BarChart3, Activity
+  ChevronDown, ChevronUp, CheckCircle, Timer, Trash2, BarChart3, Activity,
+  Plus, ToggleLeft, ToggleRight, Edit2, Save, X, Settings2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./admin-layout";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateTime } from "@/lib/date-utils";
+import { supabase } from "@/lib/supabaseClient";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,19 @@ interface StakingStats {
   activeStakers: number;
   averageApy: number;
   averageDuration: number;
+}
+
+interface StakingProductConfig {
+  id: number;
+  title: string;
+  duration: number;
+  apy: string;
+  min_amount: string;
+  max_amount: string;
+  is_enabled: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Helper ─────────────────────────────────────────────────────────────────
@@ -162,6 +177,109 @@ export default function AdminStakingPage() {
 
   const positions = positionsData?.positions || [];
 
+  // ─── Staking Products State ────────────────
+  const [products, setProducts] = useState<StakingProductConfig[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productSearch, setProductSearch] = useState('');
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [productEditForm, setProductEditForm] = useState<Partial<StakingProductConfig>>({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({ title: '', duration: '30', apy: '1.00', minAmount: '100', maxAmount: '100000' });
+
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' };
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/admin/staking-products', { headers });
+      if (response.ok) setProducts(await response.json());
+    } catch { /* ignore */ } finally { setProductsLoading(false); }
+  };
+
+  useEffect(() => { fetchProducts(); }, []);
+
+  const handleProductToggle = async (id: number) => {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/admin/staking-products/${id}/toggle`, { method: 'PUT', headers });
+      if (response.ok) {
+        const updated = await response.json();
+        setProducts(prev => prev.map(p => p.id === id ? updated : p));
+        toast({ title: 'Success', description: `Product ${updated.is_enabled ? 'enabled' : 'disabled'}` });
+      }
+    } catch { toast({ title: 'Error', description: 'Failed to toggle product', variant: 'destructive' }); }
+  };
+
+  const handleProductDelete = async (id: number, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/admin/staking-products/${id}`, { method: 'DELETE', headers });
+      if (response.ok) {
+        setProducts(prev => prev.filter(p => p.id !== id));
+        toast({ title: 'Deleted', description: `${title} removed` });
+      }
+    } catch { toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' }); }
+  };
+
+  const handleProductAdd = async () => {
+    if (!newProduct.title.trim()) { toast({ title: 'Error', description: 'Enter a product title', variant: 'destructive' }); return; }
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/admin/staking-products', {
+        method: 'POST', headers,
+        body: JSON.stringify({ title: newProduct.title, duration: parseInt(newProduct.duration), apy: newProduct.apy, minAmount: newProduct.minAmount, maxAmount: newProduct.maxAmount, sortOrder: products.length + 1 }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(prev => [...prev, data]);
+        setShowAddForm(false);
+        setNewProduct({ title: '', duration: '30', apy: '1.00', minAmount: '100', maxAmount: '100000' });
+        toast({ title: 'Success', description: `${data.title} added` });
+      } else {
+        const err = await response.json();
+        toast({ title: 'Error', description: err.message || 'Failed to add product', variant: 'destructive' });
+      }
+    } catch { toast({ title: 'Error', description: 'Failed to add product', variant: 'destructive' }); }
+  };
+
+  const startProductEdit = (product: StakingProductConfig) => {
+    setEditingProductId(product.id);
+    setProductEditForm({ title: product.title, duration: product.duration, apy: product.apy, min_amount: product.min_amount, max_amount: product.max_amount, sort_order: product.sort_order });
+  };
+
+  const handleProductSaveEdit = async () => {
+    if (!editingProductId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/admin/staking-products/${editingProductId}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ title: productEditForm.title, duration: productEditForm.duration, apy: productEditForm.apy, minAmount: productEditForm.min_amount, maxAmount: productEditForm.max_amount, sortOrder: productEditForm.sort_order }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setProducts(prev => prev.map(p => p.id === editingProductId ? updated : p));
+        setEditingProductId(null);
+        toast({ title: 'Saved', description: 'Product settings updated' });
+      }
+    } catch { toast({ title: 'Error', description: 'Failed to update product', variant: 'destructive' }); }
+  };
+
+  const handleProductSeed = async () => {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/admin/staking-products/seed', { method: 'POST', headers });
+      if (response.ok) { const result = await response.json(); toast({ title: 'Success', description: result.message }); fetchProducts(); }
+    } catch { toast({ title: 'Error', description: 'Failed to seed products', variant: 'destructive' }); }
+  };
+
+  const filteredProducts = products.filter(p => p.title.toLowerCase().includes(productSearch.toLowerCase()) || p.duration.toString().includes(productSearch));
+  const enabledProductCount = products.filter(p => p.is_enabled).length;
+
   const filteredPositions = positions.filter((p) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -234,6 +352,9 @@ export default function AdminStakingPage() {
             <TabsTrigger value="completed" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 text-xs md:text-sm">
               <CheckCircle size={14} className="mr-1.5 fill-current" /> Completed
             </TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 text-xs md:text-sm">
+              <Settings2 size={14} className="mr-1.5 fill-current" /> Products
+            </TabsTrigger>
           </TabsList>
 
           {/* All / Active / Completed → same positions list with filter */}
@@ -289,6 +410,213 @@ export default function AdminStakingPage() {
               />
             </TabsContent>
           ))}
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="mt-4 space-y-4">
+            {/* Actions */}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={fetchProducts} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
+                <RefreshCw size={14} className={`${productsLoading ? 'animate-spin' : ''} fill-current`} />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleProductSeed} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
+                Seed Defaults
+              </Button>
+              <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus size={14} className="mr-1 fill-current" /> Add Product
+              </Button>
+            </div>
+
+            {/* Product Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
+                <div className="text-xs text-gray-500">Total Products</div>
+                <div className="text-lg font-bold text-white">{products.length}</div>
+              </div>
+              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
+                <div className="text-xs text-gray-500">Enabled</div>
+                <div className="text-lg font-bold text-green-400">{enabledProductCount}</div>
+              </div>
+              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
+                <div className="text-xs text-gray-500">Max APY</div>
+                <div className="text-lg font-bold text-yellow-400">{products.length > 0 ? Math.max(...products.filter(p => p.is_enabled).map(p => parseFloat(p.apy) || 0)).toFixed(2) : '0.00'}%</div>
+              </div>
+              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
+                <div className="text-xs text-gray-500">Min Stake</div>
+                <div className="text-lg font-bold text-blue-400">${products.length > 0 ? Math.min(...products.filter(p => p.is_enabled).map(p => parseFloat(p.min_amount) || 0)).toLocaleString() : '0'}</div>
+              </div>
+            </div>
+
+            {/* Add Product Form */}
+            {showAddForm && (
+              <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Plus size={16} className="text-blue-400 fill-current" /> Add New Staking Product
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Title</label>
+                    <Input value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. 30 Days" className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Duration (Days)</label>
+                    <Input type="number" min="1" value={newProduct.duration} onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">APY (%)</label>
+                    <Input type="number" step="0.01" min="0" value={newProduct.apy} onChange={(e) => setNewProduct({ ...newProduct, apy: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Min Amount</label>
+                    <Input type="number" step="any" value={newProduct.minAmount} onChange={(e) => setNewProduct({ ...newProduct, minAmount: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Max Amount</label>
+                    <Input type="number" step="any" value={newProduct.maxAmount} onChange={(e) => setNewProduct({ ...newProduct, maxAmount: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-[#2a2a2a] bg-[#0a0a0a] text-gray-400">Cancel</Button>
+                  <Button size="sm" onClick={handleProductAdd} className="bg-blue-600 hover:bg-blue-700"><Plus size={14} className="mr-1 fill-current" /> Add Product</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
+              <Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="pl-9 h-9 bg-[#111] border-[#1e1e1e] text-white text-sm" />
+            </div>
+
+            {/* Products Table */}
+            <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
+              {productsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Coins size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
+                  <p className="text-gray-500 text-sm">No staking products found</p>
+                  <p className="text-gray-600 text-xs mt-1">Click "Seed Defaults" to add default products</p>
+                </div>
+              ) : (
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-xs text-gray-500 uppercase border-b border-[#1e1e1e] bg-[#0a0a0a]">
+                          <th className="text-left py-3 px-4">Product</th>
+                          <th className="text-center py-3 px-3">Duration</th>
+                          <th className="text-center py-3 px-3">APY</th>
+                          <th className="text-center py-3 px-3">Status</th>
+                          <th className="text-right py-3 px-3">Min Amount</th>
+                          <th className="text-right py-3 px-3">Max Amount</th>
+                          <th className="text-center py-3 px-3">Order</th>
+                          <th className="text-center py-3 px-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.map((product) => (
+                          <tr key={product.id} className={`border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${!product.is_enabled ? 'opacity-50' : ''}`}>
+                            <td className="py-3 px-4">
+                              {editingProductId === product.id ? (
+                                <Input value={productEditForm.title || ''} onChange={(e) => setProductEditForm({ ...productEditForm, title: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-32" />
+                              ) : (
+                                <span className="font-semibold text-white text-sm">{product.title}</span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" min="1" value={productEditForm.duration || ''} onChange={(e) => setProductEditForm({ ...productEditForm, duration: parseInt(e.target.value) || 0 })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-20 mx-auto" />
+                              ) : (
+                                <span className="text-sm text-gray-300">{product.duration} days</span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" step="0.01" value={productEditForm.apy || ''} onChange={(e) => setProductEditForm({ ...productEditForm, apy: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-20 mx-auto" />
+                              ) : (
+                                <span className="text-sm font-medium text-yellow-400">{parseFloat(product.apy).toFixed(2)}%</span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              <button onClick={() => handleProductToggle(product.id)} className="inline-flex items-center">
+                                {product.is_enabled ? <ToggleRight size={22} className="text-green-400 fill-current" /> : <ToggleLeft size={22} className="text-gray-500 fill-current" />}
+                              </button>
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" step="any" value={productEditForm.min_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, min_amount: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-28 ml-auto" />
+                              ) : (
+                                <span className="text-sm text-gray-300 tabular-nums">${parseFloat(product.min_amount).toLocaleString()}</span>
+                              )}
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" step="any" value={productEditForm.max_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, max_amount: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-28 ml-auto" />
+                              ) : (
+                                <span className="text-sm text-gray-300 tabular-nums">${parseFloat(product.max_amount).toLocaleString()}</span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" step="1" value={productEditForm.sort_order || 0} onChange={(e) => setProductEditForm({ ...productEditForm, sort_order: parseInt(e.target.value) || 0 })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-14 mx-auto" />
+                              ) : (
+                                <span className="text-xs text-gray-500">{product.sort_order}</span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-4">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {editingProductId === product.id ? (
+                                  <>
+                                    <button onClick={handleProductSaveEdit} className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20"><Save size={14} className="fill-current" /></button>
+                                    <button onClick={() => setEditingProductId(null)} className="p-1.5 rounded-lg bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"><X size={14} className="fill-current" /></button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button onClick={() => startProductEdit(product)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"><Edit2 size={14} className="fill-current" /></button>
+                                    <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"><Trash2 size={14} className="fill-current" /></button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile List */}
+                  <div className="block md:hidden divide-y divide-[#1e1e1e]">
+                    {filteredProducts.map((product) => (
+                      <div key={product.id} className={`p-4 ${!product.is_enabled ? 'opacity-50' : ''}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Coins size={16} className="text-yellow-400 fill-current" />
+                            <span className="font-bold text-white">{product.title}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400">{parseFloat(product.apy).toFixed(2)}% APY</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleProductToggle(product.id)}>
+                              {product.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
+                            </button>
+                            <button onClick={() => startProductEdit(product)} className="p-1 rounded text-blue-400 hover:bg-blue-500/10"><Edit2 size={14} className="fill-current" /></button>
+                            <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1 rounded text-red-400 hover:bg-red-500/10"><Trash2 size={14} className="fill-current" /></button>
+                          </div>
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span>{product.duration} days</span>
+                          <span>Min: ${parseFloat(product.min_amount).toLocaleString()}</span>
+                          <span>Max: ${parseFloat(product.max_amount).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </AdminLayout>
