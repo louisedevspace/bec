@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDate, formatTime } from '@/lib/date-utils';
 import { useLocation } from 'wouter';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info, Paperclip, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
@@ -673,9 +674,8 @@ export default function SupportPage() {
       </div>
 
       {/* New Conversation Modal */}
-      {showNewConversationForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNewConversationForm(false)}>
-          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+      <Dialog open={showNewConversationForm} onOpenChange={setShowNewConversationForm}>
+        <DialogContent className="max-w-md" hideCloseButton>
             <h2 className="text-lg font-bold text-white mb-1">Start New Conversation</h2>
             <p className="text-xs text-gray-500 mb-5">Describe your issue and our support team will respond shortly.</p>
 
@@ -739,9 +739,8 @@ export default function SupportPage() {
                 {sending ? 'Creating...' : 'Submit Ticket'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

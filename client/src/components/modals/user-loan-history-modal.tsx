@@ -159,7 +159,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111] border border-[#1e1e1e] text-white max-w-4xl max-h-[90vh] overflow-y-auto" hideCloseButton>
+      <DialogContent className="max-w-4xl" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-white flex items-center gap-2">

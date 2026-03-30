@@ -641,7 +641,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="admin-dialog max-w-6xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Shield className="w-5 h-5" />
@@ -919,7 +919,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
         {/* User Details Modal */}
         <Dialog open={showUserDetails} onOpenChange={(open) => !open && setShowUserDetails(false)}>
-          <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
                 <User className="w-5 h-5" />
@@ -1119,7 +1119,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
         {/* Manage Transactions Modal */}
         <Dialog open={showManageTransactions} onOpenChange={(open) => !open && setShowManageTransactions(false)}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
                 <History className="w-5 h-5" />
@@ -1179,7 +1179,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
         {/* Portfolio Editor Modal */}
         <Dialog open={showPortfolioEditor} onOpenChange={(open) => !open && setShowPortfolioEditor(false)}>
-          <DialogContent className="max-w-md w-[95vw] bg-[#111] border border-[#1e1e1e] text-white">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-white">Edit Portfolio</DialogTitle>
               <DialogDescription className="text-gray-400">

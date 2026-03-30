@@ -178,17 +178,9 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`sm:max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden border ${
-        isDark 
-          ? 'bg-[#111] border-[#1e1e1e] text-white' 
-          : 'bg-white border-gray-200 text-gray-900'
-      }`} hideCloseButton>
+      <DialogContent className="sm:max-w-4xl overflow-x-hidden" hideCloseButton>
         {/* Custom Header - Sticky within dialog */}
-        <div className={`sticky top-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 border-b ${
-          isDark 
-            ? 'bg-[#111] border-[#1e1e1e]' 
-            : 'bg-white border-gray-200'
-        }`}>
+        <div className="sticky top-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 border-b bg-[#111] border-[#1e1e1e]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
               <TrendingUp size={20} className="text-white" />

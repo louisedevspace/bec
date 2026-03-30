@@ -950,7 +950,7 @@ export default function AdminStreamlinedNotifications() {
 
       {/* ═══════════ CONFIRM SEND DIALOG ═══════════ */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="bg-[#111] border-[#1e1e1e] max-w-md admin-dialog">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
@@ -990,7 +990,7 @@ export default function AdminStreamlinedNotifications() {
 
       {/* ═══════════ BROADCAST DETAIL DIALOG ═══════════ */}
       <Dialog open={showBroadcastDetail} onOpenChange={setShowBroadcastDetail}>
-        <DialogContent className="bg-[#111] border-[#1e1e1e] max-w-lg admin-dialog">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-white text-sm">Broadcast Details</DialogTitle>
             <DialogDescription className="text-gray-500 text-xs">
@@ -1062,7 +1062,7 @@ export default function AdminStreamlinedNotifications() {
 
       {/* ═══════════ TEMPLATE FORM DIALOG ═══════════ */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="bg-[#111] border-[#1e1e1e] max-w-md admin-dialog">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white text-sm">
               {editingTemplate ? "Edit Template" : "New Template"}

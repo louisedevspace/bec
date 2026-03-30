@@ -8,8 +8,8 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.3.0
--- Last Updated: 2025-06-14
+-- Version: 2.4.0
+-- Last Updated: 2026-03-30
 -- Compatible with: Supabase PostgreSQL 15+
 -- ============================================================
 
@@ -337,6 +337,22 @@ CREATE TABLE IF NOT EXISTS user_staking_limits (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_staking_limits_user ON user_staking_limits(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_staking_limits_enabled ON user_staking_limits(is_enabled);
+
+-- ----------------------------------------------------------
+-- 1.8b Staking Products (admin-configurable staking plans)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS staking_products (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  duration INTEGER NOT NULL,                  -- days
+  apy DECIMAL(5,2) NOT NULL,                 -- e.g. 0.50, 4.00
+  min_amount DECIMAL(20,8) NOT NULL,
+  max_amount DECIMAL(20,8) NOT NULL,
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- ----------------------------------------------------------
 -- 1.9 Loan Applications
@@ -1224,6 +1240,30 @@ CREATE POLICY "user_staking_limits_delete_policy" ON user_staking_limits FOR DEL
 );
 
 -- ----------------------------------------------------------
+-- 4.7b Staking Products
+-- ----------------------------------------------------------
+ALTER TABLE staking_products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "staking_products_select_policy" ON staking_products;
+DROP POLICY IF EXISTS "staking_products_insert_policy" ON staking_products;
+DROP POLICY IF EXISTS "staking_products_update_policy" ON staking_products;
+DROP POLICY IF EXISTS "staking_products_delete_policy" ON staking_products;
+
+-- Public read access (users need to see available staking products)
+CREATE POLICY "staking_products_select_policy" ON staking_products FOR SELECT USING (
+  auth.uid() IS NOT NULL
+);
+CREATE POLICY "staking_products_insert_policy" ON staking_products FOR INSERT WITH CHECK (
+  public.is_admin()
+);
+CREATE POLICY "staking_products_update_policy" ON staking_products FOR UPDATE USING (
+  public.is_admin()
+);
+CREATE POLICY "staking_products_delete_policy" ON staking_products FOR DELETE USING (
+  public.is_admin()
+);
+
+-- ----------------------------------------------------------
 -- 4.8 Loan Applications
 -- ----------------------------------------------------------
 ALTER TABLE loan_applications ENABLE ROW LEVEL SECURITY;
@@ -1899,10 +1939,11 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 -- 
 -- Summary:
 -- ========
--- Tables: 31
+-- Tables: 32
 --   - users, user_passwords
 --   - portfolios, transactions, trades, futures_trades
---   - staking_positions, loan_applications
+--   - staking_positions, user_staking_limits, staking_products
+--   - loan_applications
 --   - crypto_prices, crypto_logos
 --   - kyc_verifications, kyc_documents
 --   - deposit_requests, withdraw_requests
@@ -1916,7 +1957,7 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - broadcast_notifications, broadcast_delivery_logs
 --
 -- Indexes: 30+
--- RLS Policies: 60+
+-- RLS Policies: 65+
 -- Storage Buckets: 6
 --   - avatars (public)
 --   - kyc-documents (private)
@@ -1925,8 +1966,8 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 --   - withdraw-screenshots (private)
 --   - news-images (public)
 --
--- Version: 2.3.0
--- Last Updated: 2025-06-14
+-- Version: 2.4.0
+-- Last Updated: 2026-03-30
 -- Compatible with: Supabase PostgreSQL 15+
 --
 -- ************************************************************

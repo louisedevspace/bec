@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -690,8 +691,8 @@ export default function FuturesPage() {
 
       {/* Trade Details Modal */}
       {selectedTrade && (
-        <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 ${showTradeDetailsModal ? 'block' : 'hidden'}`}>
-          <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-5 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <Dialog open={showTradeDetailsModal} onOpenChange={(open) => { if (!open) setShowTradeDetailsModal(false); }}>
+          <DialogContent className="max-w-md p-5" hideCloseButton>
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-base font-semibold text-white">Trade Details</h3>
               <button onClick={() => setShowTradeDetailsModal(false)}
@@ -826,8 +827,8 @@ export default function FuturesPage() {
                 Close
               </Button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

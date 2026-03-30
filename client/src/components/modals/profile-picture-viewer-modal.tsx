@@ -30,7 +30,7 @@ export function ProfilePictureViewerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="admin-dialog max-w-2xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             Profile Picture - {userName}

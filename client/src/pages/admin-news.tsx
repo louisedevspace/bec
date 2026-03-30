@@ -1073,7 +1073,7 @@ export default function AdminNews() {
 
         {/* ─── CREATE/EDIT DIALOG ───────────────────────── */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="admin-dialog bg-[#111] border-[#1e1e1e] max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl">
             <DialogHeader>
               <DialogTitle className="text-white">{editingNews ? 'Edit News' : 'Create News'}</DialogTitle>
               <DialogDescription className="text-gray-400">
@@ -1314,7 +1314,7 @@ export default function AdminNews() {
 
         {/* ─── CONFIRM DIALOG ──────────────────────────── */}
         <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-          <DialogContent className="admin-dialog bg-[#111] border-[#1e1e1e] max-w-md">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-white">{confirmAction?.title}</DialogTitle>
               <DialogDescription className="text-gray-400">{confirmAction?.desc}</DialogDescription>
@@ -1329,7 +1329,7 @@ export default function AdminNews() {
 
         {/* ─── CATEGORY DIALOG ─────────────────────────── */}
         <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-          <DialogContent className="admin-dialog bg-[#111] border-[#1e1e1e] max-w-md">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-white">{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
               <DialogDescription className="text-gray-400">Categories help organize your news items.</DialogDescription>
@@ -1363,7 +1363,7 @@ export default function AdminNews() {
 
         {/* ─── TEMPLATE DIALOG ─────────────────────────── */}
         <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-          <DialogContent className="admin-dialog bg-[#111] border-[#1e1e1e] max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[80vh]">
             <DialogHeader>
               <DialogTitle className="text-white">{editingTemplate ? 'Edit Template' : 'New Template'}</DialogTitle>
               <DialogDescription className="text-gray-400">Templates provide reusable styling and content.</DialogDescription>
@@ -1445,7 +1445,7 @@ export default function AdminNews() {
 
         {/* ─── ANALYTICS DETAIL DIALOG ─────────────────── */}
         <Dialog open={!!analyticsNews} onOpenChange={() => { setAnalyticsNews(null); setAnalyticsData(null); }}>
-          <DialogContent className="admin-dialog bg-[#111] border-[#1e1e1e] max-w-lg">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-white">Analytics: {analyticsNews?.title}</DialogTitle>
               <DialogDescription className="text-gray-400">Engagement metrics for this news item</DialogDescription>

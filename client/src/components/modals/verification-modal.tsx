@@ -213,7 +213,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <CheckCircle className="text-primary" size={20} />

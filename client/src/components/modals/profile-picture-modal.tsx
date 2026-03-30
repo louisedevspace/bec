@@ -271,7 +271,7 @@ export function ProfilePictureModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
+      <DialogContent className="max-w-md" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-white text-lg font-semibold">Profile Picture</DialogTitle>

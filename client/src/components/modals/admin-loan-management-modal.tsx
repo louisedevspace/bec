@@ -262,7 +262,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="admin-dialog max-w-6xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <DollarSign className="w-5 h-5 text-blue-400" />
@@ -401,7 +401,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
         {/* Application Details Modal */}
         <Dialog open={showApplicationDetails} onOpenChange={(open) => !open && setShowApplicationDetails(false)}>
-          <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-400" />
@@ -563,7 +563,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
         {/* Rejection Modal */}
         <Dialog open={showRejectionModal} onOpenChange={(open) => !open && setShowRejectionModal(false)}>
-          <DialogContent className="max-w-md w-[95vw] bg-[#111] border border-[#1e1e1e] text-white">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-400" />

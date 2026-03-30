@@ -31,7 +31,7 @@ export function StakingDetailsModal({ isOpen, onClose, position }: StakingDetail
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
+      <DialogContent className="sm:max-w-md" hideCloseButton>
         {/* Custom Header - Fixed Position */}
         <div className="fixed top-0 left-0 right-0 bg-[#111] border-b border-[#1e1e1e] px-5 py-4 flex items-center justify-between z-50">
           <div className="flex items-center gap-3">

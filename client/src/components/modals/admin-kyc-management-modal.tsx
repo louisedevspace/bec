@@ -204,7 +204,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog max-w-6xl max-h-[90vh] overflow-y-auto pr-2 bg-[#111] border-[#1e1e1e] text-white" hideCloseButton>
+        <DialogContent className="max-w-6xl pr-2" hideCloseButton>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Shield className="h-5 w-5 text-blue-400" />
@@ -442,7 +442,7 @@ export function AdminKYCManagementModal({ isOpen, onClose }: AdminKYCManagementM
 
       {/* Rejection Reason Dialog */}
       <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-        <DialogContent className="admin-dialog max-w-md bg-[#111] border-[#1e1e1e] text-white" hideCloseButton>
+        <DialogContent className="max-w-md" hideCloseButton>
           <DialogHeader>
             <DialogTitle className="text-white">Reject KYC Request</DialogTitle>
           </DialogHeader>

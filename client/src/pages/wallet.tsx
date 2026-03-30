@@ -10,6 +10,7 @@ import { ConvertModal } from "@/components/modals/convert-modal";
 import { PortfolioModal } from "@/components/modals/portfolio-modal";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import {
   Wallet, ArrowDownLeft, ArrowUpRight,
@@ -622,10 +623,9 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
       </div>
 
       {/* Transaction Detail Modal */}
-      {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setSelectedTx(null)}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative bg-[#111] border border-[#1e1e1e] rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <Dialog open={!!selectedTx} onOpenChange={(open) => !open && setSelectedTx(null)}>
+        <DialogContent className="max-w-md p-0" hideCloseButton>
+          {selectedTx && (<>
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#1e1e1e]">
               <div className="flex items-center gap-3">
@@ -738,9 +738,9 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>)}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

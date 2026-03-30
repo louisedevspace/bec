@@ -205,7 +205,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm sm:max-w-md max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0">
+      <DialogContent className="max-w-sm sm:max-w-md p-0">
         <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
           <DialogTitle className="text-base md:text-lg text-white">
             {step === 1 ? "Withdraw" : "Confirm Withdrawal"}

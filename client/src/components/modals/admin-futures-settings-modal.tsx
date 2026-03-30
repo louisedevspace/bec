@@ -118,7 +118,7 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="admin-dialog max-w-md bg-[#111] border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2 text-white">
             <TrendingUp className="h-5 w-5 text-blue-400" />

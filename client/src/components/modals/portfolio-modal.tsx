@@ -124,7 +124,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0">
+      <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl p-0">
         <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
           <DialogTitle className="text-base md:text-lg text-white">Portfolio</DialogTitle>
         </DialogHeader>

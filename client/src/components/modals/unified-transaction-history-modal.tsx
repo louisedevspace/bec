@@ -190,7 +190,7 @@ export function UnifiedTransactionHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white" hideCloseButton>
+      <DialogContent className="max-w-4xl" hideCloseButton>
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">
             Transaction History

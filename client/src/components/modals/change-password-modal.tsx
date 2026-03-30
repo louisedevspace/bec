@@ -106,7 +106,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-[#111] border-[#1e1e1e] text-white" hideCloseButton>
+      <DialogContent className="max-w-md" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-white text-lg font-semibold">Change Password</DialogTitle>

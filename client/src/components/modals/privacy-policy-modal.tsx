@@ -555,7 +555,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl max-h-[95vh] overflow-y-auto bg-[#111] border border-[#1e1e1e] text-white p-0" hideCloseButton>
+      <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl p-0" hideCloseButton>
         <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
           <DialogTitle className="text-base md:text-lg font-bold text-center text-white">
             Becxus Legal Agreements

@@ -332,7 +332,7 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm mx-auto bg-[#111] border border-[#1e1e1e] text-white shadow-2xl p-0" hideCloseButton>
+      <DialogContent className="max-w-sm mx-auto shadow-2xl p-0" hideCloseButton>
         <DialogHeader className="relative p-6 pb-4">
           <DialogTitle className="text-center text-lg font-semibold text-white flex items-center justify-center gap-2">
             <CryptoIcon symbol={tradeData.symbol?.split('/')[0] || tradeData.symbol} size="sm" />

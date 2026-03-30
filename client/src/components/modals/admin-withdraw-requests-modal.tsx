@@ -189,7 +189,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-white">Withdraw Requests</DialogTitle>
           </DialogHeader>
@@ -204,7 +204,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   if (error) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-white">Withdraw Requests</DialogTitle>
           </DialogHeader>
@@ -219,7 +219,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-white">Withdraw Requests</DialogTitle>
           </DialogHeader>
@@ -303,7 +303,7 @@ export function AdminWithdrawRequestsModal({ isOpen, onClose }: AdminWithdrawReq
       {/* Review Modal */}
       {showReviewModal && selectedRequest && (
         <Dialog open={showReviewModal} onOpenChange={() => setShowReviewModal(false)}>
-          <DialogContent className="admin-dialog sm:max-w-md bg-[#111] border-[#1e1e1e] text-white">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="text-white">
                 {action === 'approve' ? 'Approve' : 'Reject'} Withdraw Request

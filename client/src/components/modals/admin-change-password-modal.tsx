@@ -108,7 +108,7 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="admin-dialog max-w-md bg-[#111] border-[#1e1e1e] text-white">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white text-xl">Change User Password</DialogTitle>
           <DialogDescription className="text-gray-400">

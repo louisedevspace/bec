@@ -171,7 +171,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog max-w-4xl max-h-[90vh] overflow-y-auto bg-[#111] border-[#1e1e1e] text-white" hideCloseButton>
+        <DialogContent className="max-w-4xl" hideCloseButton>
           <DialogHeader>
             <DialogTitle className="text-white">Deposit Requests Management</DialogTitle>
           </DialogHeader>
@@ -263,7 +263,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
 
       {/* Review Modal */}
       <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
-        <DialogContent className="admin-dialog max-w-md bg-[#111] border-[#1e1e1e] text-white" hideCloseButton>
+        <DialogContent className="max-w-md" hideCloseButton>
           <DialogHeader>
             <DialogTitle className="text-white">
               {action === 'approve' ? 'Approve' : 'Reject'} Deposit Request

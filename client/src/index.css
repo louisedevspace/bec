@@ -123,7 +123,7 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   html, body {
@@ -294,25 +294,6 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
 /* Ensure dialogs and modals also have transparent scrollbars */
 [role="dialog"] {
   scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
-}
-
-/* Admin dialog white theme overrides (portals render outside layout, so scope via class) */
-.admin-dialog {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --card: 0 0% 98%;
-  --card-foreground: 0 0% 9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 9%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
-  --ring: 217 91% 60%;
 }
 
 /* Animated steel gradient for homepage */

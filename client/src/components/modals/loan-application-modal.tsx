@@ -150,7 +150,7 @@ export const LoanApplicationModal: React.FC<LoanApplicationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111] border border-[#1e1e1e] max-w-md max-h-[90vh] overflow-y-auto text-white" hideCloseButton>
+      <DialogContent className="max-w-md" hideCloseButton>
         <DialogHeader>
           <DialogTitle className="text-white">Apply for Loan</DialogTitle>
         </DialogHeader>
