@@ -34,6 +34,7 @@ export const REDIS_KEYS = {
   WALLET_SUMMARY: 'cache:wallet-summary:', // cache:wallet-summary:{userId}
   PORTFOLIO: 'cache:portfolio:', // cache:portfolio:{userId}
   ADMIN_SUPPORT_UNREAD: 'cache:admin:support-unread',
+  STAKING_PRODUCTS: 'cache:staking-products',
 } as const;
 
 /**
@@ -46,6 +47,7 @@ export const CACHE_TTL = {
   WALLET_SUMMARY: 30, // 30 seconds - financial data, short TTL
   PORTFOLIO: 15, // 15 seconds - very short for balance accuracy
   ADMIN_SUPPORT_UNREAD: 10, // 10 seconds - for badge count freshness
+  STAKING_PRODUCTS: 300, // 5 minutes - staking products rarely change
 } as const;
 
 /**

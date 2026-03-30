@@ -61,7 +61,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
     enabled: isOpen && !!userId,
   });
 
-  const stakingProducts: StakingProduct[] = [
+  const DEFAULT_STAKING_PRODUCTS: StakingProduct[] = [
     { duration: 7, apy: "0.5", minAmount: "10", maxAmount: "10000", title: "7 Days" },
     { duration: 15, apy: "0.8", minAmount: "100", maxAmount: "50000", title: "15 Days" },
     { duration: 30, apy: "1.2", minAmount: "500", maxAmount: "100000", title: "30 Days" },
@@ -69,6 +69,27 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
     { duration: 90, apy: "2.5", minAmount: "5000", maxAmount: "1000000", title: "90 Days" },
     { duration: 180, apy: "4.0", minAmount: "10000", maxAmount: "5000000", title: "180 Days" },
   ];
+
+  // Fetch staking products from API, fallback to defaults
+  const { data: apiProducts } = useQuery<any[]>({
+    queryKey: ["/api/staking-products"],
+    queryFn: async () => {
+      const res = await fetch("/api/staking-products");
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const stakingProducts: StakingProduct[] = apiProducts && apiProducts.length > 0
+    ? apiProducts.map((p: any) => ({
+        duration: p.duration,
+        apy: p.apy,
+        minAmount: p.min_amount,
+        maxAmount: p.max_amount,
+        title: p.title,
+      }))
+    : DEFAULT_STAKING_PRODUCTS;
 
   const { data: positions, isLoading: positionsLoading } = useQuery({
     queryKey: ["/api/staking", userId],
@@ -248,14 +269,16 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     const stakingDisabled = stakingLimits && !stakingLimits.isEnabled;
                     const durationExceeded = stakingLimits?.maxDuration ? product.duration > stakingLimits.maxDuration : false;
                     const isProductDisabled = !userId || stakingDisabled || durationExceeded;
+                    const highestApy = Math.max(...stakingProducts.map(p => parseFloat(p.apy)));
+                    const isBest = parseFloat(product.apy) === highestApy;
 
                     return (
-                    <div 
+                    <div
                       key={index}
                       className={`relative bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${isProductDisabled ? 'opacity-50 pointer-events-none' : ''}`}
                       onClick={() => !isProductDisabled && handleStake(product)}
                     >
-                      {product.apy === "4.0" && (
+                      {isBest && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-[10px] font-bold px-2 py-0.5 rounded-full text-black">
                           BEST
                         </div>

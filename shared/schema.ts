@@ -123,6 +123,20 @@ export const userStakingLimits = pgTable("user_staking_limits", {
   updatedBy: text("updated_by"),               // admin user ID
 });
 
+// Staking Products — admin-configurable staking product list
+export const stakingProducts = pgTable("staking_products", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(), // e.g. "7 Days", "30 Days"
+  duration: integer("duration").notNull(), // days
+  apy: decimal("apy", { precision: 5, scale: 2 }).notNull(), // e.g. 0.50, 4.00
+  minAmount: decimal("min_amount", { precision: 20, scale: 8 }).notNull(),
+  maxAmount: decimal("max_amount", { precision: 20, scale: 8 }).notNull(),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const loanApplications = pgTable("loan_applications", {
   id: serial("id").primaryKey(),
   user_id: text("user_id").notNull(),
@@ -265,6 +279,12 @@ export const insertUserStakingLimitSchema = createInsertSchema(userStakingLimits
   updatedBy: true,
 });
 
+export const insertStakingProductSchema = createInsertSchema(stakingProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTradingPairSchema = createInsertSchema(tradingPairs).omit({
   id: true,
   createdAt: true,
@@ -338,6 +358,9 @@ export type InsertUserTradingLimit = z.infer<typeof insertUserTradingLimitSchema
 
 export type UserStakingLimit = typeof userStakingLimits.$inferSelect;
 export type InsertUserStakingLimit = z.infer<typeof insertUserStakingLimitSchema>;
+
+export type StakingProduct = typeof stakingProducts.$inferSelect;
+export type InsertStakingProduct = z.infer<typeof insertStakingProductSchema>;
 
 export const withdrawRequests = pgTable("withdraw_requests", {
   id: serial("id").primaryKey(),

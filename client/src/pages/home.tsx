@@ -42,6 +42,7 @@ export default function HomePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [, setLocation] = useLocation();
+  const [stakingInfo, setStakingInfo] = useState({ maxApy: "4.0", durationRange: "7-180", minStake: "10" });
 
   const openModal = (modalId: string) => {
     // Financial modals now live on the wallet page — navigate with deep-link params
@@ -69,6 +70,25 @@ export default function HomePage() {
       }
     };
     getCurrentUser();
+  }, []);
+
+  // Fetch staking products for dynamic display
+  useEffect(() => {
+    fetch("/api/staking-products")
+      .then(res => res.ok ? res.json() : [])
+      .then((products: any[]) => {
+        if (products.length > 0) {
+          const apys = products.map(p => parseFloat(p.apy));
+          const durations = products.map(p => p.duration);
+          const mins = products.map(p => parseFloat(p.min_amount));
+          setStakingInfo({
+            maxApy: Math.max(...apys).toFixed(1),
+            durationRange: `${Math.min(...durations)}-${Math.max(...durations)}`,
+            minStake: Math.min(...mins).toLocaleString(),
+          });
+        }
+      })
+      .catch(() => {}); // keep defaults on error
   }, []);
 
   const handleStartTrading = () => {
@@ -134,7 +154,7 @@ export default function HomePage() {
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-2">
-                    <span className="text-green-400 font-bold text-2xl">4.0%</span>
+                    <span className="text-green-400 font-bold text-2xl">{stakingInfo.maxApy}%</span>
                     <span className="text-gray-500 text-sm">APY</span>
                   </div>
                   <div className="text-gray-500 text-xs mt-0.5">Max Return</div>
@@ -147,13 +167,13 @@ export default function HomePage() {
                     <div className="w-6 h-6 bg-blue-500/10 rounded-lg flex items-center justify-center">
                       <span className="text-blue-400 text-xs">🔒</span>
                     </div>
-                    <span className="text-gray-400">7-180 Days</span>
+                    <span className="text-gray-400">{stakingInfo.durationRange} Days</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center">
                       <span className="text-green-400 text-xs">$</span>
                     </div>
-                    <span className="text-gray-400">Min $10</span>
+                    <span className="text-gray-400">Min ${stakingInfo.minStake}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-blue-400 text-sm font-medium group-hover:gap-3 transition-all">

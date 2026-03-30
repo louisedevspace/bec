@@ -30,8 +30,34 @@ export default function registerStakingRoutes(app: Express) {
       const validatedData = insertStakingPositionSchema.parse(req.body);
       (validatedData as any).userId = userId;
 
-      // Note: Staking validation uses product-level limits (hardcoded per-product min/max/APY)
-      // No per-user staking limits are enforced
+      // Validate against staking products table
+      const stakeAmount = parseFloat(validatedData.amount);
+      const stakeDuration = validatedData.duration;
+      const stakeApy = parseFloat(validatedData.apy);
+
+      const { data: product } = await supabaseAdmin
+        .from("staking_products")
+        .select("*")
+        .eq("duration", stakeDuration)
+        .eq("is_enabled", true)
+        .single();
+
+      if (product) {
+        // Validate APY matches the product
+        const productApy = parseFloat(product.apy);
+        if (Math.abs(stakeApy - productApy) > 0.01) {
+          return res.status(400).json({ message: "Invalid APY for the selected staking duration" });
+        }
+        // Validate amount within product limits
+        const minAmount = parseFloat(product.min_amount);
+        const maxAmount = parseFloat(product.max_amount);
+        if (stakeAmount < minAmount) {
+          return res.status(400).json({ message: `Minimum staking amount for this product is ${minAmount} USDT` });
+        }
+        if (stakeAmount > maxAmount) {
+          return res.status(400).json({ message: `Maximum staking amount for this product is ${maxAmount} USDT` });
+        }
+      }
 
       // Check balance
       const { data: portfolio } = await supabaseAdmin
@@ -46,7 +72,6 @@ export default function registerStakingRoutes(app: Express) {
       }
 
       const availableBalance = parseFloat(portfolio.available);
-      const stakeAmount = parseFloat(validatedData.amount);
 
       if (availableBalance < stakeAmount) {
         return res.status(400).json({
