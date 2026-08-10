@@ -1,0 +1,746 @@
+import { useState, useEffect, useMemo } from "react";
+import { formatDateTime } from '@/lib/date-utils';
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
+import { formatUsdNumber, formatCryptoNumber } from "@/utils/format-utils";
+import { DepositModal } from "@/components/modals/deposit-modal";
+import { WithdrawModal } from "@/components/modals/withdraw-modal";
+import { ConvertModal } from "@/components/modals/convert-modal";
+import { PortfolioModal } from "@/components/modals/portfolio-modal";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+import {
+  Wallet, ArrowDownLeft, ArrowUpRight,
+  RefreshCw, Lock, Eye, EyeOff, Clock, Search, PieChart,
+  History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
+  Plus, Send, Snowflake, Info, X,
+  ChevronLeft, ChevronRight
+} from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+
+interface WalletAsset {
+  symbol: string;
+  available: number;
+  frozen: number;
+  total: number;
+  price: number;
+  usdValue: number;
+  change24h: number;
+}
+
+interface WalletTransaction {
+  id: string;
+  type: "deposit" | "withdrawal" | "trade" | "futures";
+  symbol: string;
+  amount: number;
+  feeAmount?: number;
+  feeSymbol?: string;
+  feeRate?: number;
+  netAmount?: number;
+  price?: number;
+  side?: string;
+  status: string;
+  date: string;
+  result?: number;
+  walletAddress?: string;
+}
+
+interface WalletSummary {
+  assets: WalletAsset[];
+  totalValue: number;
+  totalDeposited: number;
+  totalWithdrawn: number;
+  tradePnl: number;
+  futuresPnl: number;
+  estimatedPnl: number;
+  totalPnl: number;
+  walletLocked: boolean;
+  staking: any[];
+  transactions: WalletTransaction[];
+  transactionCounts: {
+    deposits: number;
+    withdrawals: number;
+    trades: number;
+    futures: number;
+  };
+  analytics?: {
+    fees: {
+      total: number;
+      trading: number;
+      deposit: number;
+      withdrawal: number;
+    };
+    trading: {
+      totalTrades: number;
+      executedTrades: number;
+      pendingTrades: number;
+      cancelledTrades: number;
+      buyCount: number;
+      sellCount: number;
+      buyVolume: number;
+      sellVolume: number;
+      totalVolume: number;
+      avgTradeSize: number;
+      profitableTrades: number;
+      topTradedPairs: { symbol: string; count: number; volume: number }[];
+    };
+    futures: {
+      totalFutures: number;
+      completedFutures: number;
+      wins: number;
+      losses: number;
+      winRate: number;
+      totalVolume: number;
+      pnl: number;
+      biggestWin: number;
+      biggestLoss: number;
+    };
+    portfolio: {
+      totalAssets: number;
+      totalValue: number;
+      totalDeposited: number;
+      totalWithdrawn: number;
+      netFlow: number;
+    };
+    monthlyPerformance: { month: string; trades: number; volume: number; pnl: number; fees: number }[];
+  };
+}
+
+export default function WalletPage() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hideBalances, setHideBalances] = useState(false);
+  const [activeTab, setActiveTab] = useState<"assets" | "history">("assets");
+  const [txFilter, setTxFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [historyDateRange, setHistoryDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize, setHistoryPageSize] = useState(25);
+
+  // Parse URL params for deep-linking (e.g. /wallet?action=deposit&tab=history)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    const tab = params.get("tab");
+    if (action && ["deposit", "withdraw", "convert", "portfolio"].includes(action)) {
+      setActiveModal(action);
+    }
+    if (tab && ["assets", "history"].includes(tab)) {
+      setActiveTab(tab as "assets" | "history");
+    }
+    // Clean URL params after reading
+    if (action || tab) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
+
+  // Clear notification badge when visiting wallet page
+  useEffect(() => {
+    const markDepositsSeen = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        
+        await fetch("/api/deposit-requests/mark-seen", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+        });
+      } catch {
+        // Silent - non-critical
+      }
+    };
+    markDepositsSeen();
+  }, []);
+
+  const { data: wallet, isLoading, refetch } = useQuery<WalletSummary>({
+    queryKey: ["/api/wallet/summary"],
+    queryFn: () => apiRequest("GET", "/api/wallet/summary").then(r => r.json()),
+    enabled: !!userId,
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+
+  const filteredAssets = useMemo(() => {
+    if (!wallet?.assets) return [];
+    let items = wallet.assets.filter(a => a.total > 0 || a.usdValue > 0);
+    if (searchQuery) {
+      items = items.filter(a => a.symbol.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return items;
+  }, [wallet?.assets, searchQuery]);
+
+  const filteredTransactions = useMemo(() => {
+    if (!wallet?.transactions) return [];
+    let items = wallet.transactions;
+    if (txFilter !== "all") {
+      items = items.filter(t => t.type === txFilter);
+    }
+    if (historySearch) {
+      const q = historySearch.toLowerCase();
+      items = items.filter(t => t.symbol.toLowerCase().includes(q) || t.type.toLowerCase().includes(q) || t.status.toLowerCase().includes(q));
+    }
+    if (historyDateRange.from) {
+      items = items.filter(t => new Date(t.date) >= historyDateRange.from!);
+    }
+    if (historyDateRange.to) {
+      const endOfDay = new Date(historyDateRange.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      items = items.filter(t => new Date(t.date) <= endOfDay);
+    }
+    return items;
+  }, [wallet?.transactions, txFilter, historySearch, historyDateRange]);
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredTransactions.length / historyPageSize));
+  const paginatedTransactions = filteredTransactions.slice(historyPage * historyPageSize, (historyPage + 1) * historyPageSize);
+
+  useEffect(() => { setHistoryPage(0); }, [txFilter, historySearch, historyDateRange, historyPageSize]);
+
+  
+
+  const bal = (v: number) => hideBalances ? "••••••" : `$${formatUsdNumber(v)}`;
+  const cryptoBal = (v: number) => hideBalances ? "••••" : formatCryptoNumber(v);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <div className="max-w-5xl mx-auto w-full px-4 py-6 space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 animate-pulse">
+              <div className="h-6 w-32 bg-[#1a1a1a] rounded mb-3" />
+              <div className="h-8 w-48 bg-[#1a1a1a] rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!wallet) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="text-center">
+          <Wallet size={48} className="text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">Unable to load wallet</p>
+          <button onClick={() => refetch()} className="mt-4 text-blue-400 text-sm hover:text-blue-300">Try again</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border-b border-[#1e1e1e] px-4 py-5">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                <Wallet size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">My Wallet</h1>
+                <p className="text-xs text-gray-500">Portfolio & Transactions</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setHideBalances(!hideBalances)} className="p-2 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#222] transition-colors">
+                {hideBalances ? <EyeOff size={16} className="text-gray-400" /> : <Eye size={16} className="text-gray-400" />}
+              </button>
+              <button onClick={() => refetch()} className="p-2 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#222] transition-colors">
+                <RefreshCw size={16} className="text-gray-400" />
+              </button>
+            </div>
+          </div>
+
+          {/* Wallet Lock Warning */}
+          {wallet.walletLocked && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+              <Lock size={16} className="text-red-400" />
+              <span className="text-red-400 text-sm font-medium">Your wallet is currently locked. Contact support for assistance.</span>
+            </div>
+          )}
+
+          {/* Total Balance Card */}
+          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
+            <p className="text-xs text-gray-500 mb-1">Total Portfolio Value</p>
+            <div className="flex items-baseline gap-3 mb-4">
+              <span className="text-3xl font-bold text-white tabular-nums">{bal(wallet.totalValue)}</span>
+              <span className={`text-sm font-medium ${wallet.estimatedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {wallet.estimatedPnl >= 0 ? '+' : ''}{hideBalances ? '••••' : `$${formatUsdNumber(Math.abs(wallet.estimatedPnl))}`}
+              </span>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-4 gap-3 mt-4">
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("deposit")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
+                }`}
+              >
+                <Plus size={18} className={wallet.walletLocked ? "text-gray-500" : "text-green-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-green-400"}`}>Deposit</span>
+              </button>
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("withdraw")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
+                }`}
+              >
+                <Send size={18} className={wallet.walletLocked ? "text-gray-500" : "text-red-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-red-400"}`}>Withdraw</span>
+              </button>
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("convert")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-[#0a0a0a] border-[#1e1e1e] opacity-50 cursor-not-allowed'
+                    : 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20'
+                }`}
+              >
+                <ArrowRightLeft size={18} className={wallet.walletLocked ? "text-gray-500" : "text-blue-400"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-gray-500" : "text-blue-400"}`}>Convert</span>
+              </button>
+              <button
+                onClick={() => setActiveModal("portfolio")}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl border bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+              >
+                <PieChart size={18} className="text-purple-400" />
+                <span className="text-xs font-medium text-purple-400">Portfolio</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="flex gap-1 mt-4 bg-[#111] rounded-xl border border-[#1e1e1e] p-1">
+          {[
+            { id: "assets", label: "Assets", icon: Wallet },
+            { id: "history", label: "History", icon: History },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-[#1a1a1a] text-white border border-[#2a2a2a]'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Assets Tab */}
+        {activeTab === "assets" && (
+          <div className="mt-4 space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search assets..."
+                className="w-full bg-[#111] border border-[#1e1e1e] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2a2a2a]"
+              />
+            </div>
+
+            {/* Asset List */}
+            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+              {filteredAssets.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Wallet size={32} className="text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">No assets found</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#1e1e1e]">
+                  {filteredAssets.map(asset => (
+                    <div key={asset.symbol}>
+                      <button
+                        onClick={() => setExpandedAsset(expandedAsset === asset.symbol ? null : asset.symbol)}
+                        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#1a1a1a]/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <CryptoIcon symbol={asset.symbol} size="md" />
+                          <div className="text-left">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-white">{asset.symbol}</p>
+                              {asset.frozen > 0 && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded">
+                                  <Snowflake size={10} /> Frozen
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">{cryptoBal(asset.total)} {asset.symbol}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-white tabular-nums">{bal(asset.usdValue)}</p>
+                            <p className={`text-xs ${asset.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {asset.change24h >= 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
+                            </p>
+                          </div>
+                          {expandedAsset === asset.symbol ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
+                        </div>
+                      </button>
+
+                      {/* Expanded Detail */}
+                      {expandedAsset === asset.symbol && (
+                        <div className="px-4 pb-3 bg-[#0a0a0a] border-t border-[#1e1e1e]">
+                          <div className="grid grid-cols-3 gap-3 pt-3">
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Available</p>
+                              <p className="text-xs font-medium text-white">{cryptoBal(asset.available)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Frozen</p>
+                              <p className="text-xs font-medium text-yellow-400">{asset.frozen > 0 ? cryptoBal(asset.frozen) : '0'}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 mb-0.5">Price</p>
+                              <p className="text-xs font-medium text-white">${formatUsdNumber(asset.price)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* History Tab */}
+        {activeTab === "history" && (
+          <div className="mt-4 space-y-3">
+            {/* Filter Row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[160px]">
+                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  placeholder="Search symbol, type..."
+                  className="w-full bg-[#111] border border-[#1e1e1e] rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#2a2a2a]"
+                />
+              </div>
+              <DateRangePicker value={historyDateRange} onChange={setHistoryDateRange} />
+            </div>
+
+            {/* Type Filter Tabs */}
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {[
+                { id: "all", label: "All" },
+                { id: "deposit", label: "Deposits" },
+                { id: "withdrawal", label: "Withdrawals" },
+                { id: "trade", label: "Trades" },
+                { id: "futures", label: "Futures" },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setTxFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    txFilter === f.id
+                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      : 'bg-[#111] text-gray-500 border border-[#1e1e1e] hover:text-gray-300'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Transaction List */}
+            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+              <TransactionList transactions={paginatedTransactions} hideBalances={hideBalances} />
+
+              {/* Pagination */}
+              {filteredTransactions.length > 0 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#1e1e1e]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-600">{filteredTransactions.length} total</span>
+                    <select
+                      value={historyPageSize}
+                      onChange={e => setHistoryPageSize(Number(e.target.value))}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 focus:outline-none"
+                    >
+                      {[10, 25, 50].map(s => <option key={s} value={s}>{s}/page</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
+                      disabled={historyPage === 0}
+                      className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronLeft size={14} className="text-gray-400" />
+                    </button>
+                    <span className="text-[10px] text-gray-500 px-2">{historyPage + 1} / {historyTotalPages}</span>
+                    <button
+                      onClick={() => setHistoryPage(p => Math.min(historyTotalPages - 1, p + 1))}
+                      disabled={historyPage >= historyTotalPages - 1}
+                      className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+                    >
+                      <ChevronRight size={14} className="text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <DepositModal
+        isOpen={activeModal === "deposit"}
+        onClose={() => setActiveModal(null)}
+      />
+      <WithdrawModal
+        isOpen={activeModal === "withdraw"}
+        onClose={() => setActiveModal(null)}
+      />
+      <ConvertModal
+        isOpen={activeModal === "convert"}
+        onClose={() => setActiveModal(null)}
+        userId={userId}
+      />
+      <PortfolioModal
+        isOpen={activeModal === "portfolio"}
+        onClose={() => setActiveModal(null)}
+      />
+    </div>
+  );
+}
+
+function TransactionList({ transactions, hideBalances }: { transactions: WalletTransaction[]; hideBalances: boolean }) {
+  const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
+
+  if (transactions.length === 0) {
+    return <p className="text-gray-600 text-sm text-center py-6">No transactions found</p>;
+  }
+
+  const getTypeConfig = (tx: WalletTransaction) => {
+    switch (tx.type) {
+      case "deposit":
+        return { icon: ArrowDownLeft, color: "text-green-400", bg: "bg-green-500/10", label: "Deposit" };
+      case "withdrawal":
+        return { icon: ArrowUpRight, color: "text-red-400", bg: "bg-red-500/10", label: "Withdrawal" };
+      case "trade":
+        return { icon: ArrowRightLeft, color: "text-blue-400", bg: "bg-blue-500/10", label: `${tx.side?.toUpperCase()} Trade` };
+      case "futures":
+        return { icon: Zap, color: "text-purple-400", bg: "bg-purple-500/10", label: `Futures ${tx.side?.toUpperCase() || ''}` };
+      default:
+        return { icon: Clock, color: "text-gray-400", bg: "bg-gray-500/10", label: tx.type };
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": case "completed": case "closed": return "text-green-400 bg-green-500/10";
+      case "pending": return "text-yellow-400 bg-yellow-500/10";
+      case "rejected": case "failed": return "text-red-400 bg-red-500/10";
+      default: return "text-gray-400 bg-gray-500/10";
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        {transactions.map(tx => {
+          const config = getTypeConfig(tx);
+          const Icon = config.icon;
+          return (
+            <div key={tx.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#1a1a1a]/50 transition-colors">
+              <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                <Icon size={16} className={config.color} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-white">{config.label}</span>
+                  <CryptoIcon symbol={tx.symbol?.split("/")[0] || tx.symbol} size="xs" />
+                  <span className="text-xs text-gray-500">{tx.symbol}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-gray-600">
+                    {formatDateTime(tx.date)}
+                  </span>
+                  <StatusBadge status={tx.status} size="sm" showIcon={false} />
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 flex items-center gap-2">
+                <div>
+                  <p className={`text-sm font-medium tabular-nums ${
+                    tx.type === "deposit" ? "text-green-400" :
+                    tx.type === "withdrawal" ? "text-red-400" : "text-white"
+                  }`}>
+                    {hideBalances ? "••••" : `${tx.type === "deposit" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
+                  </p>
+                  {!hideBalances && typeof tx.feeAmount === "number" && tx.feeAmount > 0 && (
+                    <p className="text-[10px] text-amber-400">
+                      Fee: {formatCryptoNumber(tx.feeAmount)} {tx.feeSymbol || tx.symbol}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedTx(tx)}
+                  className="w-6 h-6 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#222] transition-colors flex-shrink-0"
+                >
+                  <Info size={12} className="text-gray-400" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Transaction Detail Modal */}
+      <Dialog open={!!selectedTx} onOpenChange={(open) => !open && setSelectedTx(null)}>
+        <DialogContent className="max-w-md p-0" hideCloseButton>
+          {selectedTx && (<>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#1e1e1e]">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl ${getTypeConfig(selectedTx).bg} flex items-center justify-center`}>
+                  {(() => { const Ic = getTypeConfig(selectedTx).icon; return <Ic size={18} className={getTypeConfig(selectedTx).color} />; })()}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">{getTypeConfig(selectedTx).label}</h3>
+                  <p className="text-[10px] text-gray-500">ID: #{selectedTx.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedTx(null)} className="w-7 h-7 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#222] transition-colors">
+                <X size={14} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              {/* Status & Date */}
+              <div className="flex items-center justify-between">
+                <StatusBadge status={selectedTx.status} size="md" />
+                <span className="text-xs text-gray-500">{formatDateTime(selectedTx.date)}</span>
+              </div>
+
+              {/* Asset Info */}
+              <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <CryptoIcon symbol={selectedTx.symbol?.split("/")[0] || selectedTx.symbol} size="sm" />
+                  <span className="text-sm font-medium text-white">{selectedTx.symbol}</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Amount</span>
+                    <span className={`font-medium ${selectedTx.type === "deposit" ? "text-green-400" : selectedTx.type === "withdrawal" ? "text-red-400" : "text-white"}`}>
+                      {selectedTx.type === "deposit" ? "+" : selectedTx.type === "withdrawal" ? "-" : ""}{formatCryptoNumber(selectedTx.amount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}
+                    </span>
+                  </div>
+                  {selectedTx.price != null && selectedTx.price > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Price</span>
+                      <span className="text-white">${formatUsdNumber(selectedTx.price)}</span>
+                    </div>
+                  )}
+                  {selectedTx.price != null && selectedTx.price > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Total Value</span>
+                      <span className="text-white">${formatUsdNumber(selectedTx.amount * selectedTx.price)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fee Breakdown */}
+              {typeof selectedTx.feeAmount === "number" && selectedTx.feeAmount > 0 && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Fee Breakdown</p>
+                  <div className="space-y-2">
+                    {selectedTx.feeRate != null && selectedTx.feeRate > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Fee Rate</span>
+                        <span className="text-amber-400">{(selectedTx.feeRate * 100).toFixed(2)}%</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Fee Amount</span>
+                      <span className="text-amber-400">-{formatCryptoNumber(selectedTx.feeAmount)} {selectedTx.feeSymbol || selectedTx.symbol}</span>
+                    </div>
+                    {typeof selectedTx.netAmount === "number" && selectedTx.netAmount > 0 && (
+                      <div className="flex justify-between text-xs pt-2 border-t border-[#1e1e1e]">
+                        <span className="text-gray-500">Net Amount</span>
+                        <span className="text-white font-medium">{formatCryptoNumber(selectedTx.netAmount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* No Fee Info */}
+              {(selectedTx.feeAmount == null || selectedTx.feeAmount === 0) && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Fee Info</p>
+                  <p className="text-xs text-green-400">No fee applied to this transaction</p>
+                </div>
+              )}
+
+              {/* Additional Info */}
+              {(selectedTx.walletAddress || selectedTx.result || selectedTx.side) && (
+                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-medium mb-2">Additional Details</p>
+                  <div className="space-y-2">
+                    {selectedTx.side && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Side</span>
+                        <span className="text-white">{selectedTx.side.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {selectedTx.result && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Result</span>
+                        <span className={selectedTx.result === "win" ? "text-green-400" : "text-red-400"}>{selectedTx.result.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {selectedTx.walletAddress && (
+                      <div className="text-xs">
+                        <span className="text-gray-500 block mb-1">Wallet Address</span>
+                        <span className="text-gray-300 font-mono text-[10px] break-all bg-[#0d0d0d] px-2 py-1 rounded-lg border border-[#1e1e1e] block">{selectedTx.walletAddress}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>)}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

@@ -1,0 +1,366 @@
+import type { Request, Response, NextFunction } from "express";
+import { createClient } from '@supabase/supabase-js';
+import { randomBytes, timingSafeEqual } from 'crypto';
+import { validateSession, getClientIP, getUserAgent, logAuditEvent, invalidateSession } from '../utils/security';
+import { getUserDataCached, invalidateUserCache, type CachedUserData } from '../services/user-cache.service';
+
+// Augment Express Request to include Supabase auth user and session info
+declare global {
+  namespace Express {
+    interface Request {
+      user: {
+        id: string;
+        email?: string;
+        email_confirmed_at?: string | null;
+        [key: string]: any;
+      };
+      sessionInfo?: {
+        userId: string;
+        createdAt: Date;
+        lastActivityAt: Date;
+        ipAddress?: string;
+        userAgent?: string;
+      };
+    }
+  }
+}
+
+export const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+
+// SECURITY FIX M5: RLS guardrails for service role key
+// The service role key bypasses RLS, so we must:
+// 1. Never expose it to the client
+// 2. Always validate user authorization in middleware before service role queries
+// 3. Ensure all sensitive operations are properly scoped with .eq('user_id', ...) filters
+// 4. Log all admin/sensitive operations via audit logging
+// 5. Rate limit and validate all inputs
+// 6. Use proper type checking and input validation
+
+/**
+ * Helper to safely query user data with the service role key.
+ * Always includes the user_id or explicit authorization check.
+ */
+export async function safeServiceRoleQuery(
+  tableName: string,
+  userId: string,
+  column: string = 'user_id'
+): Promise<any> {
+  // This is just documentation - actual queries are done inline
+  // but this pattern should be followed to ensure RLS compliance
+  // Example: supabaseAdmin.from(tableName).select('*').eq(column, userId)
+  return null;
+}
+
+const internalTaskSecret = process.env.INTERNAL_TASK_SECRET || randomBytes(32).toString('hex');
+
+function matchesInternalTaskSecret(headerValue: string | undefined): boolean {
+  if (!headerValue) {
+    return false;
+  }
+
+  const expected = Buffer.from(internalTaskSecret);
+  const received = Buffer.from(headerValue);
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, received);
+}
+
+/**
+ * Auth middleware — verifies Bearer token via Supabase and attaches user to req.
+ * Also validates session for activity tracking and security.
+ * Uses Redis caching for user data to reduce DB queries.
+ */
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Missing Authorization header' });
+  }
+
+  // SECURITY FIX L1: Properly parse Bearer token (case-insensitive, handle whitespace)
+  const token = (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer '))
+    ? authHeader.slice(7).trim()
+    : typeof authHeader === 'string' ? authHeader.trim() : '';
+  const ipAddress = getClientIP(req);
+  const userAgent = getUserAgent(req);
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+
+    req.user = data.user;
+
+    // Use cached user data to avoid DB query on every request
+    const cachedUser = await getUserDataCached(data.user.id, async () => {
+      const { data: userRecord, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id, is_active, role, wallet_locked, email, full_name')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (userError || !userRecord) return null;
+      return userRecord;
+    });
+
+    if (!cachedUser) {
+      return res.status(401).json({ message: 'Account has been deleted. Please contact support.' });
+    }
+
+    if (!cachedUser.isActive) {
+      return res.status(401).json({ message: 'Account has been deactivated. Please contact support.' });
+    }
+
+    // Validate and track session
+    const sessionInfo = await validateSession(token, data.user.id, ipAddress, userAgent);
+    if (!sessionInfo) {
+      // Session expired due to inactivity
+      return res.status(401).json({ message: 'Session expired due to inactivity. Please log in again.' });
+    }
+
+    req.sessionInfo = sessionInfo;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Authentication failed' });
+  }
+}
+
+/**
+ * Admin-only middleware — must run after requireAuth.
+ */
+export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const isAdmin = await hasAdminAccess(userId);
+    if (!isAdmin) {
+      const ipAddress = getClientIP(req);
+      const userAgent = getUserAgent(req);
+      await logAuditEvent({
+        userId,
+        action: 'ADMIN_ACCESS_DENIED',
+        ipAddress,
+        userAgent,
+        status: 'failure',
+      });
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Admin access check failed' });
+  }
+}
+
+/**
+ * Roles allowed to work the support inbox.
+ * 'support' accounts are created by admins from the admin panel and can only
+ * reach the support endpoints — never the rest of the admin surface.
+ */
+export const SUPPORT_STAFF_ROLES: readonly string[] = ['admin', 'support'];
+
+/**
+ * Check if a user may handle support conversations (admin or support agent).
+ * Uses the same Redis-backed user cache as hasAdminAccess.
+ */
+export async function hasSupportAccess(userId: string): Promise<boolean> {
+  try {
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('role, is_active, wallet_locked')
+        .eq('id', userId)
+        .single();
+
+      if (error || !user) return null;
+      return user;
+    });
+
+    return !!cachedUser && SUPPORT_STAFF_ROLES.includes(cachedUser.role);
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Support-staff middleware — allows admins and support agents.
+ * Must run after requireAuth.
+ */
+export async function requireSupportStaff(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const allowed = await hasSupportAccess(userId);
+    if (!allowed) {
+      await logAuditEvent({
+        userId,
+        action: 'SUPPORT_ACCESS_DENIED',
+        ipAddress: getClientIP(req),
+        userAgent: getUserAgent(req),
+        status: 'failure',
+      });
+      return res.status(403).json({ message: 'Support access required' });
+    }
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Support access check failed' });
+  }
+}
+
+export async function requireInternalTask(req: Request, res: Response, next: NextFunction) {
+  const internalKeyHeader = req.headers['x-internal-key'];
+  const internalKey = Array.isArray(internalKeyHeader) ? internalKeyHeader[0] : internalKeyHeader;
+
+  if (matchesInternalTaskSecret(internalKey)) {
+    return next();
+  }
+
+  return requireAuth(req, res, () => requireAdmin(req, res, next));
+}
+
+export function getInternalTaskSecret(): string {
+  return internalTaskSecret;
+}
+
+/**
+ * Verified user middleware — requires confirmed email. Must run after requireAuth.
+ */
+export async function requireVerifiedUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    if (!req.user.email_confirmed_at) {
+      return res.status(403).json({ message: 'Email verification required. Please verify your email first.' });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Verification check failed' });
+  }
+}
+
+/**
+ * Check if user has admin role in the database.
+ * Uses Redis caching to reduce DB queries.
+ */
+export async function hasAdminAccess(userId: string): Promise<boolean> {
+  try {
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('role, is_active, wallet_locked')
+        .eq('id', userId)
+        .single();
+
+      if (error || !user) return null;
+      return user;
+    });
+
+    return cachedUser?.role === 'admin';
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Wallet lock middleware — blocks financial operations when wallet is locked.
+ * Must run after requireAuth. Admins bypass this check.
+ * Uses Redis caching to reduce DB queries.
+ */
+export async function requireUnlockedWallet(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('wallet_locked, role, is_active')
+        .eq('id', userId)
+        .single();
+
+      if (error || !user) return null;
+      return user;
+    });
+
+    if (!cachedUser) {
+      return res.status(503).json({
+        message: 'Unable to verify wallet status. Please try again later.',
+        code: 'WALLET_STATUS_UNAVAILABLE',
+      });
+    }
+
+    // Admins bypass wallet lock
+    if (cachedUser.role === 'admin') {
+      return next();
+    }
+
+    if (cachedUser.walletLocked) {
+      return res.status(403).json({
+        message: 'Your wallet is currently locked. All financial operations are restricted. Please contact support for assistance.',
+        code: 'WALLET_LOCKED',
+      });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(503).json({
+      message: 'Unable to verify wallet status. Please try again later.',
+      code: 'WALLET_STATUS_UNAVAILABLE',
+    });
+  }
+}
+
+/**
+ * Check if a specific asset is frozen for a user.
+ * Returns { frozen: boolean, available: number, frozenAmount: number }
+ */
+export async function checkAssetFrozen(userId: string, symbol: string): Promise<{ frozen: boolean; available: number; frozenAmount: number }> {
+  try {
+    const { data: portfolio } = await supabaseAdmin
+      .from('portfolios')
+      .select('available, frozen')
+      .eq('user_id', userId)
+      .eq('symbol', symbol.toUpperCase())
+      .maybeSingle();
+
+    if (!portfolio) {
+      return { frozen: false, available: 0, frozenAmount: 0 };
+    }
+
+    const available = parseFloat(portfolio.available || '0');
+    const frozenAmount = parseFloat(portfolio.frozen || '0');
+
+    return {
+      frozen: frozenAmount > 0 && available === 0, // Fully frozen
+      available,
+      frozenAmount,
+    };
+  } catch {
+    return { frozen: false, available: 0, frozenAmount: 0 };
+  }
+}
+
+/**
+ * Export session invalidation for logout endpoints
+ */
+export { invalidateSession };
+
+/**
+ * Export user cache invalidation for routes that update user data
+ */
+export { invalidateUserCache };

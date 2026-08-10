@@ -1,0 +1,721 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Illuminated Hero Keyframes ── */
+@keyframes onloadopacity {
+  24% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes onloadbgt {
+  0% { translate: 0 -72%; opacity: 0.3; }
+  100% { translate: 0 -66%; opacity: 0.85; }
+}
+@keyframes onloadbgb {
+  0% { translate: 0 72%; opacity: 0.3; }
+  100% { translate: 0 66%; opacity: 0.85; }
+}
+
+/* ── Illuminated Hero: Eclipse Spheres ──
+   Opaque circles with outer rim glow — like a solar eclipse. */
+
+/* ── Dark theme: black spheres, warm amber rim glow ── */
+.sphere-dark {
+  background: radial-gradient(circle, #050505 0%, #000 70%, #000 100%);
+}
+.sphere-glow-dark-top {
+  box-shadow:
+    0  40px 80px -20px rgba(207, 155, 80, 0.5),
+    0  30px 120px 0px rgba(180, 120, 50, 0.3),
+    0  20px 200px 20px rgba(140, 80, 30, 0.2);
+}
+.sphere-glow-dark-bottom {
+  box-shadow:
+    0 -40px 80px -20px rgba(207, 155, 80, 0.5),
+    0 -30px 120px 0px rgba(180, 120, 50, 0.3),
+    0 -20px 200px 20px rgba(140, 80, 30, 0.2);
+}
+
+/* ── Light theme: white spheres, blue/indigo rim glow ── */
+.sphere-light {
+  background: radial-gradient(circle, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%);
+}
+.sphere-glow-light-top {
+  box-shadow:
+    0  40px 80px -20px rgba(59, 130, 246, 0.45),
+    0  30px 120px 0px rgba(99, 102, 241, 0.3),
+    0  20px 200px 20px rgba(79, 70, 229, 0.18);
+}
+.sphere-glow-light-bottom {
+  box-shadow:
+    0 -40px 80px -20px rgba(59, 130, 246, 0.45),
+    0 -30px 120px 0px rgba(99, 102, 241, 0.3),
+    0 -20px 200px 20px rgba(79, 70, 229, 0.18);
+}
+
+/* Stop global light-mode overrides from breaking hero glow text color */
+html:not(.dark) .hero-glow-text { color: inherit !important; }
+html:not(.dark) .hero-glow-text span { color: inherit !important; }
+
+/* ============================================================
+   LIGHT THEME (default :root values)
+   ============================================================ */
+:root {
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --input-bg: 210 40% 96%;
+  --input-bg-hover: 214 32% 91%;
+  --input-bg-focus: 213 27% 84%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 217 91% 60%;
+  --radius: 0.5rem;
+
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 48 96% 89%;
+  --danger: 0 84% 60%;
+  --danger-foreground: 0 0% 100%;
+}
+
+/* ============================================================
+   DARK THEME (.dark class on <html>)
+   ============================================================ */
+.dark {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 98%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 55%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 98%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 98%;
+  --border: 0 0% 12%;
+  --input: 0 0% 16%;
+  --input-bg: 0 0% 16%;
+  --input-bg-hover: 0 0% 22%;
+  --input-bg-focus: 0 0% 29%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 0 0% 12%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 217 91% 60%;
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  html {
+    background-color: #0a0a0a;
+  }
+  html:not(.dark) {
+    background-color: #f8fafc;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+  
+  input,
+  textarea,
+  select {
+    background-color: hsl(var(--input-bg));
+    color: hsl(var(--foreground));
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+  
+  /* Light gray placeholder text for better UX */
+  input::placeholder,
+  textarea::placeholder,
+  .placeholder-light-gray::placeholder {
+    color: #9ca3af !important; /* Light gray color */
+    opacity: 0.7;
+  }
+  
+  .dark input::placeholder,
+  .dark textarea::placeholder,
+  .dark .placeholder-light-gray::placeholder {
+    color: #6b7280 !important; /* Darker gray for dark mode */
+    opacity: 0.8;
+  }
+  
+  /* Custom Becxus styling */
+  .becxus-bg {
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 100%);
+  }
+  .dark .becxus-bg,
+  .dark.becxus-bg {
+    background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
+  }
+  
+  .crypto-card {
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .crypto-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .modal-backdrop {
+    backdrop-filter: blur(8px);
+  }
+  
+  .gradient-bg {
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 50%, #f0f4f8 100%);
+  }
+  .dark .gradient-bg,
+  .dark.gradient-bg {
+    background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+  }
+  
+  .success {
+    color: hsl(142, 71%, 45%);
+  }
+  
+  .danger {
+    color: hsl(0, 84%, 60%);
+  }
+  
+  .price-positive {
+    color: hsl(142, 71%, 45%);
+  }
+  
+  .price-negative {
+    color: hsl(0, 84%, 60%);
+  }
+  
+  .order-book-buy {
+    background-color: hsla(142, 71%, 45%, 0.1);
+  }
+  
+  .order-book-sell {
+    background-color: hsla(0, 84%, 60%, 0.1);
+  }
+}
+
+@layer components {
+  .nav-btn-active {
+    @apply text-accent;
+  }
+
+  .nav-btn-inactive {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  /* Custom thin scrollbar for order book, lists, etc. */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.4);
+  }
+
+  /* Tabular nums for financial data */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Ensure checkboxes are visible in dark notification surfaces */
+  .notification-surface .checkbox,
+  [role="dialog"] .checkbox {
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .notification-surface .checkbox[data-state="checked"],
+  [role="dialog"] .checkbox[data-state="checked"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}
+
+/* Transparent Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+  scrollbar-width: thin;
+}
+
+/* Ensure dialogs and modals also have transparent scrollbars */
+[role="dialog"] {
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
+
+/* Animated steel gradient for homepage */
+@keyframes steelShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.steel-gradient-bg {
+  background: 
+    linear-gradient(
+      120deg,
+      rgba(71, 85, 105, 0.0) 0%,
+      rgba(100, 116, 139, 0.06) 20%,
+      rgba(148, 163, 184, 0.08) 40%,
+      rgba(100, 116, 139, 0.04) 60%,
+      rgba(71, 85, 105, 0.0) 80%,
+      rgba(100, 116, 139, 0.06) 100%
+    );
+  background-size: 200% 200%;
+  animation: steelShimmer 8s ease-in-out infinite;
+}
+
+/* Neon light effects */
+@keyframes neonPulse {
+  0%, 100% { 
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes neonSweep {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(200%) rotate(45deg); }
+}
+
+@keyframes neonGlow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3),
+                0 0 40px rgba(59, 130, 246, 0.2),
+                0 0 60px rgba(59, 130, 246, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5),
+                0 0 60px rgba(59, 130, 246, 0.3),
+                0 0 90px rgba(59, 130, 246, 0.2);
+  }
+}
+
+.neon-bg {
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf2 50%, #f0f4f8 100%);
+}
+.dark .neon-bg,
+.dark.neon-bg {
+  background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+}
+
+.neon-glow-blue {
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.15);
+}
+.dark .neon-glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4),
+              0 0 40px rgba(59, 130, 246, 0.2),
+              inset 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.15);
+}
+.dark .neon-glow-purple {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4),
+              0 0 40px rgba(139, 92, 246, 0.2),
+              inset 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.neon-text-glow {
+  text-shadow: none;
+}
+.dark .neon-text-glow {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5),
+               0 0 20px rgba(59, 130, 246, 0.3),
+               0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+.neon-border-glow {
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+.dark .neon-border-glow {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3),
+              inset 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+
+/* ================================================================
+   LIGHT THEME — HARDCODED COLOR OVERRIDES
+   ================================================================
+   The app uses hardcoded hex colors (e.g. bg-[#0a0a0a]) throughout.
+   These CSS overrides remap them to light equivalents when the
+   .dark class is NOT present on <html>. Pure CSS — instant switch,
+   zero JavaScript overhead, single repaint.
+   ================================================================ */
+
+/* ---- Background overrides ---- */
+html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #f8fafc !important; }
+html:not(.dark) .bg-\[\#0f0f0f\]  { background-color: #f1f5f9 !important; } /* slate-100, used in staking cards */
+html:not(.dark) .bg-\[\#111\],
+html:not(.dark) .bg-\[\#111111\]  { background-color: #ffffff !important; }
+html:not(.dark) .bg-\[\#111\]\/95  { background-color: rgba(255,255,255,0.95) !important; }
+html:not(.dark) .bg-\[\#1a1a1a\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#151515\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#161616\]  { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#1e1e1e\]  { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#222\]     { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#252525\]  { background-color: #e2e8f0 !important; }
+html:not(.dark) .bg-\[\#0a0a0a\]\/95 { background-color: rgba(248,250,252,0.95) !important; }
+
+/* ---- Hover background overrides ---- */
+html:not(.dark) .hover\:bg-\[\#1a1a1a\]:hover  { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#151515\]:hover   { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#222\]:hover      { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#252525\]:hover   { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#2a2a2a\]:hover   { background-color: #cbd5e1 !important; }
+
+/* Focus background overrides (Select / dropdown items) */
+html:not(.dark) .focus\:bg-\[\#1a1a1a\]:focus  { background-color: #e2e8f0 !important; }
+
+/* Active state */
+html:not(.dark) .active\:bg-\[\#222\]:active    { background-color: #cbd5e1 !important; }
+
+/* ---- Border overrides ---- */
+html:not(.dark) .border-\[\#1e1e1e\] { border-color: #e2e8f0 !important; }
+html:not(.dark) .border-\[\#2a2a2a\] { border-color: #cbd5e1 !important; }
+html:not(.dark) .border-\[\#3a3a3a\] { border-color: #94a3b8 !important; }
+html:not(.dark) .border-\[\#222\]    { border-color: #e2e8f0 !important; }
+
+/* Hover border */
+html:not(.dark) .hover\:border-\[\#2a2a2a\]:hover { border-color: #cbd5e1 !important; }
+html:not(.dark) .hover\:border-\[\#3a3a3a\]:hover { border-color: #94a3b8 !important; }
+
+/* ---- Text color overrides ---- */
+html:not(.dark) .text-white        { color: #0f172a !important; }  /* slate-900 */
+html:not(.dark) .text-gray-100     { color: #0f172a !important; }  /* slate-900 */
+html:not(.dark) .text-gray-200     { color: #1e293b !important; }  /* slate-800 */
+html:not(.dark) .text-gray-300     { color: #1e293b !important; }  /* slate-800 */
+html:not(.dark) .text-gray-400     { color: #334155 !important; }  /* slate-700 */
+html:not(.dark) .text-gray-500     { color: #475569 !important; }  /* slate-600 */
+html:not(.dark) .text-gray-600     { color: #475569 !important; }  /* slate-600 - fixed from #94a3b8 */
+
+/* Hover text */
+html:not(.dark) .hover\:text-white:hover   { color: #0f172a !important; }  /* slate-900 */
+html:not(.dark) .hover\:text-gray-300:hover { color: #0f172a !important; }  /* slate-900 */
+html:not(.dark) .hover\:text-gray-400:hover { color: #1e293b !important; }  /* slate-800 */
+/* Focus text (Select / dropdown items) */
+html:not(.dark) .focus\:text-white:focus   { color: #0f172a !important; }
+html:not(.dark) .group:hover .group-hover\:text-blue-400 { color: #3b82f6 !important; }
+
+/* ---- Preserve white text on colored backgrounds ---- */
+html:not(.dark) [class*="bg-blue-"].text-white,
+html:not(.dark) [class*="bg-blue-"] > .text-white,
+html:not(.dark) [class*="bg-red-"].text-white,
+html:not(.dark) [class*="bg-red-"] > .text-white,
+html:not(.dark) [class*="bg-green-"].text-white,
+html:not(.dark) [class*="bg-green-"] > .text-white,
+html:not(.dark) [class*="bg-emerald-"].text-white,
+html:not(.dark) [class*="bg-emerald-"] > .text-white,
+html:not(.dark) [class*="bg-orange-"].text-white,
+html:not(.dark) [class*="bg-orange-"] > .text-white,
+html:not(.dark) [class*="bg-purple-"].text-white,
+html:not(.dark) [class*="bg-purple-"] > .text-white,
+html:not(.dark) [class*="bg-violet-"].text-white,
+html:not(.dark) [class*="bg-violet-"] > .text-white,
+html:not(.dark) [class*="bg-yellow-"].text-white,
+html:not(.dark) [class*="bg-yellow-"] > .text-white,
+html:not(.dark) [class*="bg-pink-"].text-white,
+html:not(.dark) [class*="bg-pink-"] > .text-white,
+html:not(.dark) [class*="bg-indigo-"].text-white,
+html:not(.dark) [class*="bg-indigo-"] > .text-white,
+html:not(.dark) [class*="bg-primary"].text-white,
+html:not(.dark) [class*="bg-primary"] > .text-white,
+html:not(.dark) [class*="bg-destructive"].text-white,
+html:not(.dark) [class*="bg-destructive"] > .text-white {
+  color: #ffffff !important;
+}
+
+/* ---- Placeholder overrides ---- */
+html:not(.dark) .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder-gray-600::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder\:text-gray-500::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .placeholder\:text-gray-600::placeholder { color: #94a3b8 !important; }
+
+/* ---- Gradient overrides (from-[#…] / to-[#…]) ---- */
+html:not(.dark) .from-\[\#111\]     { --tw-gradient-from: #ffffff !important; }
+html:not(.dark) .from-\[\#0a0a0a\]  { --tw-gradient-from: #f8fafc !important; }
+html:not(.dark) .from-\[\#0f0f0f\]  { --tw-gradient-from: #f1f5f9 !important; }
+html:not(.dark) .from-\[\#1e1e1e\]  { --tw-gradient-from: #e2e8f0 !important; }
+html:not(.dark) .to-\[\#0a0a0a\]    { --tw-gradient-to: #f8fafc !important; }
+html:not(.dark) .to-\[\#0f0f0f\]    { --tw-gradient-to: #f1f5f9 !important; }
+html:not(.dark) .to-\[\#111\]       { --tw-gradient-to: #ffffff !important; }
+
+/* ---- Additional background overrides ---- */
+html:not(.dark) .bg-\[\#0d0d0d\]   { background-color: #f1f5f9 !important; }
+html:not(.dark) .bg-\[\#141414\]   { background-color: #f1f5f9 !important; }
+
+/* ---- Additional hover overrides ---- */
+html:not(.dark) .hover\:bg-\[\#111\]:hover     { background-color: #f1f5f9 !important; }
+html:not(.dark) .hover\:bg-\[\#0d0d0d\]:hover   { background-color: #e2e8f0 !important; }
+html:not(.dark) .hover\:bg-\[\#1a1a1a\]\/50:hover { background-color: rgba(226,232,240,0.5) !important; }
+
+/* ---- Additional border overrides ---- */
+html:not(.dark) .border-\[\#252525\]   { border-color: #cbd5e1 !important; }
+html:not(.dark) .border-\[\#1a1a1a\]   { border-color: #e2e8f0 !important; }
+
+/* Focus border */
+html:not(.dark) .focus\:border-\[\#2a2a2a\]:focus { border-color: #94a3b8 !important; }
+
+/* ---- Divide color overrides ---- */
+html:not(.dark) .divide-\[\#1e1e1e\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+html:not(.dark) .divide-\[\#141414\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* ---- Ring overrides ---- */
+html:not(.dark) .ring-\[\#111\]     { --tw-ring-color: #e2e8f0 !important; }
+
+/* ---- Data-state overrides (tab triggers, etc.) ---- */
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:bg-\[\#2a2a2a\] {
+  background-color: #e2e8f0 !important;
+}
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:text-white {
+  color: #0f172a !important;
+}
+
+/* ---- Shadow overrides ---- */
+html:not(.dark) .shadow-black\/40 { --tw-shadow-color: rgba(148,163,184,0.15) !important; }
+html:not(.dark) .shadow-black\/50 { --tw-shadow-color: rgba(148,163,184,0.2) !important; }
+html:not(.dark) .shadow-2xl        { box-shadow: 0 25px 50px -12px rgba(100,116,139,0.15) !important; }
+
+/* ---- Ring overrides ---- */
+html:not(.dark) .ring-white\/10     { --tw-ring-color: rgba(15,23,42,0.06) !important; }
+
+/* ---- UI component overrides (select, dropdown, menubar) ---- */
+html:not(.dark) .hover\:bg-\[\#1E3A8A\]:hover  { background-color: #dbeafe !important; }
+html:not(.dark) .focus\:bg-\[\#1E3A8A\]:focus   { background-color: #dbeafe !important; }
+html:not(.dark) .hover\:bg-\[\#1E3A8A\]:hover,
+html:not(.dark) .focus\:bg-\[\#1E3A8A\]:focus {
+  color: #1e40af !important;
+}
+
+/* ---- Order-book: allow dark text on faint colored rows in light mode ---- */
+html:not(.dark) .bg-red-500\/10 > .text-white,
+html:not(.dark) .bg-green-500\/10 > .text-white,
+html:not(.dark) .hover\:bg-red-500\/20:hover > .text-white,
+html:not(.dark) .hover\:bg-green-500\/20:hover > .text-white {
+  color: #334155 !important;
+}
+
+/* ---- Loading screen gradient fix ---- */
+html:not(.dark) .bg-gradient-to-br.from-\[\#1e1e1e\].to-\[\#0a0a0a\] {
+  background: linear-gradient(to bottom right, #e2e8f0, #f8fafc) !important;
+}
+
+/* ---- Bottom navigation ---- */
+html:not(.dark) nav.bg-\[\#0a0a0a\] {
+  background-color: #ffffff !important;
+  border-top-color: #e2e8f0 !important;
+}
+
+/* ---- Fix text-gray-600 in light mode (ensure it's readable not too light) ---- */
+/* Already handled above, but for gray text on light backgrounds ensure contrast */
+
+/* ---- Scrollbar overrides ---- */
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.4);
+}
+html:not(.dark) * {
+  scrollbar-color: rgba(100, 116, 139, 0.25) transparent;
+}
+
+/* ---- Additional dark hex overrides (admin pages) ---- */
+/* bg-[#333] — used in admin-news tabs active state */
+html:not(.dark) .bg-\[\#333\] { background-color: #cbd5e1 !important; }
+html:not(.dark) [data-state="active"].data-\[state\=active\]\:bg-\[\#333\] {
+  background-color: #cbd5e1 !important;
+}
+
+/* border-[#1f1f1f] — used in admin-user */
+html:not(.dark) .border-\[\#1f1f1f\] { border-color: #e2e8f0 !important; }
+
+/* ===== Accent Color Contrast Boost for Light Mode ===== */
+/* The app uses -400 shade variants which appear washed out on white backgrounds.
+   These overrides boost them to darker, more vibrant -600/-700 shades. */
+
+/* Green shades — boost from -400 to -600 */
+html:not(.dark) .text-green-400 { color: #16a34a !important; }  /* green-600 */
+html:not(.dark) .text-green-500 { color: #15803d !important; }  /* green-700 */
+html:not(.dark) .text-emerald-400 { color: #059669 !important; }  /* emerald-600 */
+html:not(.dark) .text-emerald-500 { color: #047857 !important; }  /* emerald-700 */
+
+/* Red shades — boost from -400 to -600 */
+html:not(.dark) .text-red-400 { color: #dc2626 !important; }  /* red-600 */
+html:not(.dark) .text-red-500 { color: #b91c1c !important; }  /* red-700 */
+
+/* Orange shades — boost from -400 to -600 */
+html:not(.dark) .text-orange-400 { color: #ea580c !important; }  /* orange-600 */
+html:not(.dark) .text-orange-500 { color: #c2410c !important; }  /* orange-700 */
+
+/* Yellow shades — boost from -400 to -600 */
+html:not(.dark) .text-yellow-400 { color: #ca8a04 !important; }  /* yellow-600 */
+html:not(.dark) .text-yellow-500 { color: #a16207 !important; }  /* yellow-700 */
+
+/* Blue shades — boost from -400 to -600 */
+html:not(.dark) .text-blue-400 { color: #2563eb !important; }  /* blue-600 */
+html:not(.dark) .text-blue-500 { color: #1d4ed8 !important; }  /* blue-700 */
+
+/* Purple shades — boost from -400/500 to -600/700 */
+html:not(.dark) .text-purple-400 { color: #9333ea !important; }  /* purple-600 */
+html:not(.dark) .text-purple-500 { color: #7e22ce !important; }  /* purple-700 */
+
+/* Indigo shades */
+html:not(.dark) .text-indigo-400 { color: #4f46e5 !important; }  /* indigo-600 */
+html:not(.dark) .text-indigo-500 { color: #4338ca !important; }  /* indigo-700 */
+
+/* Violet shades */
+html:not(.dark) .text-violet-400 { color: #7c3aed !important; }  /* violet-600 */
+html:not(.dark) .text-violet-500 { color: #6d28d9 !important; }  /* violet-700 */
+
+/* ---- Background accent opacity boost ---- */
+/* bg-*-500/10 is nearly invisible on white — boost to /20 for visibility */
+html:not(.dark) .bg-green-500\/10 { background-color: rgb(34 197 94 / 0.2) !important; }
+html:not(.dark) .bg-red-500\/10 { background-color: rgb(239 68 68 / 0.2) !important; }
+html:not(.dark) .bg-orange-500\/10 { background-color: rgb(249 115 22 / 0.2) !important; }
+html:not(.dark) .bg-yellow-500\/10 { background-color: rgb(234 179 8 / 0.2) !important; }
+html:not(.dark) .bg-blue-500\/10 { background-color: rgb(59 130 246 / 0.2) !important; }
+html:not(.dark) .bg-purple-500\/10 { background-color: rgb(168 85 247 / 0.2) !important; }
+html:not(.dark) .bg-emerald-500\/10 { background-color: rgb(16 185 129 / 0.2) !important; }
+html:not(.dark) .bg-indigo-500\/10 { background-color: rgb(99 102 241 / 0.2) !important; }
+
+/* ---- Admin News Form Overrides ---- */
+/* bg-[#0b0b0b] — used for form sections (Basic Info, Media, Styling, etc.) */
+html:not(.dark) .bg-\[\#0b0b0b\] { background-color: #f8fafc !important; }
+
+/* border-[#333] — used for inputs, selects, buttons */
+html:not(.dark) .border-\[\#333\] { border-color: #cbd5e1 !important; }
+
+/* hover:border-[#333] — used on template/category card hover */
+html:not(.dark) .hover\:border-\[\#333\]:hover { border-color: #94a3b8 !important; }
+
+/* ---- Badge opacity backgrounds (admin news categories, A/B testing) ---- */
+html:not(.dark) .bg-purple-500\/15 { background-color: rgb(168 85 247 / 0.2) !important; }
+html:not(.dark) .bg-purple-500\/20 { background-color: rgb(168 85 247 / 0.25) !important; }
+html:not(.dark) .bg-cyan-500\/15 { background-color: rgb(6 182 212 / 0.2) !important; }
+html:not(.dark) .bg-cyan-500\/20 { background-color: rgb(6 182 212 / 0.25) !important; }
+
+/* === Icon Fill Styling === */
+/* Add subtle fill to Lucide icons for a more solid, polished appearance */
+
+/* Dark mode: subtle fill for depth */
+.dark .lucide {
+  fill: currentColor;
+  fill-opacity: 0.15;
+}
+
+/* Light mode: slightly stronger fill for visibility */
+html:not(.dark) .lucide {
+  fill: currentColor;
+  fill-opacity: 0.2;
+}
+
+/* Icons inside colored containers (stat cards, badges) get stronger fill */
+.dark [class*="bg-"][class*="/10"] .lucide,
+.dark [class*="bg-"][class*="/15"] .lucide,
+.dark [class*="bg-"][class*="/20"] .lucide {
+  fill-opacity: 0.25;
+}
+
+html:not(.dark) [class*="bg-"][class*="/10"] .lucide,
+html:not(.dark) [class*="bg-"][class*="/15"] .lucide,
+html:not(.dark) [class*="bg-"][class*="/20"] .lucide {
+  fill-opacity: 0.3;
+}
+
+/* Navigation sidebar active icons - stronger fill */
+.dark [data-active="true"] .lucide,
+.dark .bg-blue-500\/10 .lucide {
+  fill-opacity: 0.3;
+}
+
+html:not(.dark) [data-active="true"] .lucide,
+html:not(.dark) .bg-blue-500\/10 .lucide {
+  fill-opacity: 0.35;
+}
+
+/* === Mobile chat sheets === */
+/* Full-screen chat views sit above the bottom navigation, so they must clear
+   the notch at the top and the home indicator at the bottom themselves.
+   On desktop the chat is an in-page panel and these paddings collapse. */
+.chat-safe-top {
+  padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+}
+
+.chat-safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .chat-safe-top {
+    padding-top: 0.5rem;
+  }
+
+  .chat-safe-bottom {
+    padding-bottom: 0;
+  }
+}
