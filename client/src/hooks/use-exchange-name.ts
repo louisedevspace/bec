@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { buildApiUrl } from "@/lib/config";
 import { DEFAULT_ACCENT_THEME, isAccentThemeKey, type AccentThemeKey } from "@shared/accent-themes";
 
-export const DEFAULT_EXCHANGE_NAME = "Becxus";
+// Falls back to the deployment's own configured app name (VITE_APP_NAME)
+// instead of a hardcoded brand — only used before the admin-configured
+// name (Settings → Branding) has loaded from /api/settings for the first time.
+export const DEFAULT_EXCHANGE_NAME = (import.meta.env.VITE_APP_NAME as string | undefined)?.trim() || "Exchange";
 const NAME_CACHE_KEY = "becxus-exchange-name";
 
 interface AppSettingsResponse {

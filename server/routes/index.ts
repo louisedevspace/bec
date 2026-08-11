@@ -4,6 +4,7 @@ import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import LiveCryptoService from "../services/live-crypto-service";
 import { subscribeKline, unsubscribeKline, unsubscribeAllForSocket } from "../services/kline-relay-service";
+import { getExchangeName } from "../services/app-settings.service";
 import { clients } from "../sync-manager";
 import {
   getApiMetricsSummary,
@@ -264,6 +265,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssetRoutes(app);
+
+  // PWA manifest — generated from the admin-configured exchange name so the
+  // homescreen install label follows Settings → Branding instead of a name
+  // baked into a static file at build time.
+  app.get("/manifest.webmanifest", async (_req, res) => {
+    const exchangeName = await getExchangeName().catch(() => "Exchange");
+    res.type("application/manifest+json").json({
+      name: exchangeName,
+      short_name: exchangeName,
+      description: "Professional crypto trading platform with futures, staking, and more.",
+      start_url: "/",
+      scope: "/",
+      display: "standalone",
+      background_color: "#0a0a0a",
+      theme_color: "#000000",
+      orientation: "any",
+      prefer_related_applications: false,
+      icons: [
+        { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+      ],
+    });
+  });
 
   app.get("/api/metrics/perf", (_req, res) => {
     const apiSummary = getApiMetricsSummary();

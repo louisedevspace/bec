@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
 import { getAppSettings, setCachedAppSettings } from "../services/app-settings.service";
+import { getServerConfig } from "../config";
 import { ACCENT_THEME_KEYS, DEFAULT_ACCENT_THEME, isAccentThemeKey } from "../../shared/accent-themes";
 
 export default function registerSettingsRoutes(app: Express) {
@@ -11,7 +12,7 @@ export default function registerSettingsRoutes(app: Express) {
       res.json(settings);
     } catch (error) {
       console.error("Failed to load app settings:", error);
-      res.json({ exchangeName: "Becxus", accentTheme: DEFAULT_ACCENT_THEME });
+      res.json({ exchangeName: getServerConfig().appName, accentTheme: DEFAULT_ACCENT_THEME });
     }
   });
 

@@ -23,6 +23,12 @@ export default defineConfig({
     },
   },
   root: path.resolve(import.meta.dirname, "client"),
+  // Vite defaults envDir to `root` (client/), but .env lives at the repo
+  // root alongside this config file — without this, VITE_ vars silently
+  // resolve to "" in any build not preceded by the server's own dotenv
+  // load (e.g. a bare `vite build`, or a Docker build step that only
+  // injects env vars at container runtime).
+  envDir: import.meta.dirname,
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,

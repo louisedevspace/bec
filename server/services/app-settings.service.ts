@@ -1,7 +1,11 @@
 import { supabaseAdmin } from "../routes/middleware";
+import { getServerConfig } from "../config";
 import { DEFAULT_ACCENT_THEME, isAccentThemeKey, type AccentThemeKey } from "../../shared/accent-themes";
 
-const DEFAULT_EXCHANGE_NAME = "Becxus";
+// Falls back to this deployment's own configured APP_NAME instead of a
+// hardcoded brand — only used when the app_settings DB row is missing or
+// the query errors (e.g. Supabase misconfigured for this environment).
+const DEFAULT_EXCHANGE_NAME = getServerConfig().appName;
 const CACHE_DURATION_MS = 60_000;
 
 export interface AppSettings {

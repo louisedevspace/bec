@@ -30,9 +30,8 @@ export async function setupVite(app: Express, server: Server) {
     res.type("image/png").sendFile(path.join(publicDir, "icons", "icon-512.png"));
   });
   app.use("/icons", express.static(path.join(publicDir, "icons")));
-  app.get("/manifest.webmanifest", (_req, res) => {
-    res.type("application/manifest+json").sendFile(path.join(publicDir, "manifest.webmanifest"));
-  });
+  // /manifest.webmanifest is served dynamically from registerRoutes() (registered
+  // before this dev middleware runs), which supersedes the static file below.
   app.get("/service-worker.js", (_req, res) => {
     res.type("text/javascript").sendFile(path.join(publicDir, "service-worker.js"));
   });
