@@ -434,10 +434,26 @@ export default function registerDepositsRoutes(app: Express) {
       if (!bech32.test(address) && !legacy.test(address)) {
         return "Invalid BTC address format";
       }
-    } else if (symbol === "ETH" || symbol === "USDT") {
+    } else if (symbol === "ETH") {
       const evm = /^0x[a-fA-F0-9]{40}$/;
       if (!evm.test(address)) {
         return "Invalid EVM address format";
+      }
+    } else if (symbol === "USDT") {
+      // USDT is multi-chain — validate against whichever network the admin
+      // selected instead of always requiring an EVM (0x...) address, which
+      // rejected legitimate TRC20/Tron addresses (the most common USDT network).
+      const isTronNetwork = /tron|trc/i.test(network);
+      if (isTronNetwork) {
+        const tron = /^T[1-9A-HJ-NP-Za-km-z]{25,34}$/;
+        if (!tron.test(address)) {
+          return "Invalid TRC20 (Tron) address format";
+        }
+      } else {
+        const evm = /^0x[a-fA-F0-9]{40}$/;
+        if (!evm.test(address)) {
+          return 'Invalid EVM address format — for a TRC20/Tron address, set network to "trc20" or "tron"';
+        }
       }
     } else if (symbol === "TRX") {
       const tron = /^T[1-9A-HJ-NP-Za-km-z]{25,34}$/;
