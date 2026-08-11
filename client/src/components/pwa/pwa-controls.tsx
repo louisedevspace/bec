@@ -14,6 +14,7 @@ import {
   registerServiceWorker
 } from "@/sw-register";
 import { Share, Download } from "lucide-react";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 
 function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(() => getInstallPrompt());
@@ -136,6 +137,7 @@ function usePushState() {
 }
 
 export function PwaControls() {
+  const exchangeName = useExchangeName();
   const { deferredPrompt, isInstalled, platform } = useInstallPrompt();
   const { enabled, loading, toggle, supported } = usePushState();
   const { toast } = useToast();
@@ -167,7 +169,7 @@ export function PwaControls() {
         clearInstallPrompt();
         toast({
           title: "App Installed!",
-          description: "Becxus has been added to your home screen."
+          description: `${exchangeName} has been added to your home screen.`
         });
       }
     } catch {
@@ -194,42 +196,42 @@ export function PwaControls() {
   const buttonProps = getInstallButtonProps();
 
   return (
-    <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+    <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex-shrink-0">
-          <div className="text-sm font-semibold text-white">App & Notifications</div>
-          <div className="text-xs text-gray-500">Install the app and manage push notifications</div>
+          <div className="text-sm font-semibold text-foreground">App & Notifications</div>
+          <div className="text-xs text-muted-foreground">Install the app and manage push notifications</div>
         </div>
-        
+
         <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
-          <Button 
-            onClick={handleInstall} 
+          <Button
+            onClick={handleInstall}
             disabled={buttonProps.disabled}
-            className="h-9 px-4 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-400 flex items-center"
+            className="h-9 px-4 text-xs bg-primary text-primary-foreground hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground flex items-center"
           >
             {buttonProps.icon}
             {buttonProps.label}
           </Button>
-          
+
           {supported ? (
-            <div className="flex items-center gap-2 bg-[#1a1a1a] rounded-lg px-3 py-2 border border-[#2a2a2a]">
-              <span className="text-xs text-gray-300 font-medium">Push</span>
-              <Switch 
-                checked={enabled} 
-                disabled={loading} 
+            <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 border border-border">
+              <span className="text-xs text-foreground font-medium">Push</span>
+              <Switch
+                checked={enabled}
+                disabled={loading}
                 onCheckedChange={toggle}
               />
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-[#1a1a1a] rounded-lg px-3 py-2 border border-[#2a2a2a]">
-              <span className="text-xs text-gray-500">Push unavailable</span>
+            <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 border border-border">
+              <span className="text-xs text-muted-foreground">Push unavailable</span>
             </div>
           )}
         </div>
       </div>
-      
+
       {!isInstalled && isIOS && (
-        <div className="mt-3 text-xs text-gray-500 border-t border-[#1e1e1e] pt-3">
+        <div className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">
           <span>
             <strong>iOS:</strong> Tap <Share size={12} className="inline mx-1" /> Share, then "Add to Home Screen"
           </span>

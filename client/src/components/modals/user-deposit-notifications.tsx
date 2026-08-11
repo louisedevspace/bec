@@ -45,9 +45,9 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
     queryKey: ['user-deposit-requests', userId],
     queryFn: async () => {
       if (!session?.access_token) throw new Error('No session');
-      
+
       console.log('🔍 Fetching deposit requests for user:', userId);
-      
+
       const response = await fetch(buildApiUrl(`/deposit-requests/${userId}`), {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -84,7 +84,7 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center text-muted-foreground">
             <Clock className="h-6 w-6 animate-spin mr-2" />
             Loading deposit requests...
           </div>
@@ -112,10 +112,10 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center text-gray-500">
+          <div className="text-center text-muted-foreground">
             No deposit requests found.
           </div>
-          <div className="text-xs text-gray-400 mt-2">
+          <div className="text-xs text-muted-foreground/70 mt-2">
             Debug: userId={userId}, session={session ? 'exists' : 'none'}, data={JSON.stringify(depositRequests)}
           </div>
         </CardContent>
@@ -123,15 +123,15 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
     );
   }
 
-  const rejectedRequests = depositRequests.filter((req: DepositRequest) => 
+  const rejectedRequests = depositRequests.filter((req: DepositRequest) =>
     req.status === 'rejected' && req.require_reverification
   );
 
-  const pendingRequests = depositRequests.filter((req: DepositRequest) => 
+  const pendingRequests = depositRequests.filter((req: DepositRequest) =>
     req.status === 'pending'
   );
 
-  const approvedRequests = depositRequests.filter((req: DepositRequest) => 
+  const approvedRequests = depositRequests.filter((req: DepositRequest) =>
     req.status === 'approved'
   );
 
@@ -139,7 +139,7 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       {onClose && (
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Deposit Request Notifications</h3>
+          <h3 className="text-lg font-semibold text-foreground">Deposit Request Notifications</h3>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -149,34 +149,34 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
       {/* Rejected requests requiring re-verification */}
       {rejectedRequests.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-md font-medium text-red-600 dark:text-red-400">
+          <h4 className="text-md font-medium text-danger">
             Rejected Requests Requiring Re-verification
           </h4>
           {rejectedRequests.map((request: DepositRequest) => (
-            <Card key={request.id} className="border-red-200 dark:border-red-800">
+            <Card key={request.id} className="border-danger/30">
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Badge variant="destructive">Rejected</Badge>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted-foreground">
                         {formatDate(request.reviewed_at)}
                       </span>
                     </div>
-                    <p className="font-medium flex items-center gap-1.5">
+                    <p className="font-medium flex items-center gap-1.5 text-foreground">
                       <CryptoIcon symbol={request.symbol} size="xs" />
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </p>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => handleResubmit(request)}
                   >
                     Resubmit
                   </Button>
                 </div>
-                
+
                 {request.rejection_reason && (
                   <Alert variant="destructive" className="mb-3">
                     <AlertCircle className="h-4 w-4" />
@@ -185,15 +185,15 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
                     </AlertDescription>
                   </Alert>
                 )}
-                
+
                 {request.admin_notes && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <div className="text-sm text-muted-foreground mb-3">
                     <strong>Admin Notes:</strong> {request.admin_notes}
                   </div>
                 )}
-                
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+
+                <div className="bg-warning/10 p-3 rounded-lg border border-warning/30">
+                  <p className="text-sm text-warning">
                     <strong>Action Required:</strong> Please resubmit your deposit request with the requested verification.
                   </p>
                 </div>
@@ -206,23 +206,23 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
       {/* Pending requests */}
       {pendingRequests.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-md font-medium text-yellow-600 dark:text-yellow-400">
+          <h4 className="text-md font-medium text-warning">
             Pending Requests
           </h4>
           {pendingRequests.map((request: DepositRequest) => (
-            <Card key={request.id} className="border-yellow-200 dark:border-yellow-800">
+            <Card key={request.id} className="border-warning/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary">Pending</Badge>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {formatDate(request.submitted_at)}
                   </span>
                 </div>
-                <p className="font-medium flex items-center gap-1.5">
+                <p className="font-medium flex items-center gap-1.5 text-foreground">
                   <CryptoIcon symbol={request.symbol} size="xs" />
                   {parseFloat(request.amount).toFixed(8)} {request.symbol}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Waiting for admin approval...
                 </p>
               </CardContent>
@@ -234,23 +234,23 @@ export function UserDepositNotifications({ userId, onClose }: UserDepositNotific
       {/* Approved requests */}
       {approvedRequests.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-md font-medium text-green-600 dark:text-green-400">
+          <h4 className="text-md font-medium text-success">
             Approved Requests
           </h4>
           {approvedRequests.map((request: DepositRequest) => (
-            <Card key={request.id} className="border-green-200 dark:border-green-800">
+            <Card key={request.id} className="border-success/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="default" className="bg-green-600">Approved</Badge>
-                  <span className="text-sm text-gray-500">
+                  <Badge variant="default" className="bg-success text-success-foreground">Approved</Badge>
+                  <span className="text-sm text-muted-foreground">
                     {formatDate(request.reviewed_at)}
                   </span>
                 </div>
-                <p className="font-medium flex items-center gap-1.5">
+                <p className="font-medium flex items-center gap-1.5 text-foreground">
                   <CryptoIcon symbol={request.symbol} size="xs" />
                   {parseFloat(request.amount).toFixed(8)} {request.symbol}
                 </p>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                <p className="text-sm text-success mt-1">
                   ✓ Amount added to your balance
                 </p>
               </CardContent>

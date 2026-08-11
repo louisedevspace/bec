@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { config } from "@/lib/config";
 import { Logo } from "@/components/brand/logo";
 import { trackClientMetric } from "@/lib/perf";
 import { clearInstallPrompt, getInstallPrompt, onInstallPromptChange } from "@/sw-register";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 
 export function InstallBanner() {
+  const exchangeName = useExchangeName();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(() => getInstallPrompt());
   const [visible, setVisible] = useState(false);
   const shownAtRef = useRef<number>(0);
@@ -85,7 +86,7 @@ export function InstallBanner() {
     <div
       ref={rootRef}
       role="region"
-      aria-label="Install Becxus"
+      aria-label={`Install ${exchangeName}`}
       aria-live="polite"
       className="fixed top-0 left-0 right-0 z-[1000] pointer-events-none"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
@@ -93,28 +94,23 @@ export function InstallBanner() {
       <div className="mx-auto max-w-3xl pointer-events-auto">
         <div
           data-banner-content
-          className="relative m-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]/80 backdrop-blur-2xl text-white shadow-[0_8px_40px_rgba(0,0,0,0.6)] ring-1 ring-white/[0.04] transform transition-transform duration-300 ease-out translate-y-0"
+          className="relative m-3 overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm transform transition-transform duration-300 ease-out translate-y-0"
         >
-          {/* Top edge highlight */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          {/* Blue accent glow */}
-          <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-
           <div className="flex items-center justify-between p-3 sm:p-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+              <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
                 <Logo className="w-full h-full" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-white">Install {config.appName}</div>
-                <div className="text-xs text-gray-400">Add to your home screen for a faster, app-like experience</div>
+                <div className="text-sm font-semibold text-foreground">Install {exchangeName}</div>
+                <div className="text-xs text-muted-foreground">Add to your home screen for a faster, app-like experience</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button aria-label="Install Becxus" onClick={onInstall} className="h-8 px-3 text-xs bg-blue-500/90 hover:bg-blue-500 border border-blue-400/20 shadow-lg shadow-blue-500/20">
+              <Button aria-label={`Install ${exchangeName}`} onClick={onInstall} className="h-8 px-3 text-xs bg-primary text-primary-foreground hover:opacity-90">
                 Install
               </Button>
-              <Button aria-label="Dismiss" onClick={onDismiss} variant="outline" className="h-8 px-3 text-xs bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white">
+              <Button aria-label="Dismiss" onClick={onDismiss} variant="outline" className="h-8 px-3 text-xs bg-transparent border-border text-muted-foreground hover:bg-muted hover:text-foreground">
                 Dismiss
               </Button>
             </div>

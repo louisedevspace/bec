@@ -21,6 +21,14 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const appSettings = pgTable("app_settings", {
+  id: integer("id").primaryKey().default(1),
+  exchangeName: text("exchange_name").notNull().default("Becxus"),
+  accentTheme: text("accent_theme").notNull().default("amber"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
 export const depositAddresses = pgTable("deposit_addresses", {
   id: serial("id").primaryKey(),
   assetSymbol: text("asset_symbol").notNull().unique(),

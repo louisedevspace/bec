@@ -14,12 +14,12 @@ interface ProfilePictureModalProps {
   onPictureUpdate: (pictureUrl: string) => void;
 }
 
-export function ProfilePictureModal({ 
-  isOpen, 
-  onClose, 
-  currentProfilePicture, 
-  userId, 
-  onPictureUpdate 
+export function ProfilePictureModal({
+  isOpen,
+  onClose,
+  currentProfilePicture,
+  userId,
+  onPictureUpdate
 }: ProfilePictureModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function ProfilePictureModal({
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -83,16 +83,16 @@ export function ProfilePictureModal({
 
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+        video: {
           facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
       });
-      
+
       setStream(mediaStream);
       setShowCamera(true);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -120,15 +120,15 @@ export function ProfilePictureModal({
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
-      
+
       if (context) {
         // Set canvas size to match video
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
+
         // Draw video frame to canvas
         context.drawImage(video, 0, 0);
-        
+
         // Convert canvas to blob
         canvas.toBlob((blob) => {
           if (blob) {
@@ -146,7 +146,7 @@ export function ProfilePictureModal({
   const switchCamera = async () => {
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
-    
+
     if (stream) {
       stopCamera();
       setTimeout(() => {
@@ -160,7 +160,7 @@ export function ProfilePictureModal({
     if (!isOpen) {
       stopCamera();
     }
-    
+
     return () => {
       stopCamera();
     };
@@ -274,12 +274,12 @@ export function ProfilePictureModal({
       <DialogContent className="max-w-md" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-white text-lg font-semibold">Profile Picture</DialogTitle>
+            <DialogTitle className="text-foreground text-lg font-semibold">Profile Picture</DialogTitle>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
+              className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/70 transition-colors"
             >
-              <X size={14} className="text-gray-400" />
+              <X size={14} className="text-muted-foreground" />
             </button>
           </div>
         </DialogHeader>
@@ -287,17 +287,18 @@ export function ProfilePictureModal({
         {/* Current Profile Picture */}
         {currentProfilePicture && (
           <div className="mb-4 text-center">
-            <h3 className="text-sm font-medium text-gray-400 mb-3">Current Picture</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Current Picture</h3>
             <div className="relative inline-block">
               <img
                 src={getImageDisplayUrl(currentProfilePicture)}
                 alt="Current profile"
-                className="w-24 h-24 rounded-full object-cover border-2 border-[#2a2a2a]"
+                className="w-24 h-24 rounded-full object-cover border-2 border-border"
               />
               <button
                 onClick={handleRemovePicture}
                 disabled={loading}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                className="absolute -top-2 -right-2 bg-danger text-danger-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs hover:opacity-90 transition-opacity"
+                aria-label="Remove profile picture"
               >
                 ×
               </button>
@@ -309,7 +310,7 @@ export function ProfilePictureModal({
         <div className="space-y-4">
           {/* File Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Upload from Device
             </label>
             <input
@@ -321,7 +322,7 @@ export function ProfilePictureModal({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white hover:bg-[#1a1a1a] transition-colors flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground hover:bg-muted transition-colors flex items-center justify-center space-x-2"
             >
               <Upload size={20} />
               <span>Choose File</span>
@@ -330,7 +331,7 @@ export function ProfilePictureModal({
 
           {/* Camera Capture */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Take Photo
             </label>
             <input
@@ -343,7 +344,7 @@ export function ProfilePictureModal({
             />
             <button
               onClick={startCamera}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white hover:bg-[#1a1a1a] transition-colors flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground hover:bg-muted transition-colors flex items-center justify-center space-x-2"
             >
               <Camera size={20} />
               <span>Take Photo</span>
@@ -353,28 +354,28 @@ export function ProfilePictureModal({
           {/* Preview */}
           {previewUrl && (
             <div className="text-center">
-              <h3 className="text-sm font-medium text-gray-400 mb-3">Preview</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Preview</h3>
               <img
                 src={previewUrl}
                 alt="Preview"
-                className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 mx-auto"
+                className="w-24 h-24 rounded-full object-cover border-2 border-primary mx-auto"
               />
             </div>
           )}
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center space-x-2 p-3 bg-danger/10 border border-danger/30 rounded-xl">
+              <AlertCircle size={18} className="text-danger flex-shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-              <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
-              <span className="text-green-400 text-sm">{success}</span>
+            <div className="flex items-center space-x-2 p-3 bg-success/10 border border-success/30 rounded-xl">
+              <CheckCircle size={18} className="text-success flex-shrink-0" />
+              <span className="text-success text-sm">{success}</span>
             </div>
           )}
 
@@ -383,11 +384,11 @@ export function ProfilePictureModal({
             <button
               onClick={handleUpload}
               disabled={loading}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
                   <span>Uploading...</span>
                 </>
               ) : (
@@ -401,12 +402,12 @@ export function ProfilePictureModal({
         </div>
 
         {/* Instructions */}
-        <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+        <div className="mt-2 p-3 bg-primary/10 border border-primary/20 rounded-xl">
           <div className="flex items-start space-x-2">
-            <User size={16} className="text-blue-400 mt-0.5" />
-            <div className="text-blue-400 text-sm">
+            <User size={16} className="text-primary mt-0.5" />
+            <div className="text-primary text-sm">
               <p className="font-medium mb-1">Upload Guidelines:</p>
-              <ul className="text-xs space-y-1 text-blue-400/80">
+              <ul className="text-xs space-y-1 text-primary/80">
                 <li>• Supported formats: JPG, PNG, GIF</li>
                 <li>• Maximum file size: 5MB</li>
                 <li>• Recommended size: 400x400 pixels</li>
@@ -420,14 +421,14 @@ export function ProfilePictureModal({
       {/* Camera Interface */}
       {showCamera && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl max-w-md w-full p-4">
+          <div className="bg-card border border-border rounded-xl max-w-md w-full p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Take Photo</h3>
+              <h3 className="text-lg font-semibold text-foreground">Take Photo</h3>
               <button
                 onClick={stopCamera}
-                className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
+                className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/70 transition-colors"
               >
-                <X size={14} className="text-gray-400" />
+                <X size={14} className="text-muted-foreground" />
               </button>
             </div>
 
@@ -441,7 +442,7 @@ export function ProfilePictureModal({
                 className="w-full h-64 object-cover rounded-lg"
               />
               <canvas ref={canvasRef} className="hidden" />
-              
+
               {/* Camera Controls */}
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
                 <button
@@ -450,17 +451,17 @@ export function ProfilePictureModal({
                 >
                   <RotateCcw size={20} />
                 </button>
-                
+
                 <button
                   onClick={capturePhoto}
-                  className="p-4 bg-white rounded-full text-black hover:bg-gray-200 transition-colors"
+                  className="p-4 bg-white rounded-full text-black hover:bg-white/90 transition-colors"
                 >
                   <Camera size={24} />
                 </button>
               </div>
             </div>
 
-            <div className="text-center text-sm text-gray-400">
+            <div className="text-center text-sm text-muted-foreground">
               <p>Position your face in the center and tap the camera button to capture</p>
             </div>
           </div>
@@ -468,4 +469,4 @@ export function ProfilePictureModal({
       )}
     </Dialog>
   );
-} 
+}

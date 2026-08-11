@@ -69,36 +69,40 @@ export function BottomNavigation() {
   if (isSupportAgent) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#1e1e1e] z-40 lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="h-16 overflow-x-auto scrollbar-hide flex items-center">
         <div className="flex h-full min-w-max">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location === path;
             return (
-              <Link key={path} href={path} className={`flex flex-col items-center justify-center space-y-1 h-full px-4 transition-all duration-200 ${
-                isActive
-                  ? "text-blue-500 scale-105"
-                  : "text-gray-500 hover:text-gray-400 scale-100"
+              <Link key={path} href={path} className={`flex flex-col items-center justify-center gap-1 h-full px-2.5 transition-colors duration-200 ${
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}>
-                <Icon size={18} className={isActive ? "animate-pulse" : ""} />
+                <span
+                  key={isActive ? "active" : "inactive"}
+                  className={`flex items-center justify-center rounded-2xl transition-all duration-200 ${
+                    isActive ? "bg-primary/10 px-3.5 py-1 animate-in zoom-in-90 fade-in" : "px-3.5 py-1"
+                  }`}
+                >
+                  <Icon size={18} />
+                </span>
                 <span className="text-xs font-medium">{label}</span>
-                {isActive && (
-                  <div className="absolute bottom-0 w-1 h-1 bg-blue-500 rounded-full" />
-                )}
               </Link>
             );
           })}
           {isAdmin && (
-            <Link href="/admin/dashboard" className={`flex flex-col items-center justify-center space-y-1 h-full px-4 transition-all duration-200 ${
-              isAdminActive
-                ? "text-blue-500 scale-105"
-                : "text-gray-500 hover:text-gray-400 scale-100"
+            <Link href="/admin/dashboard" className={`flex flex-col items-center justify-center gap-1 h-full px-2.5 transition-colors duration-200 ${
+              isAdminActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}>
-              <Settings size={18} className={isAdminActive ? "animate-pulse" : ""} />
+              <span
+                key={isAdminActive ? "active" : "inactive"}
+                className={`flex items-center justify-center rounded-2xl transition-all duration-200 ${
+                  isAdminActive ? "bg-primary/10 px-3.5 py-1 animate-in zoom-in-90 fade-in" : "px-3.5 py-1"
+                }`}
+              >
+                <Settings size={18} />
+              </span>
               <span className="text-xs font-medium">Admin</span>
-              {isAdminActive && (
-                <div className="absolute bottom-0 w-1 h-1 bg-blue-500 rounded-full" />
-              )}
             </Link>
           )}
         </div>

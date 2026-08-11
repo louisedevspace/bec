@@ -8,10 +8,13 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.5.0
--- Last Updated: 2026-07-27
+-- Version: 2.6.0
+-- Last Updated: 2026-08-11
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.6.0 — Added app_settings: a single-row table for admin-editable
+--         platform branding (exchange display name, accent color
+--         theme). See client/src/pages/admin-settings.tsx "Branding".
 -- 2.5.0 — Chat support agent accounts: users.role also accepts
 --         'support'. Those accounts are created from
 --         Admin -> Support Agents and may only work the support inbox.
@@ -21,6 +24,23 @@
 -- ************************************************************
 -- SECTION 1: TABLE DEFINITIONS
 -- ************************************************************
+
+-- ----------------------------------------------------------
+-- 1.0 App Settings (platform branding — singleton row)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS app_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  exchange_name TEXT NOT NULL DEFAULT 'Becxus',
+  accent_theme TEXT NOT NULL DEFAULT 'amber',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT app_settings_singleton CHECK (id = 1),
+  CONSTRAINT app_settings_accent_theme_valid CHECK (accent_theme IN ('amber', 'blue', 'violet', 'cyan', 'slate'))
+);
+
+INSERT INTO app_settings (id, exchange_name, accent_theme)
+VALUES (1, 'Becxus', 'amber')
+ON CONFLICT (id) DO NOTHING;
 
 -- ----------------------------------------------------------
 -- 1.1 Users

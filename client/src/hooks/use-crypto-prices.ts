@@ -242,8 +242,8 @@ export function useCryptoPrices() {
     if (!price) return "text-muted-foreground";
 
     const change = parseFloat(price.change24h);
-    if (change > 0) return "text-green-500";
-    if (change < 0) return "text-red-500";
+    if (change > 0) return "text-buy";
+    if (change < 0) return "text-sell";
     return "text-muted-foreground";
   };
 

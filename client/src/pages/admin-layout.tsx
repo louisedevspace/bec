@@ -11,6 +11,7 @@ import { Logo } from '@/components/brand/logo';
 import { useAdminNotifications, type AdminNotification } from '@/hooks/use-admin-notifications';
 import { useAdminPendingCounts, type BadgeKey } from '@/hooks/use-admin-pending-counts';
 import { getCachedUserRole } from '@/lib/user-role';
+import { useExchangeName } from '@/hooks/use-exchange-name';
 
 // Map sidebar hrefs to badge keys for acknowledgment tracking
 const HREF_TO_BADGE_KEY: Record<string, BadgeKey> = {
@@ -37,6 +38,7 @@ const navItems = [
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const exchangeName = useExchangeName();
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -130,20 +132,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const currentPage = navItems.find(item => location.startsWith(item.href));
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-background">
       {/* Mobile Top Bar */}
-      <header className="lg:hidden fixed left-0 right-0 z-50 bg-[#111]/95 backdrop-blur-md border-b border-[#1e1e1e] shadow-sm" style={{ top: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <header className="lg:hidden fixed left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm" style={{ top: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors"
+              className="p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:bg-accent transition-colors"
             >
-              <Menu size={22} className="fill-current" />
+              <Menu size={22} />
             </button>
             <div className="flex items-center gap-2">
               <Logo className="w-7 h-7" />
-              <span className="font-bold text-white text-sm">{isSupportAgent ? 'Support' : 'Admin'}</span>
+              <span className="font-bold text-foreground text-sm">{isSupportAgent ? 'Support' : 'Admin'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -151,17 +153,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div ref={bellRef} className="relative">
               <button
                 onClick={() => setBellOpen(!bellOpen)}
-                className="relative p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
+                className="relative p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:bg-accent transition-colors touch-manipulation"
               >
-                <Bell size={22} className="fill-current" />
+                <Bell size={22} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </button>
             </div>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground text-xs font-bold">
               {adminEmail ? adminEmail[0].toUpperCase() : 'A'}
             </div>
           </div>
@@ -172,20 +174,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {bellOpen && (
         <div className="lg:hidden fixed inset-0 z-[60]" onClick={() => setBellOpen(false)}>
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
           {/* Panel */}
           <div
-            className="absolute left-2 right-2 bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden max-h-[70vh]"
+            className="absolute left-2 right-2 bg-popover border border-border rounded-xl shadow-sm flex flex-col overflow-hidden max-h-[70vh]"
             style={{ top: 'calc(var(--pwa-banner-top, 0px) + 60px + env(safe-area-inset-top, 0px))' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#222] flex-shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Bell size={16} className="text-blue-400 fill-current" />
-                <span className="text-sm font-semibold text-white">Notifications</span>
+                <Bell size={16} className="text-primary" />
+                <span className="text-sm font-semibold text-foreground">Notifications</span>
                 {unreadCount > 0 && (
-                  <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full font-bold">
                     {unreadCount}
                   </span>
                 )}
@@ -194,17 +196,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 {unreadCount > 0 && (
                   <button
                     onClick={() => markAllAsRead()}
-                    className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors p-1.5 rounded-lg active:bg-blue-500/10 touch-manipulation"
+                    className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors p-1.5 rounded-lg active:bg-primary/10 touch-manipulation"
                   >
-                    <CheckCheck size={14} className="fill-current" />
+                    <CheckCheck size={14} />
                     Read all
                   </button>
                 )}
                 <button
                   onClick={() => setBellOpen(false)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] active:bg-[#222] transition-colors touch-manipulation"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:bg-accent transition-colors touch-manipulation"
                 >
-                  <X size={16} className="fill-current" />
+                  <X size={16} />
                 </button>
               </div>
             </div>
@@ -212,8 +214,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {/* Notification List */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                  <Bell size={32} className="mb-2 opacity-30 fill-current" />
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Bell size={32} className="mb-2 opacity-30" />
                   <p className="text-sm">No notifications yet</p>
                 </div>
               ) : (
@@ -222,34 +224,34 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
                     className={`
-                      w-full text-left px-4 py-3.5 border-b border-[#1e1e1e] hover:bg-[#1a1a1a] active:bg-[#222] transition-colors flex items-start gap-3 touch-manipulation min-h-[56px]
-                      ${!n.is_read ? 'bg-blue-500/5' : ''}
+                      w-full text-left px-4 py-3.5 border-b border-border hover:bg-muted active:bg-accent transition-colors flex items-start gap-3 touch-manipulation min-h-[56px]
+                      ${!n.is_read ? 'bg-primary/5' : ''}
                     `}
                   >
                     <div className="mt-1.5 flex-shrink-0">
                       {!n.is_read ? (
-                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                        <div className="w-2.5 h-2.5 bg-primary rounded-full" />
                       ) : (
                         <div className="w-2.5 h-2.5 rounded-full" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-white' : 'text-gray-400'}`}>
+                      <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {n.title}
                       </p>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
-                        {n.link && <ExternalLink size={10} className="text-gray-600 fill-current" />}
+                        <span className="text-[10px] text-muted-foreground/70">{timeAgo(n.created_at)}</span>
+                        {n.link && <ExternalLink size={10} className="text-muted-foreground/70" />}
                       </div>
                     </div>
                     {!n.is_read && (
                       <button
                         onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
-                        className="p-2 rounded-lg text-gray-500 hover:text-blue-400 active:bg-blue-500/10 transition-colors flex-shrink-0 touch-manipulation"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-primary active:bg-primary/10 transition-colors flex-shrink-0 touch-manipulation"
                         title="Mark as read"
                       >
-                        <Check size={16} className="fill-current" />
+                        <Check size={16} />
                       </button>
                     )}
                   </button>
@@ -263,7 +265,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-background/70 z-50 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -271,8 +273,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full bg-[#111] border-r border-[#1e1e1e]
-          flex flex-col transition-all duration-300 ease-in-out shadow-xl lg:shadow-none
+          fixed top-0 left-0 z-50 h-full bg-card border-r border-border
+          flex flex-col transition-all duration-300 ease-in-out shadow-sm lg:shadow-none
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0 lg:z-30
           ${isCollapsed ? 'lg:w-[72px]' : 'lg:w-64'}
@@ -280,38 +282,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         `}
       >
         {/* Sidebar Header */}
-        <div className={`flex items-center h-16 border-b border-[#1e1e1e] ${isCollapsed ? 'justify-center px-2' : 'px-5'}`}>
+        <div className={`flex items-center h-16 border-b border-border ${isCollapsed ? 'justify-center px-2' : 'px-5'}`}>
           {!isCollapsed && (
             <div className="flex items-center gap-3 flex-1">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+              <div className="w-9 h-9 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
                 <Logo className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="font-bold text-white text-sm tracking-tight">
-                  {isSupportAgent ? 'Becxus Support' : 'Becxus Admin'}
+                <h1 className="font-bold text-foreground text-sm tracking-tight">
+                  {isSupportAgent ? `${exchangeName} Support` : `${exchangeName} Admin`}
                 </h1>
-                <p className="text-[10px] text-gray-400 font-medium">
+                <p className="text-[10px] text-muted-foreground font-medium">
                   {isSupportAgent ? 'Support Console' : 'Management Panel'}
                 </p>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <div className="w-9 h-9 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
               <Logo className="w-6 h-6" />
             </div>
           )}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <X size={18} className="fill-current" />
+            <X size={18} />
           </button>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            className="hidden lg:flex p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <ChevronRight size={16} className={`transition-transform duration-300 fill-current ${isCollapsed ? '' : 'rotate-180'}`} />
+            <ChevronRight size={16} className={`transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`} />
           </button>
         </div>
 
@@ -320,7 +322,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {!roleResolved && (
             <div className="space-y-1" aria-hidden="true">
               {[0, 1, 2, 3, 4].map(i => (
-                <div key={i} className="h-12 rounded-xl bg-[#151515] animate-pulse" />
+                <div key={i} className="h-12 rounded-xl bg-muted animate-pulse" />
               ))}
             </div>
           )}
@@ -343,33 +345,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   group flex items-center gap-3 rounded-xl transition-all duration-200
                   ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'}
                   ${isActive
-                    ? 'bg-blue-500/10 text-blue-400 shadow-sm ring-1 ring-blue-500/20'
-                    : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
+                    ? 'bg-primary/10 text-primary ring-1 ring-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }
                 `}
                 title={isCollapsed ? `${item.label}${badgeCount ? ` (${badgeCount})` : ''}` : undefined}
               >
                 <div className={`
                   relative flex items-center justify-center rounded-lg flex-shrink-0 w-8 h-8
-                  ${isActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}
+                  ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}
                 `}>
-                  <Icon size={20} className="fill-current" />
+                  <Icon size={20} />
                   {badgeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
                       {badgeCount > 99 ? '99+' : badgeCount}
                     </span>
                   )}
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-400' : ''}`}>
+                    <p className={`text-sm font-medium truncate ${isActive ? 'text-primary' : ''}`}>
                       {item.label}
                     </p>
-                    <p className="text-[11px] text-gray-500 truncate">{item.description}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{item.description}</p>
                   </div>
                 )}
                 {!isCollapsed && isActive && (
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0 animate-pulse" />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
                 )}
               </Link>
             );
@@ -377,33 +379,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className={`border-t border-[#1e1e1e] ${isCollapsed ? 'p-2' : 'p-4'}`}>
+        <div className={`border-t border-border ${isCollapsed ? 'p-2' : 'p-4'}`}>
           {!isCollapsed && (
             <div className="flex items-center gap-3 mb-3 px-1">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground text-xs font-bold flex-shrink-0">
                 {adminEmail ? adminEmail[0].toUpperCase() : 'A'}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-300 truncate">
+                <p className="text-xs font-medium text-foreground truncate">
                   {isSupportAgent ? 'Support Agent' : 'Administrator'}
                 </p>
-                <p className="text-[10px] text-gray-500 truncate">{adminEmail}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{adminEmail}</p>
               </div>
             </div>
           )}
           <button
             onClick={handleLogout}
             className={`
-              flex items-center gap-2 w-full rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200
+              flex items-center gap-2 w-full rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200
               ${isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'}
             `}
             title={isCollapsed ? 'Logout' : undefined}
           >
-            <LogOut size={18} className="fill-current" />
+            <LogOut size={18} />
             {!isCollapsed && <span className="text-sm font-medium">Log Out</span>}
           </button>
           {!isCollapsed && (
-            <p className="text-[10px] text-gray-600 text-center mt-3">&copy; {new Date().getFullYear()} Becxus</p>
+            <p className="text-[10px] text-muted-foreground/70 text-center mt-3">&copy; {new Date().getFullYear()} {exchangeName}</p>
           )}
         </div>
       </aside>
@@ -411,16 +413,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Main Content Area */}
       <div className={`transition-all duration-300 ${isCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64'}`}>
         {/* Desktop Top Bar */}
-        <header className="hidden lg:flex items-center justify-between h-16 bg-[#111]/95 backdrop-blur-md border-b border-[#1e1e1e] px-6 sticky top-0 z-20">
+        <header className="hidden lg:flex items-center justify-between h-16 bg-card/95 backdrop-blur-md border-b border-border px-6 sticky top-0 z-20">
           <div className="flex items-center gap-3">
             {currentPage && (
               <>
-                <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                  <currentPage.icon size={18} className="text-blue-400 fill-current" />
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <currentPage.icon size={18} className="text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-white text-sm">{currentPage.label}</h2>
-                  <p className="text-[11px] text-gray-500">{currentPage.description}</p>
+                  <h2 className="font-semibold text-foreground text-sm">{currentPage.label}</h2>
+                  <p className="text-[11px] text-muted-foreground">{currentPage.description}</p>
                 </div>
               </>
             )}
@@ -430,11 +432,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div ref={bellRef} className="relative">
               <button
                 onClick={() => setBellOpen(!bellOpen)}
-                className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+                className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                <Bell size={20} className="fill-current" />
+                <Bell size={20} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -442,14 +444,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
               {/* Notification Dropdown */}
               {bellOpen && (
-                <div className="absolute right-0 top-12 w-96 max-h-[480px] bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl shadow-black/60 z-50 flex flex-col overflow-hidden">
+                <div className="absolute right-0 top-12 w-96 max-h-[480px] bg-popover border border-border rounded-xl shadow-sm z-50 flex flex-col overflow-hidden">
                   {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#222]">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <div className="flex items-center gap-2">
-                      <Bell size={16} className="text-blue-400 fill-current" />
-                      <span className="text-sm font-semibold text-white">Notifications</span>
+                      <Bell size={16} className="text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Notifications</span>
                       {unreadCount > 0 && (
-                        <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                        <span className="text-[10px] bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full font-bold">
                           {unreadCount}
                         </span>
                       )}
@@ -457,9 +459,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {unreadCount > 0 && (
                       <button
                         onClick={() => markAllAsRead()}
-                        className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                        className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
                       >
-                        <CheckCheck size={13} className="fill-current" />
+                        <CheckCheck size={13} />
                         Mark all read
                       </button>
                     )}
@@ -468,8 +470,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   {/* Notification List */}
                   <div className="flex-1 overflow-y-auto max-h-[380px]">
                     {notifications.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                        <Bell size={32} className="mb-2 opacity-30 fill-current" />
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <Bell size={32} className="mb-2 opacity-30" />
                         <p className="text-sm">No notifications yet</p>
                       </div>
                     ) : (
@@ -478,35 +480,35 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           key={n.id}
                           onClick={() => handleNotificationClick(n)}
                           className={`
-                            w-full text-left px-4 py-3 border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors flex items-start gap-3
-                            ${!n.is_read ? 'bg-blue-500/5' : ''}
+                            w-full text-left px-4 py-3 border-b border-border hover:bg-muted transition-colors flex items-start gap-3
+                            ${!n.is_read ? 'bg-primary/5' : ''}
                           `}
                         >
                           {/* Unread dot */}
                           <div className="mt-1.5 flex-shrink-0">
                             {!n.is_read ? (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                              <div className="w-2 h-2 bg-primary rounded-full" />
                             ) : (
                               <div className="w-2 h-2 rounded-full" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-white' : 'text-gray-400'}`}>
+                            <p className={`text-sm font-medium truncate ${!n.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {n.title}
                             </p>
-                            <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-gray-600">{timeAgo(n.created_at)}</span>
-                              {n.link && <ExternalLink size={10} className="text-gray-600 fill-current" />}
+                              <span className="text-[10px] text-muted-foreground/70">{timeAgo(n.created_at)}</span>
+                              {n.link && <ExternalLink size={10} className="text-muted-foreground/70" />}
                             </div>
                           </div>
                           {!n.is_read && (
                             <button
                               onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
-                              className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors flex-shrink-0"
+                              className="p-1 rounded text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
                               title="Mark as read"
                             >
-                              <Check size={14} className="fill-current" />
+                              <Check size={14} />
                             </button>
                           )}
                         </button>
@@ -517,9 +519,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-[#2a2a2a]">
-              <Shield size={14} className="text-blue-400 fill-current" />
-              <span className="text-xs text-gray-300 font-medium">{adminEmail}</span>
+            <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-lg border border-border">
+              <Shield size={14} className="text-primary" />
+              <span className="text-xs text-foreground font-medium">{adminEmail}</span>
             </div>
           </div>
         </header>
@@ -527,7 +529,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         {/* Page Content */}
         {/* Mobile spacer: accounts for fixed admin header + safe-area-inset-top */}
         <div className="lg:hidden" style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))' }} />
-        <main className="p-4 md:p-6 lg:p-8 lg:pt-6 min-h-[calc(100vh-4rem)] bg-[#0a0a0a]">
+        <main className="p-4 md:p-6 lg:p-8 lg:pt-6 min-h-[calc(100vh-4rem)] bg-background">
           {children}
         </main>
       </div>

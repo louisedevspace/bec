@@ -79,15 +79,15 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
   const getPriorityClasses = () => {
     switch (news.priority) {
       case 'urgent':
-        return 'bg-red-500/15 text-red-300 border border-red-500/30';
+        return 'bg-danger/15 text-danger border border-danger/30';
       case 'high':
-        return 'bg-orange-500/15 text-orange-300 border border-orange-500/30';
+        return 'bg-warning/15 text-warning border border-warning/30';
       case 'normal':
-        return 'bg-blue-500/15 text-blue-300 border border-blue-500/30';
+        return 'bg-info/15 text-info border border-info/30';
       case 'low':
-        return 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+        return 'bg-success/15 text-success border border-success/30';
       default:
-        return 'bg-slate-500/10 text-slate-200 border border-slate-500/20';
+        return 'bg-muted text-muted-foreground border border-border';
     }
   };
 
@@ -110,8 +110,8 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
 
   return (
     <Dialog open={isVisible} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent 
-        className="max-w-md mx-auto border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-[0_0_60px_rgba(15,23,42,0.8)] rounded-2xl p-0 overflow-hidden backdrop-blur-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+      <DialogContent
+        className="max-w-md mx-auto border border-border shadow-sm rounded-xl p-0 overflow-hidden data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         style={{ 
           backgroundColor: news.background_color || '#111111',
           color: news.text_color || '#ffffff'
@@ -186,8 +186,8 @@ export default function NewsPopup({ news, onClose, onMarkSeen }: NewsPopupProps)
 
             <Button
               onClick={handleClose}
-              className="w-full h-11 font-semibold transition-all hover:scale-[1.02] active:scale-[0.99] rounded-xl shadow-lg shadow-blue-500/30"
-              style={{ 
+              className="w-full h-11 font-semibold transition-opacity hover:opacity-90 rounded-xl shadow-sm"
+              style={{
                 backgroundColor: news.button_color || '#3b82f6',
                 color: '#ffffff',
                 border: 'none'

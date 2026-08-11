@@ -125,31 +125,31 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm sm:max-w-md md:max-w-6xl p-0">
-        <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
-          <DialogTitle className="text-base md:text-lg text-white">Portfolio</DialogTitle>
+        <DialogHeader className="p-4 md:p-6 border-b border-border">
+          <DialogTitle className="text-base md:text-lg text-foreground">Portfolio</DialogTitle>
         </DialogHeader>
 
         <div className="p-4 md:p-6">
 
         {/* Portfolio Summary */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 text-center">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Available (USD)</div>
-            <div className="text-lg font-semibold text-green-400 break-all">{totals.available}</div>
+          <div className="bg-muted/50 border border-border rounded-xl p-4 text-center">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Available (USD)</div>
+            <div className="text-lg font-semibold text-success break-all tabular-nums">{totals.available}</div>
           </div>
-          <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 text-center">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Staked (USD)</div>
-            <div className="text-lg font-semibold text-blue-400 break-all">{totals.staked}</div>
+          <div className="bg-muted/50 border border-border rounded-xl p-4 text-center">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Staked (USD)</div>
+            <div className="text-lg font-semibold text-info break-all tabular-nums">{totals.staked}</div>
           </div>
         </div>
 
         {/* Holdings Table */}
-        <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+        <div className="bg-muted/50 border border-border rounded-xl overflow-hidden">
           <div className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-xs text-gray-500 border-b border-[#1e1e1e]">
+                  <tr className="text-xs text-muted-foreground border-b border-border">
                     <th className="text-left py-2 px-2">Asset</th>
                     <th className="text-center py-2 px-2 hidden md:table-cell">Frozen</th>
                     <th className="text-right py-2 px-2">Current worth</th>
@@ -158,7 +158,7 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                 <tbody>
                   {isLoading ? (
                     Array.from({ length: 8 }).map((_, i) => (
-                      <tr key={i} className="border-b border-[#1e1e1e]">
+                      <tr key={i} className="border-b border-border">
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
                             <Skeleton className="w-8 h-8 rounded-full" />
@@ -178,25 +178,25 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                     ))
                   ) : portfolio && portfolio.length > 0 ? (
                     portfolio.map((asset: Portfolio, index: number) => (
-                      <tr key={`${asset.symbol}-${asset.user_id || 'unknown'}-${index}`} className="border-b border-[#1e1e1e] hover:bg-[#1a1a1a]">
+                      <tr key={`${asset.symbol}-${asset.user_id || 'unknown'}-${index}`} className="border-b border-border hover:bg-muted/70 transition-colors">
                         <td className="py-2 px-2">
                           <div className="flex items-center space-x-2">
                             <CryptoIcon symbol={asset.symbol} size="sm" />
                             <div className="min-w-0 flex-1">
-                              <div className="font-medium text-xs">{asset.symbol}</div>
-                              <div className="text-xs text-gray-500 truncate">
+                              <div className="font-medium text-xs text-foreground">{asset.symbol}</div>
+                              <div className="text-xs text-muted-foreground truncate tabular-nums">
                                 Available: {formatCryptoNumber(parseFloat(asset.available) || 0)} {asset.symbol}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="text-center py-2 px-2 hidden md:table-cell">
-                          <div className="font-semibold text-xs">
+                          <div className="font-semibold text-xs text-foreground tabular-nums">
                             {(parseFloat(asset.frozen) || 0).toFixed(8)} {asset.symbol}
                           </div>
                         </td>
                         <td className="text-right py-2 px-2">
-                          <div className="font-semibold text-xs">
+                          <div className="font-semibold text-xs text-foreground tabular-nums">
                             {calculateAssetValue(asset)}
                           </div>
                         </td>
@@ -204,8 +204,8 @@ export function PortfolioModal({ isOpen, onClose }: PortfolioModalProps) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="text-center py-12 text-gray-500">
-                        <div className="w-16 h-16 bg-[#111] border border-[#2a2a2a] rounded-full mx-auto mb-4 flex items-center justify-center">
+                      <td colSpan={3} className="text-center py-12 text-muted-foreground">
+                        <div className="w-16 h-16 bg-card border border-border rounded-full mx-auto mb-4 flex items-center justify-center">
                           <span className="text-2xl">📊</span>
                         </div>
                         <p>No assets found</p>

@@ -173,26 +173,26 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl" hideCloseButton>
           <DialogHeader>
-            <DialogTitle className="text-white">Deposit Requests Management</DialogTitle>
+            <DialogTitle className="text-foreground">Deposit Requests Management</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : depositRequests?.filter((request: DepositRequest) => request.status === 'pending').length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">No pending deposit requests found.</p>
+                <p className="text-muted-foreground">No pending deposit requests found.</p>
               </div>
             ) : (
               depositRequests?.filter((request: DepositRequest) => request.status === 'pending').map((request: DepositRequest) => (
-                <Card key={request.id} className="border-l-4 border-l-blue-500 bg-[#0a0a0a] border-[#1e1e1e]">
+                <Card key={request.id} className="border-l-4 border-l-primary bg-muted/40 border-border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-white flex items-center gap-1.5">
+                          <h3 className="font-semibold text-foreground flex items-center gap-1.5">
                             <CryptoIcon symbol={request.symbol} size="xs" />
                             {parseFloat(request.amount).toFixed(8)} {request.symbol}
                           </h3>
@@ -200,35 +200,35 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                         </div>
                         {getFeeRate(request.symbol) > 0 && (
                           <div className="flex items-center gap-3 text-xs mb-1">
-                            <span className="text-amber-400">Fee: {(getFeeRate(request.symbol) * 100).toFixed(2)}% ({(parseFloat(request.amount) * getFeeRate(request.symbol)).toFixed(4)} {request.symbol})</span>
-                            <span className="text-green-400">Net credit: {(parseFloat(request.amount) * (1 - getFeeRate(request.symbol))).toFixed(4)} {request.symbol}</span>
+                            <span className="text-warning">Fee: {(getFeeRate(request.symbol) * 100).toFixed(2)}% ({(parseFloat(request.amount) * getFeeRate(request.symbol)).toFixed(4)} {request.symbol})</span>
+                            <span className="text-success">Net credit: {(parseFloat(request.amount) * (1 - getFeeRate(request.symbol))).toFixed(4)} {request.symbol}</span>
                           </div>
                         )}
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           User: {request.users?.full_name || request.users?.email || (request.users?.display_id || request.user_id.substring(0, 8))} |
                           Submitted: {formatDateTime(request.submitted_at)}
                         </p>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => openImageViewer(request.screenshot_url, `${request.symbol} deposit screenshot`)}
-                          className="text-xs bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
+                          className="text-xs"
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           <span className="hidden sm:inline">View</span>
                           <span className="sm:hidden">View</span>
                         </Button>
-                        
+
                         {request.status === 'pending' && (
                           <>
                             <Button
                               variant="default"
                               size="sm"
                               onClick={() => handleReview(request, 'approve')}
-                              className="text-xs bg-green-600 hover:bg-green-700"
+                              className="text-xs bg-success hover:bg-success/90 text-success-foreground"
                             >
                               <CheckCircle className="h-3 w-3 mr-1" />
                               <span className="hidden sm:inline">Approve</span>
@@ -238,7 +238,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                               variant="destructive"
                               size="sm"
                               onClick={() => handleReview(request, 'reject')}
-                              className="text-xs bg-red-600 hover:bg-red-700"
+                              className="text-xs"
                             >
                               <XCircle className="h-3 w-3 mr-1" />
                               <span className="hidden sm:inline">Reject</span>
@@ -255,8 +255,8 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={onClose} className="bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white">Close</Button>
-            <Button onClick={() => refetch()} className="bg-blue-600 hover:bg-blue-700">Refresh</Button>
+            <Button variant="outline" onClick={onClose}>Close</Button>
+            <Button onClick={() => refetch()}>Refresh</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -265,15 +265,15 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
       <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
         <DialogContent className="max-w-md" hideCloseButton>
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               {action === 'approve' ? 'Approve' : 'Reject'} Deposit Request
             </DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
             <div className="space-y-4">
-              <div className="bg-[#0a0a0a] p-4 rounded-lg border border-[#1e1e1e]">
-                <p className="text-base font-medium text-white mb-2 flex items-center gap-1.5">
+              <div className="bg-muted/40 p-4 rounded-lg border border-border">
+                <p className="text-base font-medium text-foreground mb-2 flex items-center gap-1.5">
                   <CryptoIcon symbol={selectedRequest.symbol} size="xs" />
                   Amount: {parseFloat(selectedRequest.amount).toFixed(8)} {selectedRequest.symbol}
                 </p>
@@ -283,42 +283,41 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                   const fee = gross * rate;
                   const net = gross - fee;
                   return (
-                    <div className="space-y-1 mt-2 pt-2 border-t border-[#1e1e1e]">
+                    <div className="space-y-1 mt-2 pt-2 border-t border-border">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Fee ({(rate * 100).toFixed(2)}%)</span>
-                        <span className="text-amber-400">-{fee.toFixed(4)} {selectedRequest.symbol}</span>
+                        <span className="text-muted-foreground">Fee ({(rate * 100).toFixed(2)}%)</span>
+                        <span className="text-warning">-{fee.toFixed(4)} {selectedRequest.symbol}</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium">
-                        <span className="text-gray-300">User will receive</span>
-                        <span className="text-green-400">{net.toFixed(4)} {selectedRequest.symbol}</span>
+                        <span className="text-foreground/80">User will receive</span>
+                        <span className="text-success">{net.toFixed(4)} {selectedRequest.symbol}</span>
                       </div>
                     </div>
                   );
                 })()}
                 {action === 'approve' && getFeeRate(selectedRequest.symbol) === 0 && (
-                  <p className="text-xs text-gray-500 mt-1">No deposit fee configured for {selectedRequest.symbol}</p>
+                  <p className="text-xs text-muted-foreground mt-1">No deposit fee configured for {selectedRequest.symbol}</p>
                 )}
-                <p className="text-base text-gray-400 mt-2">
+                <p className="text-base text-muted-foreground mt-2">
                   User: {selectedRequest.users?.full_name || selectedRequest.users?.email || selectedRequest.user_id}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="adminNotes" className="text-gray-300">Admin Notes (Optional)</Label>
+                <Label htmlFor="adminNotes">Admin Notes (Optional)</Label>
                 <Textarea
                   id="adminNotes"
                   placeholder="Add any notes about this decision..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
-                  className="bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500"
                 />
               </div>
 
               {action === 'reject' && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="rejectionReason" className="text-gray-300">Rejection Reason *</Label>
+                    <Label htmlFor="rejectionReason">Rejection Reason *</Label>
                     <Textarea
                       id="rejectionReason"
                       placeholder="Please provide a reason for rejection..."
@@ -326,7 +325,6 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                       onChange={(e) => setRejectionReason(e.target.value)}
                       rows={3}
                       required
-                      className="bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500"
                     />
                   </div>
 
@@ -336,7 +334,7 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                       checked={requireReverification}
                       onCheckedChange={(checked) => setRequireReverification(checked as boolean)}
                     />
-                    <Label htmlFor="requireReverification" className="text-sm text-gray-300">
+                    <Label htmlFor="requireReverification" className="text-sm">
                       Require re-verification from user
                     </Label>
                   </div>
@@ -344,14 +342,14 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
               )}
 
               <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setShowReviewModal(false)} disabled={loading} className="bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white">
+                <Button variant="outline" onClick={() => setShowReviewModal(false)} disabled={loading}>
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   variant={action === 'approve' ? 'default' : 'destructive'}
                   onClick={handleSubmitReview}
                   disabled={loading || (action === 'reject' && !rejectionReason.trim())}
-                  className={action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                  className={action === 'approve' ? 'bg-success hover:bg-success/90 text-success-foreground' : ''}
                 >
                   {loading ? 'Processing...' : (action === 'approve' ? 'Approve' : 'Reject')}
                 </Button>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, 
-  TrendingUp, Search, Edit2, Save, X 
+import {
+  Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw,
+  TrendingUp, Search, Edit2, Save, X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,14 @@ const AVAILABLE_ASSETS = [
   'LTC', 'MATIC', 'ATOM', 'TRX', 'SHIB', 'BCH', 'DASH', 'XMR', 'XLM', 'FIL',
   'APT', 'SUI', 'ARB', 'OP', 'PEPE', 'INJ', 'XAU', 'XAUT'
 ];
+
+const PAIR_TYPE_STYLES: Record<string, string> = {
+  both: 'bg-primary/10 text-primary',
+  futures: 'bg-warning/10 text-warning',
+  gold: 'bg-success/10 text-success',
+  custom: 'bg-muted text-muted-foreground',
+  spot: 'bg-info/10 text-info',
+};
 
 export default function AdminTradingPairs() {
   const { toast } = useToast();
@@ -216,7 +224,7 @@ export default function AdminTradingPairs() {
     }
   };
 
-  const filteredPairs = pairs.filter(p => 
+  const filteredPairs = pairs.filter(p =>
     p.symbol.toLowerCase().includes(search.toLowerCase()) ||
     p.base_asset.toLowerCase().includes(search.toLowerCase())
   );
@@ -231,61 +239,61 @@ export default function AdminTradingPairs() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-              <TrendingUp size={24} className="text-blue-400 fill-current" />
+            <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+              <TrendingUp size={22} className="text-primary" />
               Trading Configuration
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Manage trading pairs and their limits</p>
+            <p className="text-sm text-muted-foreground mt-1">Manage trading pairs and their limits</p>
           </div>
         </div>
 
         {/* Pairs Header Actions */}
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={fetchPairs} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-            <RefreshCw size={14} className={`${loading ? 'animate-spin' : ''} fill-current`} />
+          <Button variant="outline" size="sm" onClick={fetchPairs} className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSeed} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
+          <Button variant="outline" size="sm" onClick={handleSeed} className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground">
             Seed Defaults
           </Button>
-          <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus size={14} className="mr-1 fill-current" /> Add Pair
+          <Button size="sm" onClick={() => setShowAddForm(!showAddForm)}>
+            <Plus size={14} className="mr-1" /> Add Pair
           </Button>
         </div>
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-            <div className="text-xs text-gray-500">Total Pairs</div>
-            <div className="text-lg font-bold text-white">{pairs.length}</div>
+          <div className="bg-card border border-border rounded-xl p-3">
+            <div className="text-xs text-muted-foreground">Total Pairs</div>
+            <div className="text-lg font-bold text-foreground tabular-nums">{pairs.length}</div>
           </div>
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-            <div className="text-xs text-gray-500">Enabled</div>
-            <div className="text-lg font-bold text-green-400">{enabledCount}</div>
+          <div className="bg-card border border-border rounded-xl p-3">
+            <div className="text-xs text-muted-foreground">Enabled</div>
+            <div className="text-lg font-bold text-success tabular-nums">{enabledCount}</div>
           </div>
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-            <div className="text-xs text-gray-500">Spot Pairs</div>
-            <div className="text-lg font-bold text-blue-400">{spotCount}</div>
+          <div className="bg-card border border-border rounded-xl p-3">
+            <div className="text-xs text-muted-foreground">Spot Pairs</div>
+            <div className="text-lg font-bold text-info tabular-nums">{spotCount}</div>
           </div>
-          <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-            <div className="text-xs text-gray-500">Futures Pairs</div>
-            <div className="text-lg font-bold text-purple-400">{futuresCount}</div>
+          <div className="bg-card border border-border rounded-xl p-3">
+            <div className="text-xs text-muted-foreground">Futures Pairs</div>
+            <div className="text-lg font-bold text-primary tabular-nums">{futuresCount}</div>
           </div>
         </div>
 
         {/* Add Pair Form */}
         {showAddForm && (
-          <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Plus size={16} className="text-blue-400 fill-current" /> Add New Trading Pair
+          <div className="bg-card border border-primary/30 rounded-xl p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Plus size={16} className="text-primary" /> Add New Trading Pair
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Base Asset</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Base Asset</label>
                 <Select value={newPair.baseAsset} onValueChange={(v) => setNewPair({ ...newPair, baseAsset: v })}>
-                  <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
+                  <SelectTrigger className="h-9 bg-background border-border text-foreground text-xs">
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                  <SelectContent className="bg-popover border-border">
                     {AVAILABLE_ASSETS.filter(a => !pairs.some(p => p.base_asset === a && p.quote_asset === newPair.quoteAsset)).map(a => (
                       <SelectItem key={a} value={a}>{a}</SelectItem>
                     ))}
@@ -293,23 +301,23 @@ export default function AdminTradingPairs() {
                 </Select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Quote Asset</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Quote Asset</label>
                 <Select value={newPair.quoteAsset} onValueChange={(v) => setNewPair({ ...newPair, quoteAsset: v })}>
-                  <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
+                  <SelectTrigger className="h-9 bg-background border-border text-foreground text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                  <SelectContent className="bg-popover border-border">
                     <SelectItem value="USDT">USDT</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Type</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Type</label>
                 <Select value={newPair.pairType} onValueChange={(v) => setNewPair({ ...newPair, pairType: v })}>
-                  <SelectTrigger className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs">
+                  <SelectTrigger className="h-9 bg-background border-border text-foreground text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                  <SelectContent className="bg-popover border-border">
                     <SelectItem value="spot">Spot Only</SelectItem>
                     <SelectItem value="futures">Futures Only</SelectItem>
                     <SelectItem value="both">Both</SelectItem>
@@ -319,47 +327,47 @@ export default function AdminTradingPairs() {
                 </Select>
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Min Amount</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Min Amount</label>
                 <Input
                   type="number" step="any" value={newPair.minTradeAmount}
                   onChange={(e) => setNewPair({ ...newPair, minTradeAmount: e.target.value })}
-                  className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
+                  className="h-9 bg-background border-border text-foreground text-xs tabular-nums"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Max Amount</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Max Amount</label>
                 <Input
                   type="number" step="any" value={newPair.maxTradeAmount}
                   onChange={(e) => setNewPair({ ...newPair, maxTradeAmount: e.target.value })}
-                  className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
+                  className="h-9 bg-background border-border text-foreground text-xs tabular-nums"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Fee (%)</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Fee (%)</label>
                 <Input
                   type="number" step="0.0001" min="0" max="100" value={newPair.tradingFeePercent}
                   onChange={(e) => setNewPair({ ...newPair, tradingFeePercent: e.target.value })}
-                  className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
+                  className="h-9 bg-background border-border text-foreground text-xs tabular-nums"
                 />
               </div>
             </div>
             {newPair.pairType === 'custom' && (
               <div>
-                <label className="text-[10px] text-gray-500 uppercase mb-1 block">Custom Price API URL</label>
+                <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Custom Price API URL</label>
                 <Input
                   type="url" value={newPair.customApiUrl}
                   onChange={(e) => setNewPair({ ...newPair, customApiUrl: e.target.value })}
                   placeholder="https://api.example.com/price/XYZ — must return { price: number }"
-                  className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-full"
+                  className="h-9 bg-background border-border text-foreground text-xs w-full"
                 />
               </div>
             )}
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-[#2a2a2a] bg-[#0a0a0a] text-gray-400">
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-border bg-background text-muted-foreground">
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
-                <Plus size={14} className="mr-1 fill-current" /> Add Pair
+              <Button size="sm" onClick={handleAdd}>
+                <Plus size={14} className="mr-1" /> Add Pair
               </Button>
             </div>
           </div>
@@ -367,26 +375,26 @@ export default function AdminTradingPairs() {
 
         {/* Search */}
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search pairs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 bg-[#111] border-[#1e1e1e] text-white text-sm"
+            className="pl-9 h-9 bg-card border-border text-foreground text-sm"
           />
         </div>
 
         {/* Pairs Table */}
-        <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
+              <RefreshCw size={20} className="animate-spin text-muted-foreground" />
             </div>
           ) : filteredPairs.length === 0 ? (
             <div className="text-center py-12">
-              <TrendingUp size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
-              <p className="text-gray-500 text-sm">No trading pairs found</p>
-              <p className="text-gray-600 text-xs mt-1">Click "Seed Defaults" to add common pairs</p>
+              <TrendingUp size={32} className="mx-auto mb-3 text-muted-foreground/60" />
+              <p className="text-muted-foreground text-sm">No trading pairs found</p>
+              <p className="text-muted-foreground/70 text-xs mt-1">Click "Seed Defaults" to add common pairs</p>
             </div>
           ) : (
             <>
@@ -394,7 +402,7 @@ export default function AdminTradingPairs() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-xs text-gray-500 uppercase border-b border-[#1e1e1e] bg-[#0a0a0a]">
+                    <tr className="text-xs text-muted-foreground uppercase border-b border-border bg-muted/40">
                       <th className="text-left py-3 px-4">Pair</th>
                       <th className="text-center py-3 px-3">Type</th>
                       <th className="text-center py-3 px-3">Status</th>
@@ -408,22 +416,22 @@ export default function AdminTradingPairs() {
                   <tbody>
                     {filteredPairs.map((pair) => (
                       <React.Fragment key={pair.id}>
-                      <tr className={`border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${!pair.is_enabled ? 'opacity-50' : ''}`}>
+                      <tr className={`border-b border-border hover:bg-muted/50 transition-colors ${!pair.is_enabled ? 'opacity-50' : ''}`}>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <CryptoIcon symbol={pair.base_asset} size="xs" />
-                            <span className="font-semibold text-white text-sm">{pair.base_asset}</span>
-                            <span className="text-gray-600">/</span>
-                            <span className="text-gray-400 text-sm">{pair.quote_asset}</span>
+                            <span className="font-semibold text-foreground text-sm">{pair.base_asset}</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-muted-foreground text-sm">{pair.quote_asset}</span>
                           </div>
                         </td>
                         <td className="text-center py-3 px-3">
                           {editingId === pair.id ? (
                             <Select value={editForm.pair_type || pair.pair_type} onValueChange={(v) => setEditForm({ ...editForm, pair_type: v })}>
-                              <SelectTrigger className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-24 mx-auto">
+                              <SelectTrigger className="h-7 bg-background border-border text-foreground text-xs w-24 mx-auto">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                              <SelectContent className="bg-popover border-border">
                                 <SelectItem value="spot">Spot</SelectItem>
                                 <SelectItem value="futures">Futures</SelectItem>
                                 <SelectItem value="both">Both</SelectItem>
@@ -432,13 +440,7 @@ export default function AdminTradingPairs() {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              pair.pair_type === 'both' ? 'bg-purple-500/10 text-purple-400' :
-                              pair.pair_type === 'futures' ? 'bg-orange-500/10 text-orange-400' :
-                              pair.pair_type === 'gold' ? 'bg-yellow-500/10 text-yellow-400' :
-                              pair.pair_type === 'custom' ? 'bg-teal-500/10 text-teal-400' :
-                              'bg-blue-500/10 text-blue-400'
-                            }`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${PAIR_TYPE_STYLES[pair.pair_type] || PAIR_TYPE_STYLES.spot}`}>
                               {pair.pair_type === 'both' ? 'Spot + Futures' : pair.pair_type.charAt(0).toUpperCase() + pair.pair_type.slice(1)}
                             </span>
                           )}
@@ -446,9 +448,9 @@ export default function AdminTradingPairs() {
                         <td className="text-center py-3 px-3">
                           <button onClick={() => handleToggle(pair.id)} className="inline-flex items-center">
                             {pair.is_enabled ? (
-                              <ToggleRight size={22} className="text-green-400 fill-current" />
+                              <ToggleRight size={22} className="text-success" />
                             ) : (
-                              <ToggleLeft size={22} className="text-gray-500 fill-current" />
+                              <ToggleLeft size={22} className="text-muted-foreground" />
                             )}
                           </button>
                         </td>
@@ -456,60 +458,60 @@ export default function AdminTradingPairs() {
                           {editingId === pair.id ? (
                             <Input type="number" step="any" value={editForm.min_trade_amount}
                               onChange={(e) => setEditForm({ ...editForm, min_trade_amount: e.target.value })}
-                              className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-24 ml-auto"
+                              className="h-7 bg-background border-border text-foreground text-xs w-24 ml-auto tabular-nums"
                             />
                           ) : (
-                            <span className="text-sm text-gray-300 tabular-nums">{parseFloat(pair.min_trade_amount).toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground tabular-nums">{parseFloat(pair.min_trade_amount).toLocaleString()}</span>
                           )}
                         </td>
                         <td className="text-right py-3 px-3">
                           {editingId === pair.id ? (
                             <Input type="number" step="any" value={editForm.max_trade_amount}
                               onChange={(e) => setEditForm({ ...editForm, max_trade_amount: e.target.value })}
-                              className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-24 ml-auto"
+                              className="h-7 bg-background border-border text-foreground text-xs w-24 ml-auto tabular-nums"
                             />
                           ) : (
-                            <span className="text-sm text-gray-300 tabular-nums">{parseFloat(pair.max_trade_amount).toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground tabular-nums">{parseFloat(pair.max_trade_amount).toLocaleString()}</span>
                           )}
                         </td>
                         <td className="text-right py-3 px-3">
                           {editingId === pair.id ? (
                             <Input type="number" step="any" value={editForm.trading_fee}
                               onChange={(e) => setEditForm({ ...editForm, trading_fee: e.target.value })}
-                              className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-20 ml-auto"
+                              className="h-7 bg-background border-border text-foreground text-xs w-20 ml-auto tabular-nums"
                             />
                           ) : (
-                            <span className="text-sm text-gray-300 tabular-nums">{(parseFloat(pair.trading_fee) * 100).toFixed(2)}%</span>
+                            <span className="text-sm text-muted-foreground tabular-nums">{(parseFloat(pair.trading_fee) * 100).toFixed(2)}%</span>
                           )}
                         </td>
                         <td className="text-center py-3 px-3">
                           {editingId === pair.id ? (
                             <Input type="number" step="1" value={editForm.sort_order}
                               onChange={(e) => setEditForm({ ...editForm, sort_order: parseInt(e.target.value) || 0 })}
-                              className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-14 mx-auto"
+                              className="h-7 bg-background border-border text-foreground text-xs w-14 mx-auto tabular-nums"
                             />
                           ) : (
-                            <span className="text-xs text-gray-500">{pair.sort_order}</span>
+                            <span className="text-xs text-muted-foreground tabular-nums">{pair.sort_order}</span>
                           )}
                         </td>
                         <td className="text-center py-3 px-4">
                           <div className="flex items-center justify-center gap-1.5">
                             {editingId === pair.id ? (
                               <>
-                                <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20">
-                                  <Save size={14} className="fill-current" />
+                                <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20">
+                                  <Save size={14} />
                                 </button>
-                                <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-gray-500/10 text-gray-400 hover:bg-gray-500/20">
-                                  <X size={14} className="fill-current" />
+                                <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-muted/70">
+                                  <X size={14} />
                                 </button>
                               </>
                             ) : (
                               <>
-                                <button onClick={() => startEdit(pair)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">
-                                  <Edit2 size={14} className="fill-current" />
+                                <button onClick={() => startEdit(pair)} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20">
+                                  <Edit2 size={14} />
                                 </button>
-                                <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
-                                  <Trash2 size={14} className="fill-current" />
+                                <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20">
+                                  <Trash2 size={14} />
                                 </button>
                               </>
                             )}
@@ -517,16 +519,16 @@ export default function AdminTradingPairs() {
                         </td>
                       </tr>
                       {editingId === pair.id && (editForm.pair_type || pair.pair_type) === 'custom' && (
-                        <tr className="border-b border-[#1e1e1e] bg-teal-500/5">
+                        <tr className="border-b border-border bg-muted/30">
                           <td colSpan={8} className="px-4 py-2">
                             <div className="flex items-center gap-2">
-                              <label className="text-[10px] text-teal-400 uppercase whitespace-nowrap">Custom Price API URL</label>
+                              <label className="text-[10px] text-muted-foreground uppercase whitespace-nowrap">Custom Price API URL</label>
                               <Input
                                 type="url"
                                 value={editForm.custom_api_url || ''}
                                 onChange={(e) => setEditForm({ ...editForm, custom_api_url: e.target.value })}
                                 placeholder="https://api.example.com/price — returns { price: number }"
-                                className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs flex-1"
+                                className="h-7 bg-background border-border text-foreground text-xs flex-1"
                               />
                             </div>
                           </td>
@@ -539,31 +541,27 @@ export default function AdminTradingPairs() {
               </div>
 
               {/* Mobile List */}
-              <div className="block md:hidden divide-y divide-[#1e1e1e]">
+              <div className="block md:hidden divide-y divide-border">
                 {filteredPairs.map((pair) => (
                   <div key={pair.id} className={`p-4 ${!pair.is_enabled ? 'opacity-50' : ''}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <CryptoIcon symbol={pair.base_asset} size="xs" />
-                        <span className="font-bold text-white">{pair.base_asset}/{pair.quote_asset}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          pair.pair_type === 'both' ? 'bg-purple-500/10 text-purple-400' :
-                          pair.pair_type === 'futures' ? 'bg-orange-500/10 text-orange-400' :
-                          'bg-blue-500/10 text-blue-400'
-                        }`}>
+                        <span className="font-bold text-foreground">{pair.base_asset}/{pair.quote_asset}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${PAIR_TYPE_STYLES[pair.pair_type] || PAIR_TYPE_STYLES.spot}`}>
                           {pair.pair_type === 'both' ? 'S+F' : pair.pair_type.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => handleToggle(pair.id)}>
-                          {pair.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
+                          {pair.is_enabled ? <ToggleRight size={20} className="text-success" /> : <ToggleLeft size={20} className="text-muted-foreground" />}
                         </button>
-                        <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1 rounded text-red-400 hover:bg-red-500/10">
-                          <Trash2 size={14} className="fill-current" />
+                        <button onClick={() => handleDelete(pair.id, pair.symbol)} className="p-1 rounded text-danger hover:bg-danger/10">
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-4 text-xs text-gray-500">
+                    <div className="flex gap-4 text-xs text-muted-foreground tabular-nums">
                       <span>Min: {parseFloat(pair.min_trade_amount).toLocaleString()}</span>
                       <span>Max: {parseFloat(pair.max_trade_amount).toLocaleString()}</span>
                       <span>Fee: {(parseFloat(pair.trading_fee) * 100).toFixed(2)}%</span>

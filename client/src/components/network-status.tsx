@@ -78,11 +78,11 @@ export function NetworkStatusNotification() {
       <div
         className={`
           pointer-events-auto mx-4 mt-4 flex items-center gap-3 rounded-xl px-5 py-3.5
-          shadow-2xl backdrop-blur-md border transition-all duration-300 max-w-md w-full
+          shadow-sm border transition-all duration-300 max-w-md w-full bg-card
           ${
             isOffline
-              ? "bg-red-950/90 border-red-800/60 text-red-100 shadow-red-900/30"
-              : "bg-emerald-950/90 border-emerald-800/60 text-emerald-100 shadow-emerald-900/30"
+              ? "border-danger/30 text-foreground"
+              : "border-success/30 text-foreground"
           }
         `}
       >
@@ -90,22 +90,22 @@ export function NetworkStatusNotification() {
         <div
           className={`
             flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full
-            ${isOffline ? "bg-red-900/60" : "bg-emerald-900/60"}
+            ${isOffline ? "bg-danger/15" : "bg-success/15"}
           `}
         >
           {isOffline ? (
-            <WifiOff className="w-5 h-5 text-red-400 animate-pulse" />
+            <WifiOff className="w-5 h-5 text-danger" />
           ) : (
-            <Wifi className="w-5 h-5 text-emerald-400" />
+            <Wifi className="w-5 h-5 text-success" />
           )}
         </div>
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm leading-tight">
+          <p className="font-semibold text-sm leading-tight text-foreground">
             {isOffline ? "No Internet Connection" : "Back Online"}
           </p>
-          <p className={`text-xs mt-0.5 ${isOffline ? "text-red-300/80" : "text-emerald-300/80"}`}>
+          <p className="text-xs mt-0.5 text-muted-foreground">
             {isOffline
               ? "Please check your network and try again"
               : "Your connection has been restored"}
@@ -116,11 +116,11 @@ export function NetworkStatusNotification() {
         <button
           onClick={handleDismiss}
           className={`
-            flex-shrink-0 p-1.5 rounded-lg transition-colors
+            flex-shrink-0 p-1.5 rounded-lg transition-colors text-muted-foreground
             ${
               isOffline
-                ? "hover:bg-red-800/50 text-red-400 hover:text-red-200"
-                : "hover:bg-emerald-800/50 text-emerald-400 hover:text-emerald-200"
+                ? "hover:bg-danger/15 hover:text-danger"
+                : "hover:bg-success/15 hover:text-success"
             }
           `}
           aria-label="Dismiss notification"

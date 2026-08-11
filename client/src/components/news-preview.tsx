@@ -53,8 +53,8 @@ export default function NewsPreview({
 
   return (
     <div className="relative">
-      <div 
-        className="w-full max-w-md mx-auto border border-[#1e1e1e] rounded-lg shadow-2xl overflow-hidden"
+      <div
+        className="w-full max-w-md mx-auto border border-border rounded-xl shadow-sm overflow-hidden"
         style={{ 
           backgroundColor: background_color || '#111111',
           color: text_color || '#ffffff'
@@ -89,7 +89,7 @@ export default function NewsPreview({
               <img
                 src={getImageDisplayUrl(image_url)}
                 alt={title}
-                className="w-full h-48 object-cover rounded-lg border border-[#1e1e1e]"
+                className="w-full h-48 object-cover rounded-lg border border-border"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
@@ -118,7 +118,7 @@ export default function NewsPreview({
 
           {/* Action Button */}
           <button
-            className="w-full font-semibold transition-all hover:scale-105 border border-[#1e1e1e] py-2 px-4 rounded"
+            className="w-full font-semibold transition-opacity hover:opacity-90 border border-border py-2 px-4 rounded-lg"
             style={{ 
               backgroundColor: button_color || '#3b82f6',
               color: '#ffffff',
@@ -130,7 +130,7 @@ export default function NewsPreview({
         </div>
       </div>
       
-      <div className="text-center mt-4 text-sm text-gray-400">
+      <div className="text-center mt-4 text-sm text-muted-foreground">
         Preview - This is how users will see your news
       </div>
     </div>

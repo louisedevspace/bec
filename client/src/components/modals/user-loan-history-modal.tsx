@@ -71,20 +71,20 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
   const getStatusBadge = (status: string, loanStatus?: string) => {
     if (status === 'pending') {
-      return <Badge variant="secondary" className="bg-yellow-600/20 text-yellow-400">Pending</Badge>;
+      return <Badge variant="secondary" className="bg-warning/20 text-warning">Pending</Badge>;
     }
     if (status === 'rejected') {
-      return <Badge variant="secondary" className="bg-red-600/20 text-red-400">Rejected</Badge>;
+      return <Badge variant="secondary" className="bg-danger/20 text-danger">Rejected</Badge>;
     }
     if (status === 'approved') {
       switch (loanStatus) {
         case 'paid':
-          return <Badge variant="secondary" className="bg-blue-600/20 text-blue-400">Paid</Badge>;
+          return <Badge variant="secondary" className="bg-info/20 text-info">Paid</Badge>;
         case 'overdue':
-          return <Badge variant="secondary" className="bg-red-600/20 text-red-400">Overdue</Badge>;
+          return <Badge variant="secondary" className="bg-danger/20 text-danger">Overdue</Badge>;
         case 'active':
         default:
-          return <Badge variant="secondary" className="bg-green-600/20 text-green-400">Active</Badge>;
+          return <Badge variant="secondary" className="bg-success/20 text-success">Active</Badge>;
       }
     }
     return <Badge variant="secondary">{status}</Badge>;
@@ -162,7 +162,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
       <DialogContent className="max-w-4xl" hideCloseButton>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-white flex items-center gap-2">
+            <DialogTitle className="text-foreground flex items-center gap-2">
               <FileText className="w-5 h-5" />
               My Loan History
             </DialogTitle>
@@ -171,7 +171,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
               size="sm"
               onClick={fetchLoanApplications}
               disabled={loading}
-              className="text-gray-400 hover:text-white"
+              className="bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -180,14 +180,14 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl">
+          <div className="bg-danger/10 border border-danger/30 text-danger p-3 rounded-xl">
             {error}
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-8 text-gray-400">
+          <div className="text-center py-8 text-muted-foreground">
             Loading loan applications...
           </div>
         )}
@@ -203,18 +203,18 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
               const isNearDue = isApproved && !isPaid && daysRemaining <= 7 && daysRemaining >= 0;
 
               return (
-                <Card key={application.id} className="bg-[#0a0a0a] border-[#1e1e1e]">
+                <Card key={application.id} className="bg-muted/50 border-border">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="w-4 h-4 text-gray-400" />
-                            <span className="text-white font-medium">
+                            <DollarSign className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-foreground font-medium tabular-nums">
                               {formatCurrency(application.amount)}
                             </span>
                           </div>
-                          <div className="text-sm text-gray-400 max-w-64 truncate">
+                          <div className="text-sm text-muted-foreground max-w-64 truncate">
                             {application.purpose}
                           </div>
                         </div>
@@ -222,48 +222,48 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
                       <div className="flex items-center gap-4">
                         <div className="text-center">
-                          <div className="text-sm text-gray-400 mb-1">Duration</div>
-                          <div className="text-white text-sm">
+                          <div className="text-sm text-muted-foreground mb-1">Duration</div>
+                          <div className="text-foreground text-sm tabular-nums">
                             {application.duration} days
                           </div>
                         </div>
 
                         <div className="text-center">
-                          <div className="text-sm text-gray-400 mb-1">Status</div>
+                          <div className="text-sm text-muted-foreground mb-1">Status</div>
                           {getStatusBadge(application.status, application.loan_status)}
                         </div>
 
                         <div className="text-center">
-                          <div className="text-sm text-gray-400 mb-1">Applied</div>
-                          <div className="text-white text-sm">
+                          <div className="text-sm text-muted-foreground mb-1">Applied</div>
+                          <div className="text-foreground text-sm">
                             {formatDate(application.created_at)}
                           </div>
                         </div>
 
                         {isApproved && (
                           <div className="text-center">
-                            <div className="text-sm text-gray-400 mb-1">Days Remaining</div>
-                            <div className={`text-sm font-medium ${
-                              isOverdue ? 'text-red-400' : 
-                              isNearDue ? 'text-yellow-400' : 
-                              'text-green-400'
+                            <div className="text-sm text-muted-foreground mb-1">Days Remaining</div>
+                            <div className={`text-sm font-medium tabular-nums ${
+                              isOverdue ? 'text-danger' :
+                              isNearDue ? 'text-warning' :
+                              'text-success'
                             }`}>
-                              {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : 
-                               isNearDue ? `${daysRemaining} days left` : 
+                              {isOverdue ? `${Math.abs(daysRemaining)} days overdue` :
+                               isNearDue ? `${daysRemaining} days left` :
                                `${daysRemaining} days left`}
                             </div>
                           </div>
                         )}
 
                         {isOverdue && (
-                          <div className="flex items-center gap-2 text-red-400">
+                          <div className="flex items-center gap-2 text-danger">
                             <AlertCircle className="w-4 h-4" />
                             <span className="text-sm">Payment Overdue</span>
                           </div>
                         )}
 
                         {isNearDue && !isOverdue && (
-                          <div className="flex items-center gap-2 text-yellow-400">
+                          <div className="flex items-center gap-2 text-warning">
                             <Clock className="w-4 h-4" />
                             <span className="text-sm">Payment Due Soon</span>
                           </div>
@@ -272,26 +272,27 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
                     </div>
 
                     {application.rejection_reason && (
-                      <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-                        <div className="text-sm text-red-400 font-medium mb-1">Rejection Reason:</div>
-                        <div className="text-sm text-red-400/80">{application.rejection_reason}</div>
+                      <div className="mt-3 p-3 bg-danger/10 border border-danger/30 rounded-xl">
+                        <div className="text-sm text-danger font-medium mb-1">Rejection Reason:</div>
+                        <div className="text-sm text-danger/80">{application.rejection_reason}</div>
                       </div>
                     )}
 
                     {isApproved && !isPaid && (isOverdue || isNearDue) && (
-                      <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                        <div className="text-sm text-yellow-400 font-medium mb-1">
-                          {isOverdue ? '⚠️ Payment Overdue' : '⏰ Payment Due Soon'}
+                      <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-xl">
+                        <div className="text-sm text-warning font-medium mb-1 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {isOverdue ? 'Payment Overdue' : 'Payment Due Soon'}
                         </div>
-                        <div className="text-sm text-yellow-400/80">
-                          {isOverdue 
+                        <div className="text-sm text-warning/80">
+                          {isOverdue
                             ? `Your loan payment is ${Math.abs(daysRemaining)} days overdue. Please make your payment as soon as possible.`
                             : `Your loan payment is due in ${daysRemaining} days. Please ensure you have sufficient funds.`
                           }
                         </div>
-                        <Button 
-                          size="sm" 
-                          className="mt-2 bg-blue-600 hover:bg-blue-700"
+                        <Button
+                          size="sm"
+                          className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                           onClick={() => handlePayLoan(application.id, application.amount)}
                           disabled={payingLoan === application.id}
                         >
@@ -311,11 +312,12 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
                     )}
 
                     {isPaid && (
-                      <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                        <div className="text-sm text-green-400 font-medium mb-1">
-                          ✅ Loan Paid
+                      <div className="mt-3 p-3 bg-success/10 border border-success/30 rounded-xl">
+                        <div className="text-sm text-success font-medium mb-1 flex items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Loan Paid
                         </div>
-                        <div className="text-sm text-green-400/80">
+                        <div className="text-sm text-success/80">
                           This loan has been successfully paid. Thank you!
                         </div>
                       </div>
@@ -327,7 +329,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
 
             {/* No Results */}
             {!loading && loanApplications.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 No loan applications found.
               </div>
             )}
@@ -335,7 +337,7 @@ export const UserLoanHistoryModal: React.FC<UserLoanHistoryModalProps> = ({
         )}
 
         <div className="flex justify-end pt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground">
             Close
           </Button>
         </div>

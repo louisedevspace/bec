@@ -615,12 +615,12 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const getVerificationBadge = (isVerified: boolean) => {
     if (isVerified) {
-      return <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+      return <Badge className="bg-success/10 text-success border border-success/20 flex items-center gap-1">
         <CheckCircle className="w-3 h-3" />
         Verified
       </Badge>;
     }
-    return <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center gap-1">
+    return <Badge className="bg-warning/10 text-warning border border-warning/20 flex items-center gap-1">
       <XCircle className="w-3 h-3" />
       Unverified
     </Badge>;
@@ -628,12 +628,12 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
   const getStatusBadge = (isActive: boolean) => {
     if (isActive) {
-      return <Badge className="bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+      return <Badge className="bg-success/10 text-success border border-success/20 flex items-center gap-1">
         <Power className="w-3 h-3" />
         Active
       </Badge>;
     }
-    return <Badge className="bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1">
+    return <Badge className="bg-danger/10 text-danger border border-danger/20 flex items-center gap-1">
       <PowerOff className="w-3 h-3" />
       Disabled
     </Badge>;
@@ -643,11 +643,11 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <Shield className="w-5 h-5" />
             User Management
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription>
             Manage user accounts, credit scores, and perform administrative actions.
           </DialogDescription>
         </DialogHeader>
@@ -655,40 +655,40 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         <div className="space-y-4">
           {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search users by email, name, or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500"
+              className="pl-10"
             />
           </div>
 
           {/* Error Display */}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-sm">
+            <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 text-danger text-sm">
               {error}
             </div>
           )}
 
           {/* Users List */}
           {loading ? (
-            <div className="text-center py-8 text-gray-400">Loading users...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading users...</div>
           ) : (
             <div className="grid gap-4">
               {filteredUsers.map((user) => (
-                <Card key={user.id} className="bg-[#0a0a0a] border-[#1e1e1e]">
+                <Card key={user.id} className="bg-muted/40 border-border">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#1e1e1e] flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-400" />
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <User className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <CardTitle className="text-white text-lg">
+                          <CardTitle className="text-foreground text-lg">
                             {user.full_name || 'No Name'}
                           </CardTitle>
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Mail className="w-3 h-3" />
                             {user.email}
                           </div>
@@ -704,13 +704,13 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* User ID */}
                       <div>
-                        <Label className="text-gray-500 text-xs">User ID</Label>
-                        <div className="text-white text-sm font-mono">{user.display_id || user.id.substring(0, 8)}</div>
+                        <Label className="text-muted-foreground text-xs">User ID</Label>
+                        <div className="text-foreground text-sm font-mono">{user.display_id || user.id.substring(0, 8)}</div>
               </div>
 
                       {/* Credit Score */}
                       <div>
-                        <Label className="text-gray-500 text-xs">Credit Score</Label>
+                        <Label className="text-muted-foreground text-xs">Credit Score</Label>
                         {editingUserId === user.id ? (
                           <div className="flex items-center gap-2 mt-1">
                             <Input
@@ -720,13 +720,13 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               max="850"
                               value={editingCreditScore}
                               onChange={(e) => setEditingCreditScore(e.target.value)}
-                              className="w-20 h-8 text-sm bg-[#0a0a0a] border-[#1e1e1e] text-white"
+                              className="w-20 h-8 text-sm"
                             />
                             <Button
                               size="sm"
                               onClick={handleSaveCreditScore}
                               disabled={saving}
-                              className="h-8 px-2 bg-blue-600 hover:bg-blue-700"
+                              className="h-8 px-2"
                             >
                               <Save className="w-3 h-3" />
                             </Button>
@@ -734,7 +734,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               size="sm"
                               variant="outline"
                               onClick={handleCancelEdit}
-                              className="h-8 px-2 border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                              className="h-8 px-2"
                             >
                               <X className="w-3 h-3" />
                             </Button>
@@ -746,7 +746,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               size="sm"
                               variant="outline"
                               onClick={() => handleEditCreditScore(user)}
-                              className="h-6 px-2 border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                              className="h-6 px-2"
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -756,26 +756,26 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
                       {/* Created Date */}
                       <div>
-                        <Label className="text-gray-500 text-xs">Created</Label>
-                        <div className="text-white text-sm">
+                        <Label className="text-muted-foreground text-xs">Created</Label>
+                        <div className="text-foreground text-sm">
                           {formatDate(user.created_at)}
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-                    <div className="mt-4 pt-4 border-t border-[#1e1e1e]">
+                    <div className="mt-4 pt-4 border-t border-border">
                       <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleViewUserDetails(user)}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           View Details
                         </Button>
-                        
+
               <Button
                 size="sm"
                           variant="outline"
@@ -784,7 +784,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleToggleUser(user);
                             }
                           }}
-                          className={`text-xs ${user.is_active ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20' : 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-green-500/20'}`}
+                          className={`text-xs ${user.is_active ? 'text-danger border-danger/30 bg-danger/10 hover:bg-danger/20' : 'text-success border-success/30 bg-success/10 hover:bg-success/20'}`}
                         >
                           {user.is_active ? (
                             <>
@@ -807,7 +807,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleDeleteUserHistory(user);
                             }
                           }}
-                          className="text-xs text-orange-400 border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20"
+                          className="text-xs text-warning border-warning/30 bg-warning/10 hover:bg-warning/20"
                         >
                           <History className="w-3 h-3 mr-1" />
                           Delete History
@@ -815,13 +815,13 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="destructive"
                           onClick={() => {
                             if (window.confirm(`Are you sure you want to delete user "${user.email}"? This will permanently remove the user and all their data.`)) {
                               handleDeleteUser(user);
                             }
                           }}
-                          className="text-xs text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
+                          className="text-xs"
                         >
                           <Trash2 className="w-3 h-3 mr-1" />
                           Delete User
@@ -835,7 +835,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleHideOrders(user);
                             }
                           }}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           <History className="w-3 h-3 mr-1" />
                           Delete Orders History
@@ -849,7 +849,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleHideFuturesTrades(user);
                             }
                           }}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           <History className="w-3 h-3 mr-1" />
                           Delete Trade History
@@ -859,7 +859,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                           size="sm"
                           variant="outline"
                           onClick={() => openManageTransactions(user)}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           <History className="w-3 h-3 mr-1" />
                           Delete Transaction History
@@ -873,7 +873,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleResetVerification(user);
                             }
                           }}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           Reset Verification
                         </Button>
@@ -884,7 +884,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                           size="sm"
                           variant="outline"
                           onClick={() => openPortfolioEditor(user)}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           Edit Portfolio Balance
                         </Button>
@@ -897,7 +897,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                               handleDeletePortfolioData(user);
                             }
                           }}
-                          className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                          className="text-xs"
                         >
                           Delete Portfolio Data
               </Button>
@@ -911,7 +911,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
           {/* No Results */}
           {!loading && filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground">
               {searchTerm ? 'No users found matching your search.' : 'No users found.'}
             </div>
           )}
@@ -921,11 +921,11 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         <Dialog open={showUserDetails} onOpenChange={(open) => !open && setShowUserDetails(false)}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
+              <DialogTitle className="text-foreground flex items-center gap-2">
                 <User className="w-5 h-5" />
                 User Details
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription>
                 Review account information and perform quick actions.
               </DialogDescription>
             </DialogHeader>
@@ -934,80 +934,80 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-gray-500 text-xs">User ID</Label>
-                    <div className="text-white text-sm font-mono bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">User ID</Label>
+                    <div className="text-foreground text-sm font-mono bg-muted/40 border border-border p-2 rounded mt-1">
                       {selectedUser.id}
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Email</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Email</Label>
+                    <div className="text-foreground text-sm bg-muted/40 border border-border p-2 rounded mt-1">
                       {selectedUser.email}
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Full Name</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Full Name</Label>
+                    <div className="text-foreground text-sm bg-muted/40 border border-border p-2 rounded mt-1">
                       {selectedUser.full_name || 'Not provided'}
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Verification Status</Label>
+                    <Label className="text-muted-foreground text-xs">Verification Status</Label>
                     <div className="mt-1">{getVerificationBadge(selectedUser.is_verified)}</div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Account Status</Label>
+                    <Label className="text-muted-foreground text-xs">Account Status</Label>
                     <div className="mt-1">{getStatusBadge(selectedUser.is_active ?? true)}</div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Credit Score</Label>
+                    <Label className="text-muted-foreground text-xs">Credit Score</Label>
                     <div className="mt-1">
                       <CreditScoreBadge creditScore={selectedUser.credit_score || 60} size="md" />
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-gray-500 text-xs">Created Date</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Created Date</Label>
+                    <div className="text-foreground text-sm bg-muted/40 border border-border p-2 rounded mt-1">
                       {formatDateTime(selectedUser.created_at)}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#1e1e1e]">
-                  <h4 className="text-sm font-semibold text-white mb-3">Staking Overview</h4>
+                <div className="pt-4 border-t border-border">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Staking Overview</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-3">
-                      <p className="text-[11px] text-gray-500 mb-1">Total Staked</p>
-                      <p className="text-lg font-semibold text-white">
+                    <div className="bg-muted/40 border border-border rounded-xl p-3">
+                      <p className="text-[11px] text-muted-foreground mb-1">Total Staked</p>
+                      <p className="text-lg font-semibold text-foreground tabular-nums">
                         {(selectedUser.total_staking_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
                       </p>
                     </div>
-                    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-3">
-                      <p className="text-[11px] text-gray-500 mb-1">Active Positions</p>
-                      <p className="text-lg font-semibold text-green-400">
+                    <div className="bg-muted/40 border border-border rounded-xl p-3">
+                      <p className="text-[11px] text-muted-foreground mb-1">Active Positions</p>
+                      <p className="text-lg font-semibold text-success tabular-nums">
                         {selectedUser.active_staking_count || 0}
                       </p>
                     </div>
-                    <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-3">
-                      <p className="text-[11px] text-gray-500 mb-1">Positions</p>
-                      <p className="text-lg font-semibold text-white">
+                    <div className="bg-muted/40 border border-border rounded-xl p-3">
+                      <p className="text-[11px] text-muted-foreground mb-1">Positions</p>
+                      <p className="text-lg font-semibold text-foreground tabular-nums">
                         {selectedUser.staking_positions?.length || 0}
                       </p>
                     </div>
                   </div>
 
                   {selectedUser.staking_positions && selectedUser.staking_positions.length > 0 && (
-                    <div className="mt-4 border border-[#1e1e1e] rounded-xl bg-[#0a0a0a] overflow-hidden">
+                    <div className="mt-4 border border-border rounded-xl bg-muted/40 overflow-hidden">
                       <div className="max-h-64 overflow-y-auto">
                         <table className="w-full text-xs">
-                          <thead className="bg-[#080808]">
-                            <tr className="text-gray-500">
+                          <thead className="bg-card">
+                            <tr className="text-muted-foreground">
                               <th className="text-left py-2 px-3 font-medium">Asset</th>
                               <th className="text-right py-2 px-3 font-medium">Amount</th>
                               <th className="text-center py-2 px-3 font-medium">APY</th>
@@ -1021,35 +1021,35 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                             {selectedUser.staking_positions.map((position: any) => (
                               <tr
                                 key={position.id}
-                                className="border-t border-[#1e1e1e] hover:bg-[#151515] transition-colors duration-200"
+                                className="border-t border-border hover:bg-card transition-colors duration-200"
                               >
-                                <td className="py-2 px-3 text-gray-100"><span className="flex items-center gap-1.5"><CryptoIcon symbol={position.symbol} size="xs" />{position.symbol}</span></td>
-                                <td className="py-2 px-3 text-right text-gray-100">
+                                <td className="py-2 px-3 text-foreground"><span className="flex items-center gap-1.5"><CryptoIcon symbol={position.symbol} size="xs" />{position.symbol}</span></td>
+                                <td className="py-2 px-3 text-right text-foreground tabular-nums">
                                   {parseFloat(position.amount || "0").toLocaleString()}
                                 </td>
-                                <td className="py-2 px-3 text-center text-green-400">
+                                <td className="py-2 px-3 text-center text-success tabular-nums">
                                   {parseFloat(position.apy || "0").toFixed(2)}%
                                 </td>
-                                <td className="py-2 px-3 text-center text-gray-100">
+                                <td className="py-2 px-3 text-center text-foreground">
                                   {position.duration}d
                                 </td>
                                 <td className="py-2 px-3 text-center">
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[11px] ${
                                       position.status === "active"
-                                        ? "bg-green-500/15 text-green-400 border border-green-500/30"
-                                        : "bg-gray-500/15 text-gray-300 border border-gray-500/30"
+                                        ? "bg-success/15 text-success border border-success/30"
+                                        : "bg-muted text-muted-foreground border border-border"
                                     }`}
                                   >
                                     {position.status}
                                   </span>
                                 </td>
-                                <td className="py-2 px-3 text-center text-gray-400">
+                                <td className="py-2 px-3 text-center text-muted-foreground">
                                   {position.start_date
                                     ? new Date(position.start_date).toLocaleDateString()
                                     : "-"}
                                 </td>
-                                <td className="py-2 px-3 text-center text-gray-400">
+                                <td className="py-2 px-3 text-center text-muted-foreground">
                                   {position.end_date
                                     ? new Date(position.end_date).toLocaleDateString()
                                     : "-"}
@@ -1063,8 +1063,8 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-[#1e1e1e]">
-                  <h4 className="text-sm font-semibold text-white mb-3">Quick Actions</h4>
+                <div className="pt-4 border-t border-border">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h4>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
@@ -1073,7 +1073,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                         setShowUserDetails(false);
                         handleEditCreditScore(selectedUser);
                       }}
-                      className="text-xs border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1e1e1e]"
+                      className="text-xs"
                     >
                       <Edit className="w-3 h-3 mr-1" />
                       Edit Credit Score
@@ -1086,7 +1086,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                         setShowUserDetails(false);
                         setConfirmAction({ type: 'toggle_user', user: selectedUser });
                       }}
-                      className={`text-xs ${selectedUser.is_active ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20' : 'text-green-400 border-green-500/30 bg-green-500/10 hover:bg-green-500/20'}`}
+                      className={`text-xs ${selectedUser.is_active ? 'text-danger border-danger/30 bg-danger/10 hover:bg-danger/20' : 'text-success border-success/30 bg-success/10 hover:bg-success/20'}`}
                     >
                       {selectedUser.is_active ? (
                         <>
@@ -1107,7 +1107,6 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                   <Button
                     variant="outline"
                     onClick={() => setShowUserDetails(false)}
-                    className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
                   >
                     Close
                   </Button>
@@ -1121,17 +1120,17 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         <Dialog open={showManageTransactions} onOpenChange={(open) => !open && setShowManageTransactions(false)}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
+              <DialogTitle className="text-foreground flex items-center gap-2">
                 <History className="w-5 h-5" />
                 Manage Transactions
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription>
                 Select deposit/withdraw transactions to hide from the user's view{selectedUser ? ` (${selectedUser.email})` : ''}.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="border border-[#1e1e1e] rounded bg-[#0a0a0a]">
-              <div className="grid grid-cols-5 text-xs text-gray-500 px-3 py-2 border-b border-[#1e1e1e]">
+            <div className="border border-border rounded-lg bg-muted/40">
+              <div className="grid grid-cols-5 text-xs text-muted-foreground px-3 py-2 border-b border-border">
                 <div>Type</div>
                 <div>Symbol</div>
                 <div>Amount</div>
@@ -1140,11 +1139,11 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {manageTransactionsData.map(t => (
-                  <div key={`${t.type}-${t.id}`} className="grid grid-cols-5 items-center text-sm px-3 py-2 border-b border-[#1e1e1e]">
-                    <div className="text-white">{t.type}</div>
-                    <div className="text-white flex items-center gap-1"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</div>
-                    <div className="text-white">{Number(t.amount).toFixed(8)}</div>
-                    <div className="text-white">{t.status}</div>
+                  <div key={`${t.type}-${t.id}`} className="grid grid-cols-5 items-center text-sm px-3 py-2 border-b border-border">
+                    <div className="text-foreground">{t.type}</div>
+                    <div className="text-foreground flex items-center gap-1"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</div>
+                    <div className="text-foreground tabular-nums">{Number(t.amount).toFixed(8)}</div>
+                    <div className="text-foreground">{t.status}</div>
                     <div>
                       <input
                         type="checkbox"
@@ -1154,7 +1153,7 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                           if (e.target.checked) next.add(t.id); else next.delete(t.id);
                           setSelectedTransactionIds(next);
                         }}
-                        className="accent-blue-500"
+                        className="accent-primary"
                       />
                     </div>
                   </div>
@@ -1166,11 +1165,10 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
               <Button
                 variant="outline"
                 onClick={() => setShowManageTransactions(false)}
-                className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
               >
                 Cancel
               </Button>
-              <Button onClick={applyHideSelectedTransactions} className="bg-orange-600 hover:bg-orange-700 text-white">
+              <Button onClick={applyHideSelectedTransactions} className="bg-warning hover:bg-warning/90 text-warning-foreground">
                 Hide Selected
               </Button>
             </div>
@@ -1181,24 +1179,24 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
         <Dialog open={showPortfolioEditor} onOpenChange={(open) => !open && setShowPortfolioEditor(false)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white">Edit Portfolio</DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogTitle className="text-foreground">Edit Portfolio</DialogTitle>
+              <DialogDescription>
                 Update balances for {selectedUser ? selectedUser.email : 'the selected user'}.
               </DialogDescription>
             </DialogHeader>
 
               <div className="space-y-4">
                 <div>
-                  <Label className="text-gray-500 text-xs">BTC Available</Label>
-                  <Input value={portfolioBTC} onChange={(e) => setPortfolioBTC(e.target.value)} className="mt-1 bg-[#0a0a0a] border-[#1e1e1e] text-white" />
+                  <Label className="text-muted-foreground text-xs">BTC Available</Label>
+                  <Input value={portfolioBTC} onChange={(e) => setPortfolioBTC(e.target.value)} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs">ETH Available</Label>
-                  <Input value={portfolioETH} onChange={(e) => setPortfolioETH(e.target.value)} className="mt-1 bg-[#0a0a0a] border-[#1e1e1e] text-white" />
+                  <Label className="text-muted-foreground text-xs">ETH Available</Label>
+                  <Input value={portfolioETH} onChange={(e) => setPortfolioETH(e.target.value)} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs">USDT Available</Label>
-                  <Input value={portfolioUSDT} onChange={(e) => setPortfolioUSDT(e.target.value)} className="mt-1 bg-[#0a0a0a] border-[#1e1e1e] text-white" />
+                  <Label className="text-muted-foreground text-xs">USDT Available</Label>
+                  <Input value={portfolioUSDT} onChange={(e) => setPortfolioUSDT(e.target.value)} className="mt-1" />
                 </div>
               </div>
 
@@ -1206,11 +1204,10 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
                 <Button
                   variant="outline"
                   onClick={() => setShowPortfolioEditor(false)}
-                  className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
                 >
                   Cancel
                 </Button>
-                <Button onClick={savePortfolioEditor} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={savePortfolioEditor}>
                   Save
                 </Button>
               </div>

@@ -58,10 +58,10 @@ interface GoldPrice {
 type StatusFilter = "all" | "pending" | "approved" | "rejected" | "cancelled";
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: typeof Clock; label: string }> = {
-  pending:   { color: "text-yellow-500", bg: "bg-yellow-500/10", icon: Clock,        label: "Pending"   },
-  approved:  { color: "text-green-500",  bg: "bg-green-500/10",  icon: CheckCircle,  label: "Approved"  },
-  rejected:  { color: "text-red-500",    bg: "bg-red-500/10",    icon: XCircle,      label: "Rejected"  },
-  cancelled: { color: "text-gray-500",   bg: "bg-gray-500/10",   icon: AlertCircle,  label: "Cancelled" },
+  pending:   { color: "text-warning", bg: "bg-warning/10", icon: Clock,        label: "Pending"   },
+  approved:  { color: "text-success", bg: "bg-success/10", icon: CheckCircle,  label: "Approved"  },
+  rejected:  { color: "text-danger",  bg: "bg-danger/10",  icon: XCircle,      label: "Rejected"  },
+  cancelled: { color: "text-muted-foreground", bg: "bg-muted", icon: AlertCircle,  label: "Cancelled" },
 };
 
 function GoldIcon({ size = 20 }: { size?: number }) {
@@ -201,25 +201,25 @@ export default function AdminGoldPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <GoldIcon size={36} />
         <div>
-          <h1 className="text-white text-xl font-bold">Gold Trading Management</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-foreground text-xl font-bold">Gold Trading Management</h1>
+          <p className="text-muted-foreground text-sm">
             Live price:{" "}
-            <span className="text-yellow-400 font-semibold">
+            <span className="text-warning font-semibold tabular-nums">
               ${goldPrice?.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "—"}/oz
             </span>
             {goldPrice?.source === "fallback" && (
-              <span className="text-red-400 text-xs ml-2">(fallback price)</span>
+              <span className="text-danger text-xs ml-2">(fallback price)</span>
             )}
           </p>
         </div>
         <button
           onClick={() => { refetchTrades(); refetchPairs(); }}
-          className="ml-auto p-2 rounded-xl bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-white transition-colors"
+          className="ml-auto p-2 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground transition-colors"
         >
           <RefreshCw size={16} />
         </button>
@@ -228,52 +228,52 @@ export default function AdminGoldPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {[
-          { label: "Total Trades", value: stats.total, color: "text-white" },
-          { label: "Pending",      value: stats.pending,  color: "text-yellow-500" },
-          { label: "Approved",     value: stats.approved, color: "text-green-500"  },
-          { label: "Rejected",     value: stats.rejected, color: "text-red-500"    },
-          { label: "Volume (USDT)", value: `$${stats.volume.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "text-blue-400" },
-          { label: "Fees Earned",  value: `$${stats.fees.toFixed(2)}`, color: "text-purple-400" },
+          { label: "Total Trades", value: stats.total, color: "text-foreground" },
+          { label: "Pending",      value: stats.pending,  color: "text-warning" },
+          { label: "Approved",     value: stats.approved, color: "text-success"  },
+          { label: "Rejected",     value: stats.rejected, color: "text-danger"    },
+          { label: "Volume (USDT)", value: `$${stats.volume.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "text-info" },
+          { label: "Fees Earned",  value: `$${stats.fees.toFixed(2)}`, color: "text-primary" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#111] rounded-xl border border-[#1e1e1e] p-3">
-            <p className="text-gray-500 text-xs mb-1">{label}</p>
-            <p className={`font-bold text-lg ${color}`}>{value}</p>
+          <div key={label} className="bg-card rounded-xl border border-border p-3">
+            <p className="text-muted-foreground text-xs mb-1">{label}</p>
+            <p className={`font-bold text-lg tabular-nums ${color}`}>{value}</p>
           </div>
         ))}
       </div>
 
       {/* Gold Pairs Management */}
-      <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] mb-4">
+      <div className="bg-card rounded-xl border border-border mb-4">
         <button
           onClick={() => setExpandedPairs(!expandedPairs)}
-          className="w-full flex items-center justify-between p-4 text-white hover:bg-[#151515] transition-colors rounded-2xl"
+          className="w-full flex items-center justify-between p-4 text-foreground hover:bg-muted/50 transition-colors rounded-xl"
         >
           <div className="flex items-center gap-2">
-            <Settings size={16} className="text-yellow-500" />
+            <Settings size={16} className="text-warning" />
             <span className="font-semibold text-sm">Gold Trading Pairs ({goldPairs.length})</span>
           </div>
-          {expandedPairs ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          {expandedPairs ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
         </button>
 
         {expandedPairs && (
-          <div className="border-t border-[#1e1e1e] p-4 space-y-3">
+          <div className="border-t border-border p-4 space-y-3">
             {goldPairs.length === 0 && (
-              <p className="text-gray-500 text-sm text-center py-4">No gold pairs found. Run the migration to add XAU/USDT.</p>
+              <p className="text-muted-foreground text-sm text-center py-4">No gold pairs found. Run the migration to add XAU/USDT.</p>
             )}
             {goldPairs.map((gp) => (
-              <div key={gp.id} className="bg-[#0f0f0f] rounded-xl border border-[#1e1e1e] p-3">
+              <div key={gp.id} className="bg-muted/30 rounded-xl border border-border p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GoldIcon size={20} />
-                    <span className="text-white font-semibold text-sm">{gp.symbol}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${gp.is_enabled ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                    <span className="text-foreground font-semibold text-sm">{gp.symbol}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${gp.is_enabled ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
                       {gp.is_enabled ? "Active" : "Disabled"}
                     </span>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setEditPair(gp); setPairForm({ trading_fee: (parseFloat(gp.trading_fee) * 100).toFixed(2), min_trade_amount: gp.min_trade_amount, max_trade_amount: gp.max_trade_amount }); }}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-gray-300 hover:text-white border border-[#2a2a2a] transition-colors"
+                      className="text-xs px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors"
                     >
                       Edit
                     </button>
@@ -281,8 +281,8 @@ export default function AdminGoldPage() {
                       onClick={() => togglePairMutation.mutate(gp.id)}
                       className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                         gp.is_enabled
-                          ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                          : "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
+                          ? "bg-danger/10 text-danger border-danger/20 hover:bg-danger/20"
+                          : "bg-success/10 text-success border-success/20 hover:bg-success/20"
                       }`}
                     >
                       {gp.is_enabled ? "Disable" : "Enable"}
@@ -290,9 +290,9 @@ export default function AdminGoldPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 mt-2 text-xs">
-                  <span className="text-gray-500">Fee: <span className="text-gray-300">{(parseFloat(gp.trading_fee) * 100).toFixed(2)}%</span></span>
-                  <span className="text-gray-500">Min: <span className="text-gray-300">${gp.min_trade_amount}</span></span>
-                  <span className="text-gray-500">Max: <span className="text-gray-300">${gp.max_trade_amount}</span></span>
+                  <span className="text-muted-foreground">Fee: <span className="text-foreground tabular-nums">{(parseFloat(gp.trading_fee) * 100).toFixed(2)}%</span></span>
+                  <span className="text-muted-foreground">Min: <span className="text-foreground tabular-nums">${gp.min_trade_amount}</span></span>
+                  <span className="text-muted-foreground">Max: <span className="text-foreground tabular-nums">${gp.max_trade_amount}</span></span>
                 </div>
               </div>
             ))}
@@ -308,8 +308,8 @@ export default function AdminGoldPage() {
             onClick={() => setStatusFilter(f)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-colors ${
               statusFilter === f
-                ? "bg-yellow-500 text-black"
-                : "bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-white"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             {f === "all" ? `All (${stats.total})` : f === "pending" ? `Pending (${stats.pending})` : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -318,11 +318,11 @@ export default function AdminGoldPage() {
       </div>
 
       {/* Trades Table */}
-      <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">Loading gold trades...</div>
+          <div className="flex items-center justify-center py-16 text-muted-foreground">Loading gold trades...</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-500 gap-2">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
             <GoldIcon size={40} />
             <p>No {statusFilter !== "all" ? statusFilter : ""} gold trades found</p>
           </div>
@@ -332,9 +332,9 @@ export default function AdminGoldPage() {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-[#1e1e1e]">
+                  <tr className="border-b border-border bg-muted/40">
                     {["ID", "User", "Date", "Pair", "Side", "Gold (oz)", "Value (USDT)", "Price/oz", "Fee", "Status", "Actions"].map(h => (
-                      <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3">{h}</th>
+                      <th key={h} className="text-left text-muted-foreground text-xs font-medium px-4 py-3">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -343,37 +343,37 @@ export default function AdminGoldPage() {
                     const cfg = STATUS_CONFIG[trade.status] || STATUS_CONFIG.pending;
                     const StatusIcon = cfg.icon;
                     return (
-                      <tr key={trade.id} className="border-b border-[#1a1a1a] hover:bg-[#151515] transition-colors">
-                        <td className="px-4 py-3 text-gray-400 text-xs">#{trade.id}</td>
+                      <tr key={trade.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground text-xs">#{trade.id}</td>
                         <td className="px-4 py-3">
-                          <div className="text-white text-xs font-medium">{trade.userDetails?.email || trade.user_id.slice(0, 8) + "..."}</div>
+                          <div className="text-foreground text-xs font-medium">{trade.userDetails?.email || trade.user_id.slice(0, 8) + "..."}</div>
                           {trade.userDetails?.full_name && (
-                            <div className="text-gray-500 text-[11px]">{trade.userDetails.full_name}</div>
+                            <div className="text-muted-foreground text-[11px]">{trade.userDetails.full_name}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                           {new Date(trade.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           <br />
                           {new Date(trade.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                         </td>
-                        <td className="px-4 py-3 text-white text-xs">{trade.pair_symbol}</td>
+                        <td className="px-4 py-3 text-foreground text-xs">{trade.pair_symbol}</td>
                         <td className="px-4 py-3">
-                          <span className={`flex items-center gap-1 text-xs font-bold ${trade.side === "buy" ? "text-green-400" : "text-red-400"}`}>
+                          <span className={`flex items-center gap-1 text-xs font-bold ${trade.side === "buy" ? "text-success" : "text-danger"}`}>
                             {trade.side === "buy" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                             {trade.side.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-white text-xs tabular-nums">{parseFloat(trade.gold_quantity).toFixed(6)}</td>
-                        <td className="px-4 py-3 text-white text-xs tabular-nums">${parseFloat(trade.amount_usdt).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-gray-300 text-xs tabular-nums">${parseFloat(trade.price_per_oz).toLocaleString()}</td>
-                        <td className="px-4 py-3 text-gray-300 text-xs tabular-nums">${parseFloat(trade.fee_usdt).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-foreground text-xs tabular-nums">{parseFloat(trade.gold_quantity).toFixed(6)}</td>
+                        <td className="px-4 py-3 text-foreground text-xs tabular-nums">${parseFloat(trade.amount_usdt).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">${parseFloat(trade.price_per_oz).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">${parseFloat(trade.fee_usdt).toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color}`}>
                             <StatusIcon size={11} />
                             {cfg.label}
                           </span>
                           {trade.reject_reason && (
-                            <p className="text-red-400 text-[11px] mt-1 max-w-[140px] truncate" title={trade.reject_reason}>
+                            <p className="text-danger text-[11px] mt-1 max-w-[140px] truncate" title={trade.reject_reason}>
                               {trade.reject_reason}
                             </p>
                           )}
@@ -384,13 +384,13 @@ export default function AdminGoldPage() {
                               <button
                                 onClick={() => approveMutation.mutate(trade.id)}
                                 disabled={approveMutation.isPending}
-                                className="px-2.5 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                                className="px-2.5 py-1.5 rounded-lg bg-success text-success-foreground hover:opacity-90 text-xs font-semibold transition-opacity disabled:opacity-50"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => { setRejectTargetId(trade.id); setRejectDialogOpen(true); }}
-                                className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-colors"
+                                className="px-2.5 py-1.5 rounded-lg bg-danger text-danger-foreground hover:opacity-90 text-xs font-semibold transition-opacity"
                               >
                                 Reject
                               </button>
@@ -410,14 +410,14 @@ export default function AdminGoldPage() {
                 const cfg = STATUS_CONFIG[trade.status] || STATUS_CONFIG.pending;
                 const StatusIcon = cfg.icon;
                 return (
-                  <div key={trade.id} className="bg-[#0f0f0f] rounded-xl border border-[#1e1e1e] p-3">
+                  <div key={trade.id} className="bg-muted/30 rounded-xl border border-border p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold uppercase ${trade.side === "buy" ? "text-green-400" : "text-red-400"}`}>
+                        <span className={`text-xs font-bold uppercase ${trade.side === "buy" ? "text-success" : "text-danger"}`}>
                           {trade.side}
                         </span>
-                        <span className="text-gray-500 text-xs">{trade.pair_symbol}</span>
-                        <span className="text-gray-600 text-xs">#{trade.id}</span>
+                        <span className="text-muted-foreground text-xs">{trade.pair_symbol}</span>
+                        <span className="text-muted-foreground/70 text-xs">#{trade.id}</span>
                       </div>
                       <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
                         <StatusIcon size={10} />
@@ -425,23 +425,23 @@ export default function AdminGoldPage() {
                       </span>
                     </div>
 
-                    <div className="text-xs text-gray-400 mb-2">
+                    <div className="text-xs text-muted-foreground mb-2">
                       {trade.userDetails?.email || trade.user_id.slice(0, 12) + "..."}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2">
-                      <span className="text-gray-500">Gold: <span className="text-white">{parseFloat(trade.gold_quantity).toFixed(6)} oz</span></span>
-                      <span className="text-gray-500">Value: <span className="text-white">${parseFloat(trade.amount_usdt).toFixed(2)}</span></span>
-                      <span className="text-gray-500">Price: <span className="text-white">${parseFloat(trade.price_per_oz).toLocaleString()}</span></span>
-                      <span className="text-gray-500">Fee: <span className="text-white">${parseFloat(trade.fee_usdt).toFixed(2)}</span></span>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2 tabular-nums">
+                      <span className="text-muted-foreground">Gold: <span className="text-foreground">{parseFloat(trade.gold_quantity).toFixed(6)} oz</span></span>
+                      <span className="text-muted-foreground">Value: <span className="text-foreground">${parseFloat(trade.amount_usdt).toFixed(2)}</span></span>
+                      <span className="text-muted-foreground">Price: <span className="text-foreground">${parseFloat(trade.price_per_oz).toLocaleString()}</span></span>
+                      <span className="text-muted-foreground">Fee: <span className="text-foreground">${parseFloat(trade.fee_usdt).toFixed(2)}</span></span>
                     </div>
 
                     {trade.reject_reason && (
-                      <p className="text-red-400 text-xs mb-2 bg-red-950/20 rounded-lg px-2 py-1">{trade.reject_reason}</p>
+                      <p className="text-danger text-xs mb-2 bg-danger/10 rounded-lg px-2 py-1">{trade.reject_reason}</p>
                     )}
 
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-[11px]">
+                      <span className="text-muted-foreground/70 text-[11px]">
                         {new Date(trade.created_at).toLocaleString()}
                       </span>
                       {trade.status === "pending" && (
@@ -449,13 +449,13 @@ export default function AdminGoldPage() {
                           <button
                             onClick={() => approveMutation.mutate(trade.id)}
                             disabled={approveMutation.isPending}
-                            className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-lg bg-success text-success-foreground hover:opacity-90 text-xs font-semibold transition-opacity disabled:opacity-50"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => { setRejectTargetId(trade.id); setRejectDialogOpen(true); }}
-                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-danger text-danger-foreground hover:opacity-90 text-xs font-semibold transition-opacity"
                           >
                             Reject
                           </button>
@@ -472,33 +472,33 @@ export default function AdminGoldPage() {
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="bg-[#111] border-[#1e1e1e] text-white max-w-md">
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle>Reject Gold Trade #{rejectTargetId}</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            <label className="text-gray-400 text-sm mb-2 block">Rejection reason (optional)</label>
+            <label className="text-muted-foreground text-sm mb-2 block">Rejection reason (optional)</label>
             <textarea
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               placeholder="e.g. Suspicious activity, Price manipulation..."
               rows={3}
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-red-500 resize-none"
+              className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-danger resize-none"
             />
-            <p className="text-gray-500 text-xs mt-2">Funds will be automatically refunded to the user.</p>
+            <p className="text-muted-foreground text-xs mt-2">Funds will be automatically refunded to the user.</p>
           </div>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => { setRejectDialogOpen(false); setRejectReason(""); setRejectTargetId(null); }}
-              className="bg-transparent border-[#2a2a2a] text-gray-300 hover:text-white hover:bg-[#1a1a1a]"
+              className="bg-transparent border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={() => rejectTargetId && rejectMutation.mutate({ id: rejectTargetId, reason: rejectReason })}
               disabled={rejectMutation.isPending}
-              className="bg-red-600 hover:bg-red-500 text-white"
+              className="bg-danger text-danger-foreground hover:opacity-90"
             >
               {rejectMutation.isPending ? "Rejecting..." : "Confirm Reject"}
             </Button>
@@ -508,13 +508,13 @@ export default function AdminGoldPage() {
 
       {/* Edit Pair Dialog */}
       <Dialog open={!!editPair} onOpenChange={(open) => { if (!open) setEditPair(null); }}>
-        <DialogContent className="bg-[#111] border-[#1e1e1e] text-white max-w-md">
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Gold Pair — {editPair?.symbol}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Trading Fee (%)</label>
+              <label className="text-muted-foreground text-xs mb-1.5 block">Trading Fee (%)</label>
               <input
                 type="number"
                 value={pairForm.trading_fee}
@@ -522,27 +522,27 @@ export default function AdminGoldPage() {
                 step="0.01"
                 min="0"
                 max="100"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-foreground text-sm tabular-nums focus:outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Min Trade Amount (USDT)</label>
+              <label className="text-muted-foreground text-xs mb-1.5 block">Min Trade Amount (USDT)</label>
               <input
                 type="number"
                 value={pairForm.min_trade_amount}
                 onChange={e => setPairForm(p => ({ ...p, min_trade_amount: e.target.value }))}
                 min="0"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-foreground text-sm tabular-nums focus:outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="text-gray-400 text-xs mb-1.5 block">Max Trade Amount (USDT)</label>
+              <label className="text-muted-foreground text-xs mb-1.5 block">Max Trade Amount (USDT)</label>
               <input
                 type="number"
                 value={pairForm.max_trade_amount}
                 onChange={e => setPairForm(p => ({ ...p, max_trade_amount: e.target.value }))}
                 min="0"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-foreground text-sm tabular-nums focus:outline-none focus:border-primary"
               />
             </div>
           </div>
@@ -550,7 +550,7 @@ export default function AdminGoldPage() {
             <Button
               variant="outline"
               onClick={() => setEditPair(null)}
-              className="bg-transparent border-[#2a2a2a] text-gray-300 hover:text-white hover:bg-[#1a1a1a]"
+              className="bg-transparent border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               Cancel
             </Button>
@@ -565,7 +565,7 @@ export default function AdminGoldPage() {
                 },
               })}
               disabled={updatePairMutation.isPending}
-              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
             >
               {updatePairMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>

@@ -65,17 +65,17 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-500/10 text-green-400 border-green-500/20">Approved</Badge>;
+        return <Badge className="bg-success/10 text-success border-success/20">Approved</Badge>;
       case 'rejected':
-        return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Rejected</Badge>;
+        return <Badge className="bg-danger/10 text-danger border-danger/20">Rejected</Badge>;
       default:
-        return <Badge variant="outline" className="border-[#1e1e1e] text-gray-400">{status}</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground">{status}</Badge>;
     }
   };
 
   // formatDateTime imported from @/lib/date-utils as formatDate
 
-  const filteredRequests = depositRequests?.filter((request: DepositRequest) => 
+  const filteredRequests = depositRequests?.filter((request: DepositRequest) =>
     request.status === activeTab
   ) || [];
 
@@ -84,10 +84,10 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Deposit History</DialogTitle>
+            <DialogTitle className="text-foreground">Deposit History</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
-            <div className="text-center text-gray-400">Loading deposit history...</div>
+            <div className="text-center text-muted-foreground">Loading deposit history...</div>
           </div>
         </DialogContent>
       </Dialog>
@@ -99,10 +99,10 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Deposit History</DialogTitle>
+            <DialogTitle className="text-foreground">Deposit History</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
-            <div className="text-center text-red-400">Error loading deposit history</div>
+            <div className="text-center text-danger">Error loading deposit history</div>
           </div>
         </DialogContent>
       </Dialog>
@@ -113,19 +113,19 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
-            <History className="h-5 w-5 text-blue-400" />
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <History className="h-5 w-5 text-primary" />
             Deposit History
           </DialogTitle>
         </DialogHeader>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-[#0a0a0a] p-1 rounded-lg border border-[#1e1e1e]">
+        <div className="flex space-x-1 bg-muted/40 p-1 rounded-lg border border-border">
           <Button
             variant={activeTab === 'approved' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('approved')}
-            className={`flex-1 ${activeTab === 'approved' ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-[#1a1a1a] text-gray-400'}`}
+            className={`flex-1 ${activeTab === 'approved' ? 'bg-success hover:bg-success/90 text-success-foreground' : 'text-muted-foreground'}`}
           >
             Approved ({depositRequests?.filter((r: DepositRequest) => r.status === 'approved').length || 0})
           </Button>
@@ -133,7 +133,7 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
             variant={activeTab === 'rejected' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setActiveTab('rejected')}
-            className={`flex-1 ${activeTab === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'hover:bg-[#1a1a1a] text-gray-400'}`}
+            className={`flex-1 ${activeTab === 'rejected' ? 'bg-danger hover:bg-danger/90 text-danger-foreground' : 'text-muted-foreground'}`}
           >
             Rejected ({depositRequests?.filter((r: DepositRequest) => r.status === 'rejected').length || 0})
           </Button>
@@ -141,17 +141,17 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
 
         <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No {activeTab} deposit requests found
             </div>
           ) : (
             filteredRequests.map((request: DepositRequest) => (
-              <div key={request.id} className="border border-[#1e1e1e] bg-[#0a0a0a] rounded-lg p-4 space-y-3">
+              <div key={request.id} className="border border-border bg-muted/40 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     {getStatusBadge(request.status)}
                     <CryptoIcon symbol={request.symbol} size="xs" />
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-foreground tabular-nums">
                       {parseFloat(request.amount).toFixed(8)} {request.symbol}
                     </span>
                   </div>
@@ -161,7 +161,7 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
                          variant="outline"
                          size="sm"
                          onClick={() => openImageViewer(request.screenshot_url, `${request.symbol} deposit screenshot`)}
-                         className="text-xs bg-transparent border-[#1e1e1e] text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
+                         className="text-xs"
                        >
                          <Eye className="h-3 w-3 mr-1" />
                          <span className="hidden sm:inline">View Screenshot</span>
@@ -171,7 +171,7 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
                    </div>
                 </div>
 
-                <div className="text-sm text-gray-400 space-y-1">
+                <div className="text-sm text-muted-foreground space-y-1">
                   <div>User: {request.users?.full_name || request.users?.email || (request.users?.display_id || request.user_id.substring(0, 8))}</div>
                   <div>Submitted: {formatDate(request.submitted_at)}</div>
                   {request.reviewed_at && (
@@ -184,10 +184,10 @@ export function AdminDepositHistoryModal({ isOpen, onClose }: AdminDepositHistor
                     <div>Admin Notes: {request.admin_notes}</div>
                   )}
                   {request.rejection_reason && (
-                    <div className="text-red-400">Rejection Reason: {request.rejection_reason}</div>
+                    <div className="text-danger">Rejection Reason: {request.rejection_reason}</div>
                   )}
                   {request.require_reverification && (
-                    <div className="text-orange-400 font-medium">Requires Re-verification</div>
+                    <div className="text-warning font-medium">Requires Re-verification</div>
                   )}
                 </div>
               </div>

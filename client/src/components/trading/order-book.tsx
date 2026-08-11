@@ -129,13 +129,13 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
   return (
     <div className={`${className} flex flex-col h-full overflow-hidden`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0">
-        <span className="text-xs font-semibold text-white tracking-wide">Order Book</span>
-        <span className="text-[10px] text-gray-600">{pair}</span>
+      <div className="flex items-center justify-between px-3 py-2.5 flex-shrink-0 border-b border-border">
+        <span className="text-xs font-semibold text-foreground tracking-wide">Order Book</span>
+        <span className="text-[10px] text-muted-foreground tabular-nums">{pair}</span>
       </div>
 
       {/* Column Headers */}
-      <div className="grid grid-cols-3 text-[10px] text-gray-500 px-3 py-1.5 border-b border-[#1e1e1e] flex-shrink-0 font-medium">
+      <div className="grid grid-cols-3 text-[10px] text-muted-foreground px-3 py-1.5 border-b border-border flex-shrink-0 font-medium uppercase tracking-wide">
         <span>Price</span>
         <span className="text-right">Amount</span>
         <span className="text-right">Total</span>
@@ -158,30 +158,30 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
             <div
               key={`ask-${i}`}
               onClick={() => handleClick(ask.price)}
-              className="relative grid grid-cols-3 text-[11px] px-3 cursor-pointer hover:bg-red-500/5 transition-colors"
+              className="relative grid grid-cols-3 text-[11px] px-3 cursor-pointer hover:bg-sell/5 transition-colors"
               style={{ height: `${100 / FIXED_ROWS}%` }}
             >
-              <div className="absolute inset-y-0 right-0 bg-red-500/8 transition-all duration-300" style={{ width: `${depthPct}%` }} />
-              <span className="relative flex items-center text-red-400 font-medium tabular-nums">{formatPrice(ask.price)}</span>
-              <span className="relative flex items-center justify-end text-gray-400 tabular-nums">{formatAmount(ask.amount)}</span>
-              <span className="relative flex items-center justify-end text-gray-600 tabular-nums">{formatAmount(ask.cumTotal)}</span>
+              <div className="absolute inset-y-0 right-0 bg-sell/[0.08] transition-all duration-300" style={{ width: `${depthPct}%` }} />
+              <span className="relative flex items-center text-sell font-medium tabular-nums">{formatPrice(ask.price)}</span>
+              <span className="relative flex items-center justify-end text-muted-foreground tabular-nums">{formatAmount(ask.amount)}</span>
+              <span className="relative flex items-center justify-end text-muted-foreground/70 tabular-nums">{formatAmount(ask.cumTotal)}</span>
             </div>
           );
         })}
       </div>
 
       {/* Spread / Last Price Bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-[#0a0a0a] border-y border-[#1a1a1a] flex-shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-y border-border flex-shrink-0">
+        <div className="flex items-center gap-1.5">
           <span className={`text-sm font-bold tabular-nums ${
-            priceDirection === "up" ? "text-green-400" : priceDirection === "down" ? "text-red-400" : "text-white"
+            priceDirection === "up" ? "text-buy" : priceDirection === "down" ? "text-sell" : "text-foreground"
           }`}>
             {formatPrice(lastPriceNum)}
           </span>
-          {priceDirection === "up" && <span className="text-green-400 text-xs">&#9650;</span>}
-          {priceDirection === "down" && <span className="text-red-400 text-xs">&#9660;</span>}
+          {priceDirection === "up" && <span className="text-buy text-xs">&#9650;</span>}
+          {priceDirection === "down" && <span className="text-sell text-xs">&#9660;</span>}
         </div>
-        <span className="text-[10px] text-gray-600">
+        <span className="text-[10px] text-muted-foreground tabular-nums">
           Spread {spreadPct.toFixed(3)}%
         </span>
       </div>
@@ -203,27 +203,27 @@ export function OrderBook({ pair, className = "", onPriceSelect }: OrderBookProp
             <div
               key={`bid-${i}`}
               onClick={() => handleClick(bid.price)}
-              className="relative grid grid-cols-3 text-[11px] px-3 cursor-pointer hover:bg-green-500/5 transition-colors"
+              className="relative grid grid-cols-3 text-[11px] px-3 cursor-pointer hover:bg-buy/5 transition-colors"
               style={{ height: `${100 / FIXED_ROWS}%` }}
             >
-              <div className="absolute inset-y-0 right-0 bg-green-500/8 transition-all duration-300" style={{ width: `${depthPct}%` }} />
-              <span className="relative flex items-center text-green-400 font-medium tabular-nums">{formatPrice(bid.price)}</span>
-              <span className="relative flex items-center justify-end text-gray-400 tabular-nums">{formatAmount(bid.amount)}</span>
-              <span className="relative flex items-center justify-end text-gray-600 tabular-nums">{formatAmount(bid.cumTotal)}</span>
+              <div className="absolute inset-y-0 right-0 bg-buy/[0.08] transition-all duration-300" style={{ width: `${depthPct}%` }} />
+              <span className="relative flex items-center text-buy font-medium tabular-nums">{formatPrice(bid.price)}</span>
+              <span className="relative flex items-center justify-end text-muted-foreground tabular-nums">{formatAmount(bid.amount)}</span>
+              <span className="relative flex items-center justify-end text-muted-foreground/70 tabular-nums">{formatAmount(bid.cumTotal)}</span>
             </div>
           );
         })}
       </div>
 
       {/* Buy/Sell Ratio Bar */}
-      <div className="px-3 py-2 flex-shrink-0 border-t border-[#1a1a1a]">
-        <div className="flex h-1 rounded-full overflow-hidden bg-[#1a1a1a]">
-          <div className="bg-green-500/50 transition-all duration-500" style={{ width: `${bidRatio}%` }} />
-          <div className="bg-red-500/50 transition-all duration-500" style={{ width: `${100 - bidRatio}%` }} />
+      <div className="px-3 py-2 flex-shrink-0 border-t border-border">
+        <div className="flex h-1 rounded-full overflow-hidden bg-muted">
+          <div className="bg-buy/60 transition-all duration-500" style={{ width: `${bidRatio}%` }} />
+          <div className="bg-sell/60 transition-all duration-500" style={{ width: `${100 - bidRatio}%` }} />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[9px] text-green-500/70 tabular-nums">{bidRatio.toFixed(1)}% Buy</span>
-          <span className="text-[9px] text-red-500/70 tabular-nums">{(100 - bidRatio).toFixed(1)}% Sell</span>
+          <span className="text-[9px] text-buy/80 tabular-nums">{bidRatio.toFixed(1)}% Buy</span>
+          <span className="text-[9px] text-sell/80 tabular-nums">{(100 - bidRatio).toFixed(1)}% Sell</span>
         </div>
       </div>
     </div>

@@ -12,7 +12,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Loader2, Send, Users, Bell, CheckCircle, AlertCircle,
@@ -123,16 +127,17 @@ function formatDate(dateStr: string | null) {
 
 function statusBadgeClass(status: string) {
   switch (status) {
-    case "completed": return "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/10";
-    case "pending": return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20 hover:bg-yellow-500/10";
-    case "failed": return "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/10";
-    default: return "bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/10";
+    case "completed": return "bg-success/10 text-success border-success/20 hover:bg-success/10";
+    case "pending": return "bg-warning/10 text-warning border-warning/20 hover:bg-warning/10";
+    case "failed": return "bg-danger/10 text-danger border-danger/20 hover:bg-danger/10";
+    default: return "bg-muted text-muted-foreground border-border hover:bg-muted";
   }
 }
 
 // ─── Main Component ──────────────────────────────────────────
 
 export default function AdminStreamlinedNotifications() {
+  const exchangeName = useExchangeName();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("send");
   const [stats, setStats] = useState<NotificationStats | null>(null);
@@ -414,15 +419,15 @@ export default function AdminStreamlinedNotifications() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">Notification Center</h1>
-            <p className="text-sm text-gray-500 mt-1">Send, manage, and track push notifications</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Notification Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">Send, manage, and track push notifications</p>
           </div>
           <Button
             onClick={fetchStats}
             variant="outline"
             size="sm"
             disabled={statsLoading}
-            className="gap-2 bg-[#111] border-[#1e1e1e] text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+            className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${statsLoading ? "animate-spin" : ""}`} />
             Refresh Stats
@@ -432,19 +437,19 @@ export default function AdminStreamlinedNotifications() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: "Total Users", value: stats?.totalUsers || 0, icon: Users, color: "text-gray-400" },
-            { label: "Push Subscribers", value: stats?.pushSubscribers || 0, icon: Bell, color: "text-blue-400" },
-            { label: "Sub Rate", value: `${stats?.subscriptionRate || "0"}%`, icon: TrendingUp, color: "text-green-400" },
-            { label: "Total Broadcasts", value: stats?.totalBroadcasts || 0, icon: Send, color: "text-purple-400" },
-            { label: "Recent Success", value: stats?.recentSuccess || 0, icon: CheckCircle, color: "text-emerald-400" },
-            { label: "Recent Failed", value: stats?.recentFailed || 0, icon: AlertCircle, color: "text-red-400" },
+            { label: "Total Users", value: stats?.totalUsers || 0, icon: Users, color: "text-muted-foreground" },
+            { label: "Push Subscribers", value: stats?.pushSubscribers || 0, icon: Bell, color: "text-info" },
+            { label: "Sub Rate", value: `${stats?.subscriptionRate || "0"}%`, icon: TrendingUp, color: "text-success" },
+            { label: "Total Broadcasts", value: stats?.totalBroadcasts || 0, icon: Send, color: "text-primary" },
+            { label: "Recent Success", value: stats?.recentSuccess || 0, icon: CheckCircle, color: "text-success" },
+            { label: "Recent Failed", value: stats?.recentFailed || 0, icon: AlertCircle, color: "text-danger" },
           ].map((s) => (
-            <Card key={s.label} className="bg-[#111] border-[#1e1e1e]">
+            <Card key={s.label}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">{s.label}</p>
-                    <p className="text-xl font-bold text-white mt-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</p>
+                    <p className="text-xl font-bold text-foreground mt-1">
                       {typeof s.value === "number" ? s.value.toLocaleString() : s.value}
                     </p>
                   </div>
@@ -457,17 +462,17 @@ export default function AdminStreamlinedNotifications() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-[#111] border border-[#1e1e1e] w-full grid grid-cols-4 h-11">
-            <TabsTrigger value="send" className="gap-1.5 text-xs data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+          <TabsList className="bg-card border border-border w-full grid grid-cols-4 h-11">
+            <TabsTrigger value="send" className="gap-1.5 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none text-muted-foreground">
               <Send className="h-3.5 w-3.5" /> Send
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-1.5 text-xs data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="history" className="gap-1.5 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none text-muted-foreground">
               <History className="h-3.5 w-3.5" /> History
             </TabsTrigger>
-            <TabsTrigger value="templates" className="gap-1.5 text-xs data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="templates" className="gap-1.5 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none text-muted-foreground">
               <FileText className="h-3.5 w-3.5" /> Templates
             </TabsTrigger>
-            <TabsTrigger value="subscribers" className="gap-1.5 text-xs data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="subscribers" className="gap-1.5 text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none text-muted-foreground">
               <Wifi className="h-3.5 w-3.5" /> Subscribers
             </TabsTrigger>
           </TabsList>
@@ -477,29 +482,28 @@ export default function AdminStreamlinedNotifications() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Compose Form (2/3) */}
               <div className="lg:col-span-2 space-y-4">
-                <Card className="bg-[#111] border-[#1e1e1e]">
+                <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-sm flex items-center gap-2">
-                      <Send className="h-4 w-4 text-blue-400" /> Compose Notification
+                    <CardTitle className="text-foreground text-sm flex items-center gap-2">
+                      <Send className="h-4 w-4 text-primary" /> Compose Notification
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-gray-400 text-xs">Title *</Label>
+                      <Label className="text-muted-foreground text-xs">Title *</Label>
                       <Input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Enter notification title..."
                         maxLength={100}
                         disabled={sending}
-                        className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
                       />
-                      <p className={`text-[10px] ${title.length > 90 ? "text-amber-400" : "text-gray-600"}`}>
+                      <p className={`text-[10px] ${title.length > 90 ? "text-warning" : "text-muted-foreground"}`}>
                         {title.length}/100
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-gray-400 text-xs">Message *</Label>
+                      <Label className="text-muted-foreground text-xs">Message *</Label>
                       <Textarea
                         value={body}
                         onChange={(e) => setBody(e.target.value)}
@@ -507,14 +511,14 @@ export default function AdminStreamlinedNotifications() {
                         rows={4}
                         maxLength={500}
                         disabled={sending}
-                        className="bg-[#0a0a0a] border-[#2a2a2a] text-white resize-none"
+                        className="resize-none"
                       />
-                      <p className={`text-[10px] ${body.length > 450 ? "text-amber-400" : "text-gray-600"}`}>
+                      <p className={`text-[10px] ${body.length > 450 ? "text-warning" : "text-muted-foreground"}`}>
                         {body.length}/500
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-gray-400 text-xs flex items-center gap-1">
+                      <Label className="text-muted-foreground text-xs flex items-center gap-1">
                         <Link2 className="h-3 w-3" /> Deep-link URL (optional)
                       </Label>
                       <Input
@@ -522,51 +526,50 @@ export default function AdminStreamlinedNotifications() {
                         onChange={(e) => setDeeplink(e.target.value)}
                         placeholder="/futures or /wallet"
                         disabled={sending}
-                        className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
                       />
                     </div>
 
                     {/* Audience Targeting */}
-                    <div className="border-t border-[#1e1e1e] pt-4 mt-2">
-                      <p className="text-xs font-medium text-gray-400 mb-3">Audience Targeting</p>
+                    <div className="border-t border-border pt-4 mt-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-3">Audience Targeting</p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-gray-500 text-[10px]">Role</Label>
+                          <Label className="text-muted-foreground text-[10px]">Role</Label>
                           <Select value={selectedRole} onValueChange={setSelectedRole} disabled={sending}>
-                            <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs h-9">
+                            <SelectTrigger className="text-xs h-9">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                              <SelectItem value="all" className="text-white text-xs">All Users</SelectItem>
-                              <SelectItem value="user" className="text-white text-xs">Regular Users</SelectItem>
-                              <SelectItem value="admin" className="text-white text-xs">Administrators</SelectItem>
-                              <SelectItem value="moderator" className="text-white text-xs">Moderators</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="all" className="text-xs">All Users</SelectItem>
+                              <SelectItem value="user" className="text-xs">Regular Users</SelectItem>
+                              <SelectItem value="admin" className="text-xs">Administrators</SelectItem>
+                              <SelectItem value="moderator" className="text-xs">Moderators</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-gray-500 text-[10px]">Verified</Label>
+                          <Label className="text-muted-foreground text-[10px]">Verified</Label>
                           <Select value={isVerified} onValueChange={setIsVerified} disabled={sending}>
-                            <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs h-9">
+                            <SelectTrigger className="text-xs h-9">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                              <SelectItem value="any" className="text-white text-xs">Any</SelectItem>
-                              <SelectItem value="true" className="text-white text-xs">Verified Only</SelectItem>
-                              <SelectItem value="false" className="text-white text-xs">Unverified Only</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="any" className="text-xs">Any</SelectItem>
+                              <SelectItem value="true" className="text-xs">Verified Only</SelectItem>
+                              <SelectItem value="false" className="text-xs">Unverified Only</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-gray-500 text-[10px]">Active</Label>
+                          <Label className="text-muted-foreground text-[10px]">Active</Label>
                           <Select value={isActive} onValueChange={setIsActive} disabled={sending}>
-                            <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs h-9">
+                            <SelectTrigger className="text-xs h-9">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                              <SelectItem value="any" className="text-white text-xs">Any</SelectItem>
-                              <SelectItem value="true" className="text-white text-xs">Active Only</SelectItem>
-                              <SelectItem value="false" className="text-white text-xs">Inactive Only</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="any" className="text-xs">Any</SelectItem>
+                              <SelectItem value="true" className="text-xs">Active Only</SelectItem>
+                              <SelectItem value="false" className="text-xs">Inactive Only</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -574,14 +577,13 @@ export default function AdminStreamlinedNotifications() {
                     </div>
 
                     {/* Action Bar */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#1e1e1e]">
-                      <p className="text-[11px] text-gray-500">
-                        Target: <span className="text-gray-300">{getAudienceDescription()}</span>
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <p className="text-[11px] text-muted-foreground">
+                        Target: <span className="text-foreground">{getAudienceDescription()}</span>
                       </p>
                       <Button
                         onClick={handleReviewSend}
                         disabled={sending || !title.trim() || !body.trim()}
-                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         {sending ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
@@ -595,37 +597,37 @@ export default function AdminStreamlinedNotifications() {
 
                 {/* Last Result */}
                 {lastResult && (
-                  <Card className="bg-[#111] border-[#1e1e1e]">
+                  <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <CheckCircle className="h-4 w-4 text-green-400" />
-                        <p className="text-sm font-medium text-white">Notification Sent</p>
-                        <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0 text-gray-500" onClick={() => setLastResult(null)}>
+                        <CheckCircle className="h-4 w-4 text-success" />
+                        <p className="text-sm font-medium text-foreground">Notification Sent</p>
+                        <Button variant="ghost" size="sm" className="ml-auto h-6 w-6 p-0 text-muted-foreground" onClick={() => setLastResult(null)}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center p-3 bg-[#0a0a0a] rounded-lg border border-[#1e1e1e]">
-                          <p className="text-lg font-bold text-white">{lastResult.totalUsers.toLocaleString()}</p>
-                          <p className="text-[10px] text-gray-500">Total Users</p>
+                        <div className="text-center p-3 bg-muted/40 rounded-lg border border-border">
+                          <p className="text-lg font-bold text-foreground">{lastResult.totalUsers.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">Total Users</p>
                         </div>
-                        <div className="text-center p-3 bg-green-500/5 rounded-lg border border-green-500/10">
-                          <p className="text-lg font-bold text-green-400">{lastResult.sentCount.toLocaleString()}</p>
-                          <p className="text-[10px] text-gray-500">Sent</p>
+                        <div className="text-center p-3 bg-success/5 rounded-lg border border-success/10">
+                          <p className="text-lg font-bold text-success">{lastResult.sentCount.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">Sent</p>
                         </div>
-                        <div className="text-center p-3 bg-red-500/5 rounded-lg border border-red-500/10">
-                          <p className="text-lg font-bold text-red-400">{lastResult.failedCount.toLocaleString()}</p>
-                          <p className="text-[10px] text-gray-500">Failed</p>
+                        <div className="text-center p-3 bg-danger/5 rounded-lg border border-danger/10">
+                          <p className="text-lg font-bold text-danger">{lastResult.failedCount.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">Failed</p>
                         </div>
                       </div>
                       {lastResult.errors && lastResult.errors.length > 0 && (
-                        <div className="mt-3 p-3 bg-amber-500/5 rounded-lg border border-amber-500/10">
-                          <p className="text-[11px] font-medium text-amber-400 mb-1">Errors:</p>
+                        <div className="mt-3 p-3 bg-warning/5 rounded-lg border border-warning/10">
+                          <p className="text-[11px] font-medium text-warning mb-1">Errors:</p>
                           {lastResult.errors.slice(0, 3).map((err, i) => (
-                            <p key={i} className="text-[10px] text-gray-500 truncate">- {err}</p>
+                            <p key={i} className="text-[10px] text-muted-foreground truncate">- {err}</p>
                           ))}
                           {lastResult.errors.length > 3 && (
-                            <p className="text-[10px] text-gray-600">... and {lastResult.errors.length - 3} more</p>
+                            <p className="text-[10px] text-muted-foreground">... and {lastResult.errors.length - 3} more</p>
                           )}
                         </div>
                       )}
@@ -636,35 +638,35 @@ export default function AdminStreamlinedNotifications() {
 
               {/* Live Preview (1/3) */}
               <div className="space-y-4">
-                <Card className="bg-[#111] border-[#1e1e1e]">
+                <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-gray-400 text-xs font-medium">Live Preview</CardTitle>
+                    <CardTitle className="text-muted-foreground text-xs font-medium">Live Preview</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-[#1a1a1a] rounded-xl p-4 border border-[#2a2a2a]">
+                    <div className="bg-muted/40 rounded-xl p-4 border border-border">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Bell className="h-5 w-5 text-blue-400" />
+                        <div className="w-10 h-10 bg-primary/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Bell className="h-5 w-5 text-primary" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white truncate">
+                          <p className="text-sm font-semibold text-foreground truncate">
                             {title || "Notification Title"}
                           </p>
-                          <p className="text-xs text-gray-400 mt-1 line-clamp-3">
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
                             {body || "Your notification message will appear here..."}
                           </p>
                           {deeplink && (
-                            <p className="text-[10px] text-blue-400 mt-1.5 truncate flex items-center gap-1">
+                            <p className="text-[10px] text-primary mt-1.5 truncate flex items-center gap-1">
                               <Link2 className="h-2.5 w-2.5 flex-shrink-0" /> {deeplink}
                             </p>
                           )}
                         </div>
                       </div>
-                      <p className="text-[10px] text-gray-600 mt-3">Becxus Exchange - just now</p>
+                      <p className="text-[10px] text-muted-foreground mt-3">{exchangeName} - just now</p>
                     </div>
                     <div className="mt-3 space-y-1.5">
-                      <p className="text-[10px] text-gray-600">Audience: <span className="text-gray-400">{getAudienceDescription()}</span></p>
-                      <p className="text-[10px] text-gray-600">Channel: <span className="text-gray-400">Push Notification</span></p>
+                      <p className="text-[10px] text-muted-foreground">Audience: <span className="text-foreground">{getAudienceDescription()}</span></p>
+                      <p className="text-[10px] text-muted-foreground">Channel: <span className="text-foreground">Push Notification</span></p>
                     </div>
                   </CardContent>
                 </Card>
@@ -674,36 +676,36 @@ export default function AdminStreamlinedNotifications() {
 
           {/* ═══════════ TAB 2: HISTORY ═══════════ */}
           <TabsContent value="history" className="mt-4">
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <CardTitle className="text-white text-sm">Broadcast History</CardTitle>
+                  <CardTitle className="text-foreground text-sm">Broadcast History</CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
                         value={historySearch}
                         onChange={(e) => setHistorySearch(e.target.value)}
                         placeholder="Search..."
-                        className="pl-8 h-8 w-40 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs"
+                        className="pl-8 h-8 w-40 text-xs"
                       />
                     </div>
                     <Select
                       value={historyStatus || "all"}
                       onValueChange={(v) => { setHistoryStatus(v === "all" ? "" : v); setHistoryPage(1); }}
                     >
-                      <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white h-8 w-32 text-xs">
+                      <SelectTrigger className="h-8 w-32 text-xs">
                         <SelectValue placeholder="All Status" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                        <SelectItem value="all" className="text-white text-xs">All Status</SelectItem>
-                        <SelectItem value="completed" className="text-white text-xs">Completed</SelectItem>
-                        <SelectItem value="pending" className="text-white text-xs">Pending</SelectItem>
-                        <SelectItem value="failed" className="text-white text-xs">Failed</SelectItem>
+                      <SelectContent>
+                        <SelectItem value="all" className="text-xs">All Status</SelectItem>
+                        <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                        <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                        <SelectItem value="failed" className="text-xs">Failed</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button variant="outline" size="sm" onClick={fetchHistory} disabled={historyLoading}
-                      className="h-8 px-2 border-[#2a2a2a] text-gray-400 hover:text-white bg-transparent">
+                      className="h-8 px-2">
                       <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? "animate-spin" : ""}`} />
                     </Button>
                   </div>
@@ -712,67 +714,65 @@ export default function AdminStreamlinedNotifications() {
               <CardContent>
                 {historyLoading && broadcasts.length === 0 ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : broadcasts.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-muted-foreground">
                     <History className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No broadcasts found</p>
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#1e1e1e] text-gray-500 text-[10px] uppercase tracking-wider">
-                            <th className="text-left py-2.5 px-3">Title</th>
-                            <th className="text-left py-2.5 px-3">Audience</th>
-                            <th className="text-center py-2.5 px-3">Sent</th>
-                            <th className="text-center py-2.5 px-3">Failed</th>
-                            <th className="text-left py-2.5 px-3">Status</th>
-                            <th className="text-left py-2.5 px-3">Date</th>
-                            <th className="text-center py-2.5 px-3"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {broadcasts.map((b) => (
-                            <tr key={b.id} className="border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors">
-                              <td className="py-2.5 px-3 text-white text-xs max-w-[200px] truncate">{b.title}</td>
-                              <td className="py-2.5 px-3">
-                                <Badge variant="outline" className="border-[#2a2a2a] text-gray-400 text-[10px]">
-                                  {b.target_role || "all"}
-                                </Badge>
-                              </td>
-                              <td className="py-2.5 px-3 text-center text-green-400 text-xs">{b.sent_count}</td>
-                              <td className="py-2.5 px-3 text-center text-red-400 text-xs">{b.failed_count}</td>
-                              <td className="py-2.5 px-3">
-                                <Badge variant="outline" className={`text-[10px] ${statusBadgeClass(b.status)}`}>{b.status}</Badge>
-                              </td>
-                              <td className="py-2.5 px-3 text-gray-500 text-[10px]">{formatDate(b.sent_at || b.created_at)}</td>
-                              <td className="py-2.5 px-3 text-center">
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white"
-                                  onClick={() => viewBroadcastDetail(b.id)}>
-                                  <Eye className="h-3.5 w-3.5" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="text-[10px] uppercase tracking-wider">Title</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Audience</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider text-center">Sent</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider text-center">Failed</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Status</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Date</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider text-center"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {broadcasts.map((b) => (
+                          <TableRow key={b.id}>
+                            <TableCell className="text-foreground text-xs max-w-[200px] truncate">{b.title}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                                {b.target_role || "all"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center text-success text-xs">{b.sent_count}</TableCell>
+                            <TableCell className="text-center text-danger text-xs">{b.failed_count}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[10px] ${statusBadgeClass(b.status)}`}>{b.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-[10px]">{formatDate(b.sent_at || b.created_at)}</TableCell>
+                            <TableCell className="text-center">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                onClick={() => viewBroadcastDetail(b.id)}>
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                     {/* Pagination */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#1e1e1e]">
-                      <p className="text-[10px] text-gray-500">{historyTotal} broadcasts</p>
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <p className="text-[10px] text-muted-foreground">{historyTotal} broadcasts</p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" disabled={historyPage <= 1}
                           onClick={() => setHistoryPage((p) => p - 1)}
-                          className="h-7 px-2 border-[#2a2a2a] text-gray-400 bg-transparent">
+                          className="h-7 px-2">
                           <ChevronLeft className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="text-[10px] text-gray-400">{historyPage}/{historyTotalPages || 1}</span>
+                        <span className="text-[10px] text-muted-foreground">{historyPage}/{historyTotalPages || 1}</span>
                         <Button variant="outline" size="sm" disabled={historyPage >= historyTotalPages}
                           onClick={() => setHistoryPage((p) => p + 1)}
-                          className="h-7 px-2 border-[#2a2a2a] text-gray-400 bg-transparent">
+                          className="h-7 px-2">
                           <ChevronRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -785,11 +785,11 @@ export default function AdminStreamlinedNotifications() {
 
           {/* ═══════════ TAB 3: TEMPLATES ═══════════ */}
           <TabsContent value="templates" className="mt-4">
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white text-sm">Notification Templates</CardTitle>
-                  <Button onClick={() => openTemplateDialog()} size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs h-8">
+                  <CardTitle className="text-foreground text-sm">Notification Templates</CardTitle>
+                  <Button onClick={() => openTemplateDialog()} size="sm" className="text-xs h-8">
                     <Plus className="h-3.5 w-3.5 mr-1.5" /> New Template
                   </Button>
                 </div>
@@ -797,45 +797,45 @@ export default function AdminStreamlinedNotifications() {
               <CardContent>
                 {templatesLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : templates.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No templates yet</p>
-                    <p className="text-xs text-gray-600 mt-1">Create your first template to save time on repeat notifications</p>
+                    <p className="text-xs text-muted-foreground mt-1">Create your first template to save time on repeat notifications</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {templates.map((t) => (
-                      <Card key={t.id} className="bg-[#0a0a0a] border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
+                      <Card key={t.id} className="bg-muted/30 hover:border-primary/30 transition-colors">
                         <CardContent className="p-4 space-y-2.5">
                           <div className="flex items-start justify-between">
                             <div className="min-w-0">
-                              <p className="text-xs font-medium text-white truncate">{t.name}</p>
-                              <p className="text-[10px] text-gray-500 mt-0.5 truncate">{t.title}</p>
+                              <p className="text-xs font-medium text-foreground truncate">{t.name}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{t.title}</p>
                             </div>
-                            <Badge variant="outline" className="border-[#2a2a2a] text-gray-600 text-[9px] flex-shrink-0 ml-2">
+                            <Badge variant="outline" className="text-muted-foreground text-[9px] flex-shrink-0 ml-2">
                               Template
                             </Badge>
                           </div>
-                          <p className="text-[11px] text-gray-400 line-clamp-2">{t.body}</p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2">{t.body}</p>
                           {t.deeplink_url && (
-                            <p className="text-[10px] text-blue-400 truncate flex items-center gap-1">
+                            <p className="text-[10px] text-primary truncate flex items-center gap-1">
                               <Link2 className="h-2.5 w-2.5 flex-shrink-0" /> {t.deeplink_url}
                             </p>
                           )}
-                          <div className="flex items-center gap-1.5 pt-2 border-t border-[#1e1e1e]">
+                          <div className="flex items-center gap-1.5 pt-2 border-t border-border">
                             <Button size="sm" variant="outline" onClick={() => useTemplate(t)}
-                              className="flex-1 h-7 border-[#2a2a2a] text-gray-400 text-[10px] bg-transparent hover:text-white hover:bg-[#1a1a1a]">
+                              className="flex-1 h-7 text-[10px]">
                               <Copy className="h-3 w-3 mr-1" /> Use
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openTemplateDialog(t)}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-white">
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                               <Edit className="h-3 w-3" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => deleteTemplate(t.id, t.name)}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-red-400">
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-danger">
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -853,17 +853,17 @@ export default function AdminStreamlinedNotifications() {
             {/* Platform Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Desktop", icon: Monitor, color: "text-blue-400", count: stats?.platforms?.desktop || 0 },
-                { label: "Android", icon: Smartphone, color: "text-green-400", count: stats?.platforms?.android || 0 },
-                { label: "iOS", icon: Smartphone, color: "text-gray-300", count: stats?.platforms?.ios || 0 },
-                { label: "Unknown", icon: Wifi, color: "text-yellow-400", count: stats?.platforms?.unknown || 0 },
+                { label: "Desktop", icon: Monitor, color: "text-info", count: stats?.platforms?.desktop || 0 },
+                { label: "Android", icon: Smartphone, color: "text-success", count: stats?.platforms?.android || 0 },
+                { label: "iOS", icon: Smartphone, color: "text-muted-foreground", count: stats?.platforms?.ios || 0 },
+                { label: "Unknown", icon: Wifi, color: "text-warning", count: stats?.platforms?.unknown || 0 },
               ].map((p) => (
-                <Card key={p.label} className="bg-[#111] border-[#1e1e1e]">
+                <Card key={p.label}>
                   <CardContent className="p-4 flex items-center gap-3">
                     <p.icon className={`h-5 w-5 ${p.color}`} />
                     <div>
-                      <p className="text-[10px] text-gray-500">{p.label}</p>
-                      <p className="text-lg font-bold text-white">{p.count}</p>
+                      <p className="text-[10px] text-muted-foreground">{p.label}</p>
+                      <p className="text-lg font-bold text-foreground">{p.count}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -873,69 +873,67 @@ export default function AdminStreamlinedNotifications() {
             {/* Test Push */}
             <div className="flex items-center gap-3">
               <Button onClick={handleTestPush} disabled={testPushLoading}
-                variant="outline" size="sm" className="border-[#2a2a2a] text-gray-400 hover:text-white bg-transparent">
+                variant="outline" size="sm">
                 {testPushLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bell className="h-4 w-4 mr-2" />}
                 Send Test Push
               </Button>
-              <p className="text-[10px] text-gray-600">Sends a test push to all active subscribers</p>
+              <p className="text-[10px] text-muted-foreground">Sends a test push to all active subscribers</p>
             </div>
 
             {/* Subscriber Table */}
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card>
               <CardContent className="p-0">
                 {subsLoading && subscribers.length === 0 ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : subscribers.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Wifi className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No subscribers yet</p>
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#1e1e1e] text-gray-500 text-[10px] uppercase tracking-wider">
-                            <th className="text-left py-2.5 px-4">User</th>
-                            <th className="text-left py-2.5 px-4">Platform</th>
-                            <th className="text-left py-2.5 px-4">Subscribed</th>
-                            <th className="text-left py-2.5 px-4">Last Updated</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {subscribers.map((s) => (
-                            <tr key={s.id} className="border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors">
-                              <td className="py-2.5 px-4">
-                                <p className="text-white text-xs">{s.user_name}</p>
-                                <p className="text-gray-500 text-[10px]">{s.user_email}</p>
-                              </td>
-                              <td className="py-2.5 px-4">
-                                <Badge variant="outline" className="border-[#2a2a2a] text-gray-400 text-[10px]">
-                                  {s.platform || "unknown"}
-                                </Badge>
-                              </td>
-                              <td className="py-2.5 px-4 text-gray-500 text-[10px]">{formatDate(s.created_at)}</td>
-                              <td className="py-2.5 px-4 text-gray-500 text-[10px]">{formatDate(s.updated_at)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="text-[10px] uppercase tracking-wider">User</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Platform</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Subscribed</TableHead>
+                          <TableHead className="text-[10px] uppercase tracking-wider">Last Updated</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subscribers.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell>
+                              <p className="text-foreground text-xs">{s.user_name}</p>
+                              <p className="text-muted-foreground text-[10px]">{s.user_email}</p>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                                {s.platform || "unknown"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-[10px]">{formatDate(s.created_at)}</TableCell>
+                            <TableCell className="text-muted-foreground text-[10px]">{formatDate(s.updated_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                     {/* Pagination */}
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-[#1e1e1e]">
-                      <p className="text-[10px] text-gray-500">{subsTotal} subscriptions</p>
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+                      <p className="text-[10px] text-muted-foreground">{subsTotal} subscriptions</p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" disabled={subsPage <= 1}
                           onClick={() => setSubsPage((p) => p - 1)}
-                          className="h-7 px-2 border-[#2a2a2a] text-gray-400 bg-transparent">
+                          className="h-7 px-2">
                           <ChevronLeft className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="text-[10px] text-gray-400">{subsPage}/{subsTotalPages || 1}</span>
+                        <span className="text-[10px] text-muted-foreground">{subsPage}/{subsTotalPages || 1}</span>
                         <Button variant="outline" size="sm" disabled={subsPage >= subsTotalPages}
                           onClick={() => setSubsPage((p) => p + 1)}
-                          className="h-7 px-2 border-[#2a2a2a] text-gray-400 bg-transparent">
+                          className="h-7 px-2">
                           <ChevronRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -952,36 +950,35 @@ export default function AdminStreamlinedNotifications() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Confirm Send
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              This will send a push notification to <span className="text-white font-medium">{getAudienceDescription()}</span>. This action cannot be undone.
+            <DialogDescription>
+              This will send a push notification to <span className="text-foreground font-medium">{getAudienceDescription()}</span>. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-3">
-            <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-              <p className="text-[10px] text-gray-500 mb-1">Title</p>
-              <p className="text-sm text-white">{title}</p>
+            <div className="bg-muted/40 rounded-lg p-3 border border-border">
+              <p className="text-[10px] text-muted-foreground mb-1">Title</p>
+              <p className="text-sm text-foreground">{title}</p>
             </div>
-            <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-              <p className="text-[10px] text-gray-500 mb-1">Message</p>
-              <p className="text-sm text-white whitespace-pre-wrap">{body}</p>
+            <div className="bg-muted/40 rounded-lg p-3 border border-border">
+              <p className="text-[10px] text-muted-foreground mb-1">Message</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{body}</p>
             </div>
             {deeplink && (
-              <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                <p className="text-[10px] text-gray-500 mb-1">Deep-link</p>
-                <p className="text-sm text-blue-400">{deeplink}</p>
+              <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                <p className="text-[10px] text-muted-foreground mb-1">Deep-link</p>
+                <p className="text-sm text-primary">{deeplink}</p>
               </div>
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}
-              className="border-[#2a2a2a] text-gray-400 bg-transparent hover:text-white hover:bg-[#1a1a1a]">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmedSend} disabled={sending} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleConfirmedSend} disabled={sending}>
               {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : <><Send className="mr-2 h-4 w-4" /> Send Now</>}
             </Button>
           </DialogFooter>
@@ -992,60 +989,60 @@ export default function AdminStreamlinedNotifications() {
       <Dialog open={showBroadcastDetail} onOpenChange={setShowBroadcastDetail}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white text-sm">Broadcast Details</DialogTitle>
-            <DialogDescription className="text-gray-500 text-xs">
+            <DialogTitle className="text-foreground text-sm">Broadcast Details</DialogTitle>
+            <DialogDescription className="text-xs">
               {selectedBroadcastDetail ? `Broadcast #${selectedBroadcastDetail.broadcast.id}` : "Loading..."}
             </DialogDescription>
           </DialogHeader>
           {detailLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : selectedBroadcastDetail ? (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                  <p className="text-[10px] text-gray-500">Title</p>
-                  <p className="text-sm text-white mt-0.5">{selectedBroadcastDetail.broadcast.title}</p>
+                <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                  <p className="text-[10px] text-muted-foreground">Title</p>
+                  <p className="text-sm text-foreground mt-0.5">{selectedBroadcastDetail.broadcast.title}</p>
                 </div>
-                <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                  <p className="text-[10px] text-gray-500">Message</p>
-                  <p className="text-xs text-gray-300 mt-0.5 whitespace-pre-wrap">{selectedBroadcastDetail.broadcast.body}</p>
+                <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                  <p className="text-[10px] text-muted-foreground">Message</p>
+                  <p className="text-xs text-foreground mt-0.5 whitespace-pre-wrap">{selectedBroadcastDetail.broadcast.body}</p>
                 </div>
                 {selectedBroadcastDetail.broadcast.deeplink_url && (
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-[10px] text-gray-500">Deep-link</p>
-                    <p className="text-xs text-blue-400 mt-0.5">{selectedBroadcastDetail.broadcast.deeplink_url}</p>
+                  <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                    <p className="text-[10px] text-muted-foreground">Deep-link</p>
+                    <p className="text-xs text-primary mt-0.5">{selectedBroadcastDetail.broadcast.deeplink_url}</p>
                   </div>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
-                <div className="text-center p-2 bg-[#0a0a0a] rounded-lg border border-[#1e1e1e]">
-                  <p className="text-sm font-bold text-white">{selectedBroadcastDetail.broadcast.total_users}</p>
-                  <p className="text-[9px] text-gray-500">Users</p>
+                <div className="text-center p-2 bg-muted/40 rounded-lg border border-border">
+                  <p className="text-sm font-bold text-foreground">{selectedBroadcastDetail.broadcast.total_users}</p>
+                  <p className="text-[9px] text-muted-foreground">Users</p>
                 </div>
-                <div className="text-center p-2 bg-green-500/5 rounded-lg border border-green-500/10">
-                  <p className="text-sm font-bold text-green-400">{selectedBroadcastDetail.broadcast.sent_count}</p>
-                  <p className="text-[9px] text-gray-500">Sent</p>
+                <div className="text-center p-2 bg-success/5 rounded-lg border border-success/10">
+                  <p className="text-sm font-bold text-success">{selectedBroadcastDetail.broadcast.sent_count}</p>
+                  <p className="text-[9px] text-muted-foreground">Sent</p>
                 </div>
-                <div className="text-center p-2 bg-red-500/5 rounded-lg border border-red-500/10">
-                  <p className="text-sm font-bold text-red-400">{selectedBroadcastDetail.broadcast.failed_count}</p>
-                  <p className="text-[9px] text-gray-500">Failed</p>
+                <div className="text-center p-2 bg-danger/5 rounded-lg border border-danger/10">
+                  <p className="text-sm font-bold text-danger">{selectedBroadcastDetail.broadcast.failed_count}</p>
+                  <p className="text-[9px] text-muted-foreground">Failed</p>
                 </div>
-                <div className="text-center p-2 bg-[#0a0a0a] rounded-lg border border-[#1e1e1e]">
+                <div className="text-center p-2 bg-muted/40 rounded-lg border border-border">
                   <Badge variant="outline" className={`text-[9px] ${statusBadgeClass(selectedBroadcastDetail.broadcast.status)}`}>
                     {selectedBroadcastDetail.broadcast.status}
                   </Badge>
-                  <p className="text-[9px] text-gray-500 mt-0.5">Status</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Status</p>
                 </div>
               </div>
-              <div className="text-[10px] text-gray-500 flex items-center justify-between border-t border-[#1e1e1e] pt-3">
-                <span>Audience: <span className="text-gray-400">{selectedBroadcastDetail.broadcast.target_role || "all"}</span></span>
+              <div className="text-[10px] text-muted-foreground flex items-center justify-between border-t border-border pt-3">
+                <span>Audience: <span className="text-foreground">{selectedBroadcastDetail.broadcast.target_role || "all"}</span></span>
                 <span>{formatDate(selectedBroadcastDetail.broadcast.sent_at || selectedBroadcastDetail.broadcast.created_at)}</span>
               </div>
               {Object.keys(selectedBroadcastDetail.deliveryStats).length > 0 && (
-                <div className="border-t border-[#1e1e1e] pt-3">
-                  <p className="text-[10px] text-gray-500 mb-2">Delivery Log Summary ({selectedBroadcastDetail.deliveryLogs.length} entries)</p>
+                <div className="border-t border-border pt-3">
+                  <p className="text-[10px] text-muted-foreground mb-2">Delivery Log Summary ({selectedBroadcastDetail.deliveryLogs.length} entries)</p>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(selectedBroadcastDetail.deliveryStats).map(([status, count]) => (
                       <Badge key={status} variant="outline" className={`text-[10px] ${statusBadgeClass(status)}`}>
@@ -1064,61 +1061,56 @@ export default function AdminStreamlinedNotifications() {
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white text-sm">
+            <DialogTitle className="text-foreground text-sm">
               {editingTemplate ? "Edit Template" : "New Template"}
             </DialogTitle>
-            <DialogDescription className="text-gray-500 text-xs">
+            <DialogDescription className="text-xs">
               {editingTemplate ? `Editing "${editingTemplate.name}"` : "Create a reusable notification template"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1">
-              <Label className="text-gray-400 text-xs">Template Name *</Label>
+              <Label className="text-muted-foreground text-xs">Template Name *</Label>
               <Input
                 value={templateForm.name}
                 onChange={(e) => setTemplateForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. Welcome Message"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-gray-400 text-xs">Notification Title *</Label>
+              <Label className="text-muted-foreground text-xs">Notification Title *</Label>
               <Input
                 value={templateForm.title}
                 onChange={(e) => setTemplateForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="Notification title"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-gray-400 text-xs">Message Body *</Label>
+              <Label className="text-muted-foreground text-xs">Message Body *</Label>
               <Textarea
                 value={templateForm.body}
                 onChange={(e) => setTemplateForm((f) => ({ ...f, body: e.target.value }))}
                 placeholder="Notification message"
                 rows={4}
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white resize-none"
+                className="resize-none"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-gray-400 text-xs flex items-center gap-1">
+              <Label className="text-muted-foreground text-xs flex items-center gap-1">
                 <Link2 className="h-3 w-3" /> Deep-link URL (optional)
               </Label>
               <Input
                 value={templateForm.deeplink_url}
                 onChange={(e) => setTemplateForm((f) => ({ ...f, deeplink_url: e.target.value }))}
                 placeholder="/futures"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
               />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}
-              className="border-[#2a2a2a] text-gray-400 bg-transparent hover:text-white hover:bg-[#1a1a1a]">
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={saveTemplate} disabled={templateSaving}
-              className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={saveTemplate} disabled={templateSaving}>
               {templateSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingTemplate ? "Save Changes" : "Create Template"}
             </Button>

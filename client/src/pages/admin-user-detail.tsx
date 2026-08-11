@@ -181,10 +181,10 @@ export default function AdminUserDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Activity size={24} className="text-gray-600 mx-auto mb-2 animate-pulse fill-current" />
-          <p className="text-gray-500 text-xs">Loading user details...</p>
+          <Activity size={24} className="text-muted-foreground mx-auto mb-2 animate-pulse" />
+          <p className="text-muted-foreground text-xs">Loading user details...</p>
         </div>
       </div>
     );
@@ -192,11 +192,11 @@ export default function AdminUserDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle size={24} className="text-red-400 mx-auto mb-2 fill-current" />
-          <p className="text-gray-400 text-sm">Failed to load user details</p>
-          <button onClick={() => setLocation("/admin/users")} className="mt-3 text-blue-400 text-xs hover:text-blue-300">Back to Users</button>
+          <AlertCircle size={24} className="text-danger mx-auto mb-2" />
+          <p className="text-muted-foreground text-sm">Failed to load user details</p>
+          <button onClick={() => setLocation("/admin/users")} className="mt-3 text-primary text-xs hover:text-primary/80">Back to Users</button>
         </div>
       </div>
     );
@@ -205,32 +205,32 @@ export default function AdminUserDetailPage() {
   const u = data.user;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-[#111] border-b border-[#1e1e1e] px-4 py-4">
+      <div className="bg-card border-b border-border px-4 py-4">
         <div className="max-w-6xl mx-auto">
-          <button onClick={() => setLocation("/admin/users")} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs mb-4 transition-colors">
-            <ArrowLeft size={14} className="fill-current" /> Back to Users
+          <button onClick={() => setLocation("/admin/users")} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs mb-4 transition-colors">
+            <ArrowLeft size={14} /> Back to Users
           </button>
 
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             {/* User Identity */}
             <div className="flex items-center gap-4 min-w-0">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-[#2a2a2a] flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
+              <div className="w-14 h-14 rounded-xl bg-primary/10 border border-border flex items-center justify-center text-xl font-bold text-primary flex-shrink-0">
                 {(u.full_name || u.username || "?")[0].toUpperCase()}
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">{u.full_name || u.username}</h1>
+                <h1 className="text-lg font-bold text-foreground">{u.full_name || u.username}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Mail size={12} className="text-gray-500 fill-current" />
-                  <span className="text-xs text-gray-400">{u.email}</span>
+                  <Mail size={12} className="text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{u.email}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-600">ID: {u.display_id || u.id?.slice(0, 8)}</span>
-                  {u.is_verified && <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">Verified</span>}
-                  {u.kyc_status === "pending" && <span className="text-[10px] bg-yellow-500/10 text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-500/20">KYC Pending</span>}
-                  {!u.is_active && <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">Inactive</span>}
-                  {data.walletLocked && <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">Wallet Locked</span>}
+                  <span className="text-[10px] text-muted-foreground">ID: {u.display_id || u.id?.slice(0, 8)}</span>
+                  {u.is_verified && <span className="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">Verified</span>}
+                  {u.kyc_status === "pending" && <span className="text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded border border-warning/20">KYC Pending</span>}
+                  {!u.is_active && <span className="text-[10px] bg-danger/10 text-danger px-1.5 py-0.5 rounded border border-danger/20">Inactive</span>}
+                  {data.walletLocked && <span className="text-[10px] bg-danger/10 text-danger px-1.5 py-0.5 rounded border border-danger/20">Wallet Locked</span>}
                 </div>
               </div>
             </div>
@@ -240,13 +240,13 @@ export default function AdminUserDetailPage() {
               <button
                 onClick={() => lockMutation.mutate(!data.walletLocked)}
                 disabled={lockMutation.isPending}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
                   data.walletLocked
-                    ? "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20"
-                    : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
+                    ? "bg-success/10 border-success/20 text-success hover:bg-success/20"
+                    : "bg-danger/10 border-danger/20 text-danger hover:bg-danger/20"
                 }`}
               >
-                {data.walletLocked ? <Unlock size={14} className="fill-current" /> : <Lock size={14} className="fill-current" />}
+                {data.walletLocked ? <Unlock size={14} /> : <Lock size={14} />}
                 {data.walletLocked ? "Unlock Wallet" : "Lock Wallet"}
               </button>
             </div>
@@ -255,17 +255,17 @@ export default function AdminUserDetailPage() {
           {/* Financial Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-5">
             {[
-              { label: "Portfolio", value: bal(data.totalValue), color: "text-white", icon: Wallet },
-              { label: "Deposited", value: bal(data.totalDeposited), color: "text-green-400", icon: ArrowDownLeft },
-              { label: "Withdrawn", value: bal(data.totalWithdrawn), color: "text-red-400", icon: ArrowUpRight },
-              { label: "Trade P&L", value: `${data.tradePnl >= 0 ? '+' : ''}${bal(data.tradePnl)}`, color: data.tradePnl >= 0 ? "text-green-400" : "text-red-400", icon: ArrowRightLeft },
-              { label: "Futures P&L", value: `${data.futuresPnl >= 0 ? '+' : ''}${bal(data.futuresPnl)}`, color: data.futuresPnl >= 0 ? "text-green-400" : "text-red-400", icon: Zap },
-              { label: "Est. P&L", value: `${data.estimatedPnl >= 0 ? '+' : ''}${bal(data.estimatedPnl)}`, color: data.estimatedPnl >= 0 ? "text-green-400" : "text-red-400", icon: TrendingUp },
+              { label: "Portfolio", value: bal(data.totalValue), color: "text-foreground", icon: Wallet },
+              { label: "Deposited", value: bal(data.totalDeposited), color: "text-success", icon: ArrowDownLeft },
+              { label: "Withdrawn", value: bal(data.totalWithdrawn), color: "text-danger", icon: ArrowUpRight },
+              { label: "Trade P&L", value: `${data.tradePnl >= 0 ? '+' : ''}${bal(data.tradePnl)}`, color: data.tradePnl >= 0 ? "text-success" : "text-danger", icon: ArrowRightLeft },
+              { label: "Futures P&L", value: `${data.futuresPnl >= 0 ? '+' : ''}${bal(data.futuresPnl)}`, color: data.futuresPnl >= 0 ? "text-success" : "text-danger", icon: Zap },
+              { label: "Est. P&L", value: `${data.estimatedPnl >= 0 ? '+' : ''}${bal(data.estimatedPnl)}`, color: data.estimatedPnl >= 0 ? "text-success" : "text-danger", icon: TrendingUp },
             ].map(stat => (
-              <div key={stat.label} className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
+              <div key={stat.label} className="bg-muted/40 rounded-xl border border-border p-3">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <stat.icon size={12} className="text-gray-500 fill-current" />
-                  <span className="text-[10px] text-gray-500">{stat.label}</span>
+                  <stat.icon size={12} className="text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">{stat.label}</span>
                 </div>
                 <p className={`text-sm font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
               </div>
@@ -276,23 +276,23 @@ export default function AdminUserDetailPage() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 mt-4">
-        <div className="flex gap-1 overflow-x-auto bg-[#111] rounded-xl border border-[#1e1e1e] p-1">
+        <div className="flex gap-1 overflow-x-auto bg-card rounded-xl border border-border p-1">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setPage(0); setSearch(""); }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                 activeTab === tab.id
-                  ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <tab.icon size={12} className="fill-current" />
+              <tab.icon size={12} />
               {tab.label}
-              {tab.id === "deposits" && data.deposits.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.deposits.length}</span>}
-              {tab.id === "withdrawals" && data.withdrawals.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.withdrawals.length}</span>}
-              {tab.id === "trades" && data.trades.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.trades.length}</span>}
-              {tab.id === "futures" && data.futures.length > 0 && <span className="text-[9px] bg-[#222] px-1 rounded">{data.futures.length}</span>}
+              {tab.id === "deposits" && data.deposits.length > 0 && <span className="text-[9px] bg-muted px-1 rounded">{data.deposits.length}</span>}
+              {tab.id === "withdrawals" && data.withdrawals.length > 0 && <span className="text-[9px] bg-muted px-1 rounded">{data.withdrawals.length}</span>}
+              {tab.id === "trades" && data.trades.length > 0 && <span className="text-[9px] bg-muted px-1 rounded">{data.trades.length}</span>}
+              {tab.id === "futures" && data.futures.length > 0 && <span className="text-[9px] bg-muted px-1 rounded">{data.futures.length}</span>}
             </button>
           ))}
         </div>
@@ -301,21 +301,21 @@ export default function AdminUserDetailPage() {
         {["deposits", "withdrawals", "trades", "futures"].includes(activeTab) && (
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <div className="relative flex-1 min-w-[160px]">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(0); }}
                 placeholder="Search..."
-                className="w-full bg-[#111] border border-[#1e1e1e] rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#2a2a2a]"
+                className="w-full bg-card border border-border rounded-lg pl-7 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40"
               />
             </div>
             <DateRangePicker value={dateRange} onChange={v => { setDateRange(v); setPage(0); }} />
             <button
               onClick={handleExport}
               disabled={currentData.total === 0}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:border-primary/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download size={12} className="fill-current" />
+              <Download size={12} />
               CSV
             </button>
           </div>
@@ -327,9 +327,9 @@ export default function AdminUserDetailPage() {
           {activeTab === "overview" && (
             <>
               {/* Account Info */}
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <User size={14} className="text-blue-400 fill-current" />
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <User size={14} className="text-primary" />
                   Account Information
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -344,31 +344,31 @@ export default function AdminUserDetailPage() {
                     { label: "Verified", value: u.is_verified ? "Yes" : "No" },
                     { label: "Active", value: u.is_active !== false ? "Yes" : "No" },
                   ].map(item => (
-                    <div key={item.label} className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3">
-                      <p className="text-[10px] text-gray-500 mb-0.5">{item.label}</p>
-                      <p className="text-xs text-white font-medium truncate">{item.value}</p>
+                    <div key={item.label} className="bg-muted/40 rounded-lg border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{item.label}</p>
+                      <p className="text-xs text-foreground font-medium truncate">{item.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Activity Counts */}
-              <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Activity size={14} className="text-purple-400 fill-current" />
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Activity size={14} className="text-primary" />
                   Activity Summary
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {[
-                    { label: "Deposits", count: data.deposits.length, color: "text-green-400" },
-                    { label: "Withdrawals", count: data.withdrawals.length, color: "text-red-400" },
-                    { label: "Trades", count: data.trades.length, color: "text-blue-400" },
-                    { label: "Futures", count: data.futures.length, color: "text-purple-400" },
-                    { label: "Staking", count: data.staking.length, color: "text-cyan-400" },
+                    { label: "Deposits", count: data.deposits.length, color: "text-success" },
+                    { label: "Withdrawals", count: data.withdrawals.length, color: "text-danger" },
+                    { label: "Trades", count: data.trades.length, color: "text-info" },
+                    { label: "Futures", count: data.futures.length, color: "text-primary" },
+                    { label: "Staking", count: data.staking.length, color: "text-info" },
                   ].map(a => (
-                    <div key={a.label} className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-3 text-center cursor-pointer hover:border-[#2a2a2a] transition-colors" onClick={() => { setActiveTab(a.label.toLowerCase() as TabId); }}>
-                      <p className={`text-xl font-bold ${a.color}`}>{a.count}</p>
-                      <p className="text-[10px] text-gray-500">{a.label}</p>
+                    <div key={a.label} className="bg-muted/40 rounded-lg border border-border p-3 text-center cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { setActiveTab(a.label.toLowerCase() as TabId); }}>
+                      <p className={`text-xl font-bold tabular-nums ${a.color}`}>{a.count}</p>
+                      <p className="text-[10px] text-muted-foreground">{a.label}</p>
                     </div>
                   ))}
                 </div>
@@ -378,16 +378,16 @@ export default function AdminUserDetailPage() {
 
           {/* Assets Tab */}
           {activeTab === "assets" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {data.assets.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Wallet size={24} className="text-gray-600 mx-auto mb-2 fill-current" />
-                  <p className="text-gray-500 text-sm">No assets in wallet</p>
+                  <Wallet size={24} className="text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">No assets in wallet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   {/* Table Header */}
-                  <div className="flex items-center px-4 py-2.5 text-[10px] text-gray-500 font-medium uppercase tracking-wider bg-[#0a0a0a]">
+                  <div className="flex items-center px-4 py-2.5 text-[10px] text-muted-foreground font-medium uppercase tracking-wider bg-muted/40">
                     <span className="flex-1">Asset</span>
                     <span className="w-24 text-right">Available</span>
                     <span className="w-24 text-right">Frozen</span>
@@ -396,28 +396,28 @@ export default function AdminUserDetailPage() {
                     <span className="w-24 text-right">Actions</span>
                   </div>
                   {data.assets.filter((a: any) => a.total > 0).map((asset: any) => (
-                    <div key={asset.symbol} className="flex items-center px-4 py-3 hover:bg-[#1a1a1a]/50 transition-colors">
+                    <div key={asset.symbol} className="flex items-center px-4 py-3 hover:bg-muted/40 transition-colors">
                       <div className="flex-1 flex items-center gap-2">
                         <CryptoIcon symbol={asset.symbol} size="sm" />
-                        <span className="text-sm font-medium text-white">{asset.symbol}</span>
+                        <span className="text-sm font-medium text-foreground">{asset.symbol}</span>
                       </div>
-                      <span className="w-24 text-right text-xs text-white tabular-nums">{formatCryptoNumber(asset.available)}</span>
-                      <span className={`w-24 text-right text-xs tabular-nums ${asset.frozen > 0 ? "text-yellow-400" : "text-gray-600"}`}>
+                      <span className="w-24 text-right text-xs text-foreground tabular-nums">{formatCryptoNumber(asset.available)}</span>
+                      <span className={`w-24 text-right text-xs tabular-nums ${asset.frozen > 0 ? "text-warning" : "text-muted-foreground"}`}>
                         {asset.frozen > 0 ? formatCryptoNumber(asset.frozen) : "0"}
                       </span>
-                      <span className="w-24 text-right text-xs text-white tabular-nums font-medium">{formatCryptoNumber(asset.total)}</span>
-                      <span className="w-28 text-right text-xs text-white tabular-nums">{bal(asset.usdValue)}</span>
+                      <span className="w-24 text-right text-xs text-foreground tabular-nums font-medium">{formatCryptoNumber(asset.total)}</span>
+                      <span className="w-28 text-right text-xs text-foreground tabular-nums">{bal(asset.usdValue)}</span>
                       <div className="w-24 flex justify-end">
                         <button
                           onClick={() => freezeMutation.mutate({ symbol: asset.symbol, freeze: asset.frozen <= 0 })}
                           disabled={freezeMutation.isPending}
                           className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium border transition-colors ${
                             asset.frozen > 0
-                              ? "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20"
-                              : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20"
+                              ? "bg-success/10 border-success/20 text-success hover:bg-success/20"
+                              : "bg-warning/10 border-warning/20 text-warning hover:bg-warning/20"
                           }`}
                         >
-                          {asset.frozen > 0 ? <Sun size={10} className="fill-current" /> : <Snowflake size={10} className="fill-current" />}
+                          {asset.frozen > 0 ? <Sun size={10} /> : <Snowflake size={10} />}
                           {asset.frozen > 0 ? "Unfreeze" : "Freeze"}
                         </button>
                       </div>
@@ -430,19 +430,19 @@ export default function AdminUserDetailPage() {
 
           {/* Deposits Tab */}
           {activeTab === "deposits" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {currentData.items.length === 0 ? (
                 <EmptyState label="No deposits found" />
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   <TableHeader columns={["Date", "Symbol", "Amount", "Fee", "Net", "Status"]} />
                   {currentData.items.map((d: any) => (
-                    <div key={d.id} className="flex items-center px-4 py-3 text-xs hover:bg-[#1a1a1a]/50 transition-colors">
-                      <span className="flex-1 text-gray-400">{formatDateTime(d.submitted_at)}</span>
+                    <div key={d.id} className="flex items-center px-4 py-3 text-xs hover:bg-muted/40 transition-colors">
+                      <span className="flex-1 text-muted-foreground">{formatDateTime(d.submitted_at)}</span>
                       <span className="w-20 flex items-center gap-1.5"><CryptoIcon symbol={d.symbol || "USDT"} size="xs" /> {d.symbol || "USDT"}</span>
-                      <span className="w-28 text-right text-green-400 tabular-nums font-medium">+{formatCryptoNumber(parseFloat(d.amount || "0"))}</span>
-                      <span className="w-24 text-right text-amber-400/70 tabular-nums">{d.fee_amount ? formatCryptoNumber(parseFloat(d.fee_amount)) : "0"}</span>
-                      <span className="w-28 text-right text-white tabular-nums">{formatCryptoNumber(parseFloat(d.net_amount || d.amount || "0"))}</span>
+                      <span className="w-28 text-right text-success tabular-nums font-medium">+{formatCryptoNumber(parseFloat(d.amount || "0"))}</span>
+                      <span className="w-24 text-right text-warning/80 tabular-nums">{d.fee_amount ? formatCryptoNumber(parseFloat(d.fee_amount)) : "0"}</span>
+                      <span className="w-28 text-right text-foreground tabular-nums">{formatCryptoNumber(parseFloat(d.net_amount || d.amount || "0"))}</span>
                       <span className="w-24 flex justify-end"><StatusBadge status={d.status} size="sm" /></span>
                     </div>
                   ))}
@@ -454,19 +454,19 @@ export default function AdminUserDetailPage() {
 
           {/* Withdrawals Tab */}
           {activeTab === "withdrawals" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {currentData.items.length === 0 ? (
                 <EmptyState label="No withdrawals found" />
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   <TableHeader columns={["Date", "Symbol", "Amount", "Fee", "Address", "Status"]} />
                   {currentData.items.map((w: any) => (
-                    <div key={w.id} className="flex items-center px-4 py-3 text-xs hover:bg-[#1a1a1a]/50 transition-colors">
-                      <span className="flex-1 text-gray-400">{formatDateTime(w.submitted_at)}</span>
+                    <div key={w.id} className="flex items-center px-4 py-3 text-xs hover:bg-muted/40 transition-colors">
+                      <span className="flex-1 text-muted-foreground">{formatDateTime(w.submitted_at)}</span>
                       <span className="w-20 flex items-center gap-1.5"><CryptoIcon symbol={w.symbol || "USDT"} size="xs" /> {w.symbol || "USDT"}</span>
-                      <span className="w-28 text-right text-red-400 tabular-nums font-medium">-{formatCryptoNumber(parseFloat(w.amount || "0"))}</span>
-                      <span className="w-24 text-right text-amber-400/70 tabular-nums">{w.fee_amount ? formatCryptoNumber(parseFloat(w.fee_amount)) : "0"}</span>
-                      <span className="w-28 text-right text-gray-500 text-[10px] truncate font-mono" title={w.wallet_address}>{w.wallet_address ? `${w.wallet_address.slice(0, 8)}...` : "N/A"}</span>
+                      <span className="w-28 text-right text-danger tabular-nums font-medium">-{formatCryptoNumber(parseFloat(w.amount || "0"))}</span>
+                      <span className="w-24 text-right text-warning/80 tabular-nums">{w.fee_amount ? formatCryptoNumber(parseFloat(w.fee_amount)) : "0"}</span>
+                      <span className="w-28 text-right text-muted-foreground text-[10px] truncate font-mono" title={w.wallet_address}>{w.wallet_address ? `${w.wallet_address.slice(0, 8)}...` : "N/A"}</span>
                       <span className="w-24 flex justify-end"><StatusBadge status={w.status} size="sm" /></span>
                     </div>
                   ))}
@@ -478,20 +478,20 @@ export default function AdminUserDetailPage() {
 
           {/* Trades Tab */}
           {activeTab === "trades" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {currentData.items.length === 0 ? (
                 <EmptyState label="No trades found" />
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   <TableHeader columns={["Date", "Pair", "Side", "Amount", "Price", "Fee", "Status"]} />
                   {currentData.items.map((t: any) => (
-                    <div key={t.id} className="flex items-center px-4 py-3 text-xs hover:bg-[#1a1a1a]/50 transition-colors">
-                      <span className="flex-1 text-gray-400">{formatDateTime(t.created_at)}</span>
+                    <div key={t.id} className="flex items-center px-4 py-3 text-xs hover:bg-muted/40 transition-colors">
+                      <span className="flex-1 text-muted-foreground">{formatDateTime(t.created_at)}</span>
                       <span className="w-24 flex items-center gap-1.5"><CryptoIcon symbol={t.symbol?.split("/")[0] || t.symbol} size="xs" /> {t.symbol}</span>
-                      <span className={`w-16 font-semibold ${t.side === "buy" ? "text-green-400" : "text-red-400"}`}>{t.side?.toUpperCase()}</span>
-                      <span className="w-24 text-right text-white tabular-nums">{formatCryptoNumber(parseFloat(t.amount || "0"))}</span>
-                      <span className="w-24 text-right text-white tabular-nums">{t.price ? `$${formatUsdNumber(parseFloat(t.price))}` : "Market"}</span>
-                      <span className="w-20 text-right text-amber-400/70 tabular-nums">{t.fee_amount ? formatCryptoNumber(parseFloat(t.fee_amount)) : "0"}</span>
+                      <span className={`w-16 font-semibold ${t.side === "buy" ? "text-success" : "text-danger"}`}>{t.side?.toUpperCase()}</span>
+                      <span className="w-24 text-right text-foreground tabular-nums">{formatCryptoNumber(parseFloat(t.amount || "0"))}</span>
+                      <span className="w-24 text-right text-foreground tabular-nums">{t.price ? `$${formatUsdNumber(parseFloat(t.price))}` : "Market"}</span>
+                      <span className="w-20 text-right text-warning/80 tabular-nums">{t.fee_amount ? formatCryptoNumber(parseFloat(t.fee_amount)) : "0"}</span>
                       <span className="w-24 flex justify-end"><StatusBadge status={t.status} size="sm" /></span>
                     </div>
                   ))}
@@ -503,21 +503,21 @@ export default function AdminUserDetailPage() {
 
           {/* Futures Tab */}
           {activeTab === "futures" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {currentData.items.length === 0 ? (
                 <EmptyState label="No futures trades found" />
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   <TableHeader columns={["Date", "Pair", "Side", "Amount", "P&L", "Status"]} />
                   {currentData.items.map((f: any) => {
                     const pnl = parseFloat(f.final_result || "0");
                     return (
-                      <div key={f.id} className="flex items-center px-4 py-3 text-xs hover:bg-[#1a1a1a]/50 transition-colors">
-                        <span className="flex-1 text-gray-400">{formatDateTime(f.created_at)}</span>
+                      <div key={f.id} className="flex items-center px-4 py-3 text-xs hover:bg-muted/40 transition-colors">
+                        <span className="flex-1 text-muted-foreground">{formatDateTime(f.created_at)}</span>
                         <span className="w-24 flex items-center gap-1.5"><CryptoIcon symbol={f.symbol?.split("/")[0] || f.symbol} size="xs" /> {f.symbol}</span>
-                        <span className={`w-16 font-semibold ${f.side === "long" ? "text-green-400" : "text-red-400"}`}>{f.side?.toUpperCase()}</span>
-                        <span className="w-24 text-right text-white tabular-nums">{formatCryptoNumber(parseFloat(f.amount || "0"))}</span>
-                        <span className={`w-28 text-right tabular-nums font-medium ${pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        <span className={`w-16 font-semibold ${f.side === "long" ? "text-success" : "text-danger"}`}>{f.side?.toUpperCase()}</span>
+                        <span className="w-24 text-right text-foreground tabular-nums">{formatCryptoNumber(parseFloat(f.amount || "0"))}</span>
+                        <span className={`w-28 text-right tabular-nums font-medium ${pnl >= 0 ? "text-success" : "text-danger"}`}>
                           {pnl >= 0 ? "+" : ""}{bal(pnl)}
                         </span>
                         <span className="w-24 flex justify-end"><StatusBadge status={f.status} size="sm" /></span>
@@ -532,20 +532,20 @@ export default function AdminUserDetailPage() {
 
           {/* Staking Tab */}
           {activeTab === "staking" && (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {data.staking.length === 0 ? (
                 <EmptyState label="No staking positions found" />
               ) : (
-                <div className="divide-y divide-[#1e1e1e]">
+                <div className="divide-y divide-border">
                   <TableHeader columns={["Symbol", "Amount", "APY", "Duration", "Status", "Start Date"]} />
                   {data.staking.map((s: any) => (
-                    <div key={s.id} className="flex items-center px-4 py-3 text-xs hover:bg-[#1a1a1a]/50 transition-colors">
+                    <div key={s.id} className="flex items-center px-4 py-3 text-xs hover:bg-muted/40 transition-colors">
                       <span className="flex-1 flex items-center gap-1.5"><CryptoIcon symbol={s.symbol} size="xs" /> {s.symbol}</span>
-                      <span className="w-28 text-right text-white tabular-nums">{formatCryptoNumber(parseFloat(s.amount || "0"))}</span>
-                      <span className="w-20 text-right text-green-400 tabular-nums">{s.apy}%</span>
-                      <span className="w-20 text-right text-gray-400">{s.duration}d</span>
+                      <span className="w-28 text-right text-foreground tabular-nums">{formatCryptoNumber(parseFloat(s.amount || "0"))}</span>
+                      <span className="w-20 text-right text-success tabular-nums">{s.apy}%</span>
+                      <span className="w-20 text-right text-muted-foreground">{s.duration}d</span>
                       <span className="w-24 flex justify-end"><StatusBadge status={s.status} size="sm" /></span>
-                      <span className="w-32 text-right text-gray-500">{formatDateTime(s.created_at)}</span>
+                      <span className="w-32 text-right text-muted-foreground">{formatDateTime(s.created_at)}</span>
                     </div>
                   ))}
                 </div>
@@ -560,7 +560,7 @@ export default function AdminUserDetailPage() {
 
 function TableHeader({ columns }: { columns: string[] }) {
   return (
-    <div className="flex items-center px-4 py-2.5 text-[10px] text-gray-500 font-medium uppercase tracking-wider bg-[#0a0a0a]">
+    <div className="flex items-center px-4 py-2.5 text-[10px] text-muted-foreground font-medium uppercase tracking-wider bg-muted/40">
       {columns.map((col, i) => (
         <span key={col} className={i === 0 ? "flex-1" : "w-24 text-right"}>{col}</span>
       ))}
@@ -571,8 +571,8 @@ function TableHeader({ columns }: { columns: string[] }) {
 function EmptyState({ label }: { label: string }) {
   return (
     <div className="p-8 text-center">
-      <AlertCircle size={20} className="text-gray-600 mx-auto mb-2 fill-current" />
-      <p className="text-gray-500 text-sm">{label}</p>
+      <AlertCircle size={20} className="text-muted-foreground mx-auto mb-2" />
+      <p className="text-muted-foreground text-sm">{label}</p>
     </div>
   );
 }
@@ -580,15 +580,15 @@ function EmptyState({ label }: { label: string }) {
 function Pagination({ total, page, totalPages, onPageChange }: { total: number; page: number; totalPages: number; onPageChange: (p: number) => void }) {
   if (total === 0) return null;
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-t border-[#1e1e1e] bg-[#0a0a0a]">
-      <span className="text-[10px] text-gray-600">{total} records</span>
+    <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/40">
+      <span className="text-[10px] text-muted-foreground">{total} records</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onPageChange(Math.max(0, page - 1))} disabled={page === 0} className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors">
-          <ChevronLeft size={14} className="text-gray-400 fill-current" />
+        <button onClick={() => onPageChange(Math.max(0, page - 1))} disabled={page === 0} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
+          <ChevronLeft size={14} className="text-muted-foreground" />
         </button>
-        <span className="text-[10px] text-gray-500 px-2">{page + 1} / {totalPages}</span>
-        <button onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors">
-          <ChevronRight size={14} className="text-gray-400 fill-current" />
+        <span className="text-[10px] text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+        <button onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
+          <ChevronRight size={14} className="text-muted-foreground" />
         </button>
       </div>
     </div>

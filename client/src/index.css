@@ -74,7 +74,7 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   --input-bg: 210 40% 96%;
   --input-bg-hover: 214 32% 91%;
   --input-bg-focus: 213 27% 84%;
-  --primary: 217 91% 60%;
+  --primary: 42 78% 52%;
   --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
@@ -82,8 +82,8 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   --accent-foreground: 222 47% 11%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --ring: 217 91% 60%;
-  --radius: 0.5rem;
+  --ring: 42 78% 52%;
+  --radius: 1.125rem;
 
   --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
@@ -91,6 +91,8 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   --warning-foreground: 48 96% 89%;
   --danger: 0 84% 60%;
   --danger-foreground: 0 0% 100%;
+  --info: 199 89% 48%;
+  --info-foreground: 0 0% 100%;
 }
 
 /* ============================================================
@@ -110,7 +112,7 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   --input-bg: 0 0% 16%;
   --input-bg-hover: 0 0% 22%;
   --input-bg-focus: 0 0% 29%;
-  --primary: 217 91% 60%;
+  --primary: 42 78% 52%;
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 98%;
@@ -118,7 +120,34 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   --accent-foreground: 0 0% 98%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
+  --ring: 42 78% 52%;
+}
+
+/* ============================================================
+   ACCENT THEME VARIANTS (data-accent on <html>)
+   Same hue applies in light and dark — only lightness of
+   surrounding surfaces changes between themes, not the brand hue.
+   Keep in sync with shared/accent-themes.ts.
+   ============================================================ */
+[data-accent="amber"] {
+  --primary: 42 78% 52%;
+  --ring: 42 78% 52%;
+}
+[data-accent="blue"] {
+  --primary: 217 91% 60%;
   --ring: 217 91% 60%;
+}
+[data-accent="violet"] {
+  --primary: 262 75% 63%;
+  --ring: 262 75% 63%;
+}
+[data-accent="cyan"] {
+  --primary: 190 80% 45%;
+  --ring: 190 80% 45%;
+}
+[data-accent="slate"] {
+  --primary: 215 20% 55%;
+  --ring: 215 20% 55%;
 }
 
 @layer base {
@@ -129,6 +158,12 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   html, body {
     overflow-x: hidden;
     overscroll-behavior-x: none;
+  }
+
+  /* Kill the default mobile tap-highlight flash on nav/links/buttons —
+     the rounded active-state pill is the intended feedback instead. */
+  a, button {
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {

@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import webpush from "web-push";
 import { requireAuth, requireAdmin, supabaseAdmin } from "./middleware";
+import { getExchangeName } from "../services/app-settings.service";
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
@@ -155,8 +156,9 @@ export default function registerPushRoutes(app: Express) {
         return res.json({ success: true, sent: 0, message: "No subscriptions found" });
       }
 
+      const exchangeName = await getExchangeName();
       const payload = JSON.stringify({
-        title: "Becxus Exchange",
+        title: `${exchangeName} Exchange`,
         body: "Test notification - Push is working!",
         icon: "/icons/icon-192.png",
         badge: "/icons/icon-192.png",

@@ -12,6 +12,7 @@ import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from '../../lib/supabaseClient';
 import { formatCryptoNumber } from '@/utils/format-utils';
 import { openImageViewer } from '@/lib/image';
+import { useExchangeName } from '@/hooks/use-exchange-name';
 
 interface UnifiedTransactionHistoryModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export function UnifiedTransactionHistoryModal({
   onClose, 
   userId 
 }: UnifiedTransactionHistoryModalProps) {
+  const exchangeName = useExchangeName();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,23 +163,23 @@ export function UnifiedTransactionHistoryModal({
       case 'approved':
         return {
           icon: CheckCircle,
-          color: 'text-green-400',
-          bgColor: 'bg-green-900/20',
+          color: 'text-success',
+          bgColor: 'bg-success/10',
           text: 'Approved'
         };
       case 'rejected':
         return {
           icon: XCircle,
-          color: 'text-red-400',
-          bgColor: 'bg-red-900/20',
+          color: 'text-danger',
+          bgColor: 'bg-danger/10',
           text: 'Rejected'
         };
       case 'pending':
       default:
         return {
           icon: Clock,
-          color: 'text-yellow-400',
-          bgColor: 'bg-yellow-900/20',
+          color: 'text-warning',
+          bgColor: 'bg-warning/10',
           text: 'Pending'
         };
     }
@@ -192,11 +194,11 @@ export function UnifiedTransactionHistoryModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl" hideCloseButton>
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center">
+          <DialogTitle className="text-xl font-bold text-center text-foreground">
             Transaction History
           </DialogTitle>
         </DialogHeader>
-        
+
         <Tabs defaultValue="new" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="new" className="flex items-center space-x-2">
@@ -208,20 +210,20 @@ export function UnifiedTransactionHistoryModal({
               <span>History ({historyTransactions.length})</span>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="new" className="space-y-4">
             {loading ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 text-muted-foreground">
                 <RefreshCw className="animate-spin mx-auto mb-2" size={24} />
                 <p>Loading transactions...</p>
               </div>
             ) : error ? (
-              <div className="text-center py-8 text-red-400">
+              <div className="text-center py-8 text-danger">
                 <AlertCircle className="mx-auto mb-2" size={24} />
                 <p>{error}</p>
               </div>
             ) : newTransactions.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="mx-auto mb-2" size={24} />
                 <p>No new notifications</p>
               </div>
@@ -230,25 +232,25 @@ export function UnifiedTransactionHistoryModal({
                 {newTransactions.map((transaction) => {
                   const statusDisplay = getStatusDisplay(transaction.status);
                   const StatusIcon = statusDisplay.icon;
-                  
+
                   return (
-                    <div 
+                    <div
                       key={`${transaction.type}-${transaction.id}`}
-                      className={`border rounded-lg p-4 ${statusDisplay.bgColor} border-l-4 border-l-current`}
+                      className={`border rounded-xl p-4 ${statusDisplay.bgColor} border-border border-l-4 border-l-current`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           {transaction.type === 'deposit' ? (
-                            <ArrowDownLeft className="text-green-400" size={20} />
+                            <ArrowDownLeft className="text-success" size={20} />
                           ) : (
-                            <ArrowUpRight className="text-red-400" size={20} />
+                            <ArrowUpRight className="text-danger" size={20} />
                           )}
                           <div>
-                            <div className="font-semibold text-white flex items-center gap-1.5">
+                            <div className="font-semibold text-foreground flex items-center gap-1.5">
                               <CryptoIcon symbol={transaction.symbol} size="xs" />
                               {transaction.type === 'deposit' ? 'Deposit' : 'Withdraw'} - {transaction.symbol}
                             </div>
-                            <div className="text-sm text-gray-300">
+                            <div className="text-sm text-muted-foreground tabular-nums">
                               {transaction.amount.toFixed(8)} {transaction.symbol}
                             </div>
                           </div>
@@ -261,7 +263,7 @@ export function UnifiedTransactionHistoryModal({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-300 mb-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center space-x-2">
                           <Calendar size={14} />
                           <span>Created: {formatDate(transaction.created_at)}</span>
@@ -275,16 +277,16 @@ export function UnifiedTransactionHistoryModal({
                       </div>
 
                       {transaction.reason && (
-                        <div className="mb-3 p-3 bg-red-900/30 rounded">
-                          <div className="text-sm text-red-200 font-medium">Reason:</div>
-                          <div className="text-sm text-red-100">{transaction.reason}</div>
+                        <div className="mb-3 p-3 bg-danger/10 rounded-lg">
+                          <div className="text-sm text-danger font-medium">Reason:</div>
+                          <div className="text-sm text-danger/90">{transaction.reason}</div>
                         </div>
                       )}
 
                       {transaction.admin_notes && (
-                        <div className="mb-3 p-3 bg-blue-900/30 rounded">
-                          <div className="text-sm text-blue-200 font-medium">Becxus Team:</div>
-                          <div className="text-sm text-blue-100">{transaction.admin_notes}</div>
+                        <div className="mb-3 p-3 bg-info/10 rounded-lg">
+                          <div className="text-sm text-info font-medium">{exchangeName} Team:</div>
+                          <div className="text-sm text-info/90">{transaction.admin_notes}</div>
                         </div>
                       )}
 
@@ -295,18 +297,18 @@ export function UnifiedTransactionHistoryModal({
                               variant="outline"
                               size="sm"
                               onClick={() => openImageViewer(transaction.screenshot_url, `${transaction.symbol} ${transaction.type} screenshot`)}
-                              className="flex items-center space-x-1"
+                              className="flex items-center space-x-1 bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                             >
                               <Eye size={14} />
                               <span>View Screenshot</span>
                             </Button>
                           )}
                         </div>
-                        
+
                         <Button
                           onClick={() => acknowledgeTransaction(transaction.id, transaction.type)}
                           disabled={acknowledging === transaction.id}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                           {acknowledging === transaction.id ? (
                             <RefreshCw className="animate-spin" size={14} />
@@ -322,20 +324,20 @@ export function UnifiedTransactionHistoryModal({
               </div>
             )}
           </TabsContent>
-          
+
           <TabsContent value="history" className="space-y-4">
             {loading ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 text-muted-foreground">
                 <RefreshCw className="animate-spin mx-auto mb-2" size={24} />
                 <p>Loading history...</p>
               </div>
             ) : error ? (
-              <div className="text-center py-8 text-red-400">
+              <div className="text-center py-8 text-danger">
                 <AlertCircle className="mx-auto mb-2" size={24} />
                 <p>{error}</p>
               </div>
             ) : historyTransactions.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <History className="mx-auto mb-2" size={24} />
                 <p>No transaction history</p>
               </div>
@@ -344,24 +346,24 @@ export function UnifiedTransactionHistoryModal({
                 {historyTransactions.map((transaction) => {
                   const statusDisplay = getStatusDisplay(transaction.status);
                   const StatusIcon = statusDisplay.icon;
-                  
+
                   return (
-                    <div 
+                    <div
                       key={`${transaction.type}-${transaction.id}`}
-                      className="border border-[#1e1e1e] rounded-xl p-4"
+                      className="border border-border rounded-xl p-4"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           {transaction.type === 'deposit' ? (
-                            <ArrowDownLeft className="text-green-400" size={20} />
+                            <ArrowDownLeft className="text-success" size={20} />
                           ) : (
-                            <ArrowUpRight className="text-red-400" size={20} />
+                            <ArrowUpRight className="text-danger" size={20} />
                           )}
                           <div>
-                            <div className="font-semibold text-white">
+                            <div className="font-semibold text-foreground">
                               {transaction.type === 'deposit' ? 'Deposit' : 'Withdraw'} - {transaction.symbol}
                             </div>
-                            <div className="text-sm text-gray-300">
+                            <div className="text-sm text-muted-foreground tabular-nums">
                               {formatCryptoNumber(transaction.amount)} {transaction.symbol}
                             </div>
                           </div>
@@ -374,7 +376,7 @@ export function UnifiedTransactionHistoryModal({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-300 mb-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center space-x-2">
                           <Calendar size={14} />
                           <span>Created: {formatDate(transaction.created_at)}</span>
@@ -388,16 +390,16 @@ export function UnifiedTransactionHistoryModal({
                       </div>
 
                       {transaction.reason && (
-                        <div className="mb-3 p-3 bg-red-900/30 rounded">
-                          <div className="text-sm text-red-200 font-medium">Reason:</div>
-                          <div className="text-sm text-red-100">{transaction.reason}</div>
+                        <div className="mb-3 p-3 bg-danger/10 rounded-lg">
+                          <div className="text-sm text-danger font-medium">Reason:</div>
+                          <div className="text-sm text-danger/90">{transaction.reason}</div>
                         </div>
                       )}
 
                       {transaction.admin_notes && (
-                        <div className="mb-3 p-3 bg-blue-900/30 rounded">
-                          <div className="text-sm text-blue-200 font-medium">Becxus Team:</div>
-                          <div className="text-sm text-blue-100">{transaction.admin_notes}</div>
+                        <div className="mb-3 p-3 bg-info/10 rounded-lg">
+                          <div className="text-sm text-info font-medium">{exchangeName} Team:</div>
+                          <div className="text-sm text-info/90">{transaction.admin_notes}</div>
                         </div>
                       )}
 
@@ -406,7 +408,7 @@ export function UnifiedTransactionHistoryModal({
                           variant="outline"
                           size="sm"
                           onClick={() => openImageViewer(transaction.screenshot_url, `${transaction.symbol} ${transaction.type} screenshot`)}
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                         >
                           <Eye size={14} />
                           <span>View Screenshot</span>
@@ -421,7 +423,7 @@ export function UnifiedTransactionHistoryModal({
         </Tabs>
 
         <div className="flex justify-end pt-4">
-          <Button onClick={onClose} variant="outline" className="bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]">Close</Button>
+          <Button onClick={onClose} variant="outline" className="bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground">Close</Button>
         </div>
       </DialogContent>
     </Dialog>

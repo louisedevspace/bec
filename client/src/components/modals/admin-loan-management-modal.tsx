@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, X, User, Mail, Shield, CheckCircle, XCircle, 
+import {
+  Search, X, User, Mail, Shield, CheckCircle, XCircle,
   Eye, AlertTriangle, Settings, FileText, DollarSign, Calendar, Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
@@ -130,7 +130,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
       // Update loan application status with timestamps
       const { error: updateError } = await supabase
         .from('loan_applications')
-        .update({ 
+        .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
           reviewed_at: new Date().toISOString(),
@@ -201,7 +201,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
       // Get current user (admin) for reviewed_by
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       const updateData: {
         status: string;
         rejection_reason: string;
@@ -214,7 +214,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
         reviewed_at: new Date().toISOString(),
         rejected_at: new Date().toISOString()
       };
-      
+
       // Only add reviewed_by if user is found
       if (user) {
         updateData.reviewed_by = user.id;
@@ -241,11 +241,11 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-600/20 text-yellow-400">Pending</Badge>;
+        return <Badge variant="secondary" className="bg-warning/15 text-warning">Pending</Badge>;
       case 'approved':
-        return <Badge variant="secondary" className="bg-green-600/20 text-green-400">Approved</Badge>;
+        return <Badge variant="secondary" className="bg-success/15 text-success">Approved</Badge>;
       case 'rejected':
-        return <Badge variant="secondary" className="bg-red-600/20 text-red-400">Rejected</Badge>;
+        return <Badge variant="secondary" className="bg-danger/15 text-danger">Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -264,33 +264,33 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
-            <DollarSign className="w-5 h-5 text-blue-400" />
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <DollarSign className="w-5 h-5 text-primary" />
             Loan Management
           </DialogTitle>
         </DialogHeader>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search by email, name, purpose, or status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500"
+            className="pl-10 bg-background border-border text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded">
+          <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-lg">
             {error}
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             Loading loan applications...
           </div>
         )}
@@ -299,18 +299,18 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
         {!loading && (
           <div className="space-y-4">
             {filteredApplications.map((application) => (
-              <Card key={application.id} className="bg-[#0a0a0a] border-[#1e1e1e]">
+              <Card key={application.id} className="bg-muted/30 border-border">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <User className="w-4 h-4 text-gray-500" />
-                          <span className="text-white font-medium">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground font-medium">
                             {application.user?.full_name || 'Unknown User'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Mail className="w-3 h-3" />
                           {application.user?.email}
                         </div>
@@ -319,29 +319,29 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="text-white font-medium">
+                        <div className="text-foreground font-medium tabular-nums">
                           {formatCurrency(application.amount)}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted-foreground">
                           {application.duration} days
                         </div>
                       </div>
 
                       <div className="text-center">
-                        <div className="text-sm text-gray-500 mb-1">Purpose</div>
-                        <div className="text-white text-sm max-w-32 truncate">
+                        <div className="text-sm text-muted-foreground mb-1">Purpose</div>
+                        <div className="text-foreground text-sm max-w-32 truncate">
                           {application.purpose}
                         </div>
                       </div>
 
                       <div className="text-center">
-                        <div className="text-sm text-gray-500 mb-1">Status</div>
+                        <div className="text-sm text-muted-foreground mb-1">Status</div>
                         {getStatusBadge(application.status)}
                       </div>
 
                       <div className="text-center">
-                        <div className="text-sm text-gray-500 mb-1">Applied</div>
-                        <div className="text-white text-sm">
+                        <div className="text-sm text-muted-foreground mb-1">Applied</div>
+                        <div className="text-foreground text-sm">
                           {formatDate(application.created_at)}
                         </div>
                       </div>
@@ -351,7 +351,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                           size="sm"
                           variant="outline"
                           onClick={() => handleViewApplicationDetails(application)}
-                          className="text-xs bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
+                          className="text-xs bg-transparent border-border text-foreground/90 hover:bg-muted hover:text-foreground"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           View Details
@@ -363,7 +363,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                               size="sm"
                               variant="outline"
                               onClick={() => handleApproveLoan(application)}
-                              className="text-xs text-green-300 border-green-500/30 bg-green-500/10 hover:bg-green-500/20"
+                              className="text-xs text-success border-success/30 bg-success/10 hover:bg-success/20"
                             >
                               <CheckCircle className="w-3 h-3 mr-1" />
                               Approve
@@ -376,7 +376,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                                 setRejectionReason('');
                                 setShowRejectionModal(true);
                               }}
-                              className="text-xs text-red-300 border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
+                              className="text-xs text-danger border-danger/30 bg-danger/10 hover:bg-danger/20"
                             >
                               <XCircle className="w-3 h-3 mr-1" />
                               Reject
@@ -392,7 +392,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
             {/* No Results */}
             {!loading && filteredApplications.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-muted-foreground">
                 {searchTerm ? 'No loan applications found matching your search.' : 'No loan applications found.'}
               </div>
             )}
@@ -403,11 +403,11 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
         <Dialog open={showApplicationDetails} onOpenChange={(open) => !open && setShowApplicationDetails(false)}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-400" />
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
                 Loan Application Details
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Review the applicant details and attached documents.
               </DialogDescription>
             </DialogHeader>
@@ -416,65 +416,65 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
               <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-500 text-xs">Applicant</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Applicant</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                     {selectedApplication.user?.full_name || 'Unknown User'}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Email</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Email</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                     {selectedApplication.user?.email}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Loan Amount</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Loan Amount</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1 tabular-nums">
                     {formatCurrency(selectedApplication.amount)}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Duration</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Duration</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                     {selectedApplication.duration} days
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Purpose</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Purpose</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                     {selectedApplication.purpose}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Monthly Income</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Monthly Income</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1 tabular-nums">
                     {selectedApplication.monthly_income ? formatCurrency(selectedApplication.monthly_income) : 'Not provided'}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-400 text-xs">Status</Label>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
                   <div className="mt-1">
                     {getStatusBadge(selectedApplication.status)}
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-500 text-xs">Applied Date</Label>
-                  <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                  <Label className="text-muted-foreground text-xs">Applied Date</Label>
+                  <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                     {formatDate(selectedApplication.created_at)}
                   </div>
                 </div>
 
                 {selectedApplication.rejection_reason && (
                   <div className="md:col-span-2">
-                    <Label className="text-gray-500 text-xs">Rejection Reason</Label>
-                    <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Rejection Reason</Label>
+                    <div className="text-danger text-sm bg-danger/10 border border-danger/20 p-2 rounded-lg mt-1">
                       {selectedApplication.rejection_reason}
                     </div>
                   </div>
@@ -482,8 +482,8 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
                 {selectedApplication.reviewed_at && (
                   <div>
-                    <Label className="text-gray-500 text-xs">Reviewed At</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Reviewed At</Label>
+                    <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                       {formatDate(selectedApplication.reviewed_at)}
                     </div>
                   </div>
@@ -491,8 +491,8 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
                 {selectedApplication.loan_pay_date && (
                   <div>
-                    <Label className="text-gray-500 text-xs">Loan Pay Date</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Loan Pay Date</Label>
+                    <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                       {formatDate(selectedApplication.loan_pay_date)}
                     </div>
                   </div>
@@ -501,16 +501,16 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
 
                 {selectedApplication.documents && (
                   <div className="md:col-span-2">
-                    <Label className="text-gray-500 text-xs">Documents</Label>
-                    <div className="text-white text-sm bg-[#0a0a0a] border border-[#1e1e1e] p-2 rounded mt-1">
+                    <Label className="text-muted-foreground text-xs">Documents</Label>
+                    <div className="text-foreground text-sm bg-muted/30 border border-border p-2 rounded-lg mt-1">
                       {selectedApplication.documents.urls && selectedApplication.documents.urls.length > 0 ? (
                         <div className="space-y-2">
                           {selectedApplication.documents.urls.map((url: string, index: number) => (
                             <div key={index} className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-blue-400" />
+                              <FileText className="w-4 h-4 text-primary" />
                               <a
                                 href={buildImageViewerPath(buildStorageImageUrl('loan-documents', url), `Loan document ${index + 1}`)}
-                                className="text-blue-400 hover:text-blue-300 underline text-xs"
+                                className="text-primary hover:text-primary/80 underline text-xs"
                               >
                                 Document {index + 1} - {url.split('/').pop()}
                               </a>
@@ -518,7 +518,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                           ))}
                         </div>
                       ) : (
-                        <div className="text-gray-500 text-xs">No documents uploaded</div>
+                        <div className="text-muted-foreground text-xs">No documents uploaded</div>
                       )}
                     </div>
                   </div>
@@ -534,14 +534,14 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                         setRejectionReason('');
                         setShowRejectionModal(true);
                       }}
-                      className="border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                      className="border-danger/30 bg-danger/10 text-danger hover:bg-danger/20"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
                       Reject
                     </Button>
                     <Button
                       onClick={() => handleApproveLoan(selectedApplication)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-success text-success-foreground hover:opacity-90"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Approve
@@ -551,7 +551,7 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                 <Button
                   variant="outline"
                   onClick={() => setShowApplicationDetails(false)}
-                  className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
+                  className="bg-transparent border-border text-foreground/90 hover:bg-muted hover:text-foreground"
                 >
                   Close
                 </Button>
@@ -565,22 +565,22 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
         <Dialog open={showRejectionModal} onOpenChange={(open) => !open && setShowRejectionModal(false)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+              <DialogTitle className="text-foreground flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-danger" />
                 Reject Loan Application
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Provide a clear rejection reason for the user.
               </DialogDescription>
             </DialogHeader>
 
             <div>
-              <Label className="text-gray-400 text-xs">Rejection Reason</Label>
+              <Label className="text-muted-foreground text-xs">Rejection Reason</Label>
               <Input
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Enter rejection reason..."
-                className="mt-1 bg-[#0a0a0a] border-[#1e1e1e] text-white placeholder:text-gray-500"
+                className="mt-1 bg-background border-border text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -591,13 +591,13 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                   setRejectionReason('');
                   setShowRejectionModal(false);
                 }}
-                className="bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
+                className="bg-transparent border-border text-foreground/90 hover:bg-muted hover:text-foreground"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => selectedApplication && handleRejectLoan(selectedApplication)}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-danger text-danger-foreground hover:opacity-90"
                 disabled={!rejectionReason.trim() || !selectedApplication || selectedApplication.status !== 'pending'}
               >
                 Reject
@@ -609,5 +609,4 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
     </Dialog>
   );
 };
-
 

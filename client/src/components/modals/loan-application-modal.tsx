@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info, FileText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '../../lib/supabaseClient';
 import { compressUserImage } from '@/lib/image-compress';
@@ -151,37 +153,41 @@ export const LoanApplicationModal: React.FC<LoanApplicationModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md" hideCloseButton>
-        <DialogHeader>
-          <DialogTitle className="text-white">Apply for Loan</DialogTitle>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+          <DialogTitle className="text-foreground">Apply for Loan</DialogTitle>
+          <button onClick={onClose} className="rounded-sm opacity-70 hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="amount" className="text-gray-400 text-xs">Loan Amount (USD)</Label>
+            <Label htmlFor="amount" className="text-muted-foreground text-xs">Loan Amount (USD)</Label>
             <Input
               id="amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter loan amount"
-              className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+              className="mt-1 bg-muted border-border text-foreground placeholder-gray-600 rounded-xl tabular-nums"
             />
           </div>
 
           <div>
-            <Label htmlFor="purpose" className="text-gray-300 text-xs">Purpose</Label>
+            <Label htmlFor="purpose" className="text-muted-foreground text-xs">Purpose</Label>
             <Textarea
               id="purpose"
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="Describe the purpose of the loan"
-              className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+              className="mt-1 bg-muted border-border text-foreground placeholder-gray-600 rounded-xl"
               rows={3}
             />
           </div>
 
           <div>
-            <Label htmlFor="duration" className="text-gray-400 text-xs">Duration (days) - 7 to 90 days</Label>
+            <Label htmlFor="duration" className="text-muted-foreground text-xs">Duration (days) - 7 to 90 days</Label>
             <Input
               id="duration"
               type="number"
@@ -190,46 +196,47 @@ export const LoanApplicationModal: React.FC<LoanApplicationModalProps> = ({
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               placeholder="Enter loan duration (7-90 days)"
-              className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+              className="mt-1 bg-muted border-border text-foreground placeholder-gray-600 rounded-xl tabular-nums"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1.5">
               Minimum: 7 days, Maximum: 90 days
             </p>
           </div>
 
           <div>
-            <Label htmlFor="monthlyIncome" className="text-gray-300 text-xs">Monthly Income (USD) - Optional</Label>
+            <Label htmlFor="monthlyIncome" className="text-muted-foreground text-xs">Monthly Income (USD) - Optional</Label>
             <Input
               id="monthlyIncome"
               type="number"
               value={monthlyIncome}
               onChange={(e) => setMonthlyIncome(e.target.value)}
               placeholder="Enter your monthly income"
-              className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+              className="mt-1 bg-muted border-border text-foreground placeholder-gray-600 rounded-xl tabular-nums"
             />
           </div>
 
           <div>
-            <Label htmlFor="documents" className="text-gray-300 text-xs">Supporting Documents - Optional</Label>
+            <Label htmlFor="documents" className="text-muted-foreground text-xs">Supporting Documents - Optional</Label>
             <Input
               id="documents"
               type="file"
               multiple
               onChange={handleFileChange}
-              className="mt-1 bg-[#0a0a0a] border-[#2a2a2a] text-white"
+              className="mt-1 bg-muted border-border text-foreground rounded-xl"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1.5">
               Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG (Max 1MB each)
             </p>
           </div>
 
           {documents.length > 0 && (
             <div>
-              <Label className="text-gray-300 text-xs">Selected Files:</Label>
-              <div className="mt-1 space-y-1">
+              <Label className="text-muted-foreground text-xs">Selected Files:</Label>
+              <div className="mt-1.5 space-y-1">
                 {documents.map((file, index) => (
-                  <div key={index} className="text-xs text-gray-300">
+                  <div key={index} className="text-xs text-foreground flex items-center gap-1.5">
+                    <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
                     {file.name}
                   </div>
                 ))}
@@ -237,18 +244,25 @@ export const LoanApplicationModal: React.FC<LoanApplicationModalProps> = ({
             </div>
           )}
 
-          <div className="flex gap-2 pt-4">
+          <Alert className="bg-info/10 border-info/20 p-3.5">
+            <Info className="text-info" size={16} />
+            <AlertDescription className="text-xs text-info">
+              Your application will be reviewed by our team. You'll be notified once a decision has been made. Submitting an application does not guarantee approval.
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex gap-3 pt-2 pb-1">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1 bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]"
+              className="flex-1 h-11 rounded-xl bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+              className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm disabled:opacity-40"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </Button>

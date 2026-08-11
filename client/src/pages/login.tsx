@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/brand/logo';
+import { useExchangeName } from '@/hooks/use-exchange-name';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft, Mail, Sparkles } from 'lucide-react';
@@ -12,6 +13,7 @@ import { Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft, Mail, Sparkles } from
 type Mode = 'login' | 'forgot-password' | 'magic-link';
 
 export default function LoginPage() {
+  const exchangeName = useExchangeName();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -224,22 +226,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#111] to-[#0a0a0a] p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/5 via-transparent to-transparent" />
-
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       {/* Login Form */}
       {mode === 'login' && (
-        <form onSubmit={handleLogin} className="relative z-10 w-full max-w-md space-y-6 bg-[#111] p-8 md:p-10 rounded-2xl border border-[#1e1e1e] shadow-2xl shadow-black/40">
+        <form onSubmit={handleLogin} className="w-full max-w-md space-y-6 bg-card p-8 md:p-10 rounded-xl border border-border shadow-sm">
           <div className="flex flex-col items-center mb-2">
-            <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mb-4 flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-16 h-16 bg-muted border border-border rounded-xl mb-4 flex items-center justify-center overflow-hidden">
               <Logo className="w-full h-full" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-white tracking-tight">Welcome Back</h2>
-            <p className="text-gray-500 text-sm">Sign in to your Becxus account</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-foreground tracking-tight">Welcome Back</h2>
+            <p className="text-muted-foreground text-sm">Sign in to your {exchangeName} account</p>
           </div>
 
           <div>
-            <Label htmlFor="email" className="text-sm font-medium text-gray-400 mb-2 block">Email Address</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-muted-foreground mb-2 block">Email Address</Label>
             <Input
               id="email"
               type="email"
@@ -247,17 +247,16 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 focus:border-blue-500/50 rounded-xl"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-400">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</Label>
               <button
                 type="button"
                 onClick={switchToForgotPassword}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-xs text-primary hover:text-primary/80 transition-colors"
               >
                 Forgot Password?
               </button>
@@ -270,11 +269,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 focus:border-blue-500/50 rounded-xl pr-10"
+                className="pr-10"
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowPassword(v => !v)}
                 tabIndex={-1}
               >
@@ -284,58 +283,58 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg">
+              <AlertCircle size={16} className="text-danger flex-shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            className="w-full font-semibold"
             disabled={loading}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
 
           <div className="relative flex items-center gap-4">
-            <div className="flex-grow border-t border-[#1e1e1e]" />
-            <span className="text-xs text-gray-600">or</span>
-            <div className="flex-grow border-t border-[#1e1e1e]" />
+            <div className="flex-grow border-t border-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="flex-grow border-t border-border" />
           </div>
 
           <button
             type="button"
             onClick={switchToMagicLink}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition-all text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-sm font-medium"
           >
             <Mail size={16} />
             Sign in with email link
           </button>
 
-          <div className="text-sm text-center mt-2 text-gray-500">
+          <div className="text-sm text-center mt-2 text-muted-foreground">
             Don't have an account?{' '}
-            <a href="/signup" className="text-blue-400 hover:text-blue-300 transition-colors">Sign up</a>
+            <a href="/signup" className="text-primary hover:text-primary/80 transition-colors">Sign up</a>
           </div>
         </form>
       )}
 
       {/* Forgot Password Form */}
       {mode === 'forgot-password' && (
-        <form onSubmit={handleForgotPassword} className="relative z-10 w-full max-w-md space-y-6 bg-[#111] p-8 md:p-10 rounded-2xl border border-[#1e1e1e] shadow-2xl shadow-black/40">
+        <form onSubmit={handleForgotPassword} className="w-full max-w-md space-y-6 bg-card p-8 md:p-10 rounded-xl border border-border shadow-sm">
           <div className="flex flex-col items-center mb-2">
-            <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mb-4 flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-16 h-16 bg-muted border border-border rounded-xl mb-4 flex items-center justify-center overflow-hidden">
               <Logo className="w-full h-full" />
             </div>
-            <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl mb-3 flex items-center justify-center">
-              <Mail size={22} className="text-blue-400" />
+            <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl mb-3 flex items-center justify-center">
+              <Mail size={22} className="text-primary" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-white tracking-tight">Reset Password</h2>
-            <p className="text-gray-500 text-sm text-center">Enter your email and we'll send you a reset link</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-foreground tracking-tight">Reset Password</h2>
+            <p className="text-muted-foreground text-sm text-center">Enter your email and we'll send you a reset link</p>
           </div>
 
           <div>
-            <Label htmlFor="reset-email" className="text-sm font-medium text-gray-400 mb-2 block">Email Address</Label>
+            <Label htmlFor="reset-email" className="text-sm font-medium text-muted-foreground mb-2 block">Email Address</Label>
             <Input
               id="reset-email"
               type="email"
@@ -343,27 +342,26 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 focus:border-blue-500/50 rounded-xl"
             />
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg">
+              <AlertCircle size={16} className="text-danger flex-shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-              <CheckCircle size={16} className="text-green-400 flex-shrink-0" />
-              <span className="text-green-400 text-sm">{success}</span>
+            <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg">
+              <CheckCircle size={16} className="text-success flex-shrink-0" />
+              <span className="text-success text-sm">{success}</span>
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            className="w-full font-semibold"
             disabled={loading || !!success}
           >
             {loading ? 'Sending...' : success ? 'Email Sent' : 'Send Reset Email'}
@@ -372,7 +370,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={switchToLogin}
-            className="flex items-center gap-2 mx-auto text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={14} />
             Back to Sign In
@@ -382,20 +380,20 @@ export default function LoginPage() {
 
       {/* Magic Link — Email Entry */}
       {mode === 'magic-link' && magicLinkStep === 'email' && (
-        <form onSubmit={handleSendMagicLink} className="relative z-10 w-full max-w-md space-y-6 bg-[#111] p-8 md:p-10 rounded-2xl border border-[#1e1e1e] shadow-2xl shadow-black/40">
+        <form onSubmit={handleSendMagicLink} className="w-full max-w-md space-y-6 bg-card p-8 md:p-10 rounded-xl border border-border shadow-sm">
           <div className="flex flex-col items-center mb-2">
-            <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mb-4 flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-16 h-16 bg-muted border border-border rounded-xl mb-4 flex items-center justify-center overflow-hidden">
               <Logo className="w-full h-full" />
             </div>
-            <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl mb-3 flex items-center justify-center">
-              <Sparkles size={22} className="text-blue-400" />
+            <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl mb-3 flex items-center justify-center">
+              <Sparkles size={22} className="text-primary" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-white tracking-tight">Magic Sign-In</h2>
-            <p className="text-gray-500 text-sm text-center">Enter your email and we'll send you a sign-in code</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-foreground tracking-tight">Magic Sign-In</h2>
+            <p className="text-muted-foreground text-sm text-center">Enter your email and we'll send you a sign-in code</p>
           </div>
 
           <div>
-            <Label htmlFor="magic-email" className="text-sm font-medium text-gray-400 mb-2 block">Email Address</Label>
+            <Label htmlFor="magic-email" className="text-sm font-medium text-muted-foreground mb-2 block">Email Address</Label>
             <Input
               id="magic-email"
               type="email"
@@ -403,20 +401,19 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 focus:border-blue-500/50 rounded-xl"
             />
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg">
+              <AlertCircle size={16} className="text-danger flex-shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            className="w-full font-semibold"
             disabled={loading}
           >
             {loading ? 'Sending...' : 'Send Sign-In Code'}
@@ -425,7 +422,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={switchToLogin}
-            className="flex items-center gap-2 mx-auto text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={14} />
             Back to Sign In
@@ -435,18 +432,18 @@ export default function LoginPage() {
 
       {/* Magic Link — OTP Code Entry */}
       {mode === 'magic-link' && magicLinkStep === 'code' && (
-        <form onSubmit={handleVerifyOtp} className="relative z-10 w-full max-w-md space-y-6 bg-[#111] p-8 md:p-10 rounded-2xl border border-[#1e1e1e] shadow-2xl shadow-black/40">
+        <form onSubmit={handleVerifyOtp} className="w-full max-w-md space-y-6 bg-card p-8 md:p-10 rounded-xl border border-border shadow-sm">
           <div className="flex flex-col items-center mb-2">
-            <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl mb-4 flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-16 h-16 bg-muted border border-border rounded-xl mb-4 flex items-center justify-center overflow-hidden">
               <Logo className="w-full h-full" />
             </div>
-            <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl mb-3 flex items-center justify-center">
-              <Mail size={22} className="text-blue-400" />
+            <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl mb-3 flex items-center justify-center">
+              <Mail size={22} className="text-primary" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-white tracking-tight">Check Your Email</h2>
-            <p className="text-gray-500 text-sm text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-1 text-foreground tracking-tight">Check Your Email</h2>
+            <p className="text-muted-foreground text-sm text-center">
               We sent a 6-digit code to{' '}
-              <span className="text-blue-400">{magicLinkEmail}</span>
+              <span className="text-primary">{magicLinkEmail}</span>
             </p>
           </div>
 
@@ -458,36 +455,36 @@ export default function LoginPage() {
               onChange={(value) => setOtpCode(value)}
             >
               <InputOTPGroup className="gap-1 sm:gap-2">
-                <InputOTPSlot index={0} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
-                <InputOTPSlot index={1} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
-                <InputOTPSlot index={2} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={0} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
+                <InputOTPSlot index={1} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
+                <InputOTPSlot index={2} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
               </InputOTPGroup>
-              <div className="flex items-center justify-center w-3 sm:w-4 text-gray-600">-</div>
+              <div className="flex items-center justify-center w-3 sm:w-4 text-muted-foreground">-</div>
               <InputOTPGroup className="gap-1 sm:gap-2">
-                <InputOTPSlot index={3} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
-                <InputOTPSlot index={4} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
-                <InputOTPSlot index={5} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-[#0a0a0a] border-[#2a2a2a] text-white rounded-lg sm:rounded-xl" />
+                <InputOTPSlot index={3} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
+                <InputOTPSlot index={4} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
+                <InputOTPSlot index={5} className="w-10 h-12 sm:w-12 sm:h-14 text-base sm:text-lg font-semibold bg-background border-border text-foreground rounded-lg" />
               </InputOTPGroup>
             </InputOTP>
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg">
+              <AlertCircle size={16} className="text-danger flex-shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-              <CheckCircle size={16} className="text-green-400 flex-shrink-0" />
-              <span className="text-green-400 text-sm">{success}</span>
+            <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg">
+              <CheckCircle size={16} className="text-success flex-shrink-0" />
+              <span className="text-success text-sm">{success}</span>
             </div>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all"
+            className="w-full font-semibold"
             disabled={loading || otpCode.length !== 6}
           >
             {loading ? 'Verifying...' : 'Verify Code'}
@@ -497,7 +494,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => { setMagicLinkStep('email'); setOtpCode(''); setError(null); setSuccess(null); }}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft size={14} />
               Change email
@@ -506,7 +503,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleResendCode}
               disabled={resendCooldown > 0 || loading}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors disabled:text-gray-600 disabled:cursor-not-allowed"
+              className="text-sm text-primary hover:text-primary/80 transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed"
             >
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
             </button>

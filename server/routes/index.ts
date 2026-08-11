@@ -47,6 +47,7 @@ import registerLinkPreviewRoutes from "./link-preview.routes";
 import registerAutoReplyRoutes from "./auto-reply.routes";
 import registerStakingProductsRoutes from "./staking-products.routes";
 import registerGoldRoutes from "./gold.routes";
+import registerSettingsRoutes from "./settings.routes";
 
 // Redis subscriber instance for Pub/Sub
 let redisSubscriber: Redis | null = null;
@@ -337,6 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAutoReplyRoutes(app);
   registerStakingProductsRoutes(app);
   registerGoldRoutes(app);
+  registerSettingsRoutes(app);
 
   // Live price updates every 5 seconds for real-time chart movement
   setInterval(async () => {

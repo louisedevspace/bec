@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabaseClient';
 import AdminLayout from './admin-layout';
 import {
@@ -88,7 +87,6 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
   const { toast } = useToast();
-  const { isDark } = useTheme();
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -226,10 +224,10 @@ export default function AdminAnalyticsPage() {
   const ChartTooltipContent = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2 shadow-xl">
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-sm">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
         {payload.map((entry: any, i: number) => (
-          <p key={i} className="text-xs font-medium" style={{ color: entry.color }}>
+          <p key={i} className="text-xs font-medium tabular-nums" style={{ color: entry.color }}>
             {entry.name}: {typeof entry.value === 'number' && entry.value > 100
               ? formatCurrency(entry.value)
               : entry.value}
@@ -239,7 +237,7 @@ export default function AdminAnalyticsPage() {
     );
   };
 
-  const renderLegendText = (value: string) => <span className="text-gray-400 text-xs">{value}</span>;
+  const renderLegendText = (value: string) => <span className="text-muted-foreground text-xs">{value}</span>;
 
   const StatCard = ({
     title,
@@ -258,35 +256,33 @@ export default function AdminAnalyticsPage() {
     trendUp?: boolean;
     color: string;
   }) => {
-    // Map solid colors to matching transparent bg + text color pairs
-    const colorMap: Record<string, { bg: string; text: string }> = {
-      'bg-blue-500': { bg: 'bg-blue-500/10', text: 'text-blue-400' },
-      'bg-green-500': { bg: 'bg-green-500/10', text: 'text-green-400' },
-      'bg-orange-500': { bg: 'bg-orange-500/10', text: 'text-orange-400' },
-      'bg-purple-500': { bg: 'bg-purple-500/10', text: 'text-purple-400' },
-      'bg-red-500': { bg: 'bg-red-500/10', text: 'text-red-400' },
-      'bg-cyan-500': { bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
-      'bg-amber-500': { bg: 'bg-amber-500/10', text: 'text-amber-400' },
+    // Map semantic accent keys to token-based bg + text pairs
+    const colorMap: Record<string, string> = {
+      primary: 'bg-primary/10 text-primary',
+      success: 'bg-success/10 text-success',
+      warning: 'bg-warning/10 text-warning',
+      danger: 'bg-danger/10 text-danger',
+      info: 'bg-info/10 text-info',
     };
-    const mapped = colorMap[color] || { bg: `${color}/10`, text: 'text-white' };
+    const mapped = colorMap[color] || colorMap.primary;
 
     return (
-      <Card className="bg-[#111] border-[#1e1e1e] hover:border-[#2a2a2a] transition-all">
+      <Card className="bg-card border-border hover:border-primary/30 transition-colors">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-[11px] font-medium text-gray-400">{title}</p>
-              <p className="text-xl font-bold text-white mt-2">{value}</p>
-              {subtitle && <p className="text-[10px] text-gray-500 mt-1">{subtitle}</p>}
+              <p className="text-[11px] font-medium text-muted-foreground">{title}</p>
+              <p className="text-xl font-bold text-foreground mt-2 tabular-nums">{value}</p>
+              {subtitle && <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">{subtitle}</p>}
               {trend && (
-                <div className={`flex items-center gap-1 mt-2 text-xs ${trendUp ? 'text-green-400' : 'text-red-400'}`}>
-                  {trendUp ? <ArrowUpRight size={14} className="fill-current" /> : <ArrowDownRight size={14} className="fill-current" />}
+                <div className={`flex items-center gap-1 mt-2 text-xs tabular-nums ${trendUp ? 'text-success' : 'text-danger'}`}>
+                  {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                   <span>{trend}</span>
                 </div>
               )}
             </div>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapped.bg} ${mapped.text}`}>
-              <Icon className="w-5 h-5 fill-current" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapped}`}>
+              <Icon className="w-5 h-5" />
             </div>
           </div>
         </CardContent>
@@ -300,19 +296,19 @@ export default function AdminAnalyticsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">Analytics</h1>
-            <p className="text-sm text-gray-500 mt-1">Platform performance and statistics</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Analytics</h1>
+            <p className="text-sm text-muted-foreground mt-1">Platform performance and statistics</p>
           </div>
           <div className="flex items-center gap-3">
             <Select value={timeRange} onValueChange={(val) => setTimeRange(val)}>
-              <SelectTrigger className="w-[160px] bg-[#111] border-[#1e1e1e] text-white text-sm focus:border-blue-500">
+              <SelectTrigger className="w-[160px] bg-card border-border text-foreground text-sm focus:border-primary focus:ring-1 focus:ring-ring">
                 <SelectValue placeholder="Select range" />
               </SelectTrigger>
-              <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                <SelectItem value="24h" className="text-white hover:bg-[#1a1a1a]">Last 24 Hours</SelectItem>
-                <SelectItem value="7d" className="text-white hover:bg-[#1a1a1a]">Last 7 Days</SelectItem>
-                <SelectItem value="30d" className="text-white hover:bg-[#1a1a1a]">Last 30 Days</SelectItem>
-                <SelectItem value="90d" className="text-white hover:bg-[#1a1a1a]">Last 90 Days</SelectItem>
+              <SelectContent className="bg-popover border-border">
+                <SelectItem value="24h" className="text-foreground hover:bg-muted focus:bg-muted">Last 24 Hours</SelectItem>
+                <SelectItem value="7d" className="text-foreground hover:bg-muted focus:bg-muted">Last 7 Days</SelectItem>
+                <SelectItem value="30d" className="text-foreground hover:bg-muted focus:bg-muted">Last 30 Days</SelectItem>
+                <SelectItem value="90d" className="text-foreground hover:bg-muted focus:bg-muted">Last 90 Days</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -320,15 +316,15 @@ export default function AdminAnalyticsPage() {
               size="sm"
               onClick={fetchAnalytics}
               disabled={loading}
-              className="gap-2 bg-[#111] border-[#1e1e1e] text-white hover:bg-[#1a1a1a] hover:text-white"
+              className="gap-2 bg-card border-border text-foreground hover:bg-muted hover:text-foreground"
             >
-              <RefreshCw className={`w-4 h-4 fill-current ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 bg-[#111] border-[#1e1e1e] text-white hover:bg-[#1a1a1a] hover:text-white"
+              className="gap-2 bg-card border-border text-foreground hover:bg-muted hover:text-foreground"
               onClick={() => {
                 toast({
                   title: 'Export Coming Soon',
@@ -336,7 +332,7 @@ export default function AdminAnalyticsPage() {
                 });
               }}
             >
-              <Download className="w-4 h-4 fill-current" />
+              <Download className="w-4 h-4" />
               Export
             </Button>
           </div>
@@ -351,21 +347,21 @@ export default function AdminAnalyticsPage() {
             icon={Users}
             trend={analytics.newUsersThisWeek > 0 ? `+${analytics.newUsersThisWeek} this week` : 'No new users this week'}
             trendUp={analytics.newUsersThisWeek > 0}
-            color="bg-blue-500"
+            color="primary"
           />
           <StatCard
             title="Total Deposits"
             value={formatCurrency(analytics.totalDeposits)}
             subtitle={`${analytics.pendingDeposits} pending`}
             icon={TrendingUp}
-            color="bg-green-500"
+            color="success"
           />
           <StatCard
             title="Total Withdrawals"
             value={formatCurrency(analytics.totalWithdrawals)}
             subtitle={`${analytics.pendingWithdrawals} pending`}
             icon={TrendingDown}
-            color="bg-orange-500"
+            color="warning"
           />
           <StatCard
             title="Total Trades"
@@ -374,84 +370,84 @@ export default function AdminAnalyticsPage() {
             icon={Activity}
             trend={`${analytics.completedTrades} completed`}
             trendUp={analytics.completedTrades > 0}
-            color="bg-purple-500"
+            color="info"
           />
         </div>
 
         {/* Detailed Analytics Tabs */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="bg-[#111] border border-[#1e1e1e] rounded-lg p-1">
-            <TabsTrigger value="users" className="rounded-md data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+          <TabsList className="bg-card border border-border rounded-lg p-1">
+            <TabsTrigger value="users" className="rounded-md data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
               Users
             </TabsTrigger>
-            <TabsTrigger value="trading" className="rounded-md data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="trading" className="rounded-md data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
               Trading
             </TabsTrigger>
-            <TabsTrigger value="finance" className="rounded-md data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="finance" className="rounded-md data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
               Finance
             </TabsTrigger>
-            <TabsTrigger value="support" className="rounded-md data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 text-gray-400">
+            <TabsTrigger value="support" className="rounded-md data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
               Support
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-white">User Growth Trend</CardTitle>
-                <p className="text-sm text-gray-500">Daily user registrations and cumulative growth</p>
+                <CardTitle className="text-lg font-semibold text-foreground">User Growth Trend</CardTitle>
+                <p className="text-sm text-muted-foreground">Daily user registrations and cumulative growth</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.userGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
-                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
-                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
-                    <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} name="Total Users" />
-                    <Line type="monotone" dataKey="newUsers" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} name="New Users" />
+                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 4 }} activeDot={{ r: 6 }} name="Total Users" />
+                    <Line type="monotone" dataKey="newUsers" stroke="hsl(var(--success))" strokeWidth={2} dot={{ fill: 'hsl(var(--success))', r: 4 }} activeDot={{ r: 6 }} name="New Users" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">User Growth</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">User Growth</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">{formatNumber(analytics.newUsersThisWeek)}</div>
-                  <p className="text-xs text-gray-500 mt-1">New users this week</p>
-                  <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((analytics.newUsersThisWeek / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
+                  <div className="text-3xl font-bold text-foreground tabular-nums">{formatNumber(analytics.newUsersThisWeek)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">New users this week</p>
+                  <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((analytics.newUsersThisWeek / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Active Users</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">{formatNumber(analytics.activeUsers)}</div>
-                  <p className="text-xs text-gray-500 mt-1">Currently active accounts</p>
-                  <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min((analytics.activeUsers / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
+                  <div className="text-3xl font-bold text-foreground tabular-nums">{formatNumber(analytics.activeUsers)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Currently active accounts</p>
+                  <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-success rounded-full" style={{ width: `${Math.min((analytics.activeUsers / Math.max(analytics.totalUsers, 1)) * 100, 100)}%` }} />
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-400">Activity Rate</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Activity Rate</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-3xl font-bold text-foreground tabular-nums">
                     {analytics.totalUsers > 0 ? Math.round((analytics.activeUsers / analytics.totalUsers) * 100) : 0}%
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Of total users are active</p>
-                  <div className="mt-4 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${analytics.totalUsers > 0 ? (analytics.activeUsers / analytics.totalUsers) * 100 : 0}%` }} />
+                  <p className="text-xs text-muted-foreground mt-1">Of total users are active</p>
+                  <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-info rounded-full" style={{ width: `${analytics.totalUsers > 0 ? (analytics.activeUsers / analytics.totalUsers) * 100 : 0}%` }} />
                   </div>
                 </CardContent>
               </Card>
@@ -459,38 +455,38 @@ export default function AdminAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="trading" className="space-y-4">
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-white">Trading Volume & Activity</CardTitle>
-                <p className="text-sm text-gray-500">Daily trading volume and number of trades</p>
+                <CardTitle className="text-lg font-semibold text-foreground">Trading Volume & Activity</CardTitle>
+                <p className="text-sm text-muted-foreground">Daily trading volume and number of trades</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData.tradingVolume}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
-                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
-                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
-                    <Bar dataKey="volume" fill="#8b5cf6" name="Volume ($)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="trades" fill="#06b6d4" name="Number of Trades" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="volume" fill="hsl(var(--primary))" name="Volume ($)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="trades" fill="hsl(var(--info))" name="Number of Trades" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-white">Trade Status Distribution</CardTitle>
-                  <p className="text-sm text-gray-500">Breakdown of trade statuses</p>
+                  <CardTitle className="text-lg font-semibold text-foreground">Trade Status Distribution</CardTitle>
+                  <p className="text-sm text-muted-foreground">Breakdown of trade statuses</p>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie data={chartData.tradeStatus} cx="50%" cy="50%" labelLine={false}
                         label={({ x, y, status, count, percent }) => (
-                          <text x={x} y={y} fill={isDark ? '#9ca3af' : '#1e293b'} textAnchor="middle" dominantBaseline="central" fontSize={11}>
+                          <text x={x} y={y} fill="hsl(var(--muted-foreground))" textAnchor="middle" dominantBaseline="central" fontSize={11}>
                             {`${status}: ${count} (${(percent * 100).toFixed(0)}%)`}
                           </text>
                         )}
@@ -506,27 +502,27 @@ export default function AdminAnalyticsPage() {
               </Card>
 
               <div className="space-y-4">
-                <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Trading Volume</CardTitle></CardHeader>
+                <Card className="bg-card border-border">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Trading Volume</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-white">{formatCurrency(analytics.totalVolume)}</div>
-                    <p className="text-xs text-gray-500 mt-1">Total trading volume</p>
+                    <div className="text-3xl font-bold text-foreground tabular-nums">{formatCurrency(analytics.totalVolume)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Total trading volume</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Orders</CardTitle></CardHeader>
+                <Card className="bg-card border-border">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending Orders</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-white">{formatNumber(analytics.pendingTrades)}</div>
-                    <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
+                    <div className="text-3xl font-bold text-foreground tabular-nums">{formatNumber(analytics.pendingTrades)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Awaiting approval</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-[#111] border-[#1e1e1e]">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Completion Rate</CardTitle></CardHeader>
+                <Card className="bg-card border-border">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-white">
+                    <div className="text-3xl font-bold text-foreground tabular-nums">
                       {analytics.totalTrades > 0 ? Math.round((analytics.completedTrades / analytics.totalTrades) * 100) : 0}%
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Orders completed</p>
+                    <p className="text-xs text-muted-foreground mt-1">Orders completed</p>
                   </CardContent>
                 </Card>
               </div>
@@ -534,48 +530,48 @@ export default function AdminAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="finance" className="space-y-4">
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-white">Deposit & Withdrawal Flow</CardTitle>
-                <p className="text-sm text-gray-500">Daily approved deposits and withdrawals comparison</p>
+                <CardTitle className="text-lg font-semibold text-foreground">Deposit & Withdrawal Flow</CardTitle>
+                <p className="text-sm text-muted-foreground">Daily approved deposits and withdrawals comparison</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={chartData.depositWithdrawal}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
-                    <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
-                    <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend formatter={renderLegendText} />
-                    <Area type="monotone" dataKey="deposits" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Deposits ($)" />
-                    <Area type="monotone" dataKey="withdrawals" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Withdrawals ($)" />
+                    <Area type="monotone" dataKey="deposits" stackId="1" stroke="hsl(var(--success))" fill="hsl(var(--success))" fillOpacity={0.25} name="Deposits ($)" />
+                    <Area type="monotone" dataKey="withdrawals" stackId="2" stroke="hsl(var(--danger))" fill="hsl(var(--danger))" fillOpacity={0.25} name="Withdrawals ($)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Net Flow</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Net Flow</CardTitle></CardHeader>
                 <CardContent>
-                  <div className={`text-3xl font-bold ${analytics.totalDeposits - analytics.totalWithdrawals >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`text-3xl font-bold tabular-nums ${analytics.totalDeposits - analytics.totalWithdrawals >= 0 ? 'text-success' : 'text-danger'}`}>
                     {formatCurrency(analytics.totalDeposits - analytics.totalWithdrawals)}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Deposits minus withdrawals</p>
+                  <p className="text-xs text-muted-foreground mt-1">Deposits minus withdrawals</p>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Deposits</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending Deposits</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">{analytics.pendingDeposits}</div>
-                  <p className="text-xs text-gray-500 mt-1">Awaiting confirmation</p>
+                  <div className="text-3xl font-bold text-foreground tabular-nums">{analytics.pendingDeposits}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Awaiting confirmation</p>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Pending Withdrawals</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending Withdrawals</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">{analytics.pendingWithdrawals}</div>
-                  <p className="text-xs text-gray-500 mt-1">Awaiting processing</p>
+                  <div className="text-3xl font-bold text-foreground tabular-nums">{analytics.pendingWithdrawals}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Awaiting processing</p>
                 </CardContent>
               </Card>
             </div>
@@ -583,27 +579,27 @@ export default function AdminAnalyticsPage() {
 
           <TabsContent value="support" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Total Tickets</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Tickets</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white">{formatNumber(analytics.supportTickets)}</div>
-                  <p className="text-xs text-gray-500 mt-1">All support conversations</p>
+                  <div className="text-3xl font-bold text-foreground tabular-nums">{formatNumber(analytics.supportTickets)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">All support conversations</p>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Open Tickets</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Open Tickets</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-orange-400">{formatNumber(analytics.openTickets)}</div>
-                  <p className="text-xs text-gray-500 mt-1">Need attention</p>
+                  <div className="text-3xl font-bold text-warning tabular-nums">{formatNumber(analytics.openTickets)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Need attention</p>
                 </CardContent>
               </Card>
-              <Card className="bg-[#111] border-[#1e1e1e]">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-400">Resolution Rate</CardTitle></CardHeader>
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Resolution Rate</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-green-400">
+                  <div className="text-3xl font-bold text-success tabular-nums">
                     {analytics.supportTickets > 0 ? Math.round((analytics.resolvedTickets / analytics.supportTickets) * 100) : 0}%
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Tickets resolved</p>
+                  <p className="text-xs text-muted-foreground mt-1">Tickets resolved</p>
                 </CardContent>
               </Card>
             </div>
@@ -611,61 +607,61 @@ export default function AdminAnalyticsPage() {
         </Tabs>
 
         {/* Cumulative Metrics Chart */}
-        <Card className="bg-[#111] border-[#1e1e1e]">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-white">Cumulative Growth Metrics</CardTitle>
-            <p className="text-sm text-gray-500">Platform growth trends over time</p>
+            <CardTitle className="text-lg font-semibold text-foreground">Cumulative Growth Metrics</CardTitle>
+            <p className="text-sm text-muted-foreground">Platform growth trends over time</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData.cumulativeMetrics}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e1e1e' : '#e2e8f0'} />
-                <XAxis dataKey="date" stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
-                <YAxis stroke={isDark ? '#6b7280' : '#475569'} fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip content={<ChartTooltipContent />} />
                 <Legend formatter={renderLegendText} />
-                <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Total Users" />
-                <Area type="monotone" dataKey="volume" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} name="Trading Volume ($)" />
-                <Area type="monotone" dataKey="deposits" stroke="#10b981" fill="#10b981" fillOpacity={0.3} name="Total Deposits ($)" />
+                <Area type="monotone" dataKey="users" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} name="Total Users" />
+                <Area type="monotone" dataKey="volume" stroke="hsl(var(--info))" fill="hsl(var(--info))" fillOpacity={0.2} name="Trading Volume ($)" />
+                <Area type="monotone" dataKey="deposits" stroke="hsl(var(--success))" fill="hsl(var(--success))" fillOpacity={0.2} name="Total Deposits ($)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Quick Insights */}
-        <Card className="bg-gradient-to-r from-blue-600/10 to-indigo-600/10 border-blue-500/20">
+        <Card className="bg-card border-border">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-6 h-6 text-white fill-current" />
+              <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">Platform Insights</h3>
+                <h3 className="text-lg font-semibold text-foreground">Platform Insights</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500">Avg. Deposit</p>
-                    <p className="text-lg font-semibold text-white">
+                  <div className="bg-background/60 rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground">Avg. Deposit</p>
+                    <p className="text-lg font-semibold text-foreground tabular-nums">
                       {analytics.totalDepositCount > 0 ? formatCurrency(analytics.totalDeposits / analytics.totalDepositCount) : formatCurrency(0)}
                     </p>
                   </div>
-                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500">Trades per User</p>
-                    <p className="text-lg font-semibold text-white">
+                  <div className="bg-background/60 rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground">Trades per User</p>
+                    <p className="text-lg font-semibold text-foreground tabular-nums">
                       {analytics.totalUsers > 0 ? (analytics.totalTrades / analytics.totalUsers).toFixed(2) : '0.00'}
                     </p>
                   </div>
-                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500">Total Fees Collected</p>
-                    <p className="text-lg font-semibold text-white">
+                  <div className="bg-background/60 rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground">Total Fees Collected</p>
+                    <p className="text-lg font-semibold text-foreground tabular-nums">
                       {formatCurrency(analytics.totalFees)}
                     </p>
                   </div>
-                  <div className="bg-[#111]/50 rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500">Support Load</p>
-                    <p className="text-lg font-semibold text-white">
+                  <div className="bg-background/60 rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground">Support Load</p>
+                    <p className="text-lg font-semibold text-foreground tabular-nums">
                       {analytics.totalUsers > 0 ? (analytics.supportTickets / analytics.totalUsers).toFixed(2) : '0.00'}
                     </p>
-                    <p className="text-xs text-gray-500">tickets per user</p>
+                    <p className="text-xs text-muted-foreground">tickets per user</p>
                   </div>
                 </div>
               </div>

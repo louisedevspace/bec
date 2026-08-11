@@ -333,11 +333,11 @@ export default function SupportPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'text-blue-400';
-      case 'in_progress': return 'text-yellow-400';
-      case 'resolved': return 'text-green-400';
-      case 'closed': return 'text-gray-500';
-      default: return 'text-gray-400';
+      case 'open': return 'text-info';
+      case 'in_progress': return 'text-warning';
+      case 'resolved': return 'text-success';
+      case 'closed': return 'text-muted-foreground';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -353,11 +353,11 @@ export default function SupportPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'low': return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'medium': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'high': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-      case 'urgent': return 'bg-red-500/10 text-red-400 border-red-500/20';
-      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      case 'low': return 'bg-success/10 text-success border-success/20';
+      case 'medium': return 'bg-warning/10 text-warning border-warning/20';
+      case 'high': return 'bg-warning/15 text-warning border-warning/25';
+      case 'urgent': return 'bg-danger/10 text-danger border-danger/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -376,10 +376,10 @@ export default function SupportPage() {
     if (msg.message_type === 'system') {
       return (
         <div key={msg.id} className="flex justify-center my-2">
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-4 py-1.5 flex items-center gap-2">
-            <Info size={12} className="text-gray-500 flex-shrink-0" />
-            <span className="text-xs text-gray-500">{msg.message}</span>
-            <span className="text-[10px] text-gray-600 ml-1">
+          <div className="bg-muted border border-border rounded-full px-4 py-1.5 flex items-center gap-2">
+            <Info size={12} className="text-muted-foreground flex-shrink-0" />
+            <span className="text-xs text-muted-foreground">{msg.message}</span>
+            <span className="text-[10px] text-muted-foreground/70 ml-1">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -395,17 +395,17 @@ export default function SupportPage() {
     return (
       <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
         {!isUser && (
-          <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
-            <Shield size={12} className="text-blue-400" />
+          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+            <Shield size={12} className="text-primary" />
           </div>
         )}
         <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl ${
           isUser
-            ? 'bg-blue-600 text-white rounded-br-md'
-            : 'bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 rounded-bl-md'
+            ? 'bg-primary text-primary-foreground rounded-br-md'
+            : 'bg-muted border border-border text-foreground rounded-bl-md'
         }`}>
           {!isUser && (
-            <p className="text-[10px] text-blue-400 font-medium mb-1">Support Agent</p>
+            <p className="text-[10px] text-primary font-medium mb-1">Support Agent</p>
           )}
           {/* Image attachment */}
           {msg.message_type === 'image' && msg.attachment_url && (
@@ -427,7 +427,7 @@ export default function SupportPage() {
           {/* Link preview for first URL in message */}
           {firstUrl && (
             <div className="mt-2">
-              <LinkPreview url={firstUrl} className="!bg-[#0a0a0a] !border-[#2a2a2a]" />
+              <LinkPreview url={firstUrl} className="!bg-background !border-border" />
             </div>
           )}
           <p className={`text-[10px] opacity-60 mt-1.5 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -439,47 +439,47 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a]">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <div className="bg-[#0a0a0a] border-b border-[#1e1e1e] sticky top-0 z-40">
+      <div className="bg-background border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => setLocation('/profile')}
-              className="p-2 hover:bg-[#111] rounded-lg transition-colors"
+              className="p-2 hover:bg-card rounded-lg transition-colors"
             >
-              <ArrowLeft size={20} className="text-gray-400" />
+              <ArrowLeft size={20} className="text-muted-foreground" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-white">Customer Support</h1>
-              <p className="text-xs text-gray-500">Get help with your account and issues</p>
+              <h1 className="text-xl font-bold text-foreground">Customer Support</h1>
+              <p className="text-xs text-muted-foreground">Get help with your account and issues</p>
             </div>
             <EnablePushButton className="hidden sm:inline-flex" />
             <button
               onClick={() => fetchConversations(true)}
-              className="p-2 hover:bg-[#111] rounded-lg transition-colors"
+              className="p-2 hover:bg-card rounded-lg transition-colors"
               title="Refresh"
             >
-              <RefreshCw size={16} className="text-gray-400" />
+              <RefreshCw size={16} className="text-muted-foreground" />
             </button>
           </div>
 
           {/* Search and Filter */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#111] border border-[#1e1e1e] rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-[#111] border border-[#1e1e1e] rounded-lg px-3 py-2.5 text-base sm:text-sm text-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
+              className="bg-card border border-border rounded-lg px-3 py-2.5 text-base sm:text-sm text-muted-foreground focus:outline-none focus:border-primary transition-colors"
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -500,20 +500,20 @@ export default function SupportPage() {
         <div className={`lg:col-span-1 flex flex-col ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
           <button
             onClick={() => setShowNewConversationForm(true)}
-            className="flex-shrink-0 w-full min-h-[44px] bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 mb-4"
+            className="flex-shrink-0 w-full min-h-[44px] bg-primary hover:opacity-90 text-primary-foreground font-medium rounded-xl transition-opacity flex items-center justify-center gap-2 mb-4"
           >
             <Plus size={16} />
             New Conversation
           </button>
 
           {/* Conversations List */}
-          <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden flex flex-col flex-1">
+          <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col flex-1 shadow-sm">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">Loading conversations...</div>
+                <div className="text-muted-foreground">Loading conversations...</div>
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="flex items-center justify-center py-8 text-gray-500 text-sm">
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
                 {conversations.length === 0 ? 'No support conversations yet' : 'No matching conversations'}
               </div>
             ) : (
@@ -524,8 +524,8 @@ export default function SupportPage() {
                     <button
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv)}
-                      className={`w-full p-4 text-left border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${
-                        selectedConversation?.id === conv.id ? 'bg-[#1a1a1a]' : ''
+                      className={`w-full p-4 text-left border-b border-border hover:bg-muted transition-colors ${
+                        selectedConversation?.id === conv.id ? 'bg-muted' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3 mb-2">
@@ -534,14 +534,14 @@ export default function SupportPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-medium text-white truncate flex-1">{conv.subject}</h3>
+                            <h3 className="text-sm font-medium text-foreground truncate flex-1">{conv.subject}</h3>
                             {unread > 0 && (
-                              <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                              <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
                                 {unread}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {conv.last_message_at
                               ? formatDate(conv.last_message_at)
                               : formatDate(conv.created_at)}
@@ -553,7 +553,7 @@ export default function SupportPage() {
                           {conv.priority}
                         </span>
                         {conv.category && conv.category !== 'general' && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]">
+                          <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
                             {getCategoryLabel(conv.category)}
                           </span>
                         )}
@@ -572,24 +572,24 @@ export default function SupportPage() {
         <div
           className={`lg:col-span-2 flex flex-col min-h-0 ${
             selectedConversation
-              ? "fixed inset-0 z-[70] bg-[#0a0a0a] lg:static lg:z-auto lg:bg-transparent"
+              ? "fixed inset-0 z-[70] bg-background lg:static lg:z-auto lg:bg-transparent"
               : "hidden lg:flex"
           }`}
         >
           {selectedConversation ? (
             <>
               {/* Mobile chat top bar */}
-              <div className="lg:hidden flex items-center gap-1 px-2 pb-2 border-b border-[#1e1e1e] bg-[#111] flex-shrink-0 chat-safe-top">
+              <div className="lg:hidden flex items-center gap-1 px-2 pb-2 border-b border-border bg-card flex-shrink-0 chat-safe-top">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="h-11 w-11 flex items-center justify-center rounded-xl text-gray-300 active:bg-[#1a1a1a] transition-colors flex-shrink-0"
+                  className="h-11 w-11 flex items-center justify-center rounded-xl text-foreground active:bg-muted transition-colors flex-shrink-0"
                   aria-label="Back to conversations"
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-semibold text-white truncate">{selectedConversation.subject}</h2>
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <h2 className="text-sm font-semibold text-foreground truncate">{selectedConversation.subject}</h2>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <span className={`capitalize ${getStatusColor(selectedConversation.status)}`}>
                       {selectedConversation.status.replace('_', ' ')}
                     </span>
@@ -601,7 +601,7 @@ export default function SupportPage() {
                 </div>
                 <button
                   onClick={() => fetchConversations(true)}
-                  className="h-11 w-11 flex items-center justify-center rounded-xl text-gray-400 active:bg-[#1a1a1a] transition-colors flex-shrink-0"
+                  className="h-11 w-11 flex items-center justify-center rounded-xl text-muted-foreground active:bg-muted transition-colors flex-shrink-0"
                   aria-label="Refresh messages"
                 >
                   <RefreshCw size={18} />
@@ -609,11 +609,11 @@ export default function SupportPage() {
               </div>
 
               {/* Conversation Header — desktop only */}
-              <div className="hidden lg:block bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 mb-4">
+              <div className="hidden lg:block bg-card rounded-xl border border-border p-4 mb-4 shadow-sm">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0 mr-3">
-                    <h2 className="text-lg font-bold text-white truncate">{selectedConversation.subject}</h2>
-                    <p className="text-xs text-gray-500 mt-1">Ticket #{selectedConversation.id}</p>
+                    <h2 className="text-lg font-bold text-foreground truncate">{selectedConversation.subject}</h2>
+                    <p className="text-xs text-muted-foreground mt-1">Ticket #{selectedConversation.id}</p>
                   </div>
                   <div className={`flex items-center gap-2 flex-shrink-0 ${getStatusColor(selectedConversation.status)}`}>
                     {getStatusIcon(selectedConversation.status)}
@@ -625,11 +625,11 @@ export default function SupportPage() {
                     {selectedConversation.priority}
                   </span>
                   {selectedConversation.category && (
-                    <span className="text-xs px-3 py-1 rounded bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]">
+                    <span className="text-xs px-3 py-1 rounded bg-muted text-muted-foreground border border-border">
                       {getCategoryLabel(selectedConversation.category)}
                     </span>
                   )}
-                  <span className="text-xs bg-[#1a1a1a] text-gray-500 px-3 py-1 rounded border border-[#2a2a2a]">
+                  <span className="text-xs bg-muted text-muted-foreground px-3 py-1 rounded border border-border">
                     {formatDate(selectedConversation.created_at)}
                   </span>
                 </div>
@@ -637,8 +637,8 @@ export default function SupportPage() {
 
               {/* Resolution action bar — shown on every screen size */}
               {selectedConversation.status === 'resolved' && (
-                <div className="bg-green-500/5 border-b lg:border border-green-500/20 lg:rounded-xl p-3 lg:mb-4 flex-shrink-0">
-                  <p className="text-sm text-green-400 mb-3 flex items-center gap-2">
+                <div className="bg-success/5 border-b lg:border border-success/20 lg:rounded-xl p-3 lg:mb-4 flex-shrink-0">
+                  <p className="text-sm text-success mb-3 flex items-center gap-2">
                     <CheckCircle size={14} className="flex-shrink-0" />
                     This ticket has been marked as resolved by support.
                   </p>
@@ -646,7 +646,7 @@ export default function SupportPage() {
                     <button
                       onClick={handleConfirmResolution}
                       disabled={actionLoading}
-                      className="flex-1 min-h-[44px] bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 min-h-[44px] bg-success/15 hover:bg-success/25 border border-success/30 text-success text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <ThumbsUp size={14} />
                       {actionLoading ? 'Processing...' : 'Confirm & Close'}
@@ -654,7 +654,7 @@ export default function SupportPage() {
                     <button
                       onClick={handleReopen}
                       disabled={actionLoading}
-                      className="flex-1 min-h-[44px] bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-yellow-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 min-h-[44px] bg-warning/10 hover:bg-warning/20 border border-warning/20 text-warning text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <RotateCcw size={14} />
                       {actionLoading ? 'Processing...' : 'Reopen Ticket'}
@@ -664,7 +664,7 @@ export default function SupportPage() {
               )}
 
               {/* Messages Area */}
-              <div className="bg-[#0a0a0a] lg:bg-[#111] lg:rounded-2xl lg:border lg:border-[#1e1e1e] lg:p-4 flex-1 flex flex-col overflow-hidden lg:mb-4 min-h-0">
+              <div className="bg-background lg:bg-card lg:rounded-xl lg:border lg:border-border lg:p-4 flex-1 flex flex-col overflow-hidden lg:mb-4 min-h-0 lg:shadow-sm">
                 <div
                   ref={messagesContainerRef}
                   className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 lg:px-0 lg:py-0 lg:mb-4 space-y-3 lg:pr-2"
@@ -672,30 +672,30 @@ export default function SupportPage() {
                   {selectedConversation.support_messages && selectedConversation.support_messages.length > 0 ? (
                     selectedConversation.support_messages.map(renderMessage)
                   ) : (
-                    <div className="text-center text-gray-500 text-sm py-8">No messages yet</div>
+                    <div className="text-center text-muted-foreground text-sm py-8">No messages yet</div>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
 
                 {/* Message Input or Closed Notice */}
                 {selectedConversation.status === 'closed' ? (
-                  <div className="bg-[#1a1a1a] border-t lg:border border-[#2a2a2a] lg:rounded-xl p-3 flex items-start gap-2 text-gray-500 text-sm flex-shrink-0 chat-safe-bottom">
+                  <div className="bg-muted border-t lg:border border-border lg:rounded-xl p-3 flex items-start gap-2 text-muted-foreground text-sm flex-shrink-0 chat-safe-bottom">
                     <Lock size={14} className="flex-shrink-0 mt-0.5" />
                     This ticket has been closed. Start a new conversation if you need further help.
                   </div>
                 ) : (
-                  <div className="flex-shrink-0 border-t lg:border-t-0 border-[#1e1e1e] bg-[#111] lg:bg-transparent px-3 pt-2 lg:p-0 chat-safe-bottom">
+                  <div className="flex-shrink-0 border-t lg:border-t-0 border-border bg-card lg:bg-transparent px-3 pt-2 lg:p-0 chat-safe-bottom">
                     {/* Image preview strip */}
                     {pendingImagePreview && (
-                      <div className="flex items-center gap-2 mb-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-2">
+                      <div className="flex items-center gap-2 mb-2 bg-background border border-border rounded-xl p-2">
                         <img src={pendingImagePreview} alt="Preview" className="h-14 w-14 object-cover rounded-lg" />
-                        <span className="text-xs text-gray-400 flex-1 truncate">{pendingImage?.name}</span>
+                        <span className="text-xs text-muted-foreground flex-1 truncate">{pendingImage?.name}</span>
                         <button
                           onClick={clearPendingImage}
-                          className="h-9 w-9 flex items-center justify-center hover:bg-[#1a1a1a] rounded-lg transition-colors"
+                          className="h-9 w-9 flex items-center justify-center hover:bg-muted rounded-lg transition-colors"
                           aria-label="Remove image"
                         >
-                          <X size={16} className="text-gray-500" />
+                          <X size={16} className="text-muted-foreground" />
                         </button>
                       </div>
                     )}
@@ -706,7 +706,7 @@ export default function SupportPage() {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading || sending}
-                        className={`h-11 w-11 flex-shrink-0 bg-[#0a0a0a] border border-[#1e1e1e] hover:text-white hover:bg-[#1a1a1a] rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 ${pendingImage ? 'text-blue-400 border-blue-500/30' : 'text-gray-400'}`}
+                        className={`h-11 w-11 flex-shrink-0 bg-background border border-border hover:text-foreground hover:bg-muted rounded-xl transition-colors flex items-center justify-center disabled:opacity-50 ${pendingImage ? 'text-primary border-primary/30' : 'text-muted-foreground'}`}
                         aria-label="Attach image"
                       >
                         <Paperclip size={18} />
@@ -718,12 +718,12 @@ export default function SupportPage() {
                         placeholder={selectedConversation.status === 'resolved' ? 'Reply to reopen this ticket...' : 'Type your message...'}
                         rows={1}
                         /* text-base keeps iOS Safari from zooming in on focus */
-                        className="flex-1 min-h-[44px] max-h-32 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-3 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                        className="flex-1 min-h-[44px] max-h-32 bg-background border border-border rounded-xl px-3 py-3 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
                       />
                       <button
                         onClick={handleSendMessage}
                         disabled={(!message.trim() && !pendingImage) || sending || uploading}
-                        className="h-11 w-11 flex-shrink-0 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl transition-colors flex items-center justify-center"
+                        className="h-11 w-11 flex-shrink-0 bg-primary hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-xl transition-opacity flex items-center justify-center"
                         aria-label="Send message"
                       >
                         {sending || uploading ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
@@ -734,11 +734,11 @@ export default function SupportPage() {
               </div>
             </>
           ) : (
-            <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] flex items-center justify-center flex-1 py-10">
+            <div className="bg-card rounded-xl border border-border flex items-center justify-center flex-1 py-10 shadow-sm">
               <div className="text-center">
-                <MessageSquare size={32} className="text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 mb-1">Select a conversation to view details</p>
-                <p className="text-gray-600 text-xs">or create a new one to get started</p>
+                <MessageSquare size={32} className="text-muted-foreground/60 mx-auto mb-2" />
+                <p className="text-muted-foreground mb-1">Select a conversation to view details</p>
+                <p className="text-muted-foreground/70 text-xs">or create a new one to get started</p>
               </div>
             </div>
           )}
@@ -748,27 +748,27 @@ export default function SupportPage() {
       {/* New Conversation Modal */}
       <Dialog open={showNewConversationForm} onOpenChange={setShowNewConversationForm}>
         <DialogContent className="max-w-md" hideCloseButton>
-            <h2 className="text-lg font-bold text-white mb-1">Start New Conversation</h2>
-            <p className="text-xs text-gray-500 mb-5">Describe your issue and our support team will respond shortly.</p>
+            <h2 className="text-lg font-bold text-foreground mb-1">Start New Conversation</h2>
+            <p className="text-xs text-muted-foreground mb-5">Describe your issue and our support team will respond shortly.</p>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-400 block mb-2">Subject</label>
+                <label className="text-sm font-medium text-muted-foreground block mb-2">Subject</label>
                 <input
                   type="text"
                   value={newConversationData.subject}
                   onChange={(e) => setNewConversationData({ ...newConversationData, subject: e.target.value })}
                   placeholder="Brief description of your issue..."
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-3 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-3 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-400 block mb-2">Priority</label>
+                <label className="text-sm font-medium text-muted-foreground block mb-2">Priority</label>
                 <select
                   value={newConversationData.priority}
                   onChange={(e) => setNewConversationData({ ...newConversationData, priority: e.target.value as any })}
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-3 text-base sm:text-sm text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-3 text-base sm:text-sm text-foreground focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -777,21 +777,21 @@ export default function SupportPage() {
                     paddingRight: '2.5rem'
                   }}
                 >
-                  <option value="low" className="bg-[#111] text-white">Low</option>
-                  <option value="medium" className="bg-[#111] text-white">Medium</option>
-                  <option value="high" className="bg-[#111] text-white">High</option>
-                  <option value="urgent" className="bg-[#111] text-white">Urgent</option>
+                  <option value="low" className="bg-card text-foreground">Low</option>
+                  <option value="medium" className="bg-card text-foreground">Medium</option>
+                  <option value="high" className="bg-card text-foreground">High</option>
+                  <option value="urgent" className="bg-card text-foreground">Urgent</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-400 block mb-2">Message</label>
+                <label className="text-sm font-medium text-muted-foreground block mb-2">Message</label>
                 <textarea
                   value={newConversationData.message}
                   onChange={(e) => setNewConversationData({ ...newConversationData, message: e.target.value })}
                   placeholder="Provide details about your issue..."
                   rows={5}
-                  className="w-full bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl px-3 py-3 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-3 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
                 />
               </div>
             </div>
@@ -799,14 +799,14 @@ export default function SupportPage() {
             <div className="flex gap-2 mt-6">
               <button
                 onClick={() => setShowNewConversationForm(false)}
-                className="flex-1 bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] text-white font-medium min-h-[46px] rounded-xl transition-colors"
+                className="flex-1 bg-muted hover:bg-muted/70 border border-border text-foreground font-medium min-h-[46px] rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateConversation}
                 disabled={!newConversationData.subject || !newConversationData.message || sending}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-medium min-h-[46px] rounded-xl transition-colors"
+                className="flex-1 bg-primary hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-medium min-h-[46px] rounded-xl transition-opacity"
               >
                 {sending ? 'Creating...' : 'Submit Ticket'}
               </button>
@@ -816,4 +816,3 @@ export default function SupportPage() {
     </div>
   );
 }
-

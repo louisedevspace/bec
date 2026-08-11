@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 
 interface PrivacyPolicyModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ interface LoanSection {
 }
 
 export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps) {
+  const exchangeName = useExchangeName();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedTermsSections, setExpandedTermsSections] = useState<Set<string>>(new Set());
   const [expandedLoanSections, setExpandedLoanSections] = useState<Set<string>>(new Set());
@@ -243,7 +245,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
       title: "1. Introduction",
       content: (
         <div className="space-y-2">
-          <p><strong>1.1</strong> These Terms and Conditions (the "Agreement") govern your use of the Becxus platform, a digital currency trading and investment service.</p>
+          <p><strong>1.1</strong> These Terms and Conditions (the "Agreement") govern your use of the {exchangeName} platform, a digital currency trading and investment service.</p>
           <p><strong>1.2</strong> By clicking "Agree to Register" and completing registration, you accept and agree to be bound by this Agreement, including all rules, notices, and statements issued by the platform.</p>
           <p><strong>1.3</strong> This Agreement does not govern disputes between users resulting from digital currency transactions.</p>
         </div>
@@ -256,7 +258,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         <div className="space-y-2">
           <ul className="list-disc list-inside space-y-1 ml-4">
             <li><strong>Digital Currency:</strong> Internationally recognized cryptocurrencies, including Bitcoin (BTC), Ethereum (ETH), and others.</li>
-            <li><strong>Platform:</strong> Becxus and Platform Global Digital Assets Co., Ltd.</li>
+            <li><strong>Platform:</strong> {exchangeName} and Platform Global Digital Assets Co., Ltd.</li>
             <li><strong>User:</strong> A registered member who agrees to these Terms and conducts transactions via the platform.</li>
             <li><strong>User Registration:</strong> The process of providing required information, creating an account, and agreeing to this Agreement.</li>
             <li><strong>Transaction Fees:</strong> Fees charged by the platform for trading digital currencies.</li>
@@ -556,55 +558,55 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm sm:max-w-md md:max-w-4xl p-0" hideCloseButton>
-        <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
-          <DialogTitle className="text-base md:text-lg font-bold text-center text-white">
-            Becxus Legal Agreements
+        <DialogHeader className="p-4 md:p-6 border-b border-border">
+          <DialogTitle className="text-base md:text-lg font-bold text-center text-foreground">
+            {exchangeName} Legal Agreements
           </DialogTitle>
         </DialogHeader>
-        
+
         <Tabs defaultValue="privacy" className="w-full p-4 md:p-6 space-y-4">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl">
-            <TabsTrigger value="privacy" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
+          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-background border border-border rounded-xl">
+            <TabsTrigger value="privacy" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Privacy</span>
                 <span>Policy</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="terms" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
+            <TabsTrigger value="terms" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Terms &</span>
                 <span>Conditions</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="loan" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-gray-400 data-[state=active]:bg-[#1a1a1a] data-[state=active]:text-white data-[state=active]:border data-[state=active]:border-[#2a2a2a] rounded-lg transition-colors duration-200">
+            <TabsTrigger value="loan" className="text-xs md:text-sm py-3 px-1 md:px-2 text-center leading-tight text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/30 rounded-lg transition-colors duration-200">
               <div className="flex flex-col">
                 <span>Loan</span>
                 <span>Agreement</span>
               </div>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="privacy" className="space-y-4">
-            <div className="text-center text-sm text-gray-400 mb-6">
-              <p>Welcome to Becxus ("the Company," "we," "our," or "us"). This Privacy Policy governs your access and use of our cryptocurrency trading platform, mobile applications, and related services ("Services").</p>
+            <div className="text-center text-sm text-muted-foreground mb-6">
+              <p>Welcome to {exchangeName} ("the Company," "we," "our," or "us"). This Privacy Policy governs your access and use of our cryptocurrency trading platform, mobile applications, and related services ("Services").</p>
               <p className="mt-2">For clarity and ease of navigation, this page is organized into sections. Click a section to expand and read more.</p>
             </div>
 
             {policySections.map((section) => (
-              <div key={section.id} className="border border-[#1e1e1e] rounded-xl bg-[#0a0a0a] overflow-hidden">
+              <div key={section.id} className="border border-border rounded-xl bg-background overflow-hidden">
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-muted transition-colors duration-200"
                 >
-                  <span className="font-semibold text-white">{section.title}</span>
+                  <span className="font-semibold text-foreground">{section.title}</span>
                   {expandedSections.has(section.id) ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
                 {expandedSections.has(section.id) && (
-                  <div className="px-4 pb-4 text-sm text-gray-300 leading-relaxed">
+                  <div className="px-4 pb-4 text-sm text-foreground/90 leading-relaxed">
                     {section.content}
                   </div>
                 )}
@@ -613,26 +615,26 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
           </TabsContent>
           
           <TabsContent value="terms" className="space-y-4">
-            <div className="text-center text-sm text-gray-400 mb-6">
-              <p>These Terms and Conditions (the "Agreement") govern your use of the Becxus platform, a digital currency trading and investment service.</p>
+            <div className="text-center text-sm text-muted-foreground mb-6">
+              <p>These Terms and Conditions (the "Agreement") govern your use of the {exchangeName} platform, a digital currency trading and investment service.</p>
               <p className="mt-2">For clarity and ease of navigation, this page is organized into sections. Click a section to expand and read more.</p>
             </div>
 
             {termsSections.map((section) => (
-              <div key={section.id} className="border border-[#1e1e1e] rounded-xl bg-[#0a0a0a] overflow-hidden">
+              <div key={section.id} className="border border-border rounded-xl bg-background overflow-hidden">
                 <button
                   onClick={() => toggleTermsSection(section.id)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-muted transition-colors duration-200"
                 >
-                  <span className="font-semibold text-white">{section.title}</span>
+                  <span className="font-semibold text-foreground">{section.title}</span>
                   {expandedTermsSections.has(section.id) ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
                 {expandedTermsSections.has(section.id) && (
-                  <div className="px-4 pb-4 text-sm text-gray-300 leading-relaxed">
+                  <div className="px-4 pb-4 text-sm text-foreground/90 leading-relaxed">
                     {section.content}
                   </div>
                 )}
@@ -641,29 +643,29 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
           </TabsContent>
           
           <TabsContent value="loan" className="space-y-4">
-            <div className="text-center text-sm text-gray-400 mb-6">
+            <div className="text-center text-sm text-muted-foreground mb-6">
               <p><strong>Crypto Backed Loan Agreement</strong></p>
               <p>This Crypto-Backed Loan Agreement ("Agreement")</p>
-              <p><strong>Lender:</strong> Becxus</p>
+              <p><strong>Lender:</strong> {exchangeName}</p>
               <p>This Agreement is governed by applicable U.S. federal and regional laws. The Borrower acknowledges that the Lender complies with all relevant regulation under the Bank Secrecy Act and consumer lending laws.</p>
               <p className="mt-2">For clarity and ease of navigation, this page is organized into sections. Click a section to expand and read more.</p>
             </div>
 
             {loanSections.map((section) => (
-              <div key={section.id} className="border border-[#1e1e1e] rounded-xl bg-[#0a0a0a] overflow-hidden">
+              <div key={section.id} className="border border-border rounded-xl bg-background overflow-hidden">
                 <button
                   onClick={() => toggleLoanSection(section.id)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-[#151515] transition-colors duration-200"
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-muted transition-colors duration-200"
                 >
-                  <span className="font-semibold text-white">{section.title}</span>
+                  <span className="font-semibold text-foreground">{section.title}</span>
                   {expandedLoanSections.has(section.id) ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
                 {expandedLoanSections.has(section.id) && (
-                  <div className="px-4 pb-4 text-sm text-gray-300 leading-relaxed">
+                  <div className="px-4 pb-4 text-sm text-foreground/90 leading-relaxed">
                     {section.content}
                   </div>
                 )}
@@ -672,8 +674,8 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end pt-4 px-4 md:px-6 pb-4 md:pb-6 border-t border-[#1e1e1e]">
-          <Button onClick={onClose} className="h-11 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a] hover:text-white font-semibold px-6 transition-colors duration-200">
+        <div className="flex justify-end pt-4 px-4 md:px-6 pb-4 md:pb-6 border-t border-border">
+          <Button onClick={onClose} className="h-11 rounded-xl bg-muted border border-border text-foreground hover:bg-muted/70 font-semibold px-6 transition-colors duration-200">
             Close
           </Button>
         </div>

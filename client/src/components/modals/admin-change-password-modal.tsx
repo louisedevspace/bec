@@ -110,82 +110,96 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl">Change User Password</DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Updating password for: {user.email}
+          <DialogTitle className="text-foreground text-xl">Change User Password</DialogTitle>
+          <DialogDescription>
+            Set a new password for this account
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* New Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              New Password
-            </label>
-            <div className="relative">
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#2a2a2a] transition-colors"
-                placeholder="Enter new password (min 6 characters)"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-              >
-                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+        {/* Identity zone: who this action targets */}
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/40 border border-border">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+            {user.email ? user.email[0].toUpperCase() : '?'}
           </div>
+          <div className="min-w-0">
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Target account</div>
+            <div className="text-sm font-medium text-foreground truncate">{user.email}</div>
+          </div>
+        </div>
 
-          {/* Confirm New Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Confirm New Password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#2a2a2a] transition-colors"
-                placeholder="Confirm new password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-              >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Credentials zone */}
+          <div className="space-y-4 p-4 rounded-2xl border border-border bg-muted/10">
+            {/* New Password */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
+                  placeholder="Enter new password (min 6 characters)"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm New Password */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors"
+                  placeholder="Confirm new password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Warning */}
-          <div className="flex items-center space-x-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-            <Shield size={20} className="text-yellow-400 shrink-0" />
-            <span className="text-yellow-400 text-sm">
+          <div className="flex items-center space-x-2 p-3 bg-warning/10 border border-warning/30 rounded-2xl">
+            <Shield size={20} className="text-warning shrink-0" />
+            <span className="text-warning text-sm">
               This will update the password for {user.email}. The user will be able to login with the new password immediately.
             </span>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={20} className="text-red-400 shrink-0" />
-              <span className="text-red-400 text-sm">{error}</span>
+            <div className="flex items-center space-x-2 p-3 bg-danger/10 border border-danger/30 rounded-2xl">
+              <AlertCircle size={20} className="text-danger shrink-0" />
+              <span className="text-danger text-sm">{error}</span>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-              <CheckCircle size={20} className="text-green-400 shrink-0" />
-              <span className="text-green-400 text-sm">{success}</span>
+            <div className="flex items-center space-x-2 p-3 bg-success/10 border border-success/30 rounded-2xl">
+              <CheckCircle size={20} className="text-success shrink-0" />
+              <span className="text-success text-sm">{success}</span>
             </div>
           )}
 
@@ -196,14 +210,14 @@ export function AdminChangePasswordModal({ isOpen, onClose, user }: AdminChangeP
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-transparent border-[#2a2a2a] text-gray-200 hover:bg-[#1a1a1a] hover:text-white"
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </Button>

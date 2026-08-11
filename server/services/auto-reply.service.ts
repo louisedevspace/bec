@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../routes/middleware";
 import { redisGet, redisSet, redisGetJSON, redisSetJSON, redisDel } from "../utils/redis";
+import { getExchangeName, withExchangeName } from "./app-settings.service";
 
 // ─── Auto-Reply Types ────────────────────────────────────────────────────────
 
@@ -379,14 +380,15 @@ class AutoReplyService {
     );
 
     // Check confidence threshold
+    const exchangeName = await getExchangeName();
     if (bestMatch.confidence >= settings.confidenceThreshold) {
       // Auto-send the reply
-      await this.sendAutoReply(conversationId, bestMatch.rule.response, bestMatch.rule.id);
+      await this.sendAutoReply(conversationId, withExchangeName(bestMatch.rule.response, exchangeName), bestMatch.rule.id);
     } else {
       // Store as suggestion for admin
       await this.storeSuggestion(conversationId, {
         ruleId: bestMatch.rule.id,
-        response: bestMatch.rule.response,
+        response: withExchangeName(bestMatch.rule.response, exchangeName),
         confidence: bestMatch.confidence,
         category: bestMatch.rule.category,
         matchedKeywords: bestMatch.matchedKeywords,
@@ -592,6 +594,7 @@ class AutoReplyService {
         .single();
 
       const category = conversation?.category || "general";
+      const exchangeName = await getExchangeName();
 
       // Score against all enabled rules
       const enabledRules = settings.rules.filter((r) => r.enabled);
@@ -607,7 +610,7 @@ class AutoReplyService {
         if (confidence > 0) {
           suggestions.push({
             ruleId: rule.id,
-            response: rule.response,
+            response: withExchangeName(rule.response, exchangeName),
             confidence,
             category: rule.category,
             matchedKeywords,

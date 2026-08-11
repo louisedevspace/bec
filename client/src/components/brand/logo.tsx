@@ -1,5 +1,6 @@
 import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 
 type Props = {
   className?: string;
@@ -7,11 +8,14 @@ type Props = {
   loading?: "eager" | "lazy";
 };
 
-export function Logo({ className, alt = "Becxus logo", loading = "eager" }: Props) {
+export function Logo({ className, alt, loading = "eager" }: Props) {
+  const exchangeName = useExchangeName();
+  const resolvedAlt = alt ?? `${exchangeName} logo`;
+
   return (
     <img
       src={logo}
-      alt={alt}
+      alt={resolvedAlt}
       className={cn("object-contain", className)}
       decoding="async"
       loading={loading}
@@ -19,8 +23,8 @@ export function Logo({ className, alt = "Becxus logo", loading = "eager" }: Prop
         const el = e.currentTarget;
         el.style.display = "none";
         const fallback = document.createElement("span");
-        fallback.textContent = "Becxus";
-        fallback.className = cn("text-sm text-white");
+        fallback.textContent = exchangeName;
+        fallback.className = cn("text-sm text-foreground");
         el.parentElement?.appendChild(fallback);
       }}
     />

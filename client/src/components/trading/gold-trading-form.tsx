@@ -35,10 +35,10 @@ interface GoldTrade {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; icon: typeof Clock; label: string }> = {
-  pending:   { color: "text-yellow-500", icon: Clock,       label: "Pending"   },
-  approved:  { color: "text-green-500",  icon: CheckCircle, label: "Approved"  },
-  rejected:  { color: "text-red-500",    icon: XCircle,     label: "Rejected"  },
-  cancelled: { color: "text-gray-500",   icon: AlertCircle, label: "Cancelled" },
+  pending:   { color: "text-warning",         icon: Clock,       label: "Pending"   },
+  approved:  { color: "text-buy",             icon: CheckCircle, label: "Approved"  },
+  rejected:  { color: "text-sell",            icon: XCircle,     label: "Rejected"  },
+  cancelled: { color: "text-muted-foreground", icon: AlertCircle, label: "Cancelled" },
 };
 
 function GoldIcon({ size = 20 }: { size?: number }) {
@@ -211,38 +211,38 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Trading Form */}
-      <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+      <div className="bg-card rounded-xl border border-border p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <GoldIcon size={28} />
             <div>
-              <div className="text-white font-semibold text-sm">Gold Trading</div>
-              <div className="text-gray-500 text-[11px]">{activePair?.symbol || "XAU/USDT"}</div>
+              <div className="text-foreground font-semibold text-sm">Gold Trading</div>
+              <div className="text-muted-foreground text-[11px]">{activePair?.symbol || "XAU/USDT"}</div>
             </div>
           </div>
           <div className="text-right">
             {priceLoading ? (
-              <div className="text-gray-500 text-xs animate-pulse">Loading...</div>
+              <div className="text-muted-foreground text-xs animate-pulse">Loading...</div>
             ) : (
               <>
-                <div className="text-yellow-400 font-bold text-lg tabular-nums">
+                <div className="text-warning font-bold text-lg tabular-nums">
                   ${goldPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
-                <div className="text-gray-500 text-[11px]">per troy oz</div>
+                <div className="text-muted-foreground text-[11px]">per troy oz</div>
               </>
             )}
           </div>
         </div>
 
         {/* Buy / Sell Toggle */}
-        <div className="flex rounded-xl overflow-hidden border border-[#1e1e1e] mb-4">
+        <div className="flex rounded-lg overflow-hidden border border-border mb-4">
           <button
             onClick={() => { setSide("buy"); setAmountInput(""); }}
             className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
               side === "buy"
-                ? "bg-green-600 text-white"
-                : "bg-[#1a1a1a] text-gray-400 hover:text-gray-200"
+                ? "bg-buy text-success-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
             <TrendingUp size={14} />
@@ -252,8 +252,8 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
             onClick={() => { setSide("sell"); setAmountInput(""); }}
             className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
               side === "sell"
-                ? "bg-red-600 text-white"
-                : "bg-[#1a1a1a] text-gray-400 hover:text-gray-200"
+                ? "bg-sell text-danger-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
             <TrendingDown size={14} />
@@ -263,7 +263,7 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
 
         {/* Amount Input */}
         <div className="mb-3">
-          <label className="text-gray-400 text-xs mb-1.5 block">
+          <label className="text-muted-foreground text-xs mb-1.5 block">
             {side === "buy" ? "Amount (USDT)" : "Amount (oz XAU)"}
           </label>
           <div className="relative">
@@ -274,13 +274,13 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
               placeholder={side === "buy" ? "0.00" : "0.000000"}
               step={side === "buy" ? "0.01" : "0.000001"}
               min="0"
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-yellow-500 transition-colors pr-16"
+              className="w-full bg-background border border-border rounded-lg px-4 py-3 text-foreground text-sm tabular-nums placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors pr-16"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <span className="text-gray-500 text-xs">{side === "buy" ? "USDT" : "XAU"}</span>
+              <span className="text-muted-foreground text-xs">{side === "buy" ? "USDT" : "XAU"}</span>
               <button
                 onClick={setMaxAmount}
-                className="text-yellow-500 text-xs font-semibold hover:text-yellow-400 transition-colors"
+                className="text-primary text-xs font-semibold hover:text-primary/80 transition-colors"
               >
                 MAX
               </button>
@@ -290,20 +290,20 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
 
         {/* Trade Summary */}
         {parsedAmount > 0 && goldPrice > 0 && (
-          <div className="bg-[#0f0f0f] rounded-xl border border-[#1e1e1e] p-3 mb-4 space-y-2">
+          <div className="bg-muted/40 rounded-lg border border-border p-3 mb-4 space-y-2">
             {side === "buy" ? (
               <>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Gold quantity</span>
-                  <span className="text-white">{goldQty.toFixed(6)} oz</span>
+                  <span className="text-muted-foreground">Gold quantity</span>
+                  <span className="text-foreground tabular-nums">{goldQty.toFixed(6)} oz</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Fee ({(feeRate * 100).toFixed(1)}%)</span>
-                  <span className="text-gray-300">${fee.toFixed(2)} USDT</span>
+                  <span className="text-muted-foreground">Fee ({(feeRate * 100).toFixed(1)}%)</span>
+                  <span className="text-foreground/80 tabular-nums">${fee.toFixed(2)} USDT</span>
                 </div>
-                <div className="flex justify-between text-xs border-t border-[#1e1e1e] pt-2">
-                  <span className="text-gray-400 font-semibold">Total cost</span>
-                  <span className={`font-semibold ${totalCost > usdtBalance ? "text-red-400" : "text-white"}`}>
+                <div className="flex justify-between text-xs border-t border-border pt-2">
+                  <span className="text-muted-foreground font-semibold">Total cost</span>
+                  <span className={`font-semibold tabular-nums ${totalCost > usdtBalance ? "text-sell" : "text-foreground"}`}>
                     ${totalCost.toFixed(2)} USDT
                   </span>
                 </div>
@@ -311,16 +311,16 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
             ) : (
               <>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">USDT value</span>
-                  <span className="text-white">${usdtValue.toFixed(2)}</span>
+                  <span className="text-muted-foreground">USDT value</span>
+                  <span className="text-foreground tabular-nums">${usdtValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Fee ({(feeRate * 100).toFixed(1)}%)</span>
-                  <span className="text-gray-300">${fee.toFixed(2)} USDT</span>
+                  <span className="text-muted-foreground">Fee ({(feeRate * 100).toFixed(1)}%)</span>
+                  <span className="text-foreground/80 tabular-nums">${fee.toFixed(2)} USDT</span>
                 </div>
-                <div className="flex justify-between text-xs border-t border-[#1e1e1e] pt-2">
-                  <span className="text-gray-400 font-semibold">You receive</span>
-                  <span className="text-green-400 font-semibold">${netReceive.toFixed(2)} USDT</span>
+                <div className="flex justify-between text-xs border-t border-border pt-2">
+                  <span className="text-muted-foreground font-semibold">You receive</span>
+                  <span className="text-buy font-semibold tabular-nums">${netReceive.toFixed(2)} USDT</span>
                 </div>
               </>
             )}
@@ -328,20 +328,20 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
         )}
 
         {/* Balance Info */}
-        <div className="flex justify-between text-xs text-gray-500 mb-4">
-          <span>USDT balance: <span className="text-gray-300">${usdtBalance.toFixed(2)}</span></span>
-          <span>XAU balance: <span className="text-gray-300">{xauBalance.toFixed(6)} oz</span></span>
+        <div className="flex justify-between text-xs text-muted-foreground mb-4 tabular-nums">
+          <span>USDT balance: <span className="text-foreground/80">${usdtBalance.toFixed(2)}</span></span>
+          <span>XAU balance: <span className="text-foreground/80">{xauBalance.toFixed(6)} oz</span></span>
         </div>
 
         {/* Submit Button */}
         <button
           onClick={() => submitMutation.mutate()}
           disabled={isSubmitDisabled}
-          className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+          className={`w-full py-3 rounded-lg font-semibold text-sm transition-colors disabled:cursor-not-allowed ${
             side === "buy"
-              ? "bg-green-600 hover:bg-green-500 disabled:bg-green-900 disabled:text-green-700"
-              : "bg-red-600 hover:bg-red-500 disabled:bg-red-900 disabled:text-red-700"
-          } text-white disabled:cursor-not-allowed`}
+              ? "bg-buy hover:bg-buy/90 text-success-foreground disabled:bg-buy/30 disabled:text-success-foreground/60"
+              : "bg-sell hover:bg-sell/90 text-danger-foreground disabled:bg-sell/30 disabled:text-danger-foreground/60"
+          }`}
         >
           {submitMutation.isPending
             ? "Submitting..."
@@ -350,36 +350,36 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
             : `Sell ${parsedAmount > 0 ? parsedAmount.toFixed(6) + " oz" : ""} Gold`}
         </button>
 
-        <p className="text-center text-gray-600 text-[11px] mt-2">
+        <p className="text-center text-muted-foreground/70 text-[11px] mt-2">
           Trades require admin approval before execution
         </p>
       </div>
 
       {/* Trade History */}
       {(trades as GoldTrade[]).length > 0 && (
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
+        <div className="bg-card rounded-xl border border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-white text-sm font-semibold">Gold Trade History</span>
+            <span className="text-foreground text-sm font-semibold">Gold Trade History</span>
             <button
               onClick={() => refetchTrades()}
-              className="text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <RefreshCw size={14} />
             </button>
           </div>
 
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
             {(trades as GoldTrade[]).map((trade) => {
               const cfg = STATUS_CONFIG[trade.status] || STATUS_CONFIG.pending;
               const StatusIcon = cfg.icon;
               return (
-                <div key={trade.id} className="bg-[#0f0f0f] rounded-xl border border-[#1e1e1e] p-3">
+                <div key={trade.id} className="bg-muted/40 rounded-lg border border-border p-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold uppercase ${trade.side === "buy" ? "text-green-400" : "text-red-400"}`}>
+                      <span className={`text-xs font-bold uppercase ${trade.side === "buy" ? "text-buy" : "text-sell"}`}>
                         {trade.side}
                       </span>
-                      <span className="text-gray-600 text-xs">{trade.pair_symbol}</span>
+                      <span className="text-muted-foreground text-xs">{trade.pair_symbol}</span>
                     </div>
                     <div className={`flex items-center gap-1 text-xs ${cfg.color}`}>
                       <StatusIcon size={11} />
@@ -387,28 +387,28 @@ export function GoldTradingForm({ pair = "XAU/USDT" }: { pair?: string }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-                    <span className="text-gray-500">Quantity: <span className="text-gray-300">{parseFloat(trade.gold_quantity).toFixed(6)} oz</span></span>
-                    <span className="text-gray-500">Price: <span className="text-gray-300">${parseFloat(trade.price_per_oz).toLocaleString()}</span></span>
-                    <span className="text-gray-500">Value: <span className="text-gray-300">${parseFloat(trade.amount_usdt).toFixed(2)}</span></span>
-                    <span className="text-gray-500">Fee: <span className="text-gray-300">${parseFloat(trade.fee_usdt).toFixed(2)}</span></span>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs tabular-nums">
+                    <span className="text-muted-foreground">Quantity: <span className="text-foreground/80">{parseFloat(trade.gold_quantity).toFixed(6)} oz</span></span>
+                    <span className="text-muted-foreground">Price: <span className="text-foreground/80">${parseFloat(trade.price_per_oz).toLocaleString()}</span></span>
+                    <span className="text-muted-foreground">Value: <span className="text-foreground/80">${parseFloat(trade.amount_usdt).toFixed(2)}</span></span>
+                    <span className="text-muted-foreground">Fee: <span className="text-foreground/80">${parseFloat(trade.fee_usdt).toFixed(2)}</span></span>
                   </div>
 
                   {trade.reject_reason && (
-                    <p className="text-red-400 text-xs mt-1.5 bg-red-950/20 rounded-lg px-2 py-1">
+                    <p className="text-sell text-xs mt-1.5 bg-sell/10 rounded-md px-2 py-1">
                       {trade.reject_reason}
                     </p>
                   )}
 
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-gray-600 text-[11px]">
+                    <span className="text-muted-foreground/70 text-[11px]">
                       {new Date(trade.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                     {trade.status === "pending" && (
                       <button
                         onClick={() => cancelMutation.mutate(trade.id)}
                         disabled={cancelMutation.isPending}
-                        className="text-red-400 hover:text-red-300 text-xs transition-colors disabled:opacity-50"
+                        className="text-sell hover:text-sell/80 text-xs transition-colors disabled:opacity-50"
                       >
                         Cancel
                       </button>

@@ -56,7 +56,7 @@ export function EnablePushButton({ className = '' }: { className?: string }) {
 
   if (state === 'denied') {
     return (
-      <span className={`inline-flex items-center gap-1.5 text-[11px] text-gray-500 ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 text-[11px] text-muted-foreground ${className}`}>
         <BellOff size={13} />
         Notifications blocked in browser settings
       </span>
@@ -68,7 +68,7 @@ export function EnablePushButton({ className = '' }: { className?: string }) {
       type="button"
       onClick={enable}
       disabled={state === 'working'}
-      className={`inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-60 ${className}`}
     >
       {state === 'working' ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
       Enable notifications

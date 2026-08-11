@@ -45,3 +45,6 @@ drizzle/
 
 # Browser debug files (HAR, etc.)
 browser files/
+
+# Playwright MCP tool output
+.playwright-mcp/

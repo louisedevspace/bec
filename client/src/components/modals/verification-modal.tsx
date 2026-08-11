@@ -225,37 +225,35 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
           {/* Personal Information */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="fullName" className="text-gray-300">Please enter your complete legal name</Label>
+              <Label htmlFor="fullName" className="text-sm font-medium text-muted-foreground mb-2 block">Please enter your complete legal name</Label>
               <Input
                 id="fullName"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange("fullName", e.target.value)}
                 placeholder="Enter your full legal name"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="ssn" className="text-gray-300">Please enter your Social Security Number (SSN)</Label>
+              <Label htmlFor="ssn" className="text-sm font-medium text-muted-foreground mb-2 block">Please enter your Social Security Number (SSN)</Label>
               <Input
                 id="ssn"
                 value={formData.ssn}
                 onChange={(e) => handleInputChange("ssn", e.target.value)}
                 placeholder="XXX-XX-XXXX"
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="address" className="text-gray-300">Please enter your residential address</Label>
+              <Label htmlFor="address" className="text-sm font-medium text-muted-foreground mb-2 block">Please enter your residential address</Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleInputChange("address", e.target.value)}
                 placeholder="Enter your complete residential address"
-                className="h-24 resize-none bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder-gray-600"
+                className="h-24 resize-none"
                 required
               />
             </div>
@@ -263,7 +261,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
 
           {/* Document Upload */}
           <div>
-            <Label className="text-gray-300 text-base font-medium">
+            <Label className="text-sm font-medium text-foreground">
               Please upload the following documents: 1. The front side of your ID card 2. The back side of your ID card 3. A photo of you holding your ID card
             </Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
@@ -292,10 +290,10 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
           </div>
 
           {/* Important Notes */}
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
             <div className="text-sm">
-              <p className="font-medium text-blue-500 mb-2">Verification Process</p>
-              <ul className="space-y-1 text-gray-500">
+              <p className="font-medium text-primary mb-2">Verification Process</p>
+              <ul className="space-y-1 text-muted-foreground">
                 <li>• Document review typically takes 1-3 business days</li>
                 <li>• Ensure all information matches your official documents</li>
                 <li>• High-quality, clear photos are required</li>
@@ -308,7 +306,7 @@ export function VerificationModal({ isOpen, onClose }: VerificationModalProps) {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+            className="w-full font-semibold"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Submitting..." : "SUBMIT"}
@@ -344,23 +342,23 @@ function FileUploadArea({ icon: Icon, title, description, file, onChange }: File
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
       />
       <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-        file 
-          ? "border-green-500 bg-green-500/10" 
-          : "border-[#2a2a2a] hover:border-primary/50"
+        file
+          ? "border-success bg-success/10"
+          : "border-border hover:border-primary/50"
       }`}>
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#0a0a0a] border border-[#2a2a2a] flex items-center justify-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted border border-border flex items-center justify-center">
           {file ? (
-            <CheckCircle className="text-green-500" size={18} />
+            <CheckCircle className="text-success" size={18} />
           ) : (
-            <Icon className="text-gray-500" size={18} />
+            <Icon className="text-muted-foreground" size={18} />
           )}
         </div>
-        <h3 className="font-medium mb-1 text-white">{title}</h3>
-        <p className="text-sm text-gray-500 mb-2">
+        <h3 className="font-medium mb-1 text-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground mb-2">
           {file ? file.name : description}
         </p>
         {!file && (
-          <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
+          <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
             <Upload size={10} />
             <span>Click to upload</span>
           </div>

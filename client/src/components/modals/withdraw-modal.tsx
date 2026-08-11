@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCryptoNumber } from "@/utils/format-utils";
 import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { supabase } from "@/lib/supabaseClient";
 import { buildApiUrl } from "@/lib/config";
+import { useExchangeName } from "@/hooks/use-exchange-name";
 
 interface WithdrawModalProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ interface WithdrawModalProps {
 }
 
 export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
+  const exchangeName = useExchangeName();
   const [step, setStep] = useState(1);
   const [selectedCrypto, setSelectedCrypto] = useState("BTC");
   const [amount, setAmount] = useState("");
@@ -206,30 +209,55 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-sm sm:max-w-md p-0">
-        <DialogHeader className="p-4 md:p-6 border-b border-[#1e1e1e]">
-          <DialogTitle className="text-base md:text-lg text-white">
-            {step === 1 ? "Withdraw" : "Confirm Withdrawal"}
+        <DialogHeader className="p-4 md:p-6 pb-0 border-b-0">
+          <DialogTitle className="text-base md:text-lg text-foreground mb-4">
+            {step === 1 ? "Withdraw Funds" : "Confirm Withdrawal"}
           </DialogTitle>
+
+          {/* Step indicator */}
+          <div className="flex items-center pb-4">
+            {[{ n: 1, label: "Details" }, { n: 2, label: "Confirm" }].map((s, i, arr) => (
+              <div key={s.n} className="flex items-center flex-1 last:flex-none">
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold tabular-nums transition-colors ${
+                      step === s.n
+                        ? "bg-primary text-primary-foreground"
+                        : step > s.n
+                        ? "bg-success text-success-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {step > s.n ? <Check className="w-3.5 h-3.5" /> : s.n}
+                  </div>
+                  <span className={`text-[10px] ${step === s.n ? "text-foreground" : "text-muted-foreground"}`}>{s.label}</span>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className={`flex-1 h-px mx-2 mb-4 ${step > s.n ? "bg-success" : "bg-border"}`} />
+                )}
+              </div>
+            ))}
+          </div>
         </DialogHeader>
 
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 pt-4 border-t border-border">
 
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="crypto-select" className="text-gray-300">Select Cryptocurrency</Label>
+              <Label htmlFor="crypto-select" className="text-muted-foreground">Select Cryptocurrency</Label>
               <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                <SelectTrigger className="bg-[#161616] border-[#2a2a2a] text-white rounded-xl h-11">
+                <SelectTrigger className="bg-muted border-border text-foreground rounded-xl h-11 mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#111] border-[#2a2a2a]">
-                  <SelectItem value="BTC" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="BTC" className="text-foreground hover:bg-muted focus:bg-muted">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="BTC" size="xs" /><span>Bitcoin (BTC)</span></div>
                   </SelectItem>
-                  <SelectItem value="ETH" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
+                  <SelectItem value="ETH" className="text-foreground hover:bg-muted focus:bg-muted">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="ETH" size="xs" /><span>Ethereum (ETH)</span></div>
                   </SelectItem>
-                  <SelectItem value="USDT" className="text-white hover:bg-[#1a1a1a] focus:bg-[#1a1a1a]">
+                  <SelectItem value="USDT" className="text-foreground hover:bg-muted focus:bg-muted">
                     <div className="flex items-center gap-2"><CryptoIcon symbol="USDT" size="xs" /><span>Tether (USDT)</span></div>
                   </SelectItem>
                 </SelectContent>
@@ -237,7 +265,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="amount" className="text-gray-300">Amount</Label>
+              <Label htmlFor="amount" className="text-muted-foreground">Amount</Label>
               <Input
                 id="amount"
                 type="number"
@@ -245,29 +273,36 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="bg-[#161616] border-[#2a2a2a] text-white placeholder-gray-600 rounded-xl h-11"
+                className="bg-muted border-border text-foreground placeholder-gray-600 rounded-xl h-11 mt-1.5 tabular-nums"
               />
-              <div className="text-xs text-gray-500 mt-1">
-                Available: <span className="text-green-400 font-medium">{formatCryptoNumber(getAvailableBalance())} {selectedCrypto}</span>
+              <div className="text-xs text-muted-foreground mt-1.5">
+                Available: <span className="text-success font-medium tabular-nums">{formatCryptoNumber(getAvailableBalance())} {selectedCrypto}</span>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="wallet-address" className="text-gray-300">Wallet Address</Label>
+              <Label htmlFor="wallet-address" className="text-muted-foreground">Wallet Address</Label>
               <Input
                 id="wallet-address"
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 placeholder={`Enter your ${selectedCrypto} wallet address`}
-                className="bg-[#161616] border-[#2a2a2a] text-white placeholder-gray-600 rounded-xl h-11"
+                className="bg-muted border-border text-foreground placeholder-gray-600 rounded-xl h-11 mt-1.5 font-mono"
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1.5">
                 Please double-check your wallet address before submitting
               </div>
             </div>
 
-            <Button onClick={handleNext} className="w-full h-11 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all duration-150 hover:translate-y-[1px] disabled:opacity-40 disabled:shadow-none">
+            <Alert className="bg-warning/10 border-warning/20 p-3.5">
+              <AlertTriangle className="text-warning" size={16} />
+              <AlertDescription className="text-sm text-warning">
+                Withdrawals are irreversible once approved. Sending to the wrong address or network will result in permanent loss of funds.
+              </AlertDescription>
+            </Alert>
+
+            <Button onClick={handleNext} className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm flex items-center justify-center gap-2 disabled:opacity-40">
               Next
             </Button>
           </div>
@@ -275,37 +310,47 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
 
         {step === 2 && (
           <div className="space-y-6">
-            <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden">
+            <div className="bg-muted/50 border border-border rounded-xl overflow-hidden">
               <div className="p-4">
-                <p className="font-medium text-blue-400 text-xs uppercase tracking-wider mb-3">Withdrawal Details</p>
+                <p className="font-medium text-info text-xs uppercase tracking-wider mb-3">Withdrawal Details</p>
                 <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Cryptocurrency:</span>
-                  <span className="font-medium text-white">{selectedCrypto}</span>
+                  <span className="text-muted-foreground">Cryptocurrency:</span>
+                  <span className="font-medium text-foreground">{selectedCrypto}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Amount:</span>
-                  <span className="font-medium text-white">{amount} {selectedCrypto}</span>
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-medium text-foreground tabular-nums">{amount} {selectedCrypto}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Wallet Address:</span>
-                  <span className="font-medium text-xs break-all text-white">{walletAddress}</span>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground shrink-0">Wallet Address:</span>
+                  <span className="font-medium text-xs break-all text-foreground font-mono text-right">{walletAddress}</span>
                 </div>
-                <div className="border-t border-[#2a2a2a] pt-2.5 flex justify-between">
-                  <span className="text-gray-500">Available Balance:</span>
-                  <span className="font-medium text-white">{getAvailableBalance().toFixed(8)} {selectedCrypto}</span>
+                <div className="border-t border-border pt-2.5 flex justify-between">
+                  <span className="text-muted-foreground">Available Balance:</span>
+                  <span className="font-medium text-foreground tabular-nums">{getAvailableBalance().toFixed(8)} {selectedCrypto}</span>
                 </div>
               </div>
               </div>
             </div>
 
+            <Alert className="bg-warning/10 border-warning/20 p-3.5">
+              <AlertTriangle className="text-warning" size={16} />
+              <AlertDescription className="text-sm">
+                <p className="font-medium text-warning mb-1">This action cannot be undone</p>
+                <p className="text-muted-foreground">
+                  Confirm the wallet address and network are correct. {exchangeName} cannot recover funds sent to an incorrect or unsupported address.
+                </p>
+              </AlertDescription>
+            </Alert>
+
             <div className="flex gap-3">
-              <Button onClick={handleBack} className="flex-1 h-11 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a] hover:text-white font-semibold">
+              <Button onClick={handleBack} className="flex-1 h-11 rounded-xl bg-muted border border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground font-semibold">
                 Back
               </Button>
-              <Button 
-                onClick={handleSubmit} 
-                className="flex-1 h-11 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all duration-150 hover:translate-y-[1px] disabled:opacity-40 disabled:shadow-none"
+              <Button
+                onClick={handleSubmit}
+                className="flex-1 h-11 rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold shadow-sm disabled:opacity-40"
                 disabled={withdrawMutation.isPending}
               >
                 {withdrawMutation.isPending ? "Submitting..." : "Confirm Withdrawal"}

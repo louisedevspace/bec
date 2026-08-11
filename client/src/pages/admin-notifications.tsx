@@ -129,59 +129,63 @@ export default function AdminNotifications() {
   return (
     <AdminLayout>
       <div className="p-4 md:p-6 space-y-6">
-        <Card className="bg-[#111] border-[#1e1e1e]">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Compose Notification</h1>
+          <p className="text-sm text-muted-foreground mt-1">Legacy campaign composer — segment, schedule, and dispatch notifications</p>
+        </div>
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Compose Notification</CardTitle>
+            <CardTitle className="text-base">Compose Notification</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-400">Title</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Title</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
-              <div>
-                <Label className="text-gray-400">Deep-link URL (optional)</Label>
-                <Input value={deeplink} onChange={(e) => setDeeplink(e.target.value)} placeholder="/futures" className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Deep-link URL (optional)</Label>
+                <Input value={deeplink} onChange={(e) => setDeeplink(e.target.value)} placeholder="/futures" />
               </div>
             </div>
-            <div>
-              <Label className="text-gray-400">Message</Label>
-              <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">Message</Label>
+              <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} className="resize-none" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-gray-400">Channels:</Label>
+            <div className="space-y-2 border-t border-border pt-4">
+              <Label className="text-muted-foreground text-xs">Channels</Label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                   <Checkbox
                     aria-label="Enable Push channel"
                     checked={channels.push}
                     onCheckedChange={(v) => setChannels((c) => ({ ...c, push: !!v }))}
                   />
-                  <span className="text-sm text-gray-300">Push</span>
+                  <span className="text-sm text-foreground">Push</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                   <Checkbox
                     aria-label="Enable Email channel"
                     checked={channels.email}
                     onCheckedChange={(v) => setChannels((c) => ({ ...c, email: !!v }))}
                   />
-                  <span className="text-sm text-gray-300">Email</span>
+                  <span className="text-sm text-foreground">Email</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                   <Checkbox
                     aria-label="Enable SMS channel"
                     checked={channels.sms}
                     onCheckedChange={(v) => setChannels((c) => ({ ...c, sms: !!v }))}
                   />
-                  <span className="text-sm text-gray-300">SMS</span>
+                  <span className="text-sm text-foreground">SMS</span>
                 </label>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-gray-400">Role</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-border pt-4">
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Role</Label>
                 <Select onValueChange={(v) => setRole(v === "any" ? undefined : v)}>
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white"><SelectValue placeholder="Any" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Any</SelectItem>
                     <SelectItem value="user">User</SelectItem>
@@ -189,10 +193,10 @@ export default function AdminNotifications() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-gray-400">Verified</Label>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Verified</Label>
                 <Select onValueChange={(v) => setIsVerified(v === "any" ? undefined : v === "true")}>
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white"><SelectValue placeholder="Any" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Any</SelectItem>
                     <SelectItem value="true">Verified</SelectItem>
@@ -200,10 +204,10 @@ export default function AdminNotifications() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-gray-400">Active</Label>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Active</Label>
                 <Select onValueChange={(v) => setIsActive(v === "any" ? undefined : v === "true")}>
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white"><SelectValue placeholder="Any" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Any</SelectItem>
                     <SelectItem value="true">Active</SelectItem>
@@ -213,24 +217,24 @@ export default function AdminNotifications() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-gray-400">Min credit score</Label>
-                <Input value={minCredit} onChange={(e) => setMinCredit(e.target.value)} placeholder="0.6" className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Min credit score</Label>
+                <Input value={minCredit} onChange={(e) => setMinCredit(e.target.value)} placeholder="0.6" />
               </div>
-              <div>
-                <Label className="text-gray-400">Email contains</Label>
-                <Input value={emailSearch} onChange={(e) => setEmailSearch(e.target.value)} placeholder="@gmail.com" className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Email contains</Label>
+                <Input value={emailSearch} onChange={(e) => setEmailSearch(e.target.value)} placeholder="@gmail.com" />
               </div>
-              <div>
-                <Label className="text-gray-400">Schedule (optional)</Label>
-                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="bg-[#0a0a0a] border-[#2a2a2a] text-white" />
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Schedule (optional)</Label>
+                <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-400">Variant</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Variant</Label>
                 <Select onValueChange={(v) => setVariant(v === "any" ? undefined : v)}>
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">None</SelectItem>
                     <SelectItem value="A">A</SelectItem>
@@ -238,33 +242,35 @@ export default function AdminNotifications() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-gray-400">Templates</Label>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs">Templates</Label>
                 <div className="flex flex-wrap gap-2">
                   {templates.map((t) => (
-                    <Button key={t.id} variant="outline" size="sm" onClick={() => applyTemplate(t)} className="text-xs border-[#2a2a2a] text-gray-300">
+                    <Button key={t.id} variant="outline" size="sm" onClick={() => applyTemplate(t)} className="text-xs">
                       {t.name}
                     </Button>
                   ))}
-                  <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="text-xs border-[#2a2a2a] text-gray-300">
+                  <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="text-xs">
                     Preview
                   </Button>
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={createCampaign} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">Create Campaign</Button>
-              <Button onClick={sendCampaign} disabled={!campaignId || sending} variant="outline" className="border-[#2a2a2a] text-gray-300 hover:text-white hover:bg-[#2a2a2a] w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+              <Button onClick={createCampaign} className="w-full sm:w-auto">Create Campaign</Button>
+              <Button onClick={sendCampaign} disabled={!campaignId || sending} variant="outline" className="w-full sm:w-auto">
                 {sending ? "Sending..." : "Send Now"}
               </Button>
-              <Button onClick={refreshStatus} disabled={!campaignId} variant="outline" className="border-[#2a2a2a] text-gray-300 hover:text-white hover:bg-[#2a2a2a] w-full sm:w-auto">
+              <Button onClick={refreshStatus} disabled={!campaignId} variant="outline" className="w-full sm:w-auto">
                 Refresh Status
               </Button>
             </div>
             {status && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/40 p-3 space-y-1">
                 {Object.entries(status).map(([k, v]) => (
-                  <div key={k}>{k}: {v as any}</div>
+                  <div key={k}>
+                    <span className="text-foreground">{k}</span>: {v as any}
+                  </div>
                 ))}
               </div>
             )}

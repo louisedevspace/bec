@@ -383,17 +383,17 @@ export default function AdminSupportPage() {
   };
 
   const statusConfig: Record<string, { icon: typeof Clock; color: string; bg: string }> = {
-    open: { icon: Inbox, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-    in_progress: { icon: Clock, color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
-    resolved: { icon: CheckCircle, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
-    closed: { icon: XCircle, color: "text-gray-500", bg: "bg-gray-500/10 border-gray-500/20" },
+    open: { icon: Inbox, color: "text-info", bg: "bg-info/10 border-info/20" },
+    in_progress: { icon: Clock, color: "text-warning", bg: "bg-warning/10 border-warning/20" },
+    resolved: { icon: CheckCircle, color: "text-success", bg: "bg-success/10 border-success/20" },
+    closed: { icon: XCircle, color: "text-muted-foreground", bg: "bg-muted border-border" },
   };
 
   const priorityConfig: Record<string, { color: string; bg: string }> = {
-    low: { color: "text-gray-400", bg: "bg-gray-500/10 border-gray-500/20" },
-    medium: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-    high: { color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-    urgent: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+    low: { color: "text-muted-foreground", bg: "bg-muted border-border" },
+    medium: { color: "text-info", bg: "bg-info/10 border-info/20" },
+    high: { color: "text-warning", bg: "bg-warning/10 border-warning/20" },
+    urgent: { color: "text-danger", bg: "bg-danger/10 border-danger/20" },
   };
 
   const categoryLabels: Record<string, string> = {
@@ -407,8 +407,8 @@ export default function AdminSupportPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3 fill-current" />
-            <p className="text-sm text-gray-500">Loading support system...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Loading support system...</p>
           </div>
         </div>
       </AdminLayout>
@@ -422,13 +422,13 @@ export default function AdminSupportPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">Support Center</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage customer conversations and provide assistance</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Support Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage customer conversations and provide assistance</p>
           </div>
           <div className="flex items-center gap-2">
             <EnablePushButton />
-            <Button variant="outline" size="sm" onClick={() => refetchAll()} className="bg-transparent border-[#2a2a2a] text-gray-400 hover:text-white hover:bg-[#1a1a1a]">
-              <RefreshCw className="h-4 w-4 mr-1.5 fill-current" /> Refresh
+            <Button variant="outline" size="sm" onClick={() => refetchAll()} className="border-border text-muted-foreground hover:text-foreground hover:bg-muted">
+              <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh
             </Button>
           </div>
         </div>
@@ -437,18 +437,18 @@ export default function AdminSupportPage() {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { label: "Total", value: stats.totalConversations, icon: MessageSquare, color: "text-gray-400", iconBg: "bg-[#1a1a1a]" },
-              { label: "Open", value: stats.openTickets, icon: Inbox, color: "text-blue-400", iconBg: "bg-blue-500/10" },
-              { label: "In Progress", value: stats.inProgressTickets, icon: Clock, color: "text-yellow-400", iconBg: "bg-yellow-500/10" },
-              { label: "Unread", value: stats.unreadMessages, icon: MessageCircle, color: "text-red-400", iconBg: "bg-red-500/10" },
-              { label: "Urgent", value: stats.urgentTickets, icon: AlertTriangle, color: "text-red-400", iconBg: "bg-red-500/10" },
-              { label: "Today", value: stats.todayTickets, icon: BarChart3, color: "text-green-400", iconBg: "bg-green-500/10" },
+              { label: "Total", value: stats.totalConversations, icon: MessageSquare, color: "text-muted-foreground", iconBg: "bg-muted" },
+              { label: "Open", value: stats.openTickets, icon: Inbox, color: "text-info", iconBg: "bg-info/10" },
+              { label: "In Progress", value: stats.inProgressTickets, icon: Clock, color: "text-warning", iconBg: "bg-warning/10" },
+              { label: "Unread", value: stats.unreadMessages, icon: MessageCircle, color: "text-danger", iconBg: "bg-danger/10" },
+              { label: "Urgent", value: stats.urgentTickets, icon: AlertTriangle, color: "text-danger", iconBg: "bg-danger/10" },
+              { label: "Today", value: stats.todayTickets, icon: BarChart3, color: "text-success", iconBg: "bg-success/10" },
             ].map((s) => (
-              <div key={s.label} className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-3 hover:border-[#2a2a2a] transition-all">
+              <div key={s.label} className="bg-card rounded-xl border border-border shadow-sm p-3 hover:border-border/80 transition-colors">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{s.label}</p>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{s.label}</p>
                   <div className={`w-7 h-7 ${s.iconBg} rounded-lg flex items-center justify-center`}>
-                    <s.icon className={`h-3.5 w-3.5 ${s.color} fill-current`} />
+                    <s.icon className={`h-3.5 w-3.5 ${s.color}`} />
                   </div>
                 </div>
                 <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
@@ -459,48 +459,48 @@ export default function AdminSupportPage() {
 
         {/* Main Chat Layout — a fixed 70vh box left the mobile composer under the
             bottom navigation, so mobile gets a viewport-relative height instead. */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden h-[calc(100dvh-22rem)] min-h-[360px] lg:h-[70vh]">
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden h-[calc(100dvh-22rem)] min-h-[360px] lg:h-[70vh]">
           <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-0">
             {/* ─── Left Sidebar: Ticket list ────────────────────── */}
-            <div className={`lg:border-r border-[#1e1e1e] flex flex-col overflow-hidden ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
+            <div className={`lg:border-r border-border flex flex-col overflow-hidden ${selectedConversation ? "hidden lg:flex" : "flex"}`}>
               {/* Search & Filters */}
-              <div className="p-3 border-b border-[#1e1e1e] space-y-2">
+              <div className="p-3 border-b border-border space-y-2">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 fill-current" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search tickets..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-base sm:text-sm h-11 sm:h-9 text-white placeholder:text-gray-500 focus:border-[#2a2a2a]"
+                      className="pl-9 rounded-lg border-border bg-background text-base sm:text-sm h-11 sm:h-9 text-foreground placeholder:text-muted-foreground focus:border-primary/40"
                     />
                   </div>
                   <Button
                     variant="outline" size="sm"
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`h-11 sm:h-9 px-3 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] ${showFilters ? "text-blue-400 border-blue-500/30" : "text-gray-500"} hover:text-white hover:bg-[#1a1a1a]`}
+                    className={`h-11 sm:h-9 px-3 rounded-lg border-border bg-background ${showFilters ? "text-primary border-primary/30" : "text-muted-foreground"} hover:text-foreground hover:bg-muted`}
                   >
-                    <Filter className="h-4 w-4 fill-current" />
+                    <Filter className="h-4 w-4" />
                   </Button>
                 </div>
 
                 {showFilters && (
                   <div className="flex gap-2 flex-wrap">
-                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-2 py-1 text-xs text-gray-400 focus:outline-none">
+                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-muted-foreground focus:outline-none">
                       <option value="all">All Status</option>
                       <option value="open">Open</option>
                       <option value="in_progress">In Progress</option>
                       <option value="resolved">Resolved</option>
                       <option value="closed">Closed</option>
                     </select>
-                    <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-2 py-1 text-xs text-gray-400 focus:outline-none">
+                    <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-muted-foreground focus:outline-none">
                       <option value="all">All Priority</option>
                       <option value="urgent">Urgent</option>
                       <option value="high">High</option>
                       <option value="medium">Medium</option>
                       <option value="low">Low</option>
                     </select>
-                    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-lg px-2 py-1 text-xs text-gray-400 focus:outline-none">
+                    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-muted-foreground focus:outline-none">
                       <option value="all">All Categories</option>
                       {Object.entries(categoryLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
@@ -510,14 +510,14 @@ export default function AdminSupportPage() {
                 {/* Bulk actions */}
                 {selectedIds.size > 0 && (
                   <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] text-gray-500">{selectedIds.size} selected</span>
-                    <Button size="sm" variant="outline" onClick={() => bulkStatusMutation.mutate({ ids: Array.from(selectedIds), status: "resolved" })} className="h-6 px-2 text-[10px] border-green-500/20 text-green-400 hover:bg-green-500/10">
+                    <span className="text-[11px] text-muted-foreground">{selectedIds.size} selected</span>
+                    <Button size="sm" variant="outline" onClick={() => bulkStatusMutation.mutate({ ids: Array.from(selectedIds), status: "resolved" })} className="h-6 px-2 text-[10px] border-success/20 text-success hover:bg-success/10">
                       Resolve
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => bulkStatusMutation.mutate({ ids: Array.from(selectedIds), status: "closed" })} className="h-6 px-2 text-[10px] border-gray-500/20 text-gray-400 hover:bg-gray-500/10">
+                    <Button size="sm" variant="outline" onClick={() => bulkStatusMutation.mutate({ ids: Array.from(selectedIds), status: "closed" })} className="h-6 px-2 text-[10px] border-border text-muted-foreground hover:bg-muted">
                       Close
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="h-6 px-2 text-[10px] border-[#1e1e1e] text-gray-500 hover:bg-[#1a1a1a]">
+                    <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} className="h-6 px-2 text-[10px] border-border text-muted-foreground hover:bg-muted">
                       Clear
                     </Button>
                   </div>
@@ -526,8 +526,8 @@ export default function AdminSupportPage() {
 
               {/* Select All */}
               {filteredConversations.length > 0 && (
-                <button onClick={selectAll} className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-gray-500 hover:text-gray-300 border-b border-[#1e1e1e] transition-colors">
-                  {selectedIds.size === filteredConversations.length ? <CheckSquare className="h-3 w-3 fill-current" /> : <Square className="h-3 w-3 fill-current" />}
+                <button onClick={selectAll} className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground border-b border-border transition-colors">
+                  {selectedIds.size === filteredConversations.length ? <CheckSquare className="h-3 w-3" /> : <Square className="h-3 w-3" />}
                   {selectedIds.size === filteredConversations.length ? "Deselect all" : "Select all"}
                 </button>
               )}
@@ -546,48 +546,48 @@ export default function AdminSupportPage() {
                       return (
                         <div
                           key={conv.id}
-                          className={`relative p-3 border-b border-[#1e1e1e] cursor-pointer transition-colors group ${isSelected ? "bg-blue-500/5 border-l-2 border-l-blue-500" : "hover:bg-[#0d0d0d]"}`}
+                          className={`relative p-3 border-b border-border cursor-pointer transition-colors group ${isSelected ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/50"}`}
                         >
                           <div className="flex items-start gap-2.5">
                             {/* Checkbox */}
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleSelect(conv.id); }}
-                              className="mt-1 text-gray-600 hover:text-gray-300 transition-colors flex-shrink-0"
+                              className="mt-1 text-muted-foreground/60 hover:text-muted-foreground transition-colors flex-shrink-0"
                             >
-                              {selectedIds.has(conv.id) ? <CheckSquare className="h-3.5 w-3.5 text-blue-400 fill-current" /> : <Square className="h-3.5 w-3.5 fill-current" />}
+                              {selectedIds.has(conv.id) ? <CheckSquare className="h-3.5 w-3.5 text-primary" /> : <Square className="h-3.5 w-3.5" />}
                             </button>
 
                             {/* Content */}
                             <div className="flex-1 min-w-0" onClick={() => setSelectedConversation(conv)}>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <StatusIcon className={`h-3 w-3 ${sc.color} flex-shrink-0 fill-current`} />
-                                <h4 className="text-sm font-medium text-white truncate flex-1">{conv.users.full_name}</h4>
+                                <StatusIcon className={`h-3 w-3 ${sc.color} flex-shrink-0`} />
+                                <h4 className="text-sm font-medium text-foreground truncate flex-1">{conv.users.full_name}</h4>
                                 {conv.unreadCount > 0 && (
-                                  <Badge className="bg-red-500 text-white text-[9px] px-1.5 py-0 h-4 rounded-full">{conv.unreadCount} new</Badge>
+                                  <Badge className="bg-danger text-danger-foreground text-[9px] px-1.5 py-0 h-4 rounded-full border-transparent hover:bg-danger">{conv.unreadCount} new</Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-400 truncate mb-1">{conv.subject}</p>
+                              <p className="text-xs text-muted-foreground truncate mb-1">{conv.subject}</p>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded border ${pc.bg} ${pc.color}`}>{conv.priority}</span>
                                 {conv.category && conv.category !== "general" && (
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-[#2a2a2a] text-gray-500">{categoryLabels[conv.category] || conv.category}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{categoryLabels[conv.category] || conv.category}</span>
                                 )}
-                                <span className="text-[10px] text-gray-600 ml-auto">{formatTime(conv.last_message_at)}</span>
+                                <span className="text-[10px] text-muted-foreground/70 ml-auto">{formatTime(conv.last_message_at)}</span>
                               </div>
                               {lastMsg && (
-                                <p className={`text-[11px] truncate mt-1 ${conv.unreadCount > 0 ? "text-red-300" : "text-gray-500"}`}>
+                                <p className={`text-[11px] truncate mt-1 ${conv.unreadCount > 0 ? "text-danger" : "text-muted-foreground"}`}>
                                   {lastMsg.sender_type === "admin" ? "You: " : ""}{lastMsg.message.substring(0, 60)}
                                 </p>
                               )}
                               {conv.unreadCount > 0 && (
-                                <p className="text-[10px] text-red-400 mt-1">Unread user messages in this chat</p>
+                                <p className="text-[10px] text-danger mt-1">Unread user messages in this chat</p>
                               )}
                             </div>
                           </div>
 
                           {/* Urgent indicator */}
                           {conv.priority === "urgent" && (
-                            <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-t-red-500 border-l-[16px] border-l-transparent" />
+                            <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-t-danger border-l-[16px] border-l-transparent" />
                           )}
                         </div>
                       );
@@ -595,8 +595,8 @@ export default function AdminSupportPage() {
                   </div>
                 ) : (
                   <div className="p-8 text-center">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700 fill-current" />
-                    <p className="text-sm text-gray-500">{searchTerm || filterStatus !== "all" ? "No matching tickets" : "No conversations yet"}</p>
+                    <MessageSquare className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">{searchTerm || filterStatus !== "all" ? "No matching tickets" : "No conversations yet"}</p>
                   </div>
                 )}
               </ScrollArea>
@@ -608,31 +608,31 @@ export default function AdminSupportPage() {
             <div
               className={`lg:col-span-2 flex flex-col overflow-hidden min-h-0 ${
                 selectedConversation
-                  ? "fixed inset-0 z-[70] bg-[#0a0a0a] lg:static lg:z-auto lg:bg-transparent flex"
+                  ? "fixed inset-0 z-[70] bg-background lg:static lg:z-auto lg:bg-transparent flex"
                   : "hidden lg:flex"
               }`}
             >
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
-                  <div className="p-3 border-b border-[#1e1e1e] flex items-start gap-2 sm:gap-3 flex-shrink-0 bg-[#111] chat-safe-top lg:pt-3">
+                  <div className="p-3 border-b border-border flex items-start gap-2 sm:gap-3 flex-shrink-0 bg-card chat-safe-top lg:pt-3">
                     <button
                       onClick={() => setSelectedConversation(null)}
-                      className="lg:hidden h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-xl active:bg-[#1a1a1a] text-gray-300"
+                      className="lg:hidden h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg active:bg-muted text-foreground"
                       aria-label="Back to ticket list"
                     >
-                      <ArrowLeft size={20} className="fill-current" />
+                      <ArrowLeft size={20} />
                     </button>
-                    <div className="hidden sm:flex w-9 h-9 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4 text-blue-400 fill-current" />
+                    <div className="hidden sm:flex w-9 h-9 bg-primary/10 rounded-xl items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-sm text-white truncate">{selectedConversation.users.full_name}</h3>
-                        <span className="text-[10px] text-gray-600">#{selectedConversation.id}</span>
+                        <h3 className="font-semibold text-sm text-foreground truncate">{selectedConversation.users.full_name}</h3>
+                        <span className="text-[10px] text-muted-foreground/70">#{selectedConversation.id}</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 truncate">{selectedConversation.users.email}</p>
-                      <p className="text-[11px] text-gray-600 truncate mt-0.5">{selectedConversation.subject}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{selectedConversation.users.email}</p>
+                      <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">{selectedConversation.subject}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       {/* Status dropdown */}
@@ -642,12 +642,12 @@ export default function AdminSupportPage() {
                           onChange={(e) => updateStatusMutation.mutate({ id: selectedConversation.id, status: e.target.value })}
                           className={`text-[11px] min-h-[34px] px-2 py-1 rounded-lg border appearance-none cursor-pointer pr-5 ${statusConfig[selectedConversation.status].bg} ${statusConfig[selectedConversation.status].color} bg-transparent focus:outline-none`}
                         >
-                          <option value="open" className="bg-[#111] text-white">Open</option>
-                          <option value="in_progress" className="bg-[#111] text-white">In Progress</option>
-                          <option value="resolved" className="bg-[#111] text-white">Resolved</option>
-                          <option value="closed" className="bg-[#111] text-white">Closed</option>
+                          <option value="open" className="bg-card text-foreground">Open</option>
+                          <option value="in_progress" className="bg-card text-foreground">In Progress</option>
+                          <option value="resolved" className="bg-card text-foreground">Resolved</option>
+                          <option value="closed" className="bg-card text-foreground">Closed</option>
                         </select>
-                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 fill-current" />
+                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
                       </div>
                       {/* Priority dropdown */}
                       <div className="relative">
@@ -656,33 +656,33 @@ export default function AdminSupportPage() {
                           onChange={(e) => updatePriorityMutation.mutate({ id: selectedConversation.id, priority: e.target.value })}
                           className={`text-[11px] min-h-[34px] px-2 py-1 rounded-lg border appearance-none cursor-pointer pr-5 ${priorityConfig[selectedConversation.priority].bg} ${priorityConfig[selectedConversation.priority].color} bg-transparent focus:outline-none`}
                         >
-                          <option value="low" className="bg-[#111] text-white">Low</option>
-                          <option value="medium" className="bg-[#111] text-white">Medium</option>
-                          <option value="high" className="bg-[#111] text-white">High</option>
-                          <option value="urgent" className="bg-[#111] text-white">Urgent</option>
+                          <option value="low" className="bg-card text-foreground">Low</option>
+                          <option value="medium" className="bg-card text-foreground">Medium</option>
+                          <option value="high" className="bg-card text-foreground">High</option>
+                          <option value="urgent" className="bg-card text-foreground">Urgent</option>
                         </select>
-                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 fill-current" />
+                        <ChevronDown className="h-3 w-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
                       </div>
                     </div>
                   </div>
 
                   {/* Ticket Info Bar */}
-                  <div className="px-3 py-2 border-b border-[#1e1e1e] flex items-center gap-2 flex-wrap bg-[#0d0d0d]">
+                  <div className="px-3 py-2 border-b border-border flex items-center gap-2 flex-wrap bg-muted/40">
                     {selectedConversation.category && (
-                      <span className="text-[10px] px-2 py-0.5 rounded border border-[#2a2a2a] text-gray-500 flex items-center gap-1">
-                        <Tag className="h-2.5 w-2.5 fill-current" /> {categoryLabels[selectedConversation.category] || selectedConversation.category}
+                      <span className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground flex items-center gap-1">
+                        <Tag className="h-2.5 w-2.5" /> {categoryLabels[selectedConversation.category] || selectedConversation.category}
                       </span>
                     )}
-                    <span className="text-[10px] text-gray-600">Created: {formatDate(selectedConversation.created_at)}</span>
+                    <span className="text-[10px] text-muted-foreground/70">Created: {formatDate(selectedConversation.created_at)}</span>
                     {selectedConversation.users.is_verified !== undefined && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedConversation.users.is_verified ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"} border ${selectedConversation.users.is_verified ? "border-green-500/20" : "border-yellow-500/20"}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedConversation.users.is_verified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"} border ${selectedConversation.users.is_verified ? "border-success/20" : "border-warning/20"}`}>
                         {selectedConversation.users.is_verified ? "Verified" : "Unverified"}
                       </span>
                     )}
                     <div className="ml-auto flex gap-1.5">
                       {selectedConversation.priority !== "urgent" && (
-                        <Button size="sm" variant="outline" onClick={() => escalateMutation.mutate(selectedConversation.id)} className="h-6 px-2 text-[10px] border-red-500/20 text-red-400 hover:bg-red-500/10 rounded-lg">
-                          <Zap className="h-2.5 w-2.5 mr-1 fill-current" /> Escalate
+                        <Button size="sm" variant="outline" onClick={() => escalateMutation.mutate(selectedConversation.id)} className="h-6 px-2 text-[10px] border-danger/20 text-danger hover:bg-danger/10 rounded-lg">
+                          <Zap className="h-2.5 w-2.5 mr-1" /> Escalate
                         </Button>
                       )}
                     </div>
@@ -697,8 +697,8 @@ export default function AdminSupportPage() {
                           if (isSystem) {
                             return (
                               <div key={msg.id} className="flex justify-center">
-                                <div className="px-3 py-1.5 rounded-full bg-[#1a1a1a] border border-[#2a2a2a]">
-                                  <p className="text-[11px] text-gray-500">{msg.message}</p>
+                                <div className="px-3 py-1.5 rounded-full bg-muted border border-border">
+                                  <p className="text-[11px] text-muted-foreground">{msg.message}</p>
                                 </div>
                               </div>
                             );
@@ -710,15 +710,15 @@ export default function AdminSupportPage() {
                             <div key={msg.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
                               <div className={`flex items-end gap-2 max-w-[88%] sm:max-w-[80%] ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
                                 <Avatar className="h-7 w-7 flex-shrink-0">
-                                  <AvatarFallback className={`text-[10px] ${isAdmin ? "bg-blue-600 text-white" : "bg-[#1a1a1a] text-gray-400"}`}>
-                                    {isAdmin ? <Shield className="h-3 w-3 fill-current" /> : <User className="h-3 w-3 fill-current" />}
+                                  <AvatarFallback className={`text-[10px] ${isAdmin ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                                    {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
                                   </AvatarFallback>
                                 </Avatar>
                                 {/* Message text always reads left-to-right — only the
                                     bubble and its timestamp sit on the right. */}
                                 <div className="space-y-0.5 text-left min-w-0">
                                   <div className={`px-3.5 py-2.5 rounded-2xl text-sm ${
-                                    isAdmin ? "bg-blue-600 text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-300 rounded-bl-md border border-[#2a2a2a]"
+                                    isAdmin ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md border border-border"
                                   }`}>
                                     {msg.message_type === "image" && msg.attachment_url && (
                                       <div className="mb-1">
@@ -736,14 +736,14 @@ export default function AdminSupportPage() {
                                       <p className="whitespace-pre-wrap break-words text-left leading-relaxed">{msg.message}</p>
                                     )}
                                   </div>
-                                  <div className={`flex items-center gap-1.5 text-[10px] text-gray-500 ${isAdmin ? "justify-end" : "justify-start"}`}>
+                                  <div className={`flex items-center gap-1.5 text-[10px] text-muted-foreground ${isAdmin ? "justify-end" : "justify-start"}`}>
                                     {isAutoReply && (
-                                      <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-full">
+                                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                                         Auto-Reply
                                       </span>
                                     )}
                                     <span>{formatTime(msg.created_at)}</span>
-                                    {!isAdmin && !msg.is_read && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
+                                    {!isAdmin && !msg.is_read && <span className="w-1.5 h-1.5 bg-primary rounded-full" />}
                                   </div>
                                 </div>
                               </div>
@@ -752,8 +752,8 @@ export default function AdminSupportPage() {
                         })
                       ) : (
                         <div className="text-center py-12">
-                          <MessageSquare className="h-8 w-8 mx-auto mb-3 text-gray-700 fill-current" />
-                          <p className="text-sm text-gray-500">No messages yet</p>
+                          <MessageSquare className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+                          <p className="text-sm text-muted-foreground">No messages yet</p>
                         </div>
                       )}
                       <div ref={messagesEndRef} />
@@ -762,20 +762,20 @@ export default function AdminSupportPage() {
 
                   {/* Response Templates */}
                   {showTemplates && templates && (
-                    <div className="border-t border-[#1e1e1e] bg-[#0d0d0d] max-h-48 overflow-y-auto">
+                    <div className="border-t border-border bg-muted/40 max-h-48 overflow-y-auto">
                       <div className="p-2">
-                        <p className="text-[11px] text-gray-500 font-medium mb-2 px-2">Quick Response Templates</p>
+                        <p className="text-[11px] text-muted-foreground font-medium mb-2 px-2">Quick Response Templates</p>
                         {Object.entries(templates).map(([category, items]) => (
                           <div key={category} className="mb-2">
-                            <p className="text-[10px] text-gray-600 uppercase tracking-wider px-2 mb-1">{category}</p>
+                            <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider px-2 mb-1">{category}</p>
                             {items.map((t, i) => (
                               <button
                                 key={i}
                                 onClick={() => handleTemplateSelect(t.message)}
-                                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors group"
+                                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted transition-colors group"
                               >
-                                <p className="text-xs text-gray-300 group-hover:text-white">{t.name}</p>
-                                <p className="text-[10px] text-gray-600 truncate">{t.message.substring(0, 80)}...</p>
+                                <p className="text-xs text-foreground/90 group-hover:text-foreground">{t.name}</p>
+                                <p className="text-[10px] text-muted-foreground/70 truncate">{t.message.substring(0, 80)}...</p>
                               </button>
                             ))}
                           </div>
@@ -785,21 +785,21 @@ export default function AdminSupportPage() {
                   )}
 
                   {/* Message Input */}
-                  <form onSubmit={handleSendMessage} className="p-3 border-t border-[#1e1e1e] flex-shrink-0 bg-[#111] chat-safe-bottom lg:pb-3">
+                  <form onSubmit={handleSendMessage} className="p-3 border-t border-border flex-shrink-0 bg-card chat-safe-bottom lg:pb-3">
                     {/* Image preview strip */}
                     {pendingImagePreview && (
                       <div className="mb-2 flex items-center gap-2">
                         <div className="relative inline-block">
-                          <img src={pendingImagePreview} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-[#2a2a2a]" />
+                          <img src={pendingImagePreview} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-border" />
                           <button
                             type="button"
                             onClick={clearPendingImage}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-danger rounded-full flex items-center justify-center hover:bg-danger/90 transition-colors"
                           >
-                            <X className="h-3 w-3 text-white" />
+                            <X className="h-3 w-3 text-danger-foreground" />
                           </button>
                         </div>
-                        <span className="text-xs text-gray-500 truncate max-w-[200px]">{pendingImage?.name}</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">{pendingImage?.name}</span>
                       </div>
                     )}
                     <input
@@ -815,10 +815,10 @@ export default function AdminSupportPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setShowTemplates(!showTemplates)}
-                        className={`rounded-xl self-end h-11 px-3 border-[#1e1e1e] ${showTemplates ? "text-blue-400 bg-blue-500/5" : "text-gray-500"} hover:text-white hover:bg-[#1a1a1a]`}
+                        className={`rounded-lg self-end h-11 px-3 border-border ${showTemplates ? "text-primary bg-primary/5" : "text-muted-foreground"} hover:text-foreground hover:bg-muted`}
                         title="Response Templates"
                       >
-                        <FileText className="h-4 w-4 fill-current" />
+                        <FileText className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
@@ -826,10 +826,10 @@ export default function AdminSupportPage() {
                         size="sm"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="rounded-xl self-end h-11 px-3 border-[#1e1e1e] text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                        className="rounded-lg self-end h-11 px-3 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                         title="Attach Image"
                       >
-                        {uploading ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Paperclip className="h-4 w-4 fill-current" />}
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                       </Button>
                       <Textarea
                         value={message}
@@ -838,7 +838,7 @@ export default function AdminSupportPage() {
                         rows={1}
                         data-reply-input
                         /* text-base on mobile stops iOS Safari zooming in on focus */
-                        className="flex-1 resize-none rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-base sm:text-sm min-h-[44px] max-h-28 text-white placeholder:text-gray-500 focus:border-[#2a2a2a]"
+                        className="flex-1 resize-none rounded-lg border-border bg-background text-base sm:text-sm min-h-[44px] max-h-28 text-foreground placeholder:text-muted-foreground focus:border-primary/40"
                         disabled={sendMessageMutation.isPending || uploading}
                         onKeyDown={(e) => {
                           // On touch keyboards Enter must insert a newline instead of sending
@@ -852,9 +852,9 @@ export default function AdminSupportPage() {
                       <Button
                         type="submit"
                         disabled={(!message.trim() && !pendingImage) || sendMessageMutation.isPending || uploading}
-                        className="rounded-xl bg-blue-600 hover:bg-blue-700 self-end h-11 w-11 p-0 flex-shrink-0"
+                        className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground self-end h-11 w-11 p-0 flex-shrink-0"
                       >
-                        {sendMessageMutation.isPending || uploading ? <Loader2 className="h-4 w-4 animate-spin fill-current" /> : <Send className="h-4 w-4 fill-current" />}
+                        {sendMessageMutation.isPending || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
                     </div>
                   </form>
@@ -862,11 +862,11 @@ export default function AdminSupportPage() {
               ) : (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                      <MessageSquare className="h-8 w-8 text-gray-600 fill-current" />
+                    <div className="w-16 h-16 bg-muted rounded-xl mx-auto mb-4 flex items-center justify-center">
+                      <MessageSquare className="h-8 w-8 text-muted-foreground/60" />
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-400 mb-1">Select a Conversation</h3>
-                    <p className="text-xs text-gray-600">Choose a ticket from the list to start responding</p>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Select a Conversation</h3>
+                    <p className="text-xs text-muted-foreground/70">Choose a ticket from the list to start responding</p>
                   </div>
                 </div>
               )}

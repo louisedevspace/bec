@@ -582,11 +582,11 @@ export default function AdminNews() {
 
   const getPriorityColor = (p: string) => {
     switch (p) {
-      case 'urgent': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'high': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-      case 'normal': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'low': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case 'urgent': return 'bg-danger/15 text-danger border-danger/30';
+      case 'high': return 'bg-warning/15 text-warning border-warning/30';
+      case 'normal': return 'bg-info/15 text-info border-info/30';
+      case 'low': return 'bg-success/15 text-success border-success/30';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -597,10 +597,10 @@ export default function AdminNews() {
 
   const getStatusInfo = (news: News) => {
     const now = new Date();
-    if (!news.is_active) return { label: 'Inactive', cls: 'bg-gray-500/20 text-gray-400' };
-    if (news.end_date && new Date(news.end_date) < now) return { label: 'Expired', cls: 'bg-red-500/20 text-red-400' };
-    if (news.start_date && new Date(news.start_date) > now) return { label: 'Scheduled', cls: 'bg-yellow-500/20 text-yellow-400' };
-    return { label: 'Active', cls: 'bg-emerald-500/20 text-emerald-400' };
+    if (!news.is_active) return { label: 'Inactive', cls: 'bg-muted text-muted-foreground' };
+    if (news.end_date && new Date(news.end_date) < now) return { label: 'Expired', cls: 'bg-danger/15 text-danger' };
+    if (news.start_date && new Date(news.start_date) > now) return { label: 'Scheduled', cls: 'bg-warning/15 text-warning' };
+    return { label: 'Active', cls: 'bg-success/15 text-success' };
   };
 
   const fmtDate = (d: string) => {
@@ -612,12 +612,12 @@ export default function AdminNews() {
   // ─── Stat card component ──────────────────────────────
 
   const StatCard = ({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: any; color: string }) => (
-    <Card className="bg-[#111] border-[#1e1e1e]">
+    <Card className="bg-card border-border">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-            <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+            <p className={`text-xl font-bold mt-1 tabular-nums ${color}`}>{value}</p>
           </div>
           <Icon className={`w-5 h-5 ${color} opacity-60 fill-current`} />
         </div>
@@ -633,18 +633,18 @@ export default function AdminNews() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
               <Megaphone className="w-5 h-5 md:w-6 md:h-6 fill-current" />
               News Management
             </h1>
-            <p className="text-gray-400 mt-1 text-sm">Create, manage, and analyze news announcements</p>
+            <p className="text-muted-foreground mt-1 text-sm">Create, manage, and analyze news announcements</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => { fetchNews(page); fetchStats(); }}
-              className="border-[#333] text-gray-300 hover:bg-[#1a1a1a]">
+              className="border-border text-muted-foreground hover:bg-muted">
               <RefreshCw className="w-4 h-4 fill-current" />
             </Button>
-            <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={openCreate} className="bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2 fill-current" />
               Create News
             </Button>
@@ -654,29 +654,29 @@ export default function AdminNews() {
         {/* Stats Row */}
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <StatCard label="Total News" value={stats.totalNews} icon={Megaphone} color="text-white" />
-            <StatCard label="Active" value={stats.activeNews} icon={CheckCircle} color="text-emerald-400" />
-            <StatCard label="Scheduled" value={stats.scheduledNews} icon={Clock} color="text-yellow-400" />
-            <StatCard label="Total Views" value={fmtNum(stats.totalViews)} icon={EyeIcon} color="text-blue-400" />
-            <StatCard label="Clicks" value={fmtNum(stats.totalClicks)} icon={MousePointerClick} color="text-purple-400" />
-            <StatCard label="Avg CTR" value={`${stats.avgCtr}%`} icon={TrendingUp} color="text-cyan-400" />
+            <StatCard label="Total News" value={stats.totalNews} icon={Megaphone} color="text-foreground" />
+            <StatCard label="Active" value={stats.activeNews} icon={CheckCircle} color="text-success" />
+            <StatCard label="Scheduled" value={stats.scheduledNews} icon={Clock} color="text-warning" />
+            <StatCard label="Total Views" value={fmtNum(stats.totalViews)} icon={EyeIcon} color="text-info" />
+            <StatCard label="Clicks" value={fmtNum(stats.totalClicks)} icon={MousePointerClick} color="text-primary" />
+            <StatCard label="Avg CTR" value={`${stats.avgCtr}%`} icon={TrendingUp} color="text-success" />
           </div>
         )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-            <TabsList className="bg-[#1a1a1a] border border-[#1e1e1e] w-max">
-              <TabsTrigger value="manage" className="data-[state=active]:bg-[#333] text-gray-300">
+            <TabsList className="bg-card border border-border w-max">
+              <TabsTrigger value="manage" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
                 <Layers className="w-4 h-4 mr-1.5 fill-current" /> Manage
               </TabsTrigger>
-              <TabsTrigger value="templates" className="data-[state=active]:bg-[#333] text-gray-300">
+              <TabsTrigger value="templates" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
                 <FileText className="w-4 h-4 mr-1.5 fill-current" /> Templates
               </TabsTrigger>
-              <TabsTrigger value="categories" className="data-[state=active]:bg-[#333] text-gray-300">
+              <TabsTrigger value="categories" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
                 <Tag className="w-4 h-4 mr-1.5 fill-current" /> Categories
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="data-[state=active]:bg-[#333] text-gray-300">
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground">
                 <BarChart3 className="w-4 h-4 mr-1.5 fill-current" /> Analytics
               </TabsTrigger>
             </TabsList>
@@ -685,17 +685,17 @@ export default function AdminNews() {
           {/* ─── MANAGE TAB ─────────────────────────────── */}
           <TabsContent value="manage" className="space-y-4 mt-4">
             {/* Filters */}
-            <Card className="bg-[#111] border-[#1e1e1e]">
+            <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="relative lg:col-span-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 fill-current" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground fill-current" />
                     <Input placeholder="Search news..." onChange={(e) => handleSearch(e.target.value)}
-                      className="bg-[#0a0a0a] border-[#333] text-white pl-9 placeholder:text-gray-600" />
+                      className="bg-background border-border text-foreground pl-9 placeholder:text-muted-foreground" />
                   </div>
                   <Select value={filterType} onValueChange={v => { setPage(1); setFilterType(v); }}>
-                    <SelectTrigger className="bg-[#0a0a0a] border-[#333] text-white"><SelectValue placeholder="Type" /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Type" /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="announcement">Announcement</SelectItem>
                       <SelectItem value="update">Update</SelectItem>
@@ -706,8 +706,8 @@ export default function AdminNews() {
                     </SelectContent>
                   </Select>
                   <Select value={filterPriority} onValueChange={v => { setPage(1); setFilterPriority(v); }}>
-                    <SelectTrigger className="bg-[#0a0a0a] border-[#333] text-white"><SelectValue placeholder="Priority" /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Priority" /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="all">All Priorities</SelectItem>
                       <SelectItem value="urgent">Urgent</SelectItem>
                       <SelectItem value="high">High</SelectItem>
@@ -716,15 +716,15 @@ export default function AdminNews() {
                     </SelectContent>
                   </Select>
                   <Select value={filterCategory} onValueChange={v => { setPage(1); setFilterCategory(v); }}>
-                    <SelectTrigger className="bg-[#0a0a0a] border-[#333] text-white"><SelectValue placeholder="Category" /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Category" /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="all">All Categories</SelectItem>
                       {categories.map(c => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={filterStatus} onValueChange={v => { setPage(1); setFilterStatus(v); }}>
-                    <SelectTrigger className="bg-[#0a0a0a] border-[#333] text-white"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-background border-border text-foreground"><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
@@ -738,19 +738,19 @@ export default function AdminNews() {
 
             {/* Bulk actions bar */}
             {selectedIds.size > 0 && (
-              <Card className="bg-blue-500/10 border-blue-500/30">
+              <Card className="bg-primary/10 border-primary/30">
                 <CardContent className="p-3 flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-sm text-blue-400 font-medium">{selectedIds.size} item(s) selected</span>
+                  <span className="text-sm text-primary font-medium">{selectedIds.size} item(s) selected</span>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-8"
+                    <Button size="sm" variant="outline" className="border-success/30 text-success hover:bg-success/10 h-8"
                       onClick={() => handleBulkAction('activate')}>
                       <ToggleLeft className="w-3.5 h-3.5 mr-1 fill-current" /> Activate
                     </Button>
-                    <Button size="sm" variant="outline" className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 h-8"
+                    <Button size="sm" variant="outline" className="border-warning/30 text-warning hover:bg-warning/10 h-8"
                       onClick={() => handleBulkAction('deactivate')}>
                       <EyeOff className="w-3.5 h-3.5 mr-1 fill-current" /> Deactivate
                     </Button>
-                    <Button size="sm" variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 h-8"
+                    <Button size="sm" variant="outline" className="border-danger/30 text-danger hover:bg-danger/10 h-8"
                       onClick={() => handleBulkAction('delete')}>
                       <Trash2 className="w-3.5 h-3.5 mr-1 fill-current" /> Delete
                     </Button>
@@ -762,15 +762,15 @@ export default function AdminNews() {
             {/* News List */}
             {loading && newsList.length === 0 ? (
               <div className="flex items-center justify-center h-40">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-500 fill-current" />
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground fill-current" />
               </div>
             ) : newsList.length === 0 ? (
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardContent className="p-12 text-center">
-                  <Megaphone className="w-12 h-12 mx-auto mb-4 text-gray-600 fill-current" />
-                  <h3 className="text-lg font-semibold text-white mb-2">No News Items</h3>
-                  <p className="text-gray-500 mb-6">Create your first announcement to get started</p>
-                  <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700">
+                  <Megaphone className="w-12 h-12 mx-auto mb-4 text-muted-foreground fill-current" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No News Items</h3>
+                  <p className="text-muted-foreground mb-6">Create your first announcement to get started</p>
+                  <Button onClick={openCreate} className="bg-primary hover:bg-primary/90">
                     <Plus className="w-4 h-4 mr-2" /> Create News
                   </Button>
                 </CardContent>
@@ -781,41 +781,41 @@ export default function AdminNews() {
                 <div className="flex items-center gap-2 px-1">
                   <input type="checkbox" checked={selectedIds.size === newsList.length && newsList.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-[#333] bg-[#1a1a1a] accent-blue-500" />
-                  <span className="text-xs text-gray-500">Select all ({totalCount} total)</span>
+                    className="w-4 h-4 rounded border-border bg-muted accent-primary" />
+                  <span className="text-xs text-muted-foreground">Select all ({totalCount} total)</span>
                 </div>
 
                 <div className="grid gap-3">
                   {newsList.map(news => {
                     const status = getStatusInfo(news);
                     return (
-                      <Card key={news.id} className={`bg-[#111] border-[#1e1e1e] transition-all ${selectedIds.has(news.id) ? 'ring-1 ring-blue-500/50' : ''}`}>
+                      <Card key={news.id} className={`bg-card border-border transition-all ${selectedIds.has(news.id) ? 'ring-1 ring-primary/50' : ''}`}>
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start gap-2 sm:gap-3">
                             {/* Checkbox */}
                             <input type="checkbox" checked={selectedIds.has(news.id)}
                               onChange={() => toggleSelect(news.id)}
-                              className="mt-1 w-4 h-4 rounded border-[#333] bg-[#1a1a1a] accent-blue-500 shrink-0" />
+                              className="mt-1 w-4 h-4 rounded border-border bg-muted accent-primary shrink-0" />
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
-                                {news.is_pinned && <Pin className="w-3.5 h-3.5 text-yellow-400 shrink-0 fill-current" />}
-                                <h3 className="text-white font-semibold text-sm sm:text-base truncate">{news.title}</h3>
+                                {news.is_pinned && <Pin className="w-3.5 h-3.5 text-warning shrink-0 fill-current" />}
+                                <h3 className="text-foreground font-semibold text-sm sm:text-base truncate">{news.title}</h3>
                               </div>
                               <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mb-2">
                                 <Badge className={`text-[10px] px-1.5 py-0 border ${status.cls}`}>{status.label}</Badge>
                                 <Badge className={`text-[10px] px-1.5 py-0 border ${getPriorityColor(news.priority)}`}>{news.priority}</Badge>
-                                <Badge className="text-[10px] px-1.5 py-0 bg-[#1a1a1a] text-gray-400 border-[#333]">{getTypeLabel(news.type)}</Badge>
+                                <Badge className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-border">{getTypeLabel(news.type)}</Badge>
                                 {news.category && news.category !== 'general' && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/15 text-purple-400 border-purple-500/30">{news.category}</Badge>
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-primary/30">{news.category}</Badge>
                                 )}
                                 {news.ab_variant && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-cyan-500/15 text-cyan-400 border-cyan-500/30">A/B: {news.ab_variant}</Badge>
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-info/15 text-info border-info/30">A/B: {news.ab_variant}</Badge>
                                 )}
                               </div>
-                              <p className="text-gray-500 text-xs sm:text-sm line-clamp-1 mb-2">{news.content}</p>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                              <p className="text-muted-foreground text-xs sm:text-sm line-clamp-1 mb-2">{news.content}</p>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1"><Users className="w-3 h-3 fill-current" /> {news.target_users}</span>
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3 fill-current" /> {fmtDate(news.created_at)}</span>
                                 <span className="flex items-center gap-1"><EyeIcon className="w-3 h-3 fill-current" /> {fmtNum(news.view_count || 0)} views</span>
@@ -823,28 +823,28 @@ export default function AdminNews() {
                               </div>
 
                               {/* Actions - inline on mobile */}
-                              <div className="flex items-center gap-0.5 sm:hidden mt-2 pt-2 border-t border-[#1e1e1e] -mx-1 flex-wrap">
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                              <div className="flex items-center gap-0.5 sm:hidden mt-2 pt-2 border-t border-border -mx-1 flex-wrap">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                   onClick={() => openAnalytics(news)} title="Analytics">
                                   <BarChart3 className="w-3.5 h-3.5 fill-current" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                   onClick={() => togglePin(news.id, !news.is_pinned)} title={news.is_pinned ? 'Unpin' : 'Pin'}>
-                                  <Pin className={`w-3.5 h-3.5 fill-current ${news.is_pinned ? 'text-yellow-400' : ''}`} />
+                                  <Pin className={`w-3.5 h-3.5 fill-current ${news.is_pinned ? 'text-warning' : ''}`} />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                   onClick={() => duplicateNews(news.id)} title="Duplicate">
                                   <Copy className="w-3.5 h-3.5 fill-current" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                   onClick={() => toggleActive(news.id, !news.is_active)} title={news.is_active ? 'Deactivate' : 'Activate'}>
                                   {news.is_active ? <EyeOff className="w-3.5 h-3.5 fill-current" /> : <Eye className="w-3.5 h-3.5 fill-current" />}
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-400 hover:bg-[#1a1a1a]"
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
                                   onClick={() => openEdit(news)} title="Edit">
                                   <Edit className="w-3.5 h-3.5 fill-current" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-red-400 hover:bg-[#1a1a1a]"
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-danger hover:bg-muted"
                                   onClick={() => handleDelete(news.id)} title="Delete">
                                   <Trash2 className="w-3.5 h-3.5 fill-current" />
                                 </Button>
@@ -853,27 +853,27 @@ export default function AdminNews() {
 
                             {/* Actions - desktop only */}
                             <div className="hidden sm:flex items-center gap-1 shrink-0">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                 onClick={() => openAnalytics(news)} title="Analytics">
                                 <BarChart3 className="w-3.5 h-3.5 fill-current" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                 onClick={() => togglePin(news.id, !news.is_pinned)} title={news.is_pinned ? 'Unpin' : 'Pin'}>
-                                <Pin className={`w-3.5 h-3.5 fill-current ${news.is_pinned ? 'text-yellow-400' : ''}`} />
+                                <Pin className={`w-3.5 h-3.5 fill-current ${news.is_pinned ? 'text-warning' : ''}`} />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                 onClick={() => duplicateNews(news.id)} title="Duplicate">
                                 <Copy className="w-3.5 h-3.5 fill-current" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                                 onClick={() => toggleActive(news.id, !news.is_active)} title={news.is_active ? 'Deactivate' : 'Activate'}>
                                 {news.is_active ? <EyeOff className="w-3.5 h-3.5 fill-current" /> : <Eye className="w-3.5 h-3.5 fill-current" />}
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-blue-400 hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
                                 onClick={() => openEdit(news)} title="Edit">
                                 <Edit className="w-3.5 h-3.5 fill-current" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-red-400 hover:bg-[#1a1a1a]"
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-danger hover:bg-muted"
                                 onClick={() => handleDelete(news.id)} title="Delete">
                                 <Trash2 className="w-3.5 h-3.5 fill-current" />
                               </Button>
@@ -888,13 +888,13 @@ export default function AdminNews() {
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-gray-500">Page {page} of {totalPages} ({totalCount} items)</span>
+                    <span className="text-xs text-muted-foreground">Page {page} of {totalPages} ({totalCount} items)</span>
                     <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" disabled={page <= 1} className="h-8 border-[#333] text-gray-400 hover:bg-[#1a1a1a]"
+                      <Button variant="outline" size="sm" disabled={page <= 1} className="h-8 border-border text-muted-foreground hover:bg-muted"
                         onClick={() => { const p = page - 1; setPage(p); fetchNews(p); }}>
                         <ChevronLeft className="w-4 h-4 fill-current" />
                       </Button>
-                      <Button variant="outline" size="sm" disabled={page >= totalPages} className="h-8 border-[#333] text-gray-400 hover:bg-[#1a1a1a]"
+                      <Button variant="outline" size="sm" disabled={page >= totalPages} className="h-8 border-border text-muted-foreground hover:bg-muted"
                         onClick={() => { const p = page + 1; setPage(p); fetchNews(p); }}>
                         <ChevronRight className="w-4 h-4 fill-current" />
                       </Button>
@@ -908,39 +908,39 @@ export default function AdminNews() {
           {/* ─── TEMPLATES TAB ──────────────────────────── */}
           <TabsContent value="templates" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-400">Reusable templates for quick news creation</p>
-              <Button onClick={openTemplateCreate} size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <p className="text-sm text-muted-foreground">Reusable templates for quick news creation</p>
+              <Button onClick={openTemplateCreate} size="sm" className="bg-primary hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-1 fill-current" /> New Template
               </Button>
             </div>
             {templates.length === 0 ? (
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardContent className="p-8 text-center">
-                  <FileText className="w-10 h-10 mx-auto mb-3 text-gray-600 fill-current" />
-                  <p className="text-gray-400">No templates yet. Create one to speed up news creation.</p>
+                  <FileText className="w-10 h-10 mx-auto mb-3 text-muted-foreground fill-current" />
+                  <p className="text-muted-foreground">No templates yet. Create one to speed up news creation.</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {templates.map(t => (
-                  <Card key={t.id} className="bg-[#111] border-[#1e1e1e] hover:border-[#333] transition-colors">
+                  <Card key={t.id} className="bg-card border-border hover:border-primary/30 transition-colors">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-white font-semibold truncate">{t.name}</h4>
-                        <Badge className="bg-[#1a1a1a] text-gray-400 border-[#333] text-[10px]">{t.type}</Badge>
+                        <h4 className="text-foreground font-semibold truncate">{t.name}</h4>
+                        <Badge className="bg-muted text-muted-foreground border-border text-[10px]">{t.type}</Badge>
                       </div>
-                      <p className="text-sm text-gray-500 line-clamp-2">{t.title || 'No title set'}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{t.title || 'No title set'}</p>
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded border border-[#333]" style={{ backgroundColor: t.background_color }} title="Background" />
-                        <div className="w-5 h-5 rounded border border-[#333]" style={{ backgroundColor: t.button_color }} title="Button" />
-                        <span className="text-xs text-gray-600 ml-auto">{t.category || 'general'}</span>
+                        <div className="w-5 h-5 rounded border border-border" style={{ backgroundColor: t.background_color }} title="Background" />
+                        <div className="w-5 h-5 rounded border border-border" style={{ backgroundColor: t.button_color }} title="Button" />
+                        <span className="text-xs text-muted-foreground ml-auto">{t.category || 'general'}</span>
                       </div>
-                      <div className="flex items-center gap-1 pt-1 border-t border-[#1e1e1e]">
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-blue-400 hover:bg-blue-500/10 flex-1"
+                      <div className="flex items-center gap-1 pt-1 border-t border-border">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10 flex-1"
                           onClick={() => useTemplate(t)}>Use</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-gray-400 hover:bg-[#1a1a1a] flex-1"
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:bg-muted flex-1"
                           onClick={() => openTemplateEdit(t)}>Edit</Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-red-400 hover:bg-red-500/10 flex-1"
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-danger hover:bg-danger/10 flex-1"
                           onClick={() => deleteTemplate(t.id)}>Delete</Button>
                       </div>
                     </CardContent>
@@ -953,35 +953,35 @@ export default function AdminNews() {
           {/* ─── CATEGORIES TAB ─────────────────────────── */}
           <TabsContent value="categories" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-400">Organize news with categories</p>
-              <Button onClick={openCategoryCreate} size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <p className="text-sm text-muted-foreground">Organize news with categories</p>
+              <Button onClick={openCategoryCreate} size="sm" className="bg-primary hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-1 fill-current" /> New Category
               </Button>
             </div>
             {categories.length === 0 ? (
-              <Card className="bg-[#111] border-[#1e1e1e]">
+              <Card className="bg-card border-border">
                 <CardContent className="p-8 text-center">
-                  <Tag className="w-10 h-10 mx-auto mb-3 text-gray-600 fill-current" />
-                  <p className="text-gray-400">No categories yet. Default "general" category is used.</p>
+                  <Tag className="w-10 h-10 mx-auto mb-3 text-muted-foreground fill-current" />
+                  <p className="text-muted-foreground">No categories yet. Default "general" category is used.</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categories.map(c => (
-                  <Card key={c.id} className="bg-[#111] border-[#1e1e1e] hover:border-[#333] transition-colors">
+                  <Card key={c.id} className="bg-card border-border hover:border-primary/30 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                        <h4 className="text-white font-semibold truncate">{c.name}</h4>
-                        <Badge className="bg-[#1a1a1a] text-gray-500 border-[#333] text-[10px] ml-auto">{c.slug}</Badge>
+                        <h4 className="text-foreground font-semibold truncate">{c.name}</h4>
+                        <Badge className="bg-muted text-muted-foreground border-border text-[10px] ml-auto">{c.slug}</Badge>
                       </div>
-                      {c.description && <p className="text-sm text-gray-500 mb-2">{c.description}</p>}
+                      {c.description && <p className="text-sm text-muted-foreground mb-2">{c.description}</p>}
                       <div className="flex items-center">
-                        <span className="text-xs text-gray-600">{stats?.byCategory?.[c.slug] || 0} news items</span>
+                        <span className="text-xs text-muted-foreground">{stats?.byCategory?.[c.slug] || 0} news items</span>
                         <div className="ml-auto flex items-center gap-1">
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-gray-400 hover:bg-[#1a1a1a]"
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:bg-muted"
                             onClick={() => openCategoryEdit(c)}>Edit</Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-red-400 hover:bg-red-500/10"
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-danger hover:bg-danger/10"
                             onClick={() => deleteCategory(c.id)}>Delete</Button>
                         </div>
                       </div>
@@ -998,21 +998,21 @@ export default function AdminNews() {
               <div className="space-y-6">
                 {/* Overview cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <StatCard label="Total Seen" value={fmtNum(stats.totalSeen)} icon={Eye} color="text-blue-400" />
-                  <StatCard label="Dismissals" value={fmtNum(stats.totalDismissals)} icon={XCircle} color="text-orange-400" />
-                  <StatCard label="Expired" value={stats.expiredNews} icon={AlertTriangle} color="text-red-400" />
-                  <StatCard label="Click Rate" value={`${stats.avgCtr}%`} icon={TrendingUp} color="text-emerald-400" />
+                  <StatCard label="Total Seen" value={fmtNum(stats.totalSeen)} icon={Eye} color="text-info" />
+                  <StatCard label="Dismissals" value={fmtNum(stats.totalDismissals)} icon={XCircle} color="text-warning" />
+                  <StatCard label="Expired" value={stats.expiredNews} icon={AlertTriangle} color="text-danger" />
+                  <StatCard label="Click Rate" value={`${stats.avgCtr}%`} icon={TrendingUp} color="text-success" />
                 </div>
 
                 {/* By Type breakdown */}
-                <Card className="bg-[#111] border-[#1e1e1e]">
+                <Card className="bg-card border-border">
                   <CardContent className="p-4">
-                    <h3 className="text-white font-semibold mb-3">Distribution by Type</h3>
+                    <h3 className="text-foreground font-semibold mb-3">Distribution by Type</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                       {Object.entries(stats.byType).map(([type, count]) => (
-                        <div key={type} className="bg-[#0a0a0a] rounded-lg p-3 text-center border border-[#1e1e1e]">
-                          <p className="text-lg font-bold text-white">{count}</p>
-                          <p className="text-xs text-gray-500 capitalize">{type}</p>
+                        <div key={type} className="bg-background rounded-lg p-3 text-center border border-border">
+                          <p className="text-lg font-bold text-foreground tabular-nums">{count}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{type}</p>
                         </div>
                       ))}
                     </div>
@@ -1020,13 +1020,13 @@ export default function AdminNews() {
                 </Card>
 
                 {/* By Priority breakdown */}
-                <Card className="bg-[#111] border-[#1e1e1e]">
+                <Card className="bg-card border-border">
                   <CardContent className="p-4">
-                    <h3 className="text-white font-semibold mb-3">Distribution by Priority</h3>
+                    <h3 className="text-foreground font-semibold mb-3">Distribution by Priority</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {['urgent', 'high', 'normal', 'low'].map(p => (
                         <div key={p} className={`rounded-lg p-3 text-center border ${getPriorityColor(p)}`}>
-                          <p className="text-lg font-bold">{stats.byPriority[p] || 0}</p>
+                          <p className="text-lg font-bold tabular-nums">{stats.byPriority[p] || 0}</p>
                           <p className="text-xs capitalize opacity-80">{p}</p>
                         </div>
                       ))}
@@ -1035,23 +1035,23 @@ export default function AdminNews() {
                 </Card>
 
                 {/* Top performing news */}
-                <Card className="bg-[#111] border-[#1e1e1e]">
+                <Card className="bg-card border-border">
                   <CardContent className="p-4">
-                    <h3 className="text-white font-semibold mb-3">Top Performing News (by views)</h3>
+                    <h3 className="text-foreground font-semibold mb-3">Top Performing News (by views)</h3>
                     {newsList.length === 0 ? (
-                      <p className="text-gray-500 text-sm">Switch to the Manage tab and load news to see performance data here.</p>
+                      <p className="text-muted-foreground text-sm">Switch to the Manage tab and load news to see performance data here.</p>
                     ) : (
                       <div className="space-y-2">
                         {[...newsList].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 5).map(n => (
-                          <div key={n.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-[#0a0a0a] rounded p-2.5 border border-[#1e1e1e]">
+                          <div key={n.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-background rounded p-2.5 border border-border">
                             <div className="flex-1 min-w-0">
-                              <p className="text-white text-sm font-medium truncate">{n.title}</p>
+                              <p className="text-foreground text-sm font-medium truncate">{n.title}</p>
                             </div>
-                            <div className="flex items-center gap-3 sm:gap-4 text-xs text-gray-500 shrink-0">
+                            <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground shrink-0 tabular-nums">
                               <span>{fmtNum(n.view_count || 0)} views</span>
                               <span>{fmtNum(n.click_count || 0)} clicks</span>
                               <span>{(n.view_count || 0) > 0 ? (((n.click_count || 0) / (n.view_count || 1)) * 100).toFixed(1) : '0.0'}% CTR</span>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-white"
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                                 onClick={() => openAnalytics(n)}>
                                 <BarChart3 className="w-3.5 h-3.5 fill-current" />
                               </Button>
@@ -1065,7 +1065,7 @@ export default function AdminNews() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-40">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-500 fill-current" />
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground fill-current" />
               </div>
             )}
           </TabsContent>
@@ -1075,14 +1075,14 @@ export default function AdminNews() {
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogContent className="max-w-6xl">
             <DialogHeader>
-              <DialogTitle className="text-white">{editingNews ? 'Edit News' : 'Create News'}</DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogTitle className="text-foreground">{editingNews ? 'Edit News' : 'Create News'}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 {editingNews ? 'Update news details and settings.' : 'Create a new news announcement.'}
               </DialogDescription>
             </DialogHeader>
 
             {/* Edit / Preview toggle */}
-            <div className="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg">
+            <div className="flex space-x-1 bg-muted p-1 rounded-lg">
               <Button variant={!showPreview ? 'default' : 'ghost'} size="sm" onClick={() => setShowPreview(false)} className="flex-1">
                 <Edit className="w-4 h-4 mr-2 fill-current" /> Edit
               </Button>
@@ -1096,26 +1096,26 @@ export default function AdminNews() {
               <div className={showPreview ? 'hidden lg:block' : ''}>
                 <form onSubmit={handleSubmit} className="space-y-5">
                   {/* Basic info */}
-                  <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Basic Info</h4>
+                  <div className="bg-background/50 border border-border rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Basic Info</h4>
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">Title</Label>
+                      <Label className="text-foreground text-sm">Title</Label>
                       <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
                         placeholder="Enter news title" required
-                        className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">Content</Label>
+                      <Label className="text-foreground text-sm">Content</Label>
                       <Textarea value={formData.content} onChange={e => setFormData(p => ({ ...p, content: e.target.value }))}
                         placeholder="Enter news content" required
-                        className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600 min-h-[80px]" />
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[80px]" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label className="text-white text-sm">Type</Label>
+                        <Label className="text-foreground text-sm">Type</Label>
                         <Select value={formData.type} onValueChange={v => setFormData(p => ({ ...p, type: v }))}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                          <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-muted border-border">
                             <SelectItem value="announcement">Announcement</SelectItem>
                             <SelectItem value="update">Update</SelectItem>
                             <SelectItem value="maintenance">Maintenance</SelectItem>
@@ -1126,10 +1126,10 @@ export default function AdminNews() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-white text-sm">Priority</Label>
+                        <Label className="text-foreground text-sm">Priority</Label>
                         <Select value={formData.priority} onValueChange={v => setFormData(p => ({ ...p, priority: v }))}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                          <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-muted border-border">
                             <SelectItem value="low">Low</SelectItem>
                             <SelectItem value="normal">Normal</SelectItem>
                             <SelectItem value="high">High</SelectItem>
@@ -1140,20 +1140,20 @@ export default function AdminNews() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label className="text-white text-sm">Category</Label>
+                        <Label className="text-foreground text-sm">Category</Label>
                         <Select value={formData.category} onValueChange={v => setFormData(p => ({ ...p, category: v }))}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                          <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-muted border-border">
                             <SelectItem value="general">General</SelectItem>
                             {categories.map(c => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-white text-sm">Target Users</Label>
+                        <Label className="text-foreground text-sm">Target Users</Label>
                         <Select value={formData.target_users} onValueChange={v => setFormData(p => ({ ...p, target_users: v }))}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                          <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-muted border-border">
                             <SelectItem value="all">All Users</SelectItem>
                             <SelectItem value="verified">Verified</SelectItem>
                             <SelectItem value="unverified">Unverified</SelectItem>
@@ -1165,24 +1165,24 @@ export default function AdminNews() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">Tags (comma separated)</Label>
+                      <Label className="text-foreground text-sm">Tags (comma separated)</Label>
                       <Input value={formData.tags} onChange={e => setFormData(p => ({ ...p, tags: e.target.value }))}
                         placeholder="e.g. crypto, trading, new-feature"
-                        className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
                     </div>
                   </div>
 
                   {/* Image */}
-                  <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Media</h4>
+                  <div className="bg-background/50 border border-border rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Media</h4>
                     <div className="flex gap-2">
                       <Input value={formData.image_url} onChange={e => setFormData(p => ({ ...p, image_url: e.target.value }))}
-                        placeholder="Image URL" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600 flex-1" />
+                        placeholder="Image URL" className="bg-muted border-border text-foreground placeholder:text-muted-foreground flex-1" />
                       <div className="relative">
                         <Input type="file" accept="image/*" onChange={handleImageUpload}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={uploadingImage} />
                         <Button type="button" variant="outline" size="sm" disabled={uploadingImage}
-                          className="bg-[#1a1a1a] border-[#333] text-white hover:bg-[#2a2a2a]">
+                          className="bg-muted border-border text-foreground hover:border-primary/30">
                           {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin fill-current" /> : <Upload className="w-4 h-4 fill-current" />}
                         </Button>
                       </div>
@@ -1190,88 +1190,88 @@ export default function AdminNews() {
                   </div>
 
                   {/* Styling */}
-                  <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Styling</h4>
+                  <div className="bg-background/50 border border-border rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Styling</h4>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Background</Label>
+                        <Label className="text-foreground text-xs">Background</Label>
                         <Input type="color" value={formData.background_color} onChange={e => setFormData(p => ({ ...p, background_color: e.target.value }))}
-                          className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                          className="bg-muted border-border h-9 w-full" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Text</Label>
+                        <Label className="text-foreground text-xs">Text</Label>
                         <Input type="color" value={formData.text_color} onChange={e => setFormData(p => ({ ...p, text_color: e.target.value }))}
-                          className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                          className="bg-muted border-border h-9 w-full" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Button</Label>
+                        <Label className="text-foreground text-xs">Button</Label>
                         <Input type="color" value={formData.button_color} onChange={e => setFormData(p => ({ ...p, button_color: e.target.value }))}
-                          className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                          className="bg-muted border-border h-9 w-full" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white text-sm">Button Text</Label>
+                      <Label className="text-foreground text-sm">Button Text</Label>
                       <Input value={formData.button_text} onChange={e => setFormData(p => ({ ...p, button_text: e.target.value }))}
-                        placeholder="Got it" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                        placeholder="Got it" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
                     </div>
                   </div>
 
                   {/* Schedule & Behavior */}
-                  <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Schedule & Behavior</h4>
+                  <div className="bg-background/50 border border-border rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Schedule & Behavior</h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Start Date</Label>
+                        <Label className="text-foreground text-xs">Start Date</Label>
                         <Input type="datetime-local" value={formData.start_date} onChange={e => setFormData(p => ({ ...p, start_date: e.target.value }))}
-                          className="bg-[#1a1a1a] border-[#333] text-white" />
+                          className="bg-muted border-border text-foreground" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">End Date (optional)</Label>
+                        <Label className="text-foreground text-xs">End Date (optional)</Label>
                         <Input type="datetime-local" value={formData.end_date} onChange={e => setFormData(p => ({ ...p, end_date: e.target.value }))}
-                          className="bg-[#1a1a1a] border-[#333] text-white" />
+                          className="bg-muted border-border text-foreground" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Popup Delay (ms)</Label>
+                        <Label className="text-foreground text-xs">Popup Delay (ms)</Label>
                         <Input type="number" value={formData.popup_delay} onChange={e => setFormData(p => ({ ...p, popup_delay: parseInt(e.target.value) || 0 }))}
-                          className="bg-[#1a1a1a] border-[#333] text-white" />
+                          className="bg-muted border-border text-foreground" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Auto Close (sec, 0=manual)</Label>
+                        <Label className="text-foreground text-xs">Auto Close (sec, 0=manual)</Label>
                         <Input type="number" value={formData.auto_close} onChange={e => setFormData(p => ({ ...p, auto_close: parseInt(e.target.value) || 0 }))}
-                          className="bg-[#1a1a1a] border-[#333] text-white" />
+                          className="bg-muted border-border text-foreground" />
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-6 pt-1">
                       <div className="flex items-center gap-2">
                         <Switch checked={formData.is_active} onCheckedChange={v => setFormData(p => ({ ...p, is_active: v }))}
-                          className="data-[state=checked]:bg-blue-500" />
-                        <Label className="text-white text-sm">Active</Label>
+                          className="data-[state=checked]:bg-primary" />
+                        <Label className="text-foreground text-sm">Active</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch checked={formData.show_popup} onCheckedChange={v => setFormData(p => ({ ...p, show_popup: v }))}
-                          className="data-[state=checked]:bg-blue-500" />
-                        <Label className="text-white text-sm">Popup</Label>
+                          className="data-[state=checked]:bg-primary" />
+                        <Label className="text-foreground text-sm">Popup</Label>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch checked={formData.is_pinned} onCheckedChange={v => setFormData(p => ({ ...p, is_pinned: v }))}
-                          className="data-[state=checked]:bg-yellow-500" />
-                        <Label className="text-white text-sm">Pinned</Label>
+                          className="data-[state=checked]:bg-warning" />
+                        <Label className="text-foreground text-sm">Pinned</Label>
                       </div>
                     </div>
                   </div>
 
                   {/* A/B Testing */}
-                  <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">A/B Testing (Optional)</h4>
-                    <p className="text-xs text-gray-600">Create two variants with the same Group ID to run an A/B test.</p>
+                  <div className="bg-background/50 border border-border rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">A/B Testing (Optional)</h4>
+                    <p className="text-xs text-muted-foreground">Create two variants with the same Group ID to run an A/B test.</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Variant (A or B)</Label>
+                        <Label className="text-foreground text-xs">Variant (A or B)</Label>
                         <Select value={formData.ab_variant || 'none'} onValueChange={v => setFormData(p => ({ ...p, ab_variant: v === 'none' ? '' : v }))}>
-                          <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                          <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-muted border-border">
                             <SelectItem value="none">None</SelectItem>
                             <SelectItem value="A">Variant A</SelectItem>
                             <SelectItem value="B">Variant B</SelectItem>
@@ -1279,10 +1279,10 @@ export default function AdminNews() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-white text-xs">Group ID</Label>
+                        <Label className="text-foreground text-xs">Group ID</Label>
                         <Input value={formData.ab_group_id} onChange={e => setFormData(p => ({ ...p, ab_group_id: e.target.value }))}
                           placeholder="e.g. test-march-2026"
-                          className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
                       </div>
                     </div>
                   </div>
@@ -1290,8 +1290,8 @@ export default function AdminNews() {
                   {/* Submit */}
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}
-                      className="border-[#333] text-white hover:bg-[#2a2a2a]">Cancel</Button>
-                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saving}>
+                      className="border-border text-foreground hover:bg-muted">Cancel</Button>
+                    <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={saving}>
                       {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin fill-current" />}
                       {editingNews ? 'Update' : 'Create'}
                     </Button>
@@ -1316,13 +1316,13 @@ export default function AdminNews() {
         <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white">{confirmAction?.title}</DialogTitle>
-              <DialogDescription className="text-gray-400">{confirmAction?.desc}</DialogDescription>
+              <DialogTitle className="text-foreground">{confirmAction?.title}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">{confirmAction?.desc}</DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => setConfirmAction(null)}
-                className="border-[#333] text-white hover:bg-[#2a2a2a]">Cancel</Button>
-              <Button className="bg-red-600 hover:bg-red-700" onClick={confirmAction?.onConfirm}>Confirm</Button>
+                className="border-border text-foreground hover:bg-muted">Cancel</Button>
+              <Button className="bg-danger hover:bg-danger/90" onClick={confirmAction?.onConfirm}>Confirm</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1331,30 +1331,30 @@ export default function AdminNews() {
         <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white">{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
-              <DialogDescription className="text-gray-400">Categories help organize your news items.</DialogDescription>
+              <DialogTitle className="text-foreground">{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">Categories help organize your news items.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-white">Name</Label>
+                <Label className="text-foreground">Name</Label>
                 <Input value={categoryForm.name} onChange={e => setCategoryForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Category name" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                  placeholder="Category name" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Description</Label>
+                <Label className="text-foreground">Description</Label>
                 <Input value={categoryForm.description} onChange={e => setCategoryForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Optional description" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                  placeholder="Optional description" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Color</Label>
+                <Label className="text-foreground">Color</Label>
                 <Input type="color" value={categoryForm.color} onChange={e => setCategoryForm(p => ({ ...p, color: e.target.value }))}
-                  className="bg-[#1a1a1a] border-[#333] h-10 w-full" />
+                  className="bg-muted border-border h-10 w-full" />
               </div>
             </div>
             <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => setShowCategoryDialog(false)}
-                className="border-[#333] text-white hover:bg-[#2a2a2a]">Cancel</Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCategorySubmit}>
+                className="border-border text-foreground hover:bg-muted">Cancel</Button>
+              <Button className="bg-primary hover:bg-primary/90" onClick={handleCategorySubmit}>
                 {editingCategory ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
@@ -1365,31 +1365,31 @@ export default function AdminNews() {
         <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
           <DialogContent className="max-w-lg max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle className="text-white">{editingTemplate ? 'Edit Template' : 'New Template'}</DialogTitle>
-              <DialogDescription className="text-gray-400">Templates provide reusable styling and content.</DialogDescription>
+              <DialogTitle className="text-foreground">{editingTemplate ? 'Edit Template' : 'New Template'}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">Templates provide reusable styling and content.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-white">Template Name</Label>
+                <Label className="text-foreground">Template Name</Label>
                 <Input value={templateForm.name} onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="e.g. Standard Announcement" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                  placeholder="e.g. Standard Announcement" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Default Title</Label>
+                <Label className="text-foreground">Default Title</Label>
                 <Input value={templateForm.title} onChange={e => setTemplateForm(p => ({ ...p, title: e.target.value }))}
-                  placeholder="Default title" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                  placeholder="Default title" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Default Content</Label>
+                <Label className="text-foreground">Default Content</Label>
                 <Textarea value={templateForm.content} onChange={e => setTemplateForm(p => ({ ...p, content: e.target.value }))}
-                  placeholder="Default content" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600 min-h-[60px]" />
+                  placeholder="Default content" className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-white text-sm">Type</Label>
+                  <Label className="text-foreground text-sm">Type</Label>
                   <Select value={templateForm.type} onValueChange={v => setTemplateForm(p => ({ ...p, type: v }))}>
-                    <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="announcement">Announcement</SelectItem>
                       <SelectItem value="update">Update</SelectItem>
                       <SelectItem value="maintenance">Maintenance</SelectItem>
@@ -1400,10 +1400,10 @@ export default function AdminNews() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-white text-sm">Category</Label>
+                  <Label className="text-foreground text-sm">Category</Label>
                   <Select value={templateForm.category} onValueChange={v => setTemplateForm(p => ({ ...p, category: v }))}>
-                    <SelectTrigger className="bg-[#1a1a1a] border-[#333] text-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-[#333]">
+                    <SelectTrigger className="bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-muted border-border">
                       <SelectItem value="general">General</SelectItem>
                       {categories.map(c => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}
                     </SelectContent>
@@ -1412,31 +1412,31 @@ export default function AdminNews() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-white text-xs">Background</Label>
+                  <Label className="text-foreground text-xs">Background</Label>
                   <Input type="color" value={templateForm.background_color} onChange={e => setTemplateForm(p => ({ ...p, background_color: e.target.value }))}
-                    className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                    className="bg-muted border-border h-9 w-full" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-white text-xs">Text</Label>
+                  <Label className="text-foreground text-xs">Text</Label>
                   <Input type="color" value={templateForm.text_color} onChange={e => setTemplateForm(p => ({ ...p, text_color: e.target.value }))}
-                    className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                    className="bg-muted border-border h-9 w-full" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-white text-xs">Button</Label>
+                  <Label className="text-foreground text-xs">Button</Label>
                   <Input type="color" value={templateForm.button_color} onChange={e => setTemplateForm(p => ({ ...p, button_color: e.target.value }))}
-                    className="bg-[#1a1a1a] border-[#333] h-9 w-full" />
+                    className="bg-muted border-border h-9 w-full" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Button Text</Label>
+                <Label className="text-foreground">Button Text</Label>
                 <Input value={templateForm.button_text} onChange={e => setTemplateForm(p => ({ ...p, button_text: e.target.value }))}
-                  placeholder="Got it" className="bg-[#1a1a1a] border-[#333] text-white placeholder:text-gray-600" />
+                  placeholder="Got it" className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
               </div>
             </div>
             <DialogFooter className="flex gap-2">
               <Button variant="outline" onClick={() => setShowTemplateDialog(false)}
-                className="border-[#333] text-white hover:bg-[#2a2a2a]">Cancel</Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleTemplateSubmit}>
+                className="border-border text-foreground hover:bg-muted">Cancel</Button>
+              <Button className="bg-primary hover:bg-primary/90" onClick={handleTemplateSubmit}>
                 {editingTemplate ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
@@ -1447,37 +1447,37 @@ export default function AdminNews() {
         <Dialog open={!!analyticsNews} onOpenChange={() => { setAnalyticsNews(null); setAnalyticsData(null); }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-white">Analytics: {analyticsNews?.title}</DialogTitle>
-              <DialogDescription className="text-gray-400">Engagement metrics for this news item</DialogDescription>
+              <DialogTitle className="text-foreground">Analytics: {analyticsNews?.title}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">Engagement metrics for this news item</DialogDescription>
             </DialogHeader>
             {analyticsData ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e] text-center">
-                    <p className="text-lg font-bold text-blue-400">{fmtNum(analyticsData.news?.view_count || 0)}</p>
-                    <p className="text-xs text-gray-500">Views</p>
+                  <div className="bg-background rounded-lg p-3 border border-border text-center">
+                    <p className="text-lg font-bold text-info tabular-nums">{fmtNum(analyticsData.news?.view_count || 0)}</p>
+                    <p className="text-xs text-muted-foreground">Views</p>
                   </div>
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e] text-center">
-                    <p className="text-lg font-bold text-purple-400">{fmtNum(analyticsData.news?.click_count || 0)}</p>
-                    <p className="text-xs text-gray-500">Clicks</p>
+                  <div className="bg-background rounded-lg p-3 border border-border text-center">
+                    <p className="text-lg font-bold text-primary tabular-nums">{fmtNum(analyticsData.news?.click_count || 0)}</p>
+                    <p className="text-xs text-muted-foreground">Clicks</p>
                   </div>
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e] text-center">
-                    <p className="text-lg font-bold text-orange-400">{fmtNum(analyticsData.news?.dismiss_count || 0)}</p>
-                    <p className="text-xs text-gray-500">Dismissals</p>
+                  <div className="bg-background rounded-lg p-3 border border-border text-center">
+                    <p className="text-lg font-bold text-warning tabular-nums">{fmtNum(analyticsData.news?.dismiss_count || 0)}</p>
+                    <p className="text-xs text-muted-foreground">Dismissals</p>
                   </div>
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e] text-center">
-                    <p className="text-lg font-bold text-emerald-400">{fmtNum(analyticsData.seenCount || 0)}</p>
-                    <p className="text-xs text-gray-500">Unique Seen</p>
+                  <div className="bg-background rounded-lg p-3 border border-border text-center">
+                    <p className="text-lg font-bold text-success tabular-nums">{fmtNum(analyticsData.seenCount || 0)}</p>
+                    <p className="text-xs text-muted-foreground">Unique Seen</p>
                   </div>
                 </div>
-                <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                  <p className="text-xs text-gray-500 mb-2">Click-Through Rate</p>
+                <div className="bg-background rounded-lg p-3 border border-border">
+                  <p className="text-xs text-muted-foreground mb-2">Click-Through Rate</p>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-[#1a1a1a] rounded-full h-3 overflow-hidden">
-                      <div className="bg-blue-500 h-full rounded-full transition-all"
+                    <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                      <div className="bg-primary h-full rounded-full transition-all"
                         style={{ width: `${Math.min(100, (analyticsData.news?.view_count > 0 ? ((analyticsData.news?.click_count || 0) / analyticsData.news.view_count) * 100 : 0))}%` }} />
                     </div>
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-sm font-bold text-foreground tabular-nums">
                       {analyticsData.news?.view_count > 0
                         ? (((analyticsData.news?.click_count || 0) / analyticsData.news.view_count) * 100).toFixed(1)
                         : '0.0'}%
@@ -1485,13 +1485,13 @@ export default function AdminNews() {
                   </div>
                 </div>
                 {analyticsData.eventsByType && Object.keys(analyticsData.eventsByType).length > 0 && (
-                  <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#1e1e1e]">
-                    <p className="text-xs text-gray-500 mb-2">Event Breakdown</p>
+                  <div className="bg-background rounded-lg p-3 border border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Event Breakdown</p>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(analyticsData.eventsByType).map(([type, count]) => (
                         <div key={type} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400 capitalize">{type}</span>
-                          <span className="text-white font-medium">{fmtNum(count as number)}</span>
+                          <span className="text-muted-foreground capitalize">{type}</span>
+                          <span className="text-foreground font-medium">{fmtNum(count as number)}</span>
                         </div>
                       ))}
                     </div>
@@ -1500,7 +1500,7 @@ export default function AdminNews() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-20">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-500 fill-current" />
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground fill-current" />
               </div>
             )}
           </DialogContent>

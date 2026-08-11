@@ -16,6 +16,7 @@ import { trackClientMetric } from "./lib/perf";
 import { InstallBanner, PwaReengageBanner } from "@/components/pwa";
 import { NetworkStatusNotification } from "@/components/network-status";
 import { isCachedSupportAgent } from "@/lib/user-role";
+import { useExchangeName, useAccentTheme } from "@/hooks/use-exchange-name";
 
 // Eager load critical pages
 import HomePage from "@/pages/home";
@@ -265,12 +266,31 @@ function Router() {
   );
 }
 
+function DocumentTitle() {
+  const exchangeName = useExchangeName();
+  useEffect(() => {
+    document.title = `${exchangeName} - Global Crypto Trading Platform`;
+  }, [exchangeName]);
+  return null;
+}
+
+function AccentThemeSync() {
+  const accentTheme = useAccentTheme();
+  useEffect(() => {
+    document.documentElement.setAttribute('data-accent', accentTheme);
+    try { localStorage.setItem('becxus-accent', accentTheme); } catch {}
+  }, [accentTheme]);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <StickyNotificationsProvider>
           <div className="min-h-screen becxus-bg">
+            <DocumentTitle />
+            <AccentThemeSync />
             <Toaster />
             <NetworkStatusNotification />
             <InstallBanner />

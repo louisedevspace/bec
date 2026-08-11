@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { formatUsdNumber } from '@/utils/format-utils';
 
@@ -119,18 +116,16 @@ export function FuturesTradingForm({ onTradeSubmitted }: FuturesTradingFormProps
 
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Futures Trading</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="symbol">Symbol</Label>
+    <div className="w-full max-w-md bg-card rounded-xl border border-border p-4">
+      <h3 className="text-sm font-semibold text-foreground mb-4">Futures Trading</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Symbol</label>
           <Select value={symbol} onValueChange={setSymbol}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10 bg-background border-border rounded-lg text-foreground text-sm focus:ring-1 focus:ring-ring">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover border-border">
               <SelectItem value="BTC/USDT">BTC/USDT</SelectItem>
               <SelectItem value="ETH/USDT">ETH/USDT</SelectItem>
               <SelectItem value="BNB/USDT">BNB/USDT</SelectItem>
@@ -141,39 +136,55 @@ export function FuturesTradingForm({ onTradeSubmitted }: FuturesTradingFormProps
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="side">Side</Label>
-          <Select value={side} onValueChange={(value: 'long' | 'short') => setSide(value)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="long">Long</SelectItem>
-              <SelectItem value="short">Short</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Long/Short Buttons */}
+        <div>
+          <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Side</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSide('long')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                side === 'long'
+                  ? 'bg-buy text-success-foreground'
+                  : 'bg-muted text-muted-foreground border border-border hover:text-foreground'
+              }`}
+            >
+              LONG
+            </button>
+            <button
+              type="button"
+              onClick={() => setSide('short')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                side === 'short'
+                  ? 'bg-sell text-danger-foreground'
+                  : 'bg-muted text-muted-foreground border border-border hover:text-foreground'
+              }`}
+            >
+              SHORT
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount (USDT)</Label>
+        <div>
+          <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Amount (USDT)</label>
           <Input
-            id="amount"
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Enter amount"
             min="0"
             step="0.01"
+            className="h-10 bg-background border-border rounded-lg text-foreground text-sm tabular-nums focus:ring-1 focus:ring-ring"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="duration">Duration</Label>
+        <div>
+          <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Duration</label>
           <Select value={duration.toString()} onValueChange={(value) => setDuration(parseInt(value))}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10 bg-background border-border rounded-lg text-foreground text-sm focus:ring-1 focus:ring-ring">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover border-border">
               {durationOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value.toString()}>
                   {option.label} ({option.profitRatio}% profit)
@@ -184,25 +195,30 @@ export function FuturesTradingForm({ onTradeSubmitted }: FuturesTradingFormProps
         </div>
 
         {currentPrice && (
-          <div className="text-sm text-muted-foreground">
-            Current Price: ${formatUsdNumber(currentPrice)}
+          <div className="flex justify-between items-center bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+            <span className="text-muted-foreground text-xs">Current Price</span>
+            <span className="text-foreground text-xs font-medium tabular-nums">${formatUsdNumber(currentPrice)}</span>
           </div>
         )}
 
-        <div className="text-sm text-muted-foreground">
-          Profit Ratio: {profitRatio}%
+        <div className="flex justify-between items-center bg-muted/40 rounded-lg px-3 py-2.5 border border-border">
+          <span className="text-muted-foreground text-xs">Profit Ratio</span>
+          <span className="text-buy text-xs font-medium tabular-nums">{profitRatio}%</span>
         </div>
 
-        <Button
+        <button
+          type="button"
           onClick={handleSubmitTrade}
           disabled={isLoading}
-          className="w-full"
-          variant="default"
+          className={`w-full py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+            side === 'long'
+              ? 'bg-buy hover:bg-buy/90 text-success-foreground'
+              : 'bg-sell hover:bg-sell/90 text-danger-foreground'
+          }`}
         >
           {isLoading ? 'Starting Trade...' : 'Start Trade'}
-        </Button>
-      </CardContent>
-    </Card>
+        </button>
+      </div>
+    </div>
   );
 }
-

@@ -88,110 +88,112 @@ export default function ExchangePage() {
   const tradingFeeRate = Number(selectedPair?.trading_fee || "0");
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Mode Tabs */}
-      <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e] flex">
-        <button
-          onClick={() => setTradingMode("spot")}
-          className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition-colors border-b-2 ${
-            tradingMode === "spot"
-              ? "text-white border-blue-500"
-              : "text-gray-500 border-transparent hover:text-gray-300"
-          }`}
-        >
-          <TrendingUp size={14} />
-          Spot
-        </button>
-        {goldEnabled && (
+      <div className="flex-shrink-0 bg-card border-b border-border px-3 py-2 overflow-x-auto">
+        <div className="inline-flex items-center gap-1 bg-muted rounded-full p-1 min-w-max">
           <button
-            onClick={() => setTradingMode("gold")}
-            className={`flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition-colors border-b-2 ${
-              tradingMode === "gold"
-                ? "text-yellow-400 border-yellow-500"
-                : "text-gray-500 border-transparent hover:text-gray-300"
+            onClick={() => setTradingMode("spot")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+              tradingMode === "spot"
+                ? "bg-card text-foreground shadow-sm animate-in fade-in zoom-in-95"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <GoldModeIcon size={14} />
-            Gold
+            <TrendingUp size={14} />
+            Spot
           </button>
-        )}
-        <Link
-          href="/futures"
-          className="flex items-center gap-1.5 px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-300 transition-colors"
-        >
-          <Zap size={14} />
-          Futures
-        </Link>
+          {goldEnabled && (
+            <button
+              onClick={() => setTradingMode("gold")}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                tradingMode === "gold"
+                  ? "bg-card text-warning shadow-sm animate-in fade-in zoom-in-95"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <GoldModeIcon size={14} />
+              Gold
+            </button>
+          )}
+          <Link
+            href="/futures"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-card/60 transition-all duration-200 whitespace-nowrap"
+          >
+            <Zap size={14} />
+            Futures
+          </Link>
+        </div>
       </div>
 
       {/* Gold Mode */}
       {tradingMode === "gold" && (
         <>
           {/* Gold Header */}
-          <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e]">
+          <div className="flex-shrink-0 bg-card border-b border-border">
             <div className="w-full px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <GoldModeIcon size={36} />
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-white text-sm font-semibold">XAU/USDT</span>
-                      <span className="text-gray-500 text-xs hidden sm:inline">Gold Spot</span>
+                      <span className="text-foreground text-sm font-semibold">XAU/USDT</span>
+                      <span className="text-muted-foreground text-xs hidden sm:inline">Gold Spot</span>
                     </div>
-                    <p className="text-gray-500 text-[11px] mt-0.5">Gold / Tether</p>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">Gold / Tether</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={16} className="text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-lg md:text-xl tabular-nums">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <TrendingUp size={16} className="text-warning" />
+                  <span className="text-warning font-bold text-lg md:text-xl tabular-nums">
                     {getFormattedPrice("XAU")}
                   </span>
-                  <span className="text-gray-500 text-xs">USDT</span>
+                  <span className="text-muted-foreground text-xs">USDT</span>
                 </div>
               </div>
             </div>
-            <div className="border-t border-[#1e1e1e]">
+            <div className="border-t border-border">
               <MarketStatsBar symbol="XAU" />
             </div>
           </div>
 
           {/* Main Trading Area */}
-          <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
+          <div className="flex-1 w-full px-2 sm:px-3 py-2 sm:py-3 flex flex-col gap-2 sm:gap-3 min-h-0">
             {/* Top Row: Chart + Order Book */}
-            <div className="flex flex-col lg:flex-row gap-2 lg:h-[520px] flex-shrink-0">
+            <div className="flex flex-col md:flex-row gap-2 sm:gap-3 md:h-[480px] lg:h-[520px] flex-shrink-0">
               {/* Mobile Chart Toggle */}
               <button
                 onClick={() => setShowMobileChart(!showMobileChart)}
-                className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#2a2a2a] transition-colors order-0"
+                className="md:hidden flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors order-0"
               >
                 <BarChart3 size={16} />
                 <span className="text-xs font-medium">{showMobileChart ? "Hide Chart" : "Show Chart"}</span>
               </button>
 
-              {/* Price Chart — Desktop */}
-              <div className="flex-1 order-1 min-h-0 relative z-10 hidden lg:block lg:h-full" style={{ contain: 'layout style' }}>
+              {/* Price Chart — Desktop/Tablet */}
+              <div className="flex-1 order-1 min-h-0 relative z-10 hidden md:block md:h-full" style={{ contain: 'layout style' }}>
                 <PriceChart symbol="XAU" className="h-full w-full" />
               </div>
 
               {/* Price Chart — Mobile */}
               {showMobileChart && (
-                <div className="order-1 relative z-10 h-[350px] lg:hidden">
+                <div className="order-1 relative z-10 h-[350px] md:hidden">
                   <PriceChart symbol="XAU" className="h-full w-full" />
                 </div>
               )}
 
               {/* Order Book */}
-              <div className="lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] h-[420px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
+              <div className="md:w-[320px] lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-card rounded-xl border border-border h-[420px] md:h-full min-h-0" style={{ contain: 'layout style' }}>
                 <OrderBook pair="XAU/USDT" className="h-full" onPriceSelect={setSelectedPrice} />
               </div>
             </div>
 
             {/* Bottom Row: Trading Form + Order Management */}
-            <div className="flex flex-col lg:flex-row gap-2">
-              <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-start gap-2 sm:gap-3">
+              <div className="lg:w-[380px] xl:w-[440px] flex-shrink-0 lg:sticky lg:top-4">
                 <TradingForm pair="XAU/USDT" type="spot" tradingFeeRate={0.002} suggestedPrice={selectedPrice} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <OrderManagement />
               </div>
             </div>
@@ -203,105 +205,105 @@ export default function ExchangePage() {
       {tradingMode === "spot" && (
         <>
           {/* Trading Pair Header */}
-          <div className="flex-shrink-0 bg-[#111] border-b border-[#1e1e1e]">
+          <div className="flex-shrink-0 bg-card border-b border-border">
             <div className="w-full px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 relative">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 relative min-w-0">
                   <CryptoIcon symbol={baseAsset} size="lg" />
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowPairMenu(!showPairMenu)}
-                        className="bg-[#1a1a1a] text-white text-sm font-semibold px-3 py-1 rounded-lg border border-[#2a2a2a] hover:bg-[#222] transition-colors flex items-center gap-1.5"
+                        className="bg-muted text-foreground text-sm font-semibold px-3 py-1 rounded-md border border-border hover:bg-muted/70 transition-colors flex items-center gap-1.5"
                       >
                         {currentPair}
-                        <ChevronDown size={14} className={`text-gray-400 transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={14} className={`text-muted-foreground transition-transform ${showPairMenu ? 'rotate-180' : ''}`} />
                       </button>
-                      <span className="text-gray-500 text-xs hidden sm:inline">Spot Trading</span>
+                      <span className="text-muted-foreground text-xs hidden sm:inline">Spot Trading</span>
                     </div>
-                    <p className="text-gray-500 text-[11px] mt-0.5">{cryptoName} / Tether</p>
+                    <p className="text-muted-foreground text-[11px] mt-0.5">{cryptoName} / Tether</p>
                   </div>
 
                   {showPairMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowPairMenu(false)} />
-                      <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-xl overflow-hidden">
-                        <div className="max-h-64 overflow-y-auto">
+                      <div className="absolute top-full left-0 mt-2 z-50 w-56 bg-popover border border-border rounded-xl shadow-sm overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
                           {pairs.length > 0 ? pairs.map(p => (
                             <button
                               key={p.id}
                               onClick={() => { setCurrentPair(p.symbol); setShowPairMenu(false); }}
-                              className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-[#222] transition-colors ${
-                                p.symbol === currentPair ? 'bg-[#222] text-white' : 'text-gray-300'
+                              className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-muted transition-colors ${
+                                p.symbol === currentPair ? 'bg-muted text-foreground' : 'text-foreground/80'
                               }`}
                             >
                               <div className="flex items-center gap-2">
                                 <CryptoIcon symbol={p.base_asset} size="xs" />
                                 <span className="font-semibold text-sm">{p.base_asset}</span>
-                                <span className="text-gray-600">/</span>
-                                <span className="text-gray-400 text-sm">{p.quote_asset}</span>
+                                <span className="text-muted-foreground">/</span>
+                                <span className="text-muted-foreground text-sm">{p.quote_asset}</span>
                               </div>
-                              {p.symbol === currentPair && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                              {p.symbol === currentPair && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                             </button>
                           )) : (
-                            <div className="px-4 py-3 text-gray-500 text-xs">No pairs available</div>
+                            <div className="px-4 py-3 text-muted-foreground text-xs">No pairs available</div>
                           )}
                         </div>
                       </div>
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={16} className="text-green-400" />
-                  <span className="text-green-400 font-bold text-lg md:text-xl tabular-nums">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <TrendingUp size={16} className="text-buy" />
+                  <span className="text-buy font-bold text-lg md:text-xl tabular-nums">
                     {getFormattedPrice(baseAsset)}
                   </span>
-                  <span className="text-gray-500 text-xs">{quoteAsset}</span>
+                  <span className="text-muted-foreground text-xs">{quoteAsset}</span>
                 </div>
               </div>
             </div>
-            <div className="border-t border-[#1e1e1e]">
+            <div className="border-t border-border">
               <MarketStatsBar symbol={baseAsset} />
             </div>
           </div>
 
           {/* Main Trading Area */}
-          <div className="flex-1 w-full px-2 py-2 flex flex-col gap-2 min-h-0">
+          <div className="flex-1 w-full px-2 sm:px-3 py-2 sm:py-3 flex flex-col gap-2 sm:gap-3 min-h-0">
             {/* Top Row: Chart + Order Book */}
-            <div className="flex flex-col lg:flex-row gap-2 lg:h-[520px] flex-shrink-0">
+            <div className="flex flex-col md:flex-row gap-2 sm:gap-3 md:h-[480px] lg:h-[520px] flex-shrink-0">
               {/* Mobile Chart Toggle */}
               <button
                 onClick={() => setShowMobileChart(!showMobileChart)}
-                className="lg:hidden flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-white hover:border-[#2a2a2a] transition-colors order-0"
+                className="md:hidden flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors order-0"
               >
                 <BarChart3 size={16} />
                 <span className="text-xs font-medium">{showMobileChart ? "Hide Chart" : "Show Chart"}</span>
               </button>
 
-              {/* Price Chart — Desktop: always visible */}
-              <div className="flex-1 order-1 min-h-0 relative z-10 hidden lg:block lg:h-full" style={{ contain: 'layout style' }}>
+              {/* Price Chart — Desktop/Tablet: always visible */}
+              <div className="flex-1 order-1 min-h-0 relative z-10 hidden md:block md:h-full" style={{ contain: 'layout style' }}>
                 <PriceChart symbol={baseAsset} className="h-full w-full" />
               </div>
 
               {/* Price Chart — Mobile: only when toggled */}
               {showMobileChart && (
-                <div className="order-1 relative z-10 h-[350px] lg:hidden">
+                <div className="order-1 relative z-10 h-[350px] md:hidden">
                   <PriceChart symbol={baseAsset} className="h-full w-full" />
                 </div>
               )}
 
               {/* Order Book */}
-              <div className="lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-[#111] rounded-2xl border border-[#1e1e1e] h-[420px] lg:h-full min-h-0" style={{ contain: 'layout style' }}>
+              <div className="md:w-[320px] lg:w-[380px] xl:w-[420px] flex-shrink-0 order-2 bg-card rounded-xl border border-border h-[420px] md:h-full min-h-0" style={{ contain: 'layout style' }}>
                 <OrderBook pair={currentPair} className="h-full" onPriceSelect={setSelectedPrice} />
               </div>
             </div>
 
             {/* Bottom Row: Trading Form + Order Management */}
-            <div className="flex flex-col lg:flex-row gap-2">
-              <div className="lg:w-[400px] xl:w-[440px] flex-shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-start gap-2 sm:gap-3">
+              <div className="lg:w-[380px] xl:w-[440px] flex-shrink-0 lg:sticky lg:top-4">
                 <TradingForm pair={currentPair} type="spot" tradingFeeRate={tradingFeeRate} suggestedPrice={selectedPrice} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <OrderManagement />
               </div>
             </div>

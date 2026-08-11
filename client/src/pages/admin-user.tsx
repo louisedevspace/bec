@@ -329,16 +329,16 @@ export default function AdminUsers() {
 
   const getStatusBadge = (user: any) => {
     if (user.email_confirmed_at && user.is_verified) {
-      return <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">Verified</Badge>;
+      return <Badge className="bg-success/10 text-success border-success/20 text-[10px]">Verified</Badge>;
     }
-    return <Badge variant="outline" className="text-orange-400 border-orange-500/20 bg-orange-500/10 text-[10px]">Pending</Badge>;
+    return <Badge variant="outline" className="text-warning border-warning/20 bg-warning/10 text-[10px]">Pending</Badge>;
   };
 
   const getActivityBadge = (user: any) => {
     if (user.is_active === false) {
-      return <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Inactive" />;
+      return <span className="w-2 h-2 rounded-full bg-danger flex-shrink-0" title="Inactive" />;
     }
-    return <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Active" />;
+    return <span className="w-2 h-2 rounded-full bg-success flex-shrink-0" title="Active" />;
   };
 
   const handleToggleSort = (field: SortField) => {
@@ -428,35 +428,35 @@ export default function AdminUsers() {
         {/* ---- Header ---- */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">User Management</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              {stats.total} total users &middot; {stats.newToday > 0 && <span className="text-green-400">{stats.newToday} new today</span>}
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">User Management</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              {stats.total} total users &middot; {stats.newToday > 0 && <span className="text-success">{stats.newToday} new today</span>}
             </p>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={() => setViewMode(v => v === 'cards' ? 'compact' : 'cards')}
-              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
+              className="inline-flex items-center rounded-lg text-[11px] sm:text-xs font-medium border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground h-7 sm:h-8 px-2 sm:px-3 transition-colors"
               title={viewMode === 'cards' ? 'Switch to compact view' : 'Switch to card view'}
             >
-              <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />
+              <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
               {viewMode === 'cards' ? 'Compact' : 'Cards'}
             </button>
             <button
               onClick={() => setShowPasswords(!showPasswords)}
-              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
+              className="inline-flex items-center rounded-lg text-[11px] sm:text-xs font-medium border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              {showPasswords ? <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" /> : <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />}
+              {showPasswords ? <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" /> : <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />}
               {showPasswords ? 'Hide' : 'Show'} Auth
             </button>
             <button
               onClick={handleExportCSV}
-              className="inline-flex items-center rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-400 hover:bg-[#1a1a1a] hover:text-white h-7 sm:h-8 px-2 sm:px-3 transition-colors"
+              className="inline-flex items-center rounded-lg text-[11px] sm:text-xs font-medium border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground h-7 sm:h-8 px-2 sm:px-3 transition-colors"
             >
-              <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />Export
+              <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Export
             </button>
-            <Button onClick={fetchUsers} size="sm" className="rounded-xl text-[11px] sm:text-xs bg-blue-600 hover:bg-blue-700 h-7 sm:h-8">
-              <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 fill-current" />Refresh
+            <Button onClick={fetchUsers} size="sm" className="rounded-lg text-[11px] sm:text-xs h-7 sm:h-8">
+              <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />Refresh
             </Button>
           </div>
         </div>
@@ -464,31 +464,29 @@ export default function AdminUsers() {
         {/* ---- Action Buttons Grid ---- */}
         <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5 sm:gap-2">
           {[
-            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />, label: 'Deposit Requests', color: 'emerald', badge: pendingCounts.deposits },
-            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />, label: 'Withdraw Requests', color: 'blue', badge: pendingCounts.withdrawals },
+            { onClick: () => setShowDepositRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Deposit Requests', color: 'success', badge: pendingCounts.deposits },
+            { onClick: () => setShowWithdrawRequestsModal(true), icon: <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: 'Withdraw Requests', color: 'info', badge: pendingCounts.withdrawals },
           ].map((btn, i) => {
-            const colorClasses = btn.color === 'emerald' ? {
-              hoverBorder: 'hover:border-emerald-500/30', hoverBg: 'hover:bg-emerald-500/10',
-              bg: 'bg-emerald-500/10', groupHoverBg: 'group-hover:bg-emerald-500/20', text: 'text-emerald-400', groupHoverText: 'group-hover:text-emerald-400',
+            const colorClasses = btn.color === 'success' ? {
+              bg: 'bg-success/10', text: 'text-success',
             } : {
-              hoverBorder: 'hover:border-blue-500/30', hoverBg: 'hover:bg-blue-500/10',
-              bg: 'bg-blue-500/10', groupHoverBg: 'group-hover:bg-blue-500/20', text: 'text-blue-400', groupHoverText: 'group-hover:text-blue-400',
+              bg: 'bg-info/10', text: 'text-info',
             };
             return (
             <button
               key={i}
               onClick={btn.onClick}
-              className={`group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-2 sm:p-3 ${colorClasses.hoverBorder} ${colorClasses.hoverBg} transition-all duration-200`}
+              className="group relative flex flex-col items-center gap-1 sm:gap-1.5 bg-card border border-border rounded-xl p-2 sm:p-3 hover:border-primary/40 transition-colors"
             >
-              <div className={`relative w-7 h-7 sm:w-9 sm:h-9 ${colorClasses.bg} rounded-lg sm:rounded-xl flex items-center justify-center ${colorClasses.groupHoverBg} transition-colors ${colorClasses.text}`}>
+              <div className={`relative w-7 h-7 sm:w-9 sm:h-9 ${colorClasses.bg} rounded-lg flex items-center justify-center transition-colors ${colorClasses.text}`}>
                 {btn.icon}
                 {btn.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-0.5 sm:px-1 bg-danger text-danger-foreground text-[8px] sm:text-[9px] font-bold rounded-full flex items-center justify-center">
                     {btn.badge > 99 ? '99+' : btn.badge}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] sm:text-[11px] font-medium text-gray-400 ${colorClasses.groupHoverText} transition-colors text-center leading-tight`}>
+              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center leading-tight">
                 {btn.label}
               </span>
             </button>
@@ -497,9 +495,9 @@ export default function AdminUsers() {
         </div>
 
         {/* ---- Filter & Search Bar ---- */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           {/* Status Filter Tabs */}
-          <div className="border-b border-[#1e1e1e] px-4 pt-3 pb-0 overflow-x-auto">
+          <div className="border-b border-border px-4 pt-3 pb-0 overflow-x-auto">
             <div className="flex gap-1 min-w-max">
               {filterTabs.map(tab => (
                 <button
@@ -507,13 +505,13 @@ export default function AdminUsers() {
                   onClick={() => setStatusFilter(tab.key)}
                   className={`inline-flex items-center gap-1.5 rounded-t-lg text-xs font-medium px-3 py-2 border-b-2 transition-all
                     ${statusFilter === tab.key
-                      ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                      : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                      ? 'border-primary text-primary bg-primary/5'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                 >
                   {tab.icon}
                   <span>{tab.label}</span>
                   <span className={`text-[10px] px-1.5 py-0 rounded-full font-semibold
-                    ${statusFilter === tab.key ? 'bg-blue-500/20 text-blue-400' : 'bg-[#1a1a1a] text-gray-500'}`}>
+                    ${statusFilter === tab.key ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {tab.count}
                   </span>
                 </button>
@@ -522,45 +520,45 @@ export default function AdminUsers() {
           </div>
 
           {/* Search + Sort + Page Size */}
-          <div className="p-3 sm:p-4 border-b border-[#1e1e1e]">
+          <div className="p-3 sm:p-4 border-b border-border">
             <div className="flex flex-col gap-3">
               <div className="relative w-full sm:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 fill-current" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search name, email, ID, phone..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-8 rounded-xl border-[#1e1e1e] bg-[#0a0a0a] text-sm h-9 text-white placeholder:text-gray-600 focus:border-blue-500"
+                  className="pl-9 pr-8 rounded-lg text-sm h-9"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                    <X size={14} className="fill-current" />
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X size={14} />
                   </button>
                 )}
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {statusFilter !== 'deleted' ? (
-                  <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
-                    <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
+                  <div className="flex items-center bg-muted border border-border rounded-lg overflow-hidden flex-shrink-0">
+                    <span className="text-[10px] text-muted-foreground px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Sort</span>
                     {sortOptions.map(opt => (
                       <button
                         key={opt.field}
                         onClick={() => handleToggleSort(opt.field)}
                         className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors flex items-center gap-0.5 sm:gap-1 whitespace-nowrap
                           ${sortField === opt.field
-                            ? 'bg-blue-500/10 text-blue-400 font-semibold'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-card'}`}
                       >
                         {opt.label}
                         {sortField === opt.field && (
-                          sortDir === 'asc' ? <SortAsc size={10} className="fill-current" /> : <SortDesc size={10} className="fill-current" />
+                          sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />
                         )}
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
-                    <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Type</span>
+                  <div className="flex items-center bg-muted border border-border rounded-lg overflow-hidden flex-shrink-0">
+                    <span className="text-[10px] text-muted-foreground px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Type</span>
                     {[
                       { key: 'all', label: 'All' },
                       { key: 'admin', label: 'Admin Deleted' },
@@ -571,8 +569,8 @@ export default function AdminUsers() {
                         onClick={() => setDeletedTypeFilter(option.key as 'all' | DeletionType)}
                         className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors whitespace-nowrap
                           ${deletedTypeFilter === option.key
-                            ? 'bg-blue-500/10 text-blue-400 font-semibold'
-                            : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-card'}`}
                       >
                         {option.label}
                       </button>
@@ -580,21 +578,21 @@ export default function AdminUsers() {
                   </div>
                 )}
                 {/* Page size */}
-                <div className="flex items-center bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl overflow-hidden flex-shrink-0">
-                  <span className="text-[10px] text-gray-500 px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
+                <div className="flex items-center bg-muted border border-border rounded-lg overflow-hidden flex-shrink-0">
+                  <span className="text-[10px] text-muted-foreground px-2 sm:px-2.5 flex-shrink-0 uppercase tracking-wide">Show</span>
                   {PAGE_SIZE_OPTIONS.map(size => (
                     <button
                       key={size}
                       onClick={() => setPageSize(size)}
                       className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-1.5 transition-colors whitespace-nowrap
-                        ${pageSize === size ? 'bg-blue-500/10 text-blue-400 font-semibold' : 'text-gray-500 hover:text-gray-300 hover:bg-[#1a1a1a]'}`}
+                        ${pageSize === size ? 'bg-primary/10 text-primary font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-card'}`}
                     >
                       {size}
                     </button>
                   ))}
                 </div>
                 {/* Result count */}
-                <span className="text-[10px] sm:text-[11px] text-gray-500 flex-shrink-0">
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground flex-shrink-0">
                   {activeResultCount} result{activeResultCount !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -605,68 +603,68 @@ export default function AdminUsers() {
           <div className="p-4">
             {loading ? (
               <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto" />
-                <p className="mt-3 text-sm text-gray-500">Loading users...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                <p className="mt-3 text-sm text-muted-foreground">Loading users...</p>
               </div>
             ) : error ? (
               <div className="text-center py-8">
-                <div className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl p-4 text-sm inline-flex items-center gap-2">
-                  <AlertTriangle size={16} className="fill-current" />{error}
+                <div className="bg-danger/10 text-danger border border-danger/20 rounded-xl p-4 text-sm inline-flex items-center gap-2">
+                  <AlertTriangle size={16} />{error}
                 </div>
               </div>
             ) : activeResultCount === 0 ? (
               <div className="text-center py-16">
-                <div className="w-16 h-16 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  {statusFilter === 'deleted' ? <Shield className="h-8 w-8 text-gray-600 fill-current" /> : <Users className="h-8 w-8 text-gray-600 fill-current" />}
+                <div className="w-16 h-16 bg-muted rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                  {statusFilter === 'deleted' ? <Shield className="h-8 w-8 text-muted-foreground" /> : <Users className="h-8 w-8 text-muted-foreground" />}
                 </div>
-                <p className="text-gray-500 text-sm mb-1">{statusFilter === 'deleted' ? 'No deleted records found' : 'No users found'}</p>
-                <p className="text-gray-600 text-xs">
+                <p className="text-muted-foreground text-sm mb-1">{statusFilter === 'deleted' ? 'No deleted records found' : 'No users found'}</p>
+                <p className="text-muted-foreground/70 text-xs">
                   {searchQuery ? 'Try adjusting your search or filters' : statusFilter === 'deleted' ? 'No deleted users match the current filter' : 'No users match the current filter'}
                 </p>
               </div>
             ) : statusFilter === 'deleted' ? (
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
                 {paginatedDeletedUsers.map((row) => (
-                  <div key={row.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
+                  <div key={row.id} className="bg-muted/40 border border-border rounded-xl p-3 sm:p-4 md:p-5 hover:border-primary/30 transition-colors">
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={row.deletion_type === 'admin' ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'}>
+                        <Badge className={row.deletion_type === 'admin' ? 'bg-warning/15 text-warning border-warning/30' : 'bg-info/15 text-info border-info/30'}>
                           {row.deletion_type === 'admin' ? 'Admin Deleted' : 'Self Deleted'}
                         </Badge>
-                        <span className="text-xs text-gray-500">{timeAgo(row.deleted_at)}</span>
+                        <span className="text-xs text-muted-foreground">{timeAgo(row.deleted_at)}</span>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDateTime(row.deleted_at)}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(row.deleted_at)}</span>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-md bg-[#0d0d0d] border border-[#1f1f1f] p-3">
-                        <p className="text-xs text-gray-500 mb-1">Deleted Account</p>
-                        <p className="text-white font-medium">{row.target_full_name || 'Unknown user'}</p>
-                        <p className="text-gray-300">{row.target_email || 'No email snapshot'}</p>
-                        <p className="text-xs text-gray-500 mt-1">
+                      <div className="rounded-md bg-card border border-border p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Deleted Account</p>
+                        <p className="text-foreground font-medium">{row.target_full_name || 'Unknown user'}</p>
+                        <p className="text-foreground/80">{row.target_email || 'No email snapshot'}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                           ID: {row.target_display_id || row.target_user_id || 'Unavailable'}
                         </p>
                       </div>
 
-                      <div className="rounded-md bg-[#0d0d0d] border border-[#1f1f1f] p-3">
-                        <p className="text-xs text-gray-500 mb-1">Deletion Source</p>
+                      <div className="rounded-md bg-card border border-border p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Deletion Source</p>
                         {row.deletion_type === 'admin' ? (
                           <>
-                            <p className="text-white font-medium">Admin action</p>
-                            <p className="text-gray-300">{row.actor_full_name || row.actor_email || 'Unknown admin'}</p>
-                            <p className="text-xs text-gray-500 mt-1">Admin ID: {row.actor_user_id || 'Unavailable'}</p>
+                            <p className="text-foreground font-medium">Admin action</p>
+                            <p className="text-foreground/80">{row.actor_full_name || row.actor_email || 'Unknown admin'}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Admin ID: {row.actor_user_id || 'Unavailable'}</p>
                           </>
                         ) : (
                           <>
-                            <p className="text-white font-medium">User self-deleted</p>
-                            <p className="text-gray-300">Initiated by the account owner</p>
+                            <p className="text-foreground font-medium">User self-deleted</p>
+                            <p className="text-foreground/80">Initiated by the account owner</p>
                           </>
                         )}
                       </div>
                     </div>
 
                     {row.reason && (
-                      <div className="text-xs text-gray-400 border-t border-[#1f1f1f] pt-3 mt-3">
+                      <div className="text-xs text-muted-foreground border-t border-border pt-3 mt-3">
                         Reason: {row.reason}
                       </div>
                     )}
@@ -678,62 +676,62 @@ export default function AdminUsers() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#1e1e1e]">
+                    <tr className="border-b border-border">
                       {['User', 'Email', 'Status', 'KYC', 'Portfolio', 'Trades', 'Joined', 'Actions'].map(h => (
-                        <th key={h} className="text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 py-2.5">{h}</th>
+                        <th key={h} className="text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2.5">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#141414]">
+                  <tbody className="divide-y divide-border">
                     {paginatedUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-[#0d0d0d] transition-colors group">
+                      <tr key={user.id} className="hover:bg-muted/40 transition-colors group">
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2.5">
                             <div className="relative flex-shrink-0">
                               <div
-                                className={`w-8 h-8 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center overflow-hidden ${user.profile_picture ? 'cursor-pointer hover:ring-1 hover:ring-blue-500/50' : ''}`}
+                                className={`w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden ${user.profile_picture ? 'cursor-pointer hover:ring-1 hover:ring-primary/50' : ''}`}
                                 onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                               >
                                 {user.profile_picture
                                   ? <img src={getImageDisplayUrl(user.profile_picture)} alt="" className="w-full h-full object-cover" />
-                                  : <User className="h-3.5 w-3.5 text-blue-400 fill-current" />}
+                                  : <User className="h-3.5 w-3.5 text-primary" />}
                               </div>
                               {getActivityBadge(user)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-white font-medium truncate text-[12px]">{user.full_name || user.email?.split('@')[0]}</p>
-                              <p className="text-gray-600 text-[10px] font-mono">@{user.username || user.email?.split('@')[0]}</p>
+                              <p className="text-foreground font-medium truncate text-[12px]">{user.full_name || user.email?.split('@')[0]}</p>
+                              <p className="text-muted-foreground text-[10px] font-mono">@{user.username || user.email?.split('@')[0]}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-gray-400 truncate max-w-[180px]">{user.email}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px]">{user.email}</td>
                         <td className="px-3 py-2.5">{getStatusBadge(user)}</td>
                         <td className="px-3 py-2.5">
                           <Badge className={`text-[10px] px-1.5 py-0 ${
-                            user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400' :
-                            user.kyc_status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                            user.kyc_status === 'rejected' ? 'bg-red-500/10 text-red-400' :
-                            'bg-gray-500/10 text-gray-500'
+                            user.kyc_status === 'approved' ? 'bg-success/10 text-success' :
+                            user.kyc_status === 'pending' ? 'bg-warning/10 text-warning' :
+                            user.kyc_status === 'rejected' ? 'bg-danger/10 text-danger' :
+                            'bg-muted text-muted-foreground'
                           }`}>
                             {user.kyc_status || 'None'}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 text-white font-semibold">{formatCurrency(user.total_portfolio_value || 0)}</td>
-                        <td className="px-3 py-2.5 text-gray-400">{user.trade_count || 0}</td>
-                        <td className="px-3 py-2.5 text-gray-500">{timeAgo(user.created_at)}</td>
+                        <td className="px-3 py-2.5 text-foreground font-semibold tabular-nums">{formatCurrency(user.total_portfolio_value || 0)}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{user.trade_count || 0}</td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{timeAgo(user.created_at)}</td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-1 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                             <button onClick={() => handleChangePassword(user)}
-                              className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Change Password">
-                              <Key size={12} className="fill-current" />
+                              className="w-7 h-7 rounded-lg bg-warning/10 text-warning hover:bg-warning/20 flex items-center justify-center transition-colors" title="Change Password">
+                              <Key size={12} />
                             </button>
                             <button onClick={() => handleOpenManagement(user)}
-                              className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 flex items-center justify-center transition-colors" title="Manage User">
-                              <Settings size={12} className="fill-current" />
+                              className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center transition-colors" title="Manage User">
+                              <Settings size={12} />
                             </button>
                             <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
-                              className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 flex items-center justify-center transition-colors" title="Futures Settings">
-                              <TrendingUp size={12} className="fill-current" />
+                              className="w-7 h-7 rounded-lg bg-info/10 text-info hover:bg-info/20 flex items-center justify-center transition-colors" title="Futures Settings">
+                              <TrendingUp size={12} />
                             </button>
                           </div>
                         </td>
@@ -746,7 +744,7 @@ export default function AdminUsers() {
               /* ===== CARD VIEW ===== */
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
                 {paginatedUsers.map(user => (
-                  <div key={user.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 hover:border-[#2a2a2a] transition-all duration-200">
+                  <div key={user.id} className="bg-muted/40 border border-border rounded-xl p-3 sm:p-4 md:p-5 hover:border-primary/30 transition-colors">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
                       {/* Left Column - User Info */}
                       <div>
@@ -754,54 +752,54 @@ export default function AdminUsers() {
                         <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
                           <div className="relative flex-shrink-0">
                             <div
-                              className={`w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg sm:rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-[#111] ${user.profile_picture ? 'cursor-pointer hover:ring-blue-500/50' : ''}`}
+                              className={`w-9 h-9 sm:w-11 sm:h-11 bg-primary/10 rounded-lg sm:rounded-xl flex items-center justify-center overflow-hidden ring-2 ring-card ${user.profile_picture ? 'cursor-pointer hover:ring-primary/50' : ''}`}
                               onClick={() => user.profile_picture && handleViewProfilePicture(user.profile_picture, user.full_name || user.email)}
                             >
                               {user.profile_picture
                                 ? <img src={getImageDisplayUrl(user.profile_picture)} alt="Profile" className="w-full h-full object-cover" />
-                                : <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 fill-current" />}
+                                : <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
                             </div>
                             {user.is_active !== false && (
-                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 rounded-full ring-2 ring-[#111]" />
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-success rounded-full ring-2 ring-card" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{user.full_name || user.email}</h3>
+                            <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">{user.full_name || user.email}</h3>
                             <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap mt-0.5">
                               {getStatusBadge(user)}
-                              <span className="text-[10px] sm:text-xs font-mono text-blue-400 bg-blue-500/10 px-1 sm:px-1.5 py-0.5 rounded-md truncate max-w-[120px] sm:max-w-none">
+                              <span className="text-[10px] sm:text-xs font-mono text-primary bg-primary/10 px-1 sm:px-1.5 py-0.5 rounded-md truncate max-w-[120px] sm:max-w-none">
                                 @{user.username || user.email?.split('@')[0] || 'unknown'}
                               </span>
-                              <span className="text-[9px] sm:text-[10px] text-gray-500 hidden sm:inline">#{user.display_id || user.id.substring(0, 8)}</span>
+                              <span className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:inline">#{user.display_id || user.id.substring(0, 8)}</span>
                             </div>
                           </div>
                           {/* Role Badge */}
                           {user.role === 'admin' && (
-                            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px] sm:text-[10px] flex-shrink-0">
-                              <Shield size={10} className="mr-0.5 sm:mr-1 fill-current" />Admin
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] sm:text-[10px] flex-shrink-0">
+                              <Shield size={10} className="mr-0.5 sm:mr-1" />Admin
                             </Badge>
                           )}
                         </div>
 
                         {/* Contact Info */}
                         <div className="space-y-1 sm:space-y-1.5 text-[11px] sm:text-xs">
-                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                             <span className="truncate">{user.email}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                             <span className="truncate">Joined {formatDate(user.created_at)}</span>
-                            <span className="text-gray-600 text-[9px] sm:text-[10px] hidden sm:inline">({timeAgo(user.created_at)})</span>
+                            <span className="text-muted-foreground/70 text-[9px] sm:text-[10px] hidden sm:inline">({timeAgo(user.created_at)})</span>
                           </div>
                           {user.last_sign_in_at && (
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                              <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                              <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                               <span className="truncate">Last login {timeAgo(user.last_sign_in_at)}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
-                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 flex-shrink-0 fill-current" />
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                             <span>{user.phone || 'No phone'}</span>
                           </div>
                         </div>
@@ -809,26 +807,26 @@ export default function AdminUsers() {
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                           <button onClick={() => handleChangePassword(user)}
-                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <Key className="h-3 w-3 fill-current" />Password
+                            className="inline-flex items-center gap-1 rounded-lg text-[11px] sm:text-xs font-medium border border-warning/30 text-warning bg-warning/10 hover:bg-warning/20 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
+                            <Key className="h-3 w-3" />Password
                           </button>
                           <button onClick={() => handleOpenManagement(user)}
-                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:border-blue-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <Settings className="h-3 w-3 fill-current" />Manage
+                            className="inline-flex items-center gap-1 rounded-lg text-[11px] sm:text-xs font-medium border border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
+                            <Settings className="h-3 w-3" />Manage
                           </button>
                           <button onClick={() => { setSelectedFuturesUser(user); setShowFuturesSettingsModal(true); }}
-                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500/50 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
-                            <TrendingUp className="h-3 w-3 fill-current" />Futures
+                            className="inline-flex items-center gap-1 rounded-lg text-[11px] sm:text-xs font-medium border border-info/30 text-info bg-info/10 hover:bg-info/20 h-7 sm:h-8 px-2 sm:px-3 transition-colors">
+                            <TrendingUp className="h-3 w-3" />Futures
                           </button>
                           <button onClick={() => copyToClipboard(user.id)}
-                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg text-[11px] sm:text-xs font-medium border border-border text-muted-foreground bg-card hover:bg-muted hover:text-foreground h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
                             title="Copy User ID">
-                            {copiedId === user.id ? <Check className="h-3 w-3 text-green-400 fill-current" /> : <Copy className="h-3 w-3 fill-current" />}
+                            {copiedId === user.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                           </button>
                           <a href={`/admin/users/${user.id}`}
-                            className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border border-[#1e1e1e] text-gray-500 bg-[#0a0a0a] hover:bg-[#1a1a1a] hover:text-gray-300 h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg text-[11px] sm:text-xs font-medium border border-border text-muted-foreground bg-card hover:bg-muted hover:text-foreground h-7 sm:h-8 px-2 sm:px-2.5 transition-colors"
                             title="View Details">
-                            <Eye className="h-3 w-3 fill-current" />
+                            <Eye className="h-3 w-3" />
                           </a>
                         </div>
                       </div>
@@ -836,43 +834,43 @@ export default function AdminUsers() {
                       {/* Right Column - Portfolio & Status */}
                       <div className="space-y-3">
                         {/* Portfolio Card */}
-                        <div className="bg-[#0d0d0d] rounded-xl border border-[#1a1a1a] p-2.5 sm:p-3">
+                        <div className="bg-card rounded-xl border border-border p-2.5 sm:p-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center">
-                              <Coins className="h-3 w-3 text-blue-400 fill-current" />
+                            <div className="w-5 h-5 bg-primary/10 rounded flex items-center justify-center">
+                              <Coins className="h-3 w-3 text-primary" />
                             </div>
-                            <span className="text-[11px] sm:text-xs font-semibold text-gray-300">Portfolio & Trading</span>
+                            <span className="text-[11px] sm:text-xs font-semibold text-foreground/80">Portfolio & Trading</span>
                           </div>
                           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
-                              <p className="text-sm sm:text-base font-bold text-white">{user.assets_count || 0}</p>
-                              <p className="text-[9px] sm:text-[10px] text-gray-500">Assets</p>
+                            <div className="bg-muted rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-sm sm:text-base font-bold text-foreground tabular-nums">{user.assets_count || 0}</p>
+                              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Assets</p>
                             </div>
-                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
-                              <p className="text-[11px] sm:text-base font-bold text-white truncate">{formatCurrency(user.total_portfolio_value || 0)}</p>
-                              <p className="text-[9px] sm:text-[10px] text-gray-500">Value</p>
+                            <div className="bg-muted rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-[11px] sm:text-base font-bold text-foreground truncate tabular-nums">{formatCurrency(user.total_portfolio_value || 0)}</p>
+                              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Value</p>
                             </div>
-                            <div className="bg-[#0a0a0a] rounded-lg p-1.5 sm:p-2 text-center">
-                              <p className="text-sm sm:text-base font-bold text-white">{user.trade_count || 0}</p>
-                              <p className="text-[9px] sm:text-[10px] text-gray-500">Trades</p>
+                            <div className="bg-muted rounded-lg p-1.5 sm:p-2 text-center">
+                              <p className="text-sm sm:text-base font-bold text-foreground tabular-nums">{user.trade_count || 0}</p>
+                              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Trades</p>
                             </div>
                           </div>
                           {user.portfolio && user.portfolio.length > 0 && (
-                            <div className="mt-2.5 pt-2.5 border-t border-[#1a1a1a]">
+                            <div className="mt-2.5 pt-2.5 border-t border-border">
                               <div className="space-y-1">
                                 {user.portfolio.slice(0, 5).map((asset: any, index: number) => (
                                   <div key={index} className="flex justify-between text-[11px]">
-                                    <span className="font-semibold text-gray-300 flex items-center gap-1.5"><CryptoIcon symbol={asset.symbol} size="xs" />{asset.symbol}</span>
-                                    <span className="text-gray-500">
+                                    <span className="font-semibold text-foreground/80 flex items-center gap-1.5"><CryptoIcon symbol={asset.symbol} size="xs" />{asset.symbol}</span>
+                                    <span className="text-muted-foreground tabular-nums">
                                       {formatGenericCryptoBalance(asset.available || '0', asset.symbol)}
                                       {parseFloat(asset.frozen || '0') > 0 && (
-                                        <span className="text-amber-500/70 ml-1">(+{formatGenericCryptoBalance(asset.frozen, asset.symbol)} frozen)</span>
+                                        <span className="text-warning/80 ml-1">(+{formatGenericCryptoBalance(asset.frozen, asset.symbol)} frozen)</span>
                                       )}
                                     </span>
                                   </div>
                                 ))}
                                 {user.portfolio.length > 5 && (
-                                  <p className="text-[10px] text-gray-600 text-center pt-1">+{user.portfolio.length - 5} more assets</p>
+                                  <p className="text-[10px] text-muted-foreground/70 text-center pt-1">+{user.portfolio.length - 5} more assets</p>
                                 )}
                               </div>
                             </div>
@@ -881,66 +879,66 @@ export default function AdminUsers() {
 
                         {/* Status Grid */}
                         <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
-                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Email</p>
-                            <Badge variant={user.email_confirmed_at ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.email_confirmed_at ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                          <div className="bg-card rounded-lg border border-border p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Email</p>
+                            <Badge variant={user.email_confirmed_at ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.email_confirmed_at ? 'bg-success/10 text-success hover:bg-success/10' : 'text-warning bg-warning/10'}`}>
                               {user.email_confirmed_at ? 'Confirmed' : 'Pending'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
-                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">KYC</p>
-                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-green-500/10 text-green-400 hover:bg-green-500/10' : user.kyc_status === 'rejected' ? 'text-red-400 bg-red-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                          <div className="bg-card rounded-lg border border-border p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">KYC</p>
+                            <Badge variant={user.kyc_status === 'approved' ? "default" : "outline"} className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 ${user.kyc_status === 'approved' ? 'bg-success/10 text-success hover:bg-success/10' : user.kyc_status === 'rejected' ? 'text-danger bg-danger/10' : 'text-warning bg-warning/10'}`}>
                               {user.kyc_status === 'approved' ? 'Approved' : user.kyc_status === 'pending' ? 'Pending' : user.kyc_status === 'rejected' ? 'Rejected' : 'None'}
                             </Badge>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
-                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Loans</p>
-                            <span className="text-xs sm:text-sm font-semibold text-white">{user.active_loans_count || 0}</span>
+                          <div className="bg-card rounded-lg border border-border p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Loans</p>
+                            <span className="text-xs sm:text-sm font-semibold text-foreground tabular-nums">{user.active_loans_count || 0}</span>
                           </div>
-                          <div className="bg-[#0d0d0d] rounded-lg sm:rounded-xl border border-[#1a1a1a] p-2 sm:p-2.5 text-center">
-                            <p className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5">Staking</p>
-                            <span className="text-xs sm:text-sm font-semibold text-white">{user.active_staking_count || 0}</span>
+                          <div className="bg-card rounded-lg border border-border p-2 sm:p-2.5 text-center">
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Staking</p>
+                            <span className="text-xs sm:text-sm font-semibold text-foreground tabular-nums">{user.active_staking_count || 0}</span>
                           </div>
                         </div>
 
                         {/* Auth Details (expandable) */}
                         {showPasswords && (
-                          <div className="bg-amber-500/5 rounded-xl border border-amber-500/10 p-3 space-y-2">
+                          <div className="bg-warning/5 rounded-xl border border-warning/10 p-3 space-y-2">
                             <div className="flex items-center gap-1.5">
-                              <Shield className="h-3.5 w-3.5 text-amber-400 fill-current" />
-                              <span className="text-xs font-semibold text-amber-300">Auth Details</span>
+                              <Shield className="h-3.5 w-3.5 text-warning" />
+                              <span className="text-xs font-semibold text-warning">Auth Details</span>
                             </div>
                             <div className="space-y-1.5 text-[11px]">
                               <div className="flex items-center justify-between">
-                                <span className="text-amber-400/80">Username</span>
-                                <span className="font-mono text-amber-200 bg-[#111] px-1.5 py-0.5 rounded">@{user.username || 'N/A'}</span>
+                                <span className="text-warning/80">Username</span>
+                                <span className="font-mono text-warning bg-card px-1.5 py-0.5 rounded">@{user.username || 'N/A'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-amber-400/80">Provider</span>
-                                <span className="text-amber-200 bg-[#111] px-1.5 py-0.5 rounded">{user.app_metadata?.provider || 'email'}</span>
+                                <span className="text-warning/80">Provider</span>
+                                <span className="text-warning bg-card px-1.5 py-0.5 rounded">{user.app_metadata?.provider || 'email'}</span>
                               </div>
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-amber-400/80 flex-shrink-0">User ID</span>
+                                <span className="text-warning/80 flex-shrink-0">User ID</span>
                                 <div className="flex items-center gap-1 min-w-0">
-                                  <code className="text-[10px] text-amber-200 bg-[#111] px-1.5 py-0.5 rounded truncate block">{user.id}</code>
-                                  <button onClick={() => copyToClipboard(user.id)} className="p-0.5 hover:bg-amber-500/20 rounded flex-shrink-0 transition-colors">
-                                    {copiedId === user.id ? <Check className="h-3 w-3 text-green-400 fill-current" /> : <Copy className="h-3 w-3 text-amber-400 fill-current" />}
+                                  <code className="text-[10px] text-warning bg-card px-1.5 py-0.5 rounded truncate block">{user.id}</code>
+                                  <button onClick={() => copyToClipboard(user.id)} className="p-0.5 hover:bg-warning/20 rounded flex-shrink-0 transition-colors">
+                                    {copiedId === user.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3 text-warning" />}
                                   </button>
                                 </div>
                               </div>
-                              <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/15 mt-1">
+                              <div className="bg-danger/10 rounded-lg p-2 border border-danger/15 mt-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-red-400 font-medium">Password Access</span>
+                                  <span className="text-danger font-medium">Password Access</span>
                                   <div className="flex items-center gap-1">
                                     {revealedPasswords[user.id] ? (
                                       <>
-                                        <span className="font-mono text-red-200 bg-[#111] px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={revealedPasswords[user.id]}>
+                                        <span className="font-mono text-danger bg-card px-1.5 py-0.5 rounded text-[11px] max-w-[200px] truncate" title={revealedPasswords[user.id]}>
                                           {revealedPasswords[user.id]}
                                         </span>
                                         <button
                                           type="button"
                                           onClick={() => hideRevealedPassword(user.id)}
-                                          className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                                          className="text-[10px] px-1.5 py-0.5 rounded bg-card text-danger border border-danger/20 hover:bg-danger/20 transition-colors"
                                         >
                                           Hide
                                         </button>
@@ -950,7 +948,7 @@ export default function AdminUsers() {
                                         type="button"
                                         onClick={() => revealPassword(user.id)}
                                         disabled={revealingPasswordFor === user.id}
-                                        className="text-[10px] px-1.5 py-0.5 rounded bg-[#111] text-red-300 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-60 transition-colors"
+                                        className="text-[10px] px-1.5 py-0.5 rounded bg-card text-danger border border-danger/20 hover:bg-danger/20 disabled:opacity-60 transition-colors"
                                       >
                                         {revealingPasswordFor === user.id ? 'Loading...' : 'Reveal'}
                                       </button>
@@ -958,7 +956,7 @@ export default function AdminUsers() {
                                   </div>
                                 </div>
                                 {user.password_last_updated && (
-                                  <p className="text-[10px] text-red-400/60 mt-1">Updated: {formatDate(user.password_last_updated)}</p>
+                                  <p className="text-[10px] text-danger/60 mt-1">Updated: {formatDate(user.password_last_updated)}</p>
                                 )}
                               </div>
                             </div>
@@ -974,28 +972,28 @@ export default function AdminUsers() {
 
           {/* ---- Pagination ---- */}
           {activeResultCount > 0 && (
-            <div className="p-3 sm:p-4 border-t border-[#1e1e1e] flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
-              <p className="text-[10px] sm:text-[11px] text-gray-500">
+            <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground">
                 Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, activeResultCount)} of {activeResultCount} {statusFilter === 'deleted' ? 'deleted records' : 'users'}
               </p>
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage <= 1}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={12} className="sm:hidden fill-current" />
-                  <ChevronLeft size={14} className="hidden sm:block fill-current" />
-                  <ChevronLeft size={12} className="-ml-1.5 sm:hidden fill-current" />
-                  <ChevronLeft size={14} className="-ml-2 hidden sm:block fill-current" />
+                  <ChevronLeft size={12} className="sm:hidden" />
+                  <ChevronLeft size={14} className="hidden sm:block" />
+                  <ChevronLeft size={12} className="-ml-1.5 sm:hidden" />
+                  <ChevronLeft size={14} className="-ml-2 hidden sm:block" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage <= 1}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronLeft size={12} className="sm:hidden fill-current" />
-                  <ChevronLeft size={14} className="hidden sm:block fill-current" />
+                  <ChevronLeft size={12} className="sm:hidden" />
+                  <ChevronLeft size={14} className="hidden sm:block" />
                 </button>
                 {/* Page numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1015,8 +1013,8 @@ export default function AdminUsers() {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] sm:text-[11px] font-medium transition-colors
                         ${currentPage === pageNum
-                          ? 'bg-blue-600 text-white border border-blue-500'
-                          : 'bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 hover:text-white hover:border-[#2a2a2a]'}`}
+                          ? 'bg-primary text-primary-foreground border border-primary'
+                          : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40'}`}
                     >
                       {pageNum}
                     </button>
@@ -1025,20 +1023,20 @@ export default function AdminUsers() {
                 <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={12} className="sm:hidden fill-current" />
-                  <ChevronRight size={14} className="hidden sm:block fill-current" />
+                  <ChevronRight size={12} className="sm:hidden" />
+                  <ChevronRight size={14} className="hidden sm:block" />
                 </button>
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage >= totalPages}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0a0a] border border-[#1e1e1e] flex items-center justify-center text-gray-500 hover:text-white hover:border-[#2a2a2a] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <ChevronRight size={12} className="sm:hidden fill-current" />
-                  <ChevronRight size={14} className="hidden sm:block fill-current" />
-                  <ChevronRight size={12} className="-ml-1.5 sm:hidden fill-current" />
-                  <ChevronRight size={14} className="-ml-2 hidden sm:block fill-current" />
+                  <ChevronRight size={12} className="sm:hidden" />
+                  <ChevronRight size={14} className="hidden sm:block" />
+                  <ChevronRight size={12} className="-ml-1.5 sm:hidden" />
+                  <ChevronRight size={14} className="-ml-2 hidden sm:block" />
                 </button>
               </div>
             </div>

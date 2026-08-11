@@ -14,42 +14,37 @@ export const CreditScoreBadge: React.FC<CreditScoreBadgeProps> = ({
 }) => {
   // Credit score is now stored as direct value (0-850)
   const displayScore = Math.round(creditScore);
-  
-  // Determine color and status based on credit score (0-850 range)
+
+  // Determine semantic token and status based on credit score (0-850 range)
   const getCreditScoreInfo = (score: number) => {
     const displayValue = Math.round(score);
     if (displayValue >= 680) { // 80% of 850
       return {
-        backgroundColor: '#10b981', // green-500
-        color: '#ffffff',
+        classes: 'bg-success text-success-foreground',
         status: 'Excellent',
         icon: <TrendingUp size={14} />
       };
     } else if (displayValue >= 595) { // 70% of 850
       return {
-        backgroundColor: '#3b82f6', // blue-500
-        color: '#ffffff',
+        classes: 'bg-info text-info-foreground',
         status: 'Good',
         icon: <TrendingUp size={14} />
       };
     } else if (displayValue >= 510) { // 60% of 850
       return {
-        backgroundColor: '#eab308', // yellow-500
-        color: '#ffffff',
+        classes: 'bg-warning text-warning-foreground',
         status: 'Fair',
         icon: <Minus size={14} />
       };
     } else if (displayValue >= 425) { // 50% of 850
       return {
-        backgroundColor: '#f97316', // orange-500
-        color: '#ffffff',
+        classes: 'bg-danger/80 text-danger-foreground',
         status: 'Poor',
         icon: <TrendingDown size={14} />
       };
     } else {
       return {
-        backgroundColor: '#ef4444', // red-500
-        color: '#ffffff',
+        classes: 'bg-danger text-danger-foreground',
         status: 'Very Poor',
         icon: <TrendingDown size={14} />
       };
@@ -57,44 +52,20 @@ export const CreditScoreBadge: React.FC<CreditScoreBadgeProps> = ({
   };
 
   const creditInfo = getCreditScoreInfo(creditScore);
-  
-  const sizeStyles = {
-    sm: {
-      fontSize: '0.75rem',
-      padding: '0.25rem 0.5rem',
-      borderRadius: '0.375rem'
-    },
-    md: {
-      fontSize: '0.875rem',
-      padding: '0.375rem 0.75rem',
-      borderRadius: '0.5rem'
-    },
-    lg: {
-      fontSize: '1rem',
-      padding: '0.5rem 1rem',
-      borderRadius: '0.5rem'
-    }
-  };
 
-  const badgeStyle = {
-    ...sizeStyles[size],
-    backgroundColor: creditInfo.backgroundColor,
-    color: creditInfo.color,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.25rem',
-    fontWeight: '500',
-    border: 'none',
-    cursor: 'default',
-    userSelect: 'none' as const,
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+  const sizeClasses = {
+    sm: 'text-xs px-2 py-1 rounded-md gap-1',
+    md: 'text-sm px-3 py-1.5 rounded-lg gap-1',
+    lg: 'text-base px-4 py-2 rounded-lg gap-1.5',
   };
 
   return (
-    <div style={badgeStyle}>
+    <div
+      className={`inline-flex items-center font-medium border-0 shadow-sm select-none ${creditInfo.classes} ${sizeClasses[size]}`}
+    >
       {showIcon && creditInfo.icon}
-      <span style={{ fontWeight: '600' }}>{creditInfo.status}</span>
-      <span style={{ fontWeight: '700', marginLeft: '0.25rem' }}>({displayScore})</span>
+      <span className="font-semibold">{creditInfo.status}</span>
+      <span className="font-bold ml-1">({displayScore})</span>
     </div>
   );
 };

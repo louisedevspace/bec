@@ -103,21 +103,21 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
 
   const getStatusBadge = (status: string, loanStatus?: string) => {
     if (status === 'pending') {
-      return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending Review</Badge>;
+      return <Badge className="bg-warning/15 text-warning border-transparent"><Clock className="w-3 h-3 mr-1" />Pending Review</Badge>;
     }
     if (status === 'rejected') {
-      return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+      return <Badge className="bg-danger/15 text-danger border-transparent"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
     }
     if (status === 'approved') {
       switch (loanStatus) {
         case 'active':
-          return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>;
+          return <Badge className="bg-success/15 text-success border-transparent"><CheckCircle className="w-3 h-3 mr-1" />Active</Badge>;
         case 'paid':
-          return <Badge className="bg-blue-100 text-blue-800"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
+          return <Badge className="bg-info/15 text-info border-transparent"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
         case 'overdue':
-          return <Badge className="bg-red-100 text-red-800"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>;
+          return <Badge className="bg-danger/15 text-danger border-transparent"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>;
         default:
-          return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+          return <Badge className="bg-success/15 text-success border-transparent"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
       }
     }
     return <Badge variant="outline">{status}</Badge>;
@@ -157,7 +157,7 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500">Loading loan information...</div>
+          <div className="text-center text-muted-foreground">Loading loan information...</div>
         </CardContent>
       </Card>
     );
@@ -173,7 +173,7 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500">
+          <div className="text-center text-muted-foreground">
             No loan applications found.
           </div>
         </CardContent>
@@ -191,34 +191,34 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
       </CardHeader>
       <CardContent className="space-y-4">
         {loans.map((loan) => (
-          <div key={loan.id} className="border rounded-lg p-4 space-y-3">
+          <div key={loan.id} className="border border-border rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Loan #{loan.id}</span>
+                <span className="font-medium text-foreground">Loan #{loan.id}</span>
                 {getStatusBadge(loan.status, loan.loan_status)}
               </div>
               <div className="text-right">
-                <div className="font-semibold">{formatCurrency(loan.amount)}</div>
+                <div className="font-semibold text-foreground tabular-nums">{formatCurrency(loan.amount)}</div>
               </div>
             </div>
 
             {loan.status === 'approved' && loan.loan_pay_date && (
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>Due: {formatDate(loan.loan_pay_date)}</span>
                 </div>
                 <div className="text-sm">
                   {isOverdue(loan.loan_pay_date) ? (
-                    <span className="text-red-600 font-medium">
+                    <span className="text-danger font-medium tabular-nums">
                       Overdue by {Math.abs(getDaysUntilDue(loan.loan_pay_date))} days
                     </span>
                   ) : isDueSoon(loan.loan_pay_date) ? (
-                    <span className="text-yellow-600 font-medium">
+                    <span className="text-warning font-medium">
                       Due tomorrow
                     </span>
                   ) : (
-                    <span className="text-gray-600">
+                    <span className="text-muted-foreground tabular-nums">
                       {getDaysUntilDue(loan.loan_pay_date)} days remaining
                     </span>
                   )}
@@ -227,8 +227,8 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
             )}
 
             {loan.status === 'rejected' && loan.rejection_reason && (
-              <div className="bg-red-50 border border-red-200 rounded p-3">
-                <div className="text-sm text-red-800">
+              <div className="bg-danger/10 border border-danger/20 rounded-lg p-3">
+                <div className="text-sm text-danger">
                   <strong>Rejection Reason:</strong> {loan.rejection_reason}
                 </div>
               </div>
@@ -236,8 +236,8 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
 
 
             {isDueSoon(loan.loan_pay_date) && loan.status === 'approved' && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <div className="flex items-center gap-2 text-yellow-800">
+              <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-warning">
                   <AlertTriangle className="w-4 h-4" />
                   <span className="text-sm font-medium">
                     Your loan payment is due tomorrow. Please ensure you have sufficient funds.
@@ -247,8 +247,8 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
             )}
 
             {isOverdue(loan.loan_pay_date) && loan.status === 'approved' && (
-              <div className="bg-red-50 border border-red-200 rounded p-3">
-                <div className="flex items-center gap-2 text-red-800">
+              <div className="bg-danger/10 border border-danger/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-danger">
                   <AlertTriangle className="w-4 h-4" />
                   <span className="text-sm font-medium">
                     Your loan payment is overdue. Please contact support immediately.
@@ -262,7 +262,7 @@ export const LoanStatusCard: React.FC<LoanStatusCardProps> = ({ userId }) => {
                 <Button
                   onClick={() => handlePayLoan(loan.id, loan.amount)}
                   disabled={payingLoan === loan.id}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
                   size="sm"
                 >
                   {payingLoan === loan.id ? (

@@ -1,5 +1,5 @@
 import { useCryptoPrices } from "@/hooks/use-crypto-prices";
-import { TrendingUp, TrendingDown, BarChart3, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 interface MarketStatsBarProps {
   symbol: string; // e.g. "BTC"
@@ -29,26 +29,26 @@ export function MarketStatsBar({ symbol, className }: MarketStatsBarProps) {
   return (
     <div className={`flex items-center gap-4 overflow-x-auto py-2 px-3 text-xs ${className || ""}`}>
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <span className="text-gray-500">24h Change</span>
-        <span className={`font-semibold flex items-center gap-0.5 ${isPositive ? "text-green-400" : "text-red-400"}`}>
+        <span className="text-muted-foreground">24h Change</span>
+        <span className={`font-semibold flex items-center gap-0.5 tabular-nums ${isPositive ? "text-buy" : "text-sell"}`}>
           {isPositive ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
           {isPositive ? "+" : ""}{change.toFixed(2)}%
         </span>
       </div>
-      <div className="w-px h-3 bg-[#2a2a2a] flex-shrink-0" />
+      <div className="w-px h-3 bg-border flex-shrink-0" />
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <span className="text-gray-500">24h High</span>
-        <span className="text-white font-medium">${fmt(high)}</span>
+        <span className="text-muted-foreground">24h High</span>
+        <span className="text-foreground font-medium tabular-nums">${fmt(high)}</span>
       </div>
-      <div className="w-px h-3 bg-[#2a2a2a] flex-shrink-0" />
+      <div className="w-px h-3 bg-border flex-shrink-0" />
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <span className="text-gray-500">24h Low</span>
-        <span className="text-white font-medium">${fmt(low)}</span>
+        <span className="text-muted-foreground">24h Low</span>
+        <span className="text-foreground font-medium tabular-nums">${fmt(low)}</span>
       </div>
-      <div className="w-px h-3 bg-[#2a2a2a] flex-shrink-0" />
+      <div className="w-px h-3 bg-border flex-shrink-0" />
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <span className="text-gray-500">24h Volume</span>
-        <span className="text-white font-medium">{fmt(volume)} USDT</span>
+        <span className="text-muted-foreground">24h Volume</span>
+        <span className="text-foreground font-medium tabular-nums">{fmt(volume)} USDT</span>
       </div>
     </div>
   );

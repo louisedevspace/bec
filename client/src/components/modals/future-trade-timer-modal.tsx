@@ -311,17 +311,17 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
 
     if (isFlashing) {
       // During flashing period (first 4 seconds), alternate colors with fluctuating value
-      const color = flashColor === 'green' ? 'text-green-600' : 'text-red-600';
+      const color = flashColor === 'green' ? 'text-buy' : 'text-sell';
       const sign = flashColor === 'green' ? '+' : '-';
       return { color, sign, value: fluctuatingValue };
     } else if (isCompleted) {
       // On completion, show the definitive outcome
-      const color = isPotentialProfit ? 'text-green-600' : 'text-red-600';
+      const color = isPotentialProfit ? 'text-buy' : 'text-sell';
       const sign = isPotentialProfit ? '+' : '-';
       return { color, sign, value: staticProfitAmount };
     } else {
       // During countdown, show outcome color with fluctuating value
-      const color = isPotentialProfit ? 'text-green-600' : 'text-red-600';
+      const color = isPotentialProfit ? 'text-buy' : 'text-sell';
       const sign = isPotentialProfit ? '+' : '-';
       return { color, sign, value: fluctuatingValue };
     }
@@ -330,33 +330,53 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
   // Get P&L display properties (color, sign, value)
   const pnlDisplay = getPnLDisplay();
 
+  const isLong = tradeData.side === 'long';
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm mx-auto shadow-2xl p-0" hideCloseButton>
-        <DialogHeader className="relative p-6 pb-4">
-          <DialogTitle className="text-center text-lg font-semibold text-white flex items-center justify-center gap-2">
-            <CryptoIcon symbol={tradeData.symbol?.split('/')[0] || tradeData.symbol} size="sm" />
-            {tradeData.symbol}
-          </DialogTitle>
+      <DialogContent className="max-w-sm mx-auto shadow-sm p-0 overflow-hidden" hideCloseButton>
+        {/* Ambient side-colored glow — long glows success, short glows danger */}
+        <div
+          className="absolute inset-x-0 top-0 h-56 pointer-events-none"
+          style={{
+            background: isLong
+              ? 'radial-gradient(circle at 50% 0%, hsl(var(--success) / 0.18) 0%, transparent 70%)'
+              : 'radial-gradient(circle at 50% 0%, hsl(var(--danger) / 0.18) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
+
+        <DialogHeader className="relative p-6 pb-2">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <DialogTitle className="text-center text-base font-semibold text-foreground flex items-center gap-2">
+              <CryptoIcon symbol={tradeData.symbol?.split('/')[0] || tradeData.symbol} size="sm" />
+              {tradeData.symbol}
+            </DialogTitle>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+              isLong ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'
+            }`}>
+              {isLong ? 'Long' : 'Short'}
+            </span>
+          </div>
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-1 hover:bg-[#2a2a2a] rounded-full transition-colors"
+            className="absolute top-4 right-4 p-1.5 hover:bg-muted rounded-full transition-colors"
           >
-            <X size={20} className="text-gray-400" />
+            <X size={18} className="text-muted-foreground" />
           </button>
         </DialogHeader>
 
-        <div className="px-6 pb-6">
+        <div className="relative px-6 pb-6">
           {/* Circular Progress Timer */}
-          <div className="flex justify-center mb-8">
-            <div className="relative w-52 h-52">
+          <div className="flex justify-center mb-6">
+            <div className="relative w-56 h-56">
               {/* Background Circle */}
               <svg className="w-full h-full" viewBox="0 0 140 140">
                 <circle
                   cx="70"
                   cy="70"
                   r={radius}
-                  stroke="#374151"
+                  style={{ stroke: "hsl(var(--border))" }}
                   strokeWidth="6"
                   fill="none"
                 />
@@ -365,43 +385,42 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
                   cx="70"
                   cy="70"
                   r={radius}
-                  stroke={tradeData.side === 'long' ? '#10b981' : '#ef4444'}
+                  style={{ stroke: isLong ? "hsl(var(--success))" : "hsl(var(--danger))" }}
                   strokeWidth="6"
                   fill="none"
                   strokeLinecap="round"
                   strokeDasharray={strokeDasharray}
                   strokeDashoffset={strokeDashoffset}
-                  style={{
-                    transition: 'stroke-dashoffset 0.1s ease-out',
-                    transform: 'rotate(-90deg)',
-                    transformOrigin: '70px 70px'
-                  }}
+                  className="transition-[stroke-dashoffset] duration-100 ease-out"
+                  transform="rotate(-90 70 70)"
                 />
               </svg>
-              
+
               {/* Center Content */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 {isCompleted ? (
-                  <>
-                    <div className="text-4xl font-bold text-white mb-2">
-                      ✓
+                  <div className="flex flex-col items-center animate-in zoom-in-75 fade-in duration-300">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
+                      isPotentialProfit ? 'bg-success/15' : 'bg-danger/15'
+                    }`}>
+                      <span className={`text-2xl font-bold ${isPotentialProfit ? 'text-success' : 'text-danger'}`}>✓</span>
                     </div>
-                    <div className="text-sm text-gray-400 mb-1">Trade Completed</div>
-                    <div className="text-lg font-semibold text-green-400">
+                    <div className="text-sm text-muted-foreground mb-1">Trade Completed</div>
+                    <div className="text-lg font-semibold text-foreground">
                       Check your balance
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <div className="text-5xl font-bold text-white mb-2">
+                    <div className="text-5xl font-bold text-foreground mb-2 tabular-nums">
                       {timeLeft}
                     </div>
-                    <div className="text-sm text-gray-400 mb-1">Current price</div>
-                    <div className="text-lg font-semibold text-white">
+                    <div className="text-sm text-muted-foreground mb-1">Current price</div>
+                    <div className="text-lg font-semibold text-foreground tabular-nums">
                       {formatUsdNumber(parseFloat(liveCurrentPrice))}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">Potential P&L</div>
-                    <div className={`text-sm font-semibold ${pnlDisplay.color}`}>
+                    <div className="text-xs text-muted-foreground mt-1">Potential P&L</div>
+                    <div className={`text-sm font-semibold tabular-nums ${pnlDisplay.color}`}>
                       {pnlDisplay.sign}{formatUsdNumber(pnlDisplay.value)} USDT
                     </div>
                   </>
@@ -411,39 +430,33 @@ export function FutureTradeTimerModal({ isOpen, onClose, onComplete, tradeData }
           </div>
 
           {/* Trade Details */}
-          <div className="space-y-3 mb-6">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Position</span>
-              <span className={`font-semibold ${tradeData.side === 'long' ? 'text-green-400' : 'text-red-400'}`}>
-                {tradeData.side === 'long' ? 'Long' : 'Short'}
-              </span>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="bg-muted/40 rounded-xl p-3 border border-border">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Quantity</div>
+              <div className="font-semibold text-foreground tabular-nums text-sm">{tradeData.amount} USDT</div>
             </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Purchase quantity</span>
-              <span className="font-semibold text-white">{tradeData.amount}</span>
+            <div className="bg-muted/40 rounded-xl p-3 border border-border">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Entry price</div>
+              <div className="font-semibold text-foreground tabular-nums text-sm">{tradeData.price}</div>
             </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Purchase price</span>
-              <span className="font-semibold text-white">{tradeData.price}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Potential P&L</span>
-              <span className={`font-semibold ${pnlDisplay.color}`}>
-                {pnlDisplay.sign}{formatUsdNumber(pnlDisplay.value)} USDT
-              </span>
-            </div>
+          </div>
+
+          <div className={`rounded-xl p-3.5 border mb-6 flex items-center justify-between ${
+            pnlDisplay.color === 'text-buy' ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'
+          }`}>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Potential P&L</span>
+            <span className={`font-bold tabular-nums text-base ${pnlDisplay.color}`}>
+              {pnlDisplay.sign}{formatUsdNumber(pnlDisplay.value)} USDT
+            </span>
           </div>
 
           {/* Back Button */}
           <Button
             onClick={handleClose}
-            className={`w-full font-semibold py-3 rounded-lg ${
-              tradeData.side === 'long' 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-red-600 hover:bg-red-700 text-white'
+            className={`w-full font-semibold py-3 rounded-2xl ${
+              isLong
+                ? 'bg-buy hover:bg-buy/90 text-success-foreground'
+                : 'bg-sell hover:bg-sell/90 text-danger-foreground'
             }`}
           >
             {isCompleted ? 'Close' : 'Back'}

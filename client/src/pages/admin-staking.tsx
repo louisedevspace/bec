@@ -297,36 +297,36 @@ export default function AdminStakingPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3 flex-wrap">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Coins size={22} className="text-purple-400 fill-current" />
+            <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-3 flex-wrap">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Coins size={20} className="text-primary" />
               </div>
               <span className="min-w-0">Staking Management</span>
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monitor and manage all staking positions</p>
+            <p className="text-sm text-muted-foreground mt-1">Monitor and manage all staking positions</p>
           </div>
           <Button
             onClick={() => refetchPositions()}
             variant="outline"
             size="sm"
-            className="bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#222] hover:text-white"
+            className="bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <RefreshCw size={14} className="mr-2 fill-current" /> Refresh
+            <RefreshCw size={14} className="mr-2" /> Refresh
           </Button>
         </div>
 
         {/* Stats Grid */}
         {!statsLoading && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            <StatCard icon={Activity} label="Active Positions" value={stats.activePositions} color="green" />
-            <StatCard icon={CheckCircle} label="Completed" value={stats.completedPositions} color="blue" />
-            <StatCard icon={DollarSign} label="Total Active Staked" value={`$${fmt(stats.totalActiveStaked)}`} color="purple" />
-            <StatCard icon={TrendingUp} label="Rewards Paid" value={`$${fmt(stats.estimatedRewardsPaid)}`} color="yellow" />
-            <StatCard icon={Users} label="Active Stakers" value={stats.activeStakers} color="cyan" />
+            <StatCard icon={Activity} label="Active Positions" value={stats.activePositions} color="success" />
+            <StatCard icon={CheckCircle} label="Completed" value={stats.completedPositions} color="info" />
+            <StatCard icon={DollarSign} label="Total Active Staked" value={`$${fmt(stats.totalActiveStaked)}`} color="primary" />
+            <StatCard icon={TrendingUp} label="Rewards Paid" value={`$${fmt(stats.estimatedRewardsPaid)}`} color="warning" />
+            <StatCard icon={Users} label="Active Stakers" value={stats.activeStakers} color="info" />
           </div>
         )}
 
@@ -342,18 +342,18 @@ export default function AdminStakingPage() {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={(newTab) => { setTab(newTab); setStatusFilter("all"); }} className="w-full">
-          <TabsList className="bg-[#111] border border-[#1e1e1e] h-10 p-1 w-full md:w-auto">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 text-xs md:text-sm">
-              <BarChart3 size={14} className="mr-1.5 fill-current" /> All Positions
+          <TabsList className="bg-card border border-border h-10 p-1 w-full md:w-auto">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs md:text-sm">
+              <BarChart3 size={14} className="mr-1.5" /> All Positions
             </TabsTrigger>
-            <TabsTrigger value="active" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 text-xs md:text-sm">
-              <Activity size={14} className="mr-1.5 fill-current" /> Active
+            <TabsTrigger value="active" className="data-[state=active]:bg-success/15 data-[state=active]:text-success text-xs md:text-sm">
+              <Activity size={14} className="mr-1.5" /> Active
             </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 text-xs md:text-sm">
-              <CheckCircle size={14} className="mr-1.5 fill-current" /> Completed
+            <TabsTrigger value="completed" className="data-[state=active]:bg-info/15 data-[state=active]:text-info text-xs md:text-sm">
+              <CheckCircle size={14} className="mr-1.5" /> Completed
             </TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-400 text-xs md:text-sm">
-              <Settings2 size={14} className="mr-1.5 fill-current" /> Products
+            <TabsTrigger value="products" className="data-[state=active]:bg-warning/15 data-[state=active]:text-warning text-xs md:text-sm">
+              <Settings2 size={14} className="mr-1.5" /> Products
             </TabsTrigger>
           </TabsList>
 
@@ -363,19 +363,19 @@ export default function AdminStakingPage() {
               {/* Filter bar */}
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search by name, email, ID..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10 bg-[#111] border-[#1e1e1e] text-white placeholder:text-gray-600 h-10"
+                    className="pl-10 bg-card border-border text-foreground h-10"
                   />
                 </div>
                 {tabKey === "overview" && (
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="h-10 px-3 bg-[#111] border border-[#1e1e1e] rounded-lg text-sm text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    className="h-10 px-3 bg-card border border-border rounded-lg text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -415,89 +415,89 @@ export default function AdminStakingPage() {
           <TabsContent value="products" className="mt-4 space-y-4">
             {/* Actions */}
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={fetchProducts} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
-                <RefreshCw size={14} className={`${productsLoading ? 'animate-spin' : ''} fill-current`} />
+              <Button variant="outline" size="sm" onClick={fetchProducts} className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground">
+                <RefreshCw size={14} className={productsLoading ? 'animate-spin' : ''} />
               </Button>
-              <Button variant="outline" size="sm" onClick={handleProductSeed} className="border-[#2a2a2a] bg-[#111] text-gray-300 hover:bg-[#1a1a1a]">
+              <Button variant="outline" size="sm" onClick={handleProductSeed} className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground">
                 Seed Defaults
               </Button>
-              <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus size={14} className="mr-1 fill-current" /> Add Product
+              <Button size="sm" onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus size={14} className="mr-1" /> Add Product
               </Button>
             </div>
 
             {/* Product Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-                <div className="text-xs text-gray-500">Total Products</div>
-                <div className="text-lg font-bold text-white">{products.length}</div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-xs text-muted-foreground">Total Products</div>
+                <div className="text-lg font-bold text-foreground tabular-nums">{products.length}</div>
               </div>
-              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-                <div className="text-xs text-gray-500">Enabled</div>
-                <div className="text-lg font-bold text-green-400">{enabledProductCount}</div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-xs text-muted-foreground">Enabled</div>
+                <div className="text-lg font-bold text-success tabular-nums">{enabledProductCount}</div>
               </div>
-              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-                <div className="text-xs text-gray-500">Max APY</div>
-                <div className="text-lg font-bold text-yellow-400">{products.length > 0 ? Math.max(...products.filter(p => p.is_enabled).map(p => parseFloat(p.apy) || 0)).toFixed(2) : '0.00'}%</div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-xs text-muted-foreground">Max APY</div>
+                <div className="text-lg font-bold text-warning tabular-nums">{products.length > 0 ? Math.max(...products.filter(p => p.is_enabled).map(p => parseFloat(p.apy) || 0)).toFixed(2) : '0.00'}%</div>
               </div>
-              <div className="bg-[#111] border border-[#1e1e1e] rounded-xl p-3">
-                <div className="text-xs text-gray-500">Min Stake</div>
-                <div className="text-lg font-bold text-blue-400">${products.length > 0 ? Math.min(...products.filter(p => p.is_enabled).map(p => parseFloat(p.min_amount) || 0)).toLocaleString() : '0'}</div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-xs text-muted-foreground">Min Stake</div>
+                <div className="text-lg font-bold text-info tabular-nums">${products.length > 0 ? Math.min(...products.filter(p => p.is_enabled).map(p => parseFloat(p.min_amount) || 0)).toLocaleString() : '0'}</div>
               </div>
             </div>
 
             {/* Add Product Form */}
             {showAddForm && (
-              <div className="bg-[#111] border border-blue-500/30 rounded-xl p-4 space-y-4">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Plus size={16} className="text-blue-400 fill-current" /> Add New Staking Product
+              <div className="bg-card border border-primary/30 rounded-xl p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Plus size={16} className="text-primary" /> Add New Staking Product
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Title</label>
-                    <Input value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. 30 Days" className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Title</label>
+                    <Input value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. 30 Days" className="h-9 bg-background border-border text-foreground text-xs" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Duration (Days)</label>
-                    <Input type="number" min="1" value={newProduct.duration} onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Duration (Days)</label>
+                    <Input type="number" min="1" value={newProduct.duration} onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">APY (%)</label>
-                    <Input type="number" step="0.01" min="0" value={newProduct.apy} onChange={(e) => setNewProduct({ ...newProduct, apy: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">APY (%)</label>
+                    <Input type="number" step="0.01" min="0" value={newProduct.apy} onChange={(e) => setNewProduct({ ...newProduct, apy: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Min Amount</label>
-                    <Input type="number" step="any" value={newProduct.minAmount} onChange={(e) => setNewProduct({ ...newProduct, minAmount: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Min Amount</label>
+                    <Input type="number" step="any" value={newProduct.minAmount} onChange={(e) => setNewProduct({ ...newProduct, minAmount: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase mb-1 block">Max Amount</label>
-                    <Input type="number" step="any" value={newProduct.maxAmount} onChange={(e) => setNewProduct({ ...newProduct, maxAmount: e.target.value })} className="h-9 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs" />
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Max Amount</label>
+                    <Input type="number" step="any" value={newProduct.maxAmount} onChange={(e) => setNewProduct({ ...newProduct, maxAmount: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-[#2a2a2a] bg-[#0a0a0a] text-gray-400">Cancel</Button>
-                  <Button size="sm" onClick={handleProductAdd} className="bg-blue-600 hover:bg-blue-700"><Plus size={14} className="mr-1 fill-current" /> Add Product</Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-border bg-background text-muted-foreground">Cancel</Button>
+                  <Button size="sm" onClick={handleProductAdd}><Plus size={14} className="mr-1" /> Add Product</Button>
                 </div>
               </div>
             )}
 
             {/* Search */}
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 fill-current" />
-              <Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="pl-9 h-9 bg-[#111] border-[#1e1e1e] text-white text-sm" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="pl-9 h-9 bg-card border-border text-foreground text-sm" />
             </div>
 
             {/* Products Table */}
-            <div className="bg-[#111] border border-[#1e1e1e] rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
               {productsLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <RefreshCw size={20} className="animate-spin text-gray-500 fill-current" />
+                  <RefreshCw size={20} className="animate-spin text-muted-foreground" />
                 </div>
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-12">
-                  <Coins size={32} className="mx-auto mb-3 text-gray-600 fill-current" />
-                  <p className="text-gray-500 text-sm">No staking products found</p>
-                  <p className="text-gray-600 text-xs mt-1">Click "Seed Defaults" to add default products</p>
+                  <Coins size={32} className="mx-auto mb-3 text-muted-foreground/60" />
+                  <p className="text-muted-foreground text-sm">No staking products found</p>
+                  <p className="text-muted-foreground/70 text-xs mt-1">Click "Seed Defaults" to add default products</p>
                 </div>
               ) : (
                 <>
@@ -505,7 +505,7 @@ export default function AdminStakingPage() {
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-xs text-gray-500 uppercase border-b border-[#1e1e1e] bg-[#0a0a0a]">
+                        <tr className="text-xs text-muted-foreground uppercase border-b border-border bg-muted/40">
                           <th className="text-left py-3 px-4">Product</th>
                           <th className="text-center py-3 px-3">Duration</th>
                           <th className="text-center py-3 px-3">APY</th>
@@ -518,65 +518,65 @@ export default function AdminStakingPage() {
                       </thead>
                       <tbody>
                         {filteredProducts.map((product) => (
-                          <tr key={product.id} className={`border-b border-[#1e1e1e] hover:bg-[#1a1a1a] transition-colors ${!product.is_enabled ? 'opacity-50' : ''}`}>
+                          <tr key={product.id} className={`border-b border-border hover:bg-muted/50 transition-colors ${!product.is_enabled ? 'opacity-50' : ''}`}>
                             <td className="py-3 px-4">
                               {editingProductId === product.id ? (
-                                <Input value={productEditForm.title || ''} onChange={(e) => setProductEditForm({ ...productEditForm, title: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-32" />
+                                <Input value={productEditForm.title || ''} onChange={(e) => setProductEditForm({ ...productEditForm, title: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-32" />
                               ) : (
-                                <span className="font-semibold text-white text-sm">{product.title}</span>
+                                <span className="font-semibold text-foreground text-sm">{product.title}</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" min="1" value={productEditForm.duration || ''} onChange={(e) => setProductEditForm({ ...productEditForm, duration: parseInt(e.target.value) || 0 })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-20 mx-auto" />
+                                <Input type="number" min="1" value={productEditForm.duration || ''} onChange={(e) => setProductEditForm({ ...productEditForm, duration: parseInt(e.target.value) || 0 })} className="h-7 bg-background border-border text-foreground text-xs w-20 mx-auto tabular-nums" />
                               ) : (
-                                <span className="text-sm text-gray-300">{product.duration} days</span>
+                                <span className="text-sm text-muted-foreground tabular-nums">{product.duration} days</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" step="0.01" value={productEditForm.apy || ''} onChange={(e) => setProductEditForm({ ...productEditForm, apy: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-20 mx-auto" />
+                                <Input type="number" step="0.01" value={productEditForm.apy || ''} onChange={(e) => setProductEditForm({ ...productEditForm, apy: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-20 mx-auto tabular-nums" />
                               ) : (
-                                <span className="text-sm font-medium text-yellow-400">{parseFloat(product.apy).toFixed(2)}%</span>
+                                <span className="text-sm font-medium text-warning tabular-nums">{parseFloat(product.apy).toFixed(2)}%</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
                               <button onClick={() => handleProductToggle(product.id)} className="inline-flex items-center">
-                                {product.is_enabled ? <ToggleRight size={22} className="text-green-400 fill-current" /> : <ToggleLeft size={22} className="text-gray-500 fill-current" />}
+                                {product.is_enabled ? <ToggleRight size={22} className="text-success" /> : <ToggleLeft size={22} className="text-muted-foreground" />}
                               </button>
                             </td>
                             <td className="text-right py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" step="any" value={productEditForm.min_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, min_amount: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-28 ml-auto" />
+                                <Input type="number" step="any" value={productEditForm.min_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, min_amount: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-28 ml-auto tabular-nums" />
                               ) : (
-                                <span className="text-sm text-gray-300 tabular-nums">${parseFloat(product.min_amount).toLocaleString()}</span>
+                                <span className="text-sm text-muted-foreground tabular-nums">${parseFloat(product.min_amount).toLocaleString()}</span>
                               )}
                             </td>
                             <td className="text-right py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" step="any" value={productEditForm.max_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, max_amount: e.target.value })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-28 ml-auto" />
+                                <Input type="number" step="any" value={productEditForm.max_amount || ''} onChange={(e) => setProductEditForm({ ...productEditForm, max_amount: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-28 ml-auto tabular-nums" />
                               ) : (
-                                <span className="text-sm text-gray-300 tabular-nums">${parseFloat(product.max_amount).toLocaleString()}</span>
+                                <span className="text-sm text-muted-foreground tabular-nums">${parseFloat(product.max_amount).toLocaleString()}</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" step="1" value={productEditForm.sort_order || 0} onChange={(e) => setProductEditForm({ ...productEditForm, sort_order: parseInt(e.target.value) || 0 })} className="h-7 bg-[#0a0a0a] border-[#2a2a2a] text-white text-xs w-14 mx-auto" />
+                                <Input type="number" step="1" value={productEditForm.sort_order || 0} onChange={(e) => setProductEditForm({ ...productEditForm, sort_order: parseInt(e.target.value) || 0 })} className="h-7 bg-background border-border text-foreground text-xs w-14 mx-auto tabular-nums" />
                               ) : (
-                                <span className="text-xs text-gray-500">{product.sort_order}</span>
+                                <span className="text-xs text-muted-foreground tabular-nums">{product.sort_order}</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex items-center justify-center gap-1.5">
                                 {editingProductId === product.id ? (
                                   <>
-                                    <button onClick={handleProductSaveEdit} className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20"><Save size={14} className="fill-current" /></button>
-                                    <button onClick={() => setEditingProductId(null)} className="p-1.5 rounded-lg bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"><X size={14} className="fill-current" /></button>
+                                    <button onClick={handleProductSaveEdit} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20"><Save size={14} /></button>
+                                    <button onClick={() => setEditingProductId(null)} className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-muted/70"><X size={14} /></button>
                                   </>
                                 ) : (
                                   <>
-                                    <button onClick={() => startProductEdit(product)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"><Edit2 size={14} className="fill-current" /></button>
-                                    <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"><Trash2 size={14} className="fill-current" /></button>
+                                    <button onClick={() => startProductEdit(product)} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"><Edit2 size={14} /></button>
+                                    <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20"><Trash2 size={14} /></button>
                                   </>
                                 )}
                               </div>
@@ -588,24 +588,24 @@ export default function AdminStakingPage() {
                   </div>
 
                   {/* Mobile List */}
-                  <div className="block md:hidden divide-y divide-[#1e1e1e]">
+                  <div className="block md:hidden divide-y divide-border">
                     {filteredProducts.map((product) => (
                       <div key={product.id} className={`p-4 ${!product.is_enabled ? 'opacity-50' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Coins size={16} className="text-yellow-400 fill-current" />
-                            <span className="font-bold text-white">{product.title}</span>
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400">{parseFloat(product.apy).toFixed(2)}% APY</span>
+                            <Coins size={16} className="text-warning" />
+                            <span className="font-bold text-foreground">{product.title}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning/10 text-warning tabular-nums">{parseFloat(product.apy).toFixed(2)}% APY</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => handleProductToggle(product.id)}>
-                              {product.is_enabled ? <ToggleRight size={20} className="text-green-400 fill-current" /> : <ToggleLeft size={20} className="text-gray-500 fill-current" />}
+                              {product.is_enabled ? <ToggleRight size={20} className="text-success" /> : <ToggleLeft size={20} className="text-muted-foreground" />}
                             </button>
-                            <button onClick={() => startProductEdit(product)} className="p-1 rounded text-blue-400 hover:bg-blue-500/10"><Edit2 size={14} className="fill-current" /></button>
-                            <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1 rounded text-red-400 hover:bg-red-500/10"><Trash2 size={14} className="fill-current" /></button>
+                            <button onClick={() => startProductEdit(product)} className="p-1 rounded text-primary hover:bg-primary/10"><Edit2 size={14} /></button>
+                            <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1 rounded text-danger hover:bg-danger/10"><Trash2 size={14} /></button>
                           </div>
                         </div>
-                        <div className="flex gap-4 text-xs text-gray-500">
+                        <div className="flex gap-4 text-xs text-muted-foreground tabular-nums">
                           <span>{product.duration} days</span>
                           <span>Min: ${parseFloat(product.min_amount).toLocaleString()}</span>
                           <span>Max: ${parseFloat(product.max_amount).toLocaleString()}</span>
@@ -632,24 +632,23 @@ function StatCard({ icon: Icon, label, value, color }: {
   color: string;
 }) {
   const colors: Record<string, string> = {
-    green: "bg-green-500/10 text-green-400",
-    blue: "bg-blue-500/10 text-blue-400",
-    purple: "bg-purple-500/10 text-purple-400",
-    yellow: "bg-yellow-500/10 text-yellow-400",
-    cyan: "bg-cyan-500/10 text-cyan-400",
-    red: "bg-red-500/10 text-red-400",
+    success: "bg-success/10 text-success",
+    info: "bg-info/10 text-info",
+    primary: "bg-primary/10 text-primary",
+    warning: "bg-warning/10 text-warning",
+    danger: "bg-danger/10 text-danger",
   };
 
   return (
-    <Card className="bg-[#0f0f0f] border-[#1e1e1e]">
+    <Card className="bg-card border-border">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[color] || colors.blue}`}>
-            <Icon size={18} className="fill-current" />
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[color] || colors.info}`}>
+            <Icon size={18} />
           </div>
           <div>
-            <p className="text-xs text-gray-500">{label}</p>
-            <p className="text-lg font-bold text-white">{value}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">{value}</p>
           </div>
         </div>
       </CardContent>
@@ -659,9 +658,9 @@ function StatCard({ icon: Icon, label, value, color }: {
 
 function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-xl px-4 py-3">
-      <p className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-semibold text-white mt-0.5">{value}</p>
+    <div className="bg-card border border-border rounded-xl px-4 py-3">
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-semibold text-foreground mt-0.5 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -690,16 +689,16 @@ function PositionsList({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <RefreshCw size={20} className="text-gray-500 animate-spin fill-current" />
+        <RefreshCw size={20} className="text-muted-foreground animate-spin" />
       </div>
     );
   }
 
   if (positions.length === 0) {
     return (
-      <Card className="bg-[#0f0f0f] border-[#1e1e1e]">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-          <Coins size={32} className="mb-2 opacity-30 fill-current" />
+      <Card className="bg-card border-border">
+        <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <Coins size={32} className="mb-2 opacity-30" />
           <p className="text-sm">No staking positions found</p>
         </CardContent>
       </Card>
@@ -718,7 +717,7 @@ function PositionsList({
         const estimatedReward = stakeAmount * (apy / 100) * (p.duration / 365);
 
         return (
-          <Card key={p.id} className={`bg-[#0f0f0f] border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors ${isExpanded ? "ring-1 ring-purple-500/30" : ""}`}>
+          <Card key={p.id} className={`bg-card border-border hover:border-primary/30 transition-colors ${isExpanded ? "ring-1 ring-primary/30" : ""}`}>
             <CardContent className="p-0">
               {/* Main Row */}
               <button
@@ -726,19 +725,19 @@ function PositionsList({
                 className="w-full flex items-center gap-3 p-4 text-left"
               >
                 {/* Status indicator */}
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? "bg-success" : "bg-muted-foreground"}`} />
 
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {p.user?.full_name || p.user?.email || p.userId.slice(0, 12) + "..."}
                     </p>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 ${isActive ? "border-green-500/30 text-green-400 bg-green-500/5" : "border-gray-500/30 text-gray-400 bg-gray-500/5"}`}>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 ${isActive ? "border-success/30 text-success bg-success/5" : "border-border text-muted-foreground bg-muted/50"}`}>
                       {p.status}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {p.user?.email || p.userId}
                     {p.user?.display_id ? ` • #${p.user.display_id}` : ""}
                   </p>
@@ -746,62 +745,62 @@ function PositionsList({
 
                 {/* Amount */}
                 <div className="text-right flex-shrink-0 hidden sm:block">
-                  <p className="text-sm font-bold text-white">${fmt(stakeAmount)}</p>
-                  <p className="text-[10px] text-gray-500">USDT</p>
+                  <p className="text-sm font-bold text-foreground tabular-nums">${fmt(stakeAmount)}</p>
+                  <p className="text-[10px] text-muted-foreground">USDT</p>
                 </div>
 
                 {/* APY */}
                 <div className="text-right flex-shrink-0 hidden md:block">
-                  <p className="text-sm font-semibold text-green-400">{p.apy}%</p>
-                  <p className="text-[10px] text-gray-500">APY</p>
+                  <p className="text-sm font-semibold text-success tabular-nums">{p.apy}%</p>
+                  <p className="text-[10px] text-muted-foreground">APY</p>
                 </div>
 
                 {/* Duration / Days Left */}
                 <div className="text-right flex-shrink-0 hidden lg:block">
-                  <p className="text-sm text-white">{isActive ? `${days}d left` : `${p.duration}d`}</p>
-                  <p className="text-[10px] text-gray-500">{p.duration}d total</p>
+                  <p className="text-sm text-foreground tabular-nums">{isActive ? `${days}d left` : `${p.duration}d`}</p>
+                  <p className="text-[10px] text-muted-foreground">{p.duration}d total</p>
                 </div>
 
                 {/* Expand icon */}
-                {isExpanded ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0 fill-current" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0 fill-current" />}
+                {isExpanded ? <ChevronUp size={16} className="text-muted-foreground flex-shrink-0" /> : <ChevronDown size={16} className="text-muted-foreground flex-shrink-0" />}
               </button>
 
               {/* Expanded Details */}
               {isExpanded && (
-                <div className="border-t border-[#1e1e1e] p-4 space-y-4">
+                <div className="border-t border-border p-4 space-y-4">
                   {/* Info grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">Position ID</p>
-                      <p className="text-sm font-semibold text-white mt-0.5">#{p.id}</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">Position ID</p>
+                      <p className="text-sm font-semibold text-foreground mt-0.5">#{p.id}</p>
                     </div>
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">Amount</p>
-                      <p className="text-sm font-semibold text-white mt-0.5">${fmt(stakeAmount)}</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">Amount</p>
+                      <p className="text-sm font-semibold text-foreground mt-0.5 tabular-nums">${fmt(stakeAmount)}</p>
                     </div>
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">APY</p>
-                      <p className="text-sm font-semibold text-green-400 mt-0.5">{p.apy}%</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">APY</p>
+                      <p className="text-sm font-semibold text-success mt-0.5 tabular-nums">{p.apy}%</p>
                     </div>
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">Est. Reward</p>
-                      <p className="text-sm font-semibold text-yellow-400 mt-0.5">${fmt(estimatedReward)}</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">Est. Reward</p>
+                      <p className="text-sm font-semibold text-warning mt-0.5 tabular-nums">${fmt(estimatedReward)}</p>
                     </div>
                   </div>
 
                   {/* Dates */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">Start Date</p>
-                      <p className="text-xs text-white mt-0.5">{formatDateTime(p.startDate)}</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">Start Date</p>
+                      <p className="text-xs text-foreground mt-0.5">{formatDateTime(p.startDate)}</p>
                     </div>
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">End Date</p>
-                      <p className="text-xs text-white mt-0.5">{formatDateTime(p.endDate)}</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">End Date</p>
+                      <p className="text-xs text-foreground mt-0.5">{formatDateTime(p.endDate)}</p>
                     </div>
-                    <div className="bg-[#0a0a0a] rounded-lg p-3">
-                      <p className="text-[10px] text-gray-500 uppercase">Duration</p>
-                      <p className="text-xs text-white mt-0.5">{p.duration} days</p>
+                    <div className="bg-muted/40 rounded-lg p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase">Duration</p>
+                      <p className="text-xs text-foreground mt-0.5">{p.duration} days</p>
                     </div>
                   </div>
 
@@ -809,12 +808,12 @@ function PositionsList({
                   {isActive && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-gray-500">Progress</span>
-                        <span className="text-[10px] text-gray-400">{progress}%</span>
+                        <span className="text-[10px] text-muted-foreground">Progress</span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">{progress}%</span>
                       </div>
-                      <div className="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all"
+                          className="h-full bg-primary rounded-full transition-all"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -822,16 +821,16 @@ function PositionsList({
                   )}
 
                   {/* Actions */}
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1a1a1a]">
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
                     {isActive && (
                       <>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onStatusChange(p.id, "completed")}
-                          className="h-7 text-xs bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
+                          className="h-7 text-xs bg-success/10 border-success/30 text-success hover:bg-success/20"
                         >
-                          <CheckCircle size={12} className="mr-1 fill-current" /> Complete
+                          <CheckCircle size={12} className="mr-1" /> Complete
                         </Button>
 
                         {/* Extend */}
@@ -843,16 +842,16 @@ function PositionsList({
                             placeholder="days"
                             value={extendDays[p.id] || ""}
                             onChange={(e) => setExtendDays({ ...extendDays, [p.id]: e.target.value })}
-                            className="w-20 h-7 text-xs bg-[#111] border-[#1e1e1e] text-white"
+                            className="w-20 h-7 text-xs bg-card border-border text-foreground"
                           />
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => onExtend(p.id)}
                             disabled={!extendDays[p.id] || parseInt(extendDays[p.id]) <= 0}
-                            className="h-7 text-xs bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
+                            className="h-7 text-xs bg-info/10 border-info/30 text-info hover:bg-info/20"
                           >
-                            <Timer size={12} className="mr-1 fill-current" /> Extend
+                            <Timer size={12} className="mr-1" /> Extend
                           </Button>
                         </div>
                       </>
@@ -863,9 +862,9 @@ function PositionsList({
                         variant="outline"
                         size="sm"
                         onClick={() => onStatusChange(p.id, "active")}
-                        className="h-7 text-xs bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20"
+                        className="h-7 text-xs bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
                       >
-                        <Activity size={12} className="mr-1 fill-current" /> Reactivate
+                        <Activity size={12} className="mr-1" /> Reactivate
                       </Button>
                     )}
 
@@ -873,9 +872,9 @@ function PositionsList({
                       variant="ghost"
                       size="sm"
                       onClick={() => onDelete(p.id)}
-                      className="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 ml-auto"
+                      className="h-7 text-xs text-danger hover:text-danger hover:bg-danger/10 ml-auto"
                     >
-                      <Trash2 size={12} className="mr-1 fill-current" /> Delete
+                      <Trash2 size={12} className="mr-1" /> Delete
                     </Button>
                   </div>
                 </div>

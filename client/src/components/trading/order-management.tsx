@@ -226,9 +226,9 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
   const getSideIcon = (side: string) => {
     return side === "buy" || side === "long" ? (
-      <TrendingUp size={14} className="text-green-500" />
+      <TrendingUp size={14} className="text-buy" />
     ) : (
-      <TrendingDown size={14} className="text-red-500" />
+      <TrendingDown size={14} className="text-sell" />
     );
   };
 
@@ -237,13 +237,13 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
       return (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-[#0a0a0a] rounded-xl p-4 border border-[#1e1e1e] animate-pulse">
+            <div key={i} className="bg-muted/40 rounded-lg p-4 border border-border animate-pulse">
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
-                  <div className="h-4 w-28 bg-[#1a1a1a] rounded" />
-                  <div className="h-3 w-20 bg-[#1a1a1a] rounded" />
+                  <div className="h-4 w-28 bg-muted rounded" />
+                  <div className="h-3 w-20 bg-muted rounded" />
                 </div>
-                <div className="h-5 w-16 bg-[#1a1a1a] rounded-full" />
+                <div className="h-5 w-16 bg-muted rounded-full" />
               </div>
             </div>
           ))}
@@ -254,11 +254,11 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     if (orders.length === 0) {
       return (
         <div className="text-center py-10">
-          <div className="w-12 h-12 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl mx-auto mb-3 flex items-center justify-center">
-            <AlertCircle size={20} className="text-gray-600" />
+          <div className="w-12 h-12 bg-muted border border-border rounded-lg mx-auto mb-3 flex items-center justify-center">
+            <AlertCircle size={20} className="text-muted-foreground" />
           </div>
-          <p className="text-gray-400 text-sm">{emptyMessage}</p>
-          <p className="text-gray-600 text-xs mt-1">
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+          <p className="text-muted-foreground/70 text-xs mt-1">
             {activeTab === "current"
               ? "Your orders awaiting admin approval will appear here"
               : "Your completed and processed orders will appear here"
@@ -271,38 +271,38 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
     return (
       <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
         {orders.map((order) => (
-          <div key={order.id} className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] hover:border-[#2a2a2a] transition-colors">
+          <div key={order.id} className="bg-muted/40 rounded-lg p-3 border border-border hover:border-foreground/20 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
                   order.side === "buy" || order.side === "long"
-                    ? "bg-green-500/10"
-                    : "bg-red-500/10"
+                    ? "bg-buy/10"
+                    : "bg-sell/10"
                 }`}>
                   {getSideIcon(order.side)}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <CryptoIcon symbol={order.symbol?.split('/')[0] || order.symbol} size="xs" />
-                    <span className="text-white font-medium text-sm">{order.symbol}</span>
+                    <span className="text-foreground font-medium text-sm">{order.symbol}</span>
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
                       order.side === "buy" || order.side === "long"
-                        ? "bg-green-500/10 text-green-400"
-                        : "bg-red-500/10 text-red-400"
+                        ? "bg-buy/10 text-buy"
+                        : "bg-sell/10 text-sell"
                     }`}>
                       {order.side.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">
+                  <div className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
                     {formatAmount(order.amount, order.symbol)} @ {formatPrice(order.price)}
                   </div>
                   {(order.status === "executed" || order.status === "filled") && formatFee(order) && (
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-amber-400/80">
+                      <span className="text-[10px] text-warning/80 tabular-nums">
                         Fee: {formatFee(order)}
                       </span>
                       {getTradeTotal(order) && (
-                        <span className="text-[10px] text-gray-500">
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
                           {order.side === "buy" ? "Total paid" : "Net received"}: {getTradeTotal(order)}
                         </span>
                       )}
@@ -313,20 +313,20 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
               <div className="flex items-center gap-2">
                 <div className="text-right mr-1">
-                  <div className="text-[10px] text-gray-600">{formatDate((order as any).created_at || order.createdAt)}</div>
+                  <div className="text-[10px] text-muted-foreground/70 tabular-nums">{formatDate((order as any).created_at || order.createdAt)}</div>
                 </div>
                 <StatusBadge status={order.status} size="sm" />
                 <button
                   onClick={() => handleSelectOrder(order)}
-                  className="p-1 rounded-lg hover:bg-[#222] transition-colors"
+                  className="p-1 rounded-md hover:bg-muted transition-colors"
                   title="Trade details"
                 >
-                  <Info className="h-3.5 w-3.5 text-gray-500" />
+                  <Info className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
                 {activeTab === "current" && order.status === "pending_approval" && (
                   <button
                     onClick={() => handleCancelOrder(order.id)}
-                    className="text-red-400 hover:text-red-300 text-[11px] font-medium px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                    className="text-sell hover:text-sell/80 text-[11px] font-medium px-2 py-1 rounded-md bg-sell/10 hover:bg-sell/20 transition-colors"
                   >
                     Cancel
                   </button>
@@ -340,15 +340,15 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
   };
 
   return (
-    <div className={`bg-[#111] rounded-2xl border border-[#1e1e1e] ${className}`}>
+    <div className={`bg-card rounded-xl border border-border ${className}`}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">Order Management</h3>
+          <h3 className="text-sm font-semibold text-foreground">Order Management</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
               disabled={filteredOrders.length === 0}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-gray-400 hover:text-white bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground bg-muted border border-border hover:border-foreground/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export to CSV"
             >
               <Download size={10} />
@@ -358,26 +358,26 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-[#0a0a0a] rounded-xl p-1 border border-[#1e1e1e]">
+        <div className="flex gap-1 bg-muted/40 rounded-lg p-1 border border-border">
           <button
             onClick={() => setActiveTab("current")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${
               activeTab === "current"
-                ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
-                : "text-gray-500 hover:text-gray-300"
+                ? "bg-card text-foreground shadow-sm border border-border"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Current Orders
             {currentOrders && currentOrders.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">{currentOrders.length}</span>
+              <span className="ml-1.5 text-[10px] bg-warning/15 text-warning px-1.5 py-0.5 rounded-full">{currentOrders.length}</span>
             )}
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${
               activeTab === "history"
-                ? "bg-[#1a1a1a] text-white shadow-sm border border-[#2a2a2a]"
-                : "text-gray-500 hover:text-gray-300"
+                ? "bg-card text-foreground shadow-sm border border-border"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Order History
@@ -392,7 +392,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
           <select
             value={sideFilter}
             onChange={e => setSideFilter(e.target.value)}
-            className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+            className="px-2 py-1.5 rounded-md text-xs bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors focus:outline-none appearance-none cursor-pointer"
           >
             <option value="all">All Sides</option>
             <option value="buy">Buy</option>
@@ -404,7 +404,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             <select
               value={pairFilter}
               onChange={e => setPairFilter(e.target.value)}
-              className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+              className="px-2 py-1.5 rounded-md text-xs bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors focus:outline-none appearance-none cursor-pointer"
             >
               <option value="all">All Pairs</option>
               {availablePairs.map(p => <option key={p} value={p}>{p}</option>)}
@@ -416,7 +416,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors focus:outline-none appearance-none cursor-pointer"
+              className="px-2 py-1.5 rounded-md text-xs bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors focus:outline-none appearance-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="executed">Executed</option>
@@ -430,7 +430,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
           {/* Sort */}
           <button
             onClick={() => setSortOrder(s => s === "newest" ? "oldest" : "newest")}
-            className="px-2 py-1.5 rounded-lg text-xs bg-[#111] border border-[#1e1e1e] text-gray-400 hover:text-gray-300 hover:border-[#2a2a2a] transition-colors"
+            className="px-2 py-1.5 rounded-md text-xs bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
           >
             {sortOrder === "newest" ? "Newest" : "Oldest"}
           </button>
@@ -444,13 +444,13 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
       {/* Pagination */}
       {filteredOrders.length > 0 && (
-        <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-[#1e1e1e]">
+        <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-border">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-600">{filteredOrders.length} total</span>
+            <span className="text-[10px] text-muted-foreground/70">{filteredOrders.length} total</span>
             <select
               value={pageSize}
               onChange={e => setPageSize(Number(e.target.value))}
-              className="px-1.5 py-0.5 rounded text-[10px] bg-[#0a0a0a] border border-[#1e1e1e] text-gray-500 focus:outline-none"
+              className="px-1.5 py-0.5 rounded text-[10px] bg-background border border-border text-muted-foreground focus:outline-none"
             >
               {PAGE_SIZES.map(s => <option key={s} value={s}>{s}/page</option>)}
             </select>
@@ -459,19 +459,19 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+              className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
             >
-              <ChevronLeft size={14} className="text-gray-400" />
+              <ChevronLeft size={14} className="text-muted-foreground" />
             </button>
-            <span className="text-[10px] text-gray-500 px-2">
+            <span className="text-[10px] text-muted-foreground px-2 tabular-nums">
               {page + 1} / {totalPages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="p-1 rounded hover:bg-[#1a1a1a] disabled:opacity-30 transition-colors"
+              className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors"
             >
-              <ChevronRight size={14} className="text-gray-400" />
+              <ChevronRight size={14} className="text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -479,13 +479,13 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
       {/* Trade Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-5 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-sm">
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-base font-semibold text-white">Trade Details</h3>
+              <h3 className="text-base font-semibold text-foreground">Trade Details</h3>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-gray-400 transition-colors text-lg"
+                className="h-7 w-7 flex items-center justify-center rounded-md bg-muted hover:bg-muted/70 text-muted-foreground transition-colors text-lg"
               >
                 ×
               </button>
@@ -493,41 +493,41 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
             <div className="space-y-3">
               {/* Trade Header */}
-              <div className="flex items-center gap-3 bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
+              <div className="flex items-center gap-3 bg-muted/40 rounded-lg p-3 border border-border">
                 <CryptoIcon symbol={selectedOrder.symbol?.split('/')[0] || selectedOrder.symbol} size="sm" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-semibold text-sm">{selectedOrder.symbol}</span>
+                    <span className="text-foreground font-semibold text-sm">{selectedOrder.symbol}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                      selectedOrder.side === 'buy' || selectedOrder.side === 'long' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                      selectedOrder.side === 'buy' || selectedOrder.side === 'long' ? 'bg-buy/10 text-buy' : 'bg-sell/10 text-sell'
                     }`}>
                       {selectedOrder.side.toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-[10px] text-gray-500">Order #{selectedOrderNumber}</span>
+                  <span className="text-[10px] text-muted-foreground">Order #{selectedOrderNumber}</span>
                 </div>
                 <StatusBadge status={selectedOrder.status} size="md" />
               </div>
 
               {/* Timestamp */}
-              <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                <label className="text-[10px] text-gray-500 uppercase tracking-wider">Time Placed</label>
-                <div className="text-white text-xs mt-0.5">
+              <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Time Placed</label>
+                <div className="text-foreground text-xs mt-0.5">
                   {formatDate((selectedOrder as any).created_at || selectedOrder.createdAt)}
                 </div>
               </div>
 
               {/* Trade Parameters */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Amount</label>
-                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
+                <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Amount</label>
+                  <div className="text-foreground font-semibold text-sm mt-0.5 tabular-nums">
                     {formatAmount(selectedOrder.amount, selectedOrder.symbol)}
                   </div>
                 </div>
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Price</label>
-                  <div className="text-white font-semibold text-sm mt-0.5 tabular-nums">
+                <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Price</label>
+                  <div className="text-foreground font-semibold text-sm mt-0.5 tabular-nums">
                     {formatPrice(selectedOrder.price)}
                   </div>
                 </div>
@@ -535,9 +535,9 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
               {/* Cost / Value */}
               {selectedOrder.price && (
-                <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e]">
-                  <label className="text-[10px] text-gray-500 uppercase tracking-wider">Trade Value</label>
-                  <div className="text-white font-medium text-sm mt-0.5 tabular-nums">
+                <div className="bg-muted/40 rounded-lg p-3 border border-border">
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Trade Value</label>
+                  <div className="text-foreground font-medium text-sm mt-0.5 tabular-nums">
                     {formatCryptoNumber(parseFloat(selectedOrder.amount) * parseFloat(selectedOrder.price))} USDT
                   </div>
                 </div>
@@ -546,34 +546,34 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
               {/* Fee & Total Breakdown for executed trades */}
               {(selectedOrder.status === "executed" || selectedOrder.status === "filled") && (
                 <>
-                  <div className="border-t border-[#1e1e1e] my-2" />
-                  <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
-                    <div className="px-3 py-2 border-b border-[#1e1e1e]">
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Fee Breakdown</span>
+                  <div className="border-t border-border my-2" />
+                  <div className="bg-muted/40 rounded-lg border border-border overflow-hidden">
+                    <div className="px-3 py-2 border-b border-border">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Fee Breakdown</span>
                     </div>
                     <div className="p-3 space-y-2">
                       {selectedOrder.price && (
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">Trade Value</span>
-                          <span className="text-xs text-white tabular-nums">
+                          <span className="text-xs text-muted-foreground">Trade Value</span>
+                          <span className="text-xs text-foreground tabular-nums">
                             {formatCryptoNumber(parseFloat(selectedOrder.amount) * parseFloat(selectedOrder.price))} USDT
                           </span>
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           Trading Fee {(selectedOrder as any).fee_rate ? `(${(parseFloat((selectedOrder as any).fee_rate) * 100).toFixed(2)}%)` : ''}
                         </span>
-                        <span className="text-xs text-amber-400 tabular-nums">
+                        <span className="text-xs text-warning tabular-nums">
                           {formatFee(selectedOrder) ? `-${formatFee(selectedOrder)}` : '$0.00'}
                         </span>
                       </div>
-                      <div className="border-t border-[#1e1e1e] my-1" />
+                      <div className="border-t border-border my-1" />
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400 font-semibold">
+                        <span className="text-xs text-muted-foreground font-semibold">
                           {selectedOrder.side === 'buy' ? 'Total Paid' : 'Net Received'}
                         </span>
-                        <span className="text-sm text-white font-bold tabular-nums">
+                        <span className="text-sm text-foreground font-bold tabular-nums">
                           {getTradeTotal(selectedOrder) || 'N/A'}
                         </span>
                       </div>
@@ -584,8 +584,8 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
 
               {/* Pending status info */}
               {(selectedOrder.status === "pending" || selectedOrder.status === "pending_approval") && (
-                <div className="bg-yellow-500/5 rounded-xl p-3 border border-yellow-500/10">
-                  <div className="text-xs text-yellow-400">
+                <div className="bg-warning/5 rounded-lg p-3 border border-warning/10">
+                  <div className="text-xs text-warning">
                     This order is awaiting admin approval. Fees will be applied when the trade is executed.
                   </div>
                 </div>
@@ -595,7 +595,7 @@ export function OrderManagement({ className = "" }: OrderManagementProps) {
             <div className="mt-5">
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="w-full bg-[#1e1e1e] hover:bg-[#2a2a2a] text-white rounded-xl py-2.5 text-sm border border-[#2a2a2a] transition-colors"
+                className="w-full bg-muted hover:bg-muted/70 text-foreground rounded-lg py-2.5 text-sm border border-border transition-colors"
               >
                 Close
               </button>

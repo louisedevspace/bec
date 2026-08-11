@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoApi } from "@/services/crypto-api";
-import { Upload, FileText, Camera, User } from "lucide-react";
+import { Upload, FileText, Camera, User, Info, ShieldCheck } from "lucide-react";
 import type { LoanApplication } from "@/types/crypto";
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
@@ -219,8 +220,12 @@ export default function LoanPage() {
                   value={formData.amount}
                   onChange={(e) => handleInputChange("amount", e.target.value)}
                   placeholder="Enter loan amount"
+                  className="tabular-nums"
                   required
                 />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Minimum: 1,000 USDT &middot; Maximum: 1,000,000 USDT
+                </p>
               </div>
               <div>
                 <Label htmlFor="duration">Loan Duration</Label>
@@ -302,25 +307,39 @@ export default function LoanPage() {
 
         {/* Terms and Submit */}
         <Card>
-          <CardContent className="pt-6">
-            {uploading && <div className="mb-4 text-blue-500">Uploading documents...</div>}
-            {uploadError && <div className="mb-4 text-red-500">{uploadError}</div>}
-            <div className="flex items-start space-x-3 mb-6">
+          <CardContent className="pt-6 space-y-4">
+            <Alert className="bg-info/10 border-info/20">
+              <Info className="text-info" size={16} />
+              <AlertDescription className="text-sm text-info">
+                Your application will be reviewed by our team and is subject to identity verification and credit assessment. This does not guarantee approval.
+              </AlertDescription>
+            </Alert>
+
+            {uploading && (
+              <div className="flex items-center gap-2 text-sm text-info">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-info" />
+                Uploading documents...
+              </div>
+            )}
+            {uploadError && <div className="text-sm text-danger">{uploadError}</div>}
+
+            <div className="flex items-start space-x-3">
               <Checkbox
                 id="terms"
                 checked={formData.termsAccepted}
                 onCheckedChange={(checked) => handleInputChange("termsAccepted", !!checked)}
               />
-              <label htmlFor="terms" className="text-sm leading-relaxed">
+              <label htmlFor="terms" className="text-sm leading-relaxed text-muted-foreground">
                 I agree to the Terms and Conditions and Privacy Policy. I understand that loan approval is subject to verification and credit assessment.
               </label>
             </div>
-            
+
             <Button
               type="submit"
-              className="w-full"
+              className="w-full shadow-sm"
               disabled={loanMutation.isPending || !formData.termsAccepted}
             >
+              <ShieldCheck className="w-4 h-4" />
               {loanMutation.isPending ? "Submitting..." : "Submit Loan Application"}
             </Button>
           </CardContent>
@@ -355,14 +374,14 @@ function FileUploadArea({ icon: Icon, title, description, file, onChange }: File
         onChange={handleFileChange}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
       />
-      <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-        file 
-          ? "border-green-500 bg-green-500/10" 
+      <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+        file
+          ? "border-success bg-success/10"
           : "border-border hover:border-primary/50"
       }`}>
         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
           {file ? (
-            <User className="text-green-500" size={18} />
+            <User className="text-success" size={18} />
           ) : (
             <Icon className="text-muted-foreground" size={18} />
           )}

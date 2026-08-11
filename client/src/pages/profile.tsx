@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Wallet, PieChart, History, Shield, Key, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon } from 'lucide-react';
+import { Wallet, PieChart, History, Shield, Key, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon, ChevronRight, Lock, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -19,6 +19,7 @@ import { userDataQueryOptions, portfolioQueryOptions } from '@/lib/queryClient';
 
 export default function ProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'support'>('overview');
   const [, setLocation] = useLocation();
   const { prices } = useCryptoPrices();
   const { isDark, toggleTheme } = useTheme();
@@ -41,17 +42,17 @@ export default function ProfilePage() {
     queryKey: ['user-profile', authUser?.id],
     queryFn: async () => {
       if (!authUser) throw new Error('No auth user');
-      
+
       // Check if the user exists in the users table
       const { data: users, error: listError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id);
-      
+
       if (listError) throw listError;
-      
+
       let userProfile;
-      
+
       if (!users || users.length === 0) {
         // User exists in Auth but not in users table — auto-create the row
         console.log('User not found in users table, creating profile...');
@@ -87,7 +88,7 @@ export default function ProfilePage() {
       } else {
         userProfile = users[0];
       }
-      
+
       return userProfile;
     },
     enabled: !!authUser?.id,
@@ -105,7 +106,7 @@ export default function ProfilePage() {
         .eq('user_id', authUser.id)
         .order('submitted_at', { ascending: false })
         .limit(1);
-      
+
       if (kycError) {
         console.error('Error fetching KYC status:', kycError);
         return null;
@@ -187,9 +188,9 @@ export default function ProfilePage() {
   // Memoized calculations for performance
   const totalStaked = useMemo(() => {
     if (!stakingPositions || stakingPositions.length === 0 || !prices || prices.length === 0) return 0;
-    
+
     let total = 0;
-    
+
     stakingPositions.forEach((position: any) => {
       const price = prices.find((p: any) => p.symbol === position.symbol);
       if (price && position.status === 'active') {
@@ -198,15 +199,15 @@ export default function ProfilePage() {
         total += stakedAmount * priceValue;
       }
     });
-    
+
     return total;
   }, [stakingPositions, prices]);
 
   const totalBalance = useMemo(() => {
     if (!portfolio || portfolio.length === 0 || !prices || prices.length === 0) return 0;
-    
+
     let totalValue = 0;
-    
+
     // Calculate available portfolio value (ETH, BTC, USDT, etc.) - EXCLUDE staked amounts
     // All values are converted to USD for the total
     portfolio.forEach((asset: any) => {
@@ -219,7 +220,7 @@ export default function ProfilePage() {
         totalValue += total * priceValue;
       }
     });
-    
+
     return totalValue;
   }, [portfolio, prices]);
 
@@ -273,8 +274,8 @@ export default function ProfilePage() {
       return {
         status: 'not-submitted',
         icon: AlertCircle,
-        color: 'text-yellow-400',
-        bgColor: 'bg-yellow-900/20',
+        color: 'text-warning',
+        bgColor: 'bg-warning/10',
         text: 'KYC not submitted',
         description: 'Please submit your KYC documents for verification'
       };
@@ -285,8 +286,8 @@ export default function ProfilePage() {
         return {
           status: 'approved',
           icon: CheckCircle,
-          color: 'text-green-400',
-          bgColor: 'bg-green-900/20',
+          color: 'text-success',
+          bgColor: 'bg-success/10',
           text: 'KYC Approved',
           description: 'Your identity has been verified successfully'
         };
@@ -294,8 +295,8 @@ export default function ProfilePage() {
         return {
           status: 'rejected',
           icon: XCircle,
-          color: 'text-red-400',
-          bgColor: 'bg-red-900/20',
+          color: 'text-danger',
+          bgColor: 'bg-danger/10',
           text: 'KYC Rejected',
           description: kycStatus.rejection_reason || 'Your KYC application was rejected'
         };
@@ -304,8 +305,8 @@ export default function ProfilePage() {
         return {
           status: 'pending',
           icon: Clock,
-          color: 'text-blue-400',
-          bgColor: 'bg-blue-900/20',
+          color: 'text-info',
+          bgColor: 'bg-info/10',
           text: 'KYC Pending',
           description: 'Your KYC application is under review'
         };
@@ -317,265 +318,262 @@ export default function ProfilePage() {
 
   // Show loading spinner only for initial auth/profile fetch
   if (authLoading || profileLoading) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="animate-pulse text-gray-500 text-sm">Loading profile...</div>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-pulse text-muted-foreground text-sm">Loading profile...</div>
     </div>
   );
-  
+
   // Handle auth or profile errors
   const error = authError || profileError;
   if (error) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="text-red-400 text-sm">Error: {(error as Error).message}</div>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-danger text-sm">Error: {(error as Error).message}</div>
     </div>
   );
   if (!profile) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="text-gray-500 text-sm">No profile found.</div>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-muted-foreground text-sm">No profile found.</div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-20">
-      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
-        {/* Header */}
-        <div className="text-center mb-2">
-          <h1 className="text-base font-semibold text-white">My Account</h1>
-        </div>
+    <div className="min-h-screen bg-background text-foreground pb-24 lg:pb-12">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pt-5 lg:pt-10 lg:grid lg:grid-cols-[280px_1fr] lg:gap-6 lg:items-start">
 
-        {/* Profile Summary Card */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-5">
-          <div className="flex items-start gap-4">
-            <div className="relative flex-shrink-0">
-              {profile.profile_picture ? (
-                <img
-                  src={getImageDisplayUrl(profile.profile_picture)}
-                  alt="Profile"
-                  className="w-14 h-14 rounded-xl object-cover border border-[#2a2a2a]"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-xl font-bold text-gray-400">
-                  {profile.full_name ? profile.full_name[0] : '?'}
-                </div>
-              )}
-              <button
-                onClick={() => setActiveModal('profile-picture')}
-                className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-lg w-5 h-5 flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg"
-              >
-                <Camera size={10} />
-              </button>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-white">ID: {profile.display_id || profile.id.substring(0, 8)}</div>
-              <div className="text-xs text-gray-500 mt-0.5 truncate">{profile.email}</div>
-              <div className="text-xs text-gray-500 truncate">{profile.full_name || 'Name not set'}</div>
-            </div>
-          </div>
-
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
-              <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Credit Score</div>
-              <div className="text-sm font-bold text-yellow-400 tabular-nums">{profile.credit_score || 60}</div>
-            </div>
-            <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
-              <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Portfolio</div>
-              <div className="text-sm font-bold text-green-400 tabular-nums">
-                {portfolioLoading ? (
-                  <span className="inline-block w-16 h-4 bg-gray-700 animate-pulse rounded"></span>
-                ) : (
-                  `$${formatUsdNumber(totalBalance)}`
-                )}
-              </div>
-            </div>
-            <div className="bg-[#0a0a0a] rounded-xl p-3 border border-[#1e1e1e] text-center">
-              <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Staked</div>
-              <div className="text-sm font-bold text-blue-400 tabular-nums">
-                {stakingLoading ? (
-                  <span className="inline-block w-16 h-4 bg-gray-700 animate-pulse rounded"></span>
-                ) : (
-                  `$${formatUsdNumber(totalStaked)}`
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Verification Status Card - Hide when KYC is approved */}
-        {verificationDisplay.status !== 'approved' && (
-          <div id="kyc-status-section" className={`bg-[#111] rounded-2xl border border-[#1e1e1e] p-4 transition-all duration-300`}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                verificationDisplay.status === 'rejected' ? 'bg-red-500/10' :
-                verificationDisplay.status === 'pending' ? 'bg-blue-500/10' : 'bg-yellow-500/10'
-              }`}>
-                <StatusIcon size={14} className={verificationDisplay.color} />
-              </div>
-              <span className={`text-sm font-semibold ${verificationDisplay.color}`}>{verificationDisplay.text}</span>
-            </div>
-            <p className="text-xs text-gray-500 mb-2 ml-9">{verificationDisplay.description}</p>
-            
-            {verificationDisplay.status === 'rejected' && kycStatus?.rejection_reason && (
-              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 ml-9 mb-2">
-                <p className="text-[11px] text-red-300">{kycStatus.rejection_reason}</p>
+        {/* Identity rail */}
+        <aside className="bg-card rounded-2xl border border-border p-5 lg:p-6 shadow-sm lg:sticky lg:top-24 flex flex-col items-center text-center gap-1">
+          <div className="relative flex-shrink-0">
+            {profile.profile_picture ? (
+              <img
+                src={getImageDisplayUrl(profile.profile_picture)}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover border border-border"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-muted border border-border flex items-center justify-center text-2xl font-bold text-muted-foreground">
+                {profile.full_name ? profile.full_name[0] : '?'}
               </div>
             )}
-            
-            {(verificationDisplay.status === 'not-submitted' || verificationDisplay.status === 'rejected') && (
-              <p className="text-[11px] text-blue-400 ml-9">
-                {verificationDisplay.status === 'not-submitted' 
-                  ? 'Please go to the Home page to submit your KYC documents.'
-                  : 'Please go to the Home page to re-submit your KYC documents.'}
-              </p>
-            )}
+            <button
+              onClick={() => setActiveModal('profile-picture')}
+              className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+              aria-label="Change profile picture"
+            >
+              <Camera size={11} />
+            </button>
           </div>
-        )}
 
-        {/* Staking Section */}
-        <div className="bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] rounded-2xl border border-[#252525] overflow-hidden">
-          <div 
-            onClick={() => setActiveModal('staking')}
-            className="relative cursor-pointer group"
-          >
-            {/* Background Pattern */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-blue-500/5"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all duration-500"></div>
-            
-            <div className="relative p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-300">
-                      <TrendingUp size={22} className="text-white" />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-[7px] text-white font-bold">✓</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-sm">USDT Staking</h3>
-                    <p className="text-gray-400 text-xs">Flexible & Fixed Terms</p>
-                  </div>
-                </div>
-                <div className="text-right sm:text-right">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-green-400 font-bold text-lg">4.0%</span>
-                    <span className="text-gray-500 text-xs">APY</span>
-                  </div>
-                  <div className="text-gray-500 text-[10px] mt-0.5">Max Return</div>
-                </div>
+          <div className="mt-3 text-sm font-semibold text-foreground truncate max-w-full">{profile.full_name || 'Name not set'}</div>
+          <div className="text-xs text-muted-foreground truncate max-w-full">{profile.email}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">ID: {profile.display_id || profile.id.substring(0, 8)}</div>
+
+          <div className={`inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full text-[11px] font-semibold ${verificationDisplay.bgColor} ${verificationDisplay.color}`}>
+            <StatusIcon size={11} />
+            {verificationDisplay.text}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4 w-full">
+            <div className="bg-muted/50 rounded-xl p-2.5 border border-border text-center">
+              <PieChart size={12} className="text-primary mx-auto mb-1" />
+              <div className="text-xs font-bold text-primary tabular-nums">{profile.credit_score || 60}</div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Credit</div>
+            </div>
+            <div className="bg-muted/50 rounded-xl p-2.5 border border-border text-center">
+              <Wallet size={12} className="text-success mx-auto mb-1" />
+              <div className="text-xs font-bold text-success tabular-nums">
+                {portfolioLoading ? '···' : `$${formatUsdNumber(totalBalance)}`}
               </div>
-              
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3 pt-3 border-t border-[#1e1e1e]">
-                <div className="flex items-center gap-4 text-xs flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center">
-                      <span className="text-blue-400 text-[10px]">🔒</span>
-                    </div>
-                    <span className="text-gray-400">7-180 Days</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 bg-green-500/10 rounded flex items-center justify-center">
-                      <span className="text-green-400 text-[10px]">$</span>
-                    </div>
-                    <span className="text-gray-400">Min $10</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-blue-400 text-xs font-medium group-hover:gap-2 transition-all self-end sm:self-auto">
-                  <span>Stake Now</span>
-                  <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Portfolio</div>
+            </div>
+            <div className="bg-muted/50 rounded-xl p-2.5 border border-border text-center">
+              <TrendingUp size={12} className="text-info mx-auto mb-1" />
+              <div className="text-xs font-bold text-info tabular-nums">
+                {stakingLoading ? '···' : `$${formatUsdNumber(totalStaked)}`}
               </div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Staked</div>
             </div>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] p-4">
-          <div className="grid grid-cols-2 gap-2">
-            <ActionButton icon={Wallet} label="My Wallet" onClick={() => handleQuickAction('wallet')} />
-            <ActionButton icon={TrendingUp} label="Staking" onClick={() => handleQuickAction('staking')} />
-          </div>
-        </div>
-
-        {/* Appearance */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center px-4 py-3 text-left transition-colors hover:bg-[#1a1a1a] focus:outline-none"
+            className="w-full flex items-center justify-between mt-4 px-3 py-2.5 rounded-xl border border-border bg-muted/50 hover:bg-muted transition-colors text-left"
           >
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center mr-3 border border-[#2a2a2a] ${
-              isDark ? 'bg-[#1a1a1a]' : 'bg-[#1a1a1a]'
-            }`}>
-              {isDark ? (
-                <Moon size={14} className="text-blue-400" />
-              ) : (
-                <Sun size={14} className="text-yellow-500" />
-              )}
-            </div>
-            <span className="flex-1 text-sm text-gray-300">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
-            <div className={`w-10 h-[22px] rounded-full relative transition-colors duration-200 ${
-              isDark ? 'bg-blue-500' : 'bg-gray-300'
-            }`}>
-              <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                isDark ? 'translate-x-[22px]' : 'translate-x-[3px]'
-              }`} />
+            <span className="flex items-center gap-2 text-xs font-medium text-foreground">
+              {isDark ? <Moon size={13} className="text-primary" /> : <Sun size={13} className="text-warning" />}
+              {isDark ? 'Dark Mode' : 'Light Mode'}
+            </span>
+            <div className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${isDark ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+              <div className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-background shadow-sm transition-transform duration-200 ${isDark ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
             </div>
           </button>
-        </div>
 
-        {/* Menu Section 1 */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <MenuButton icon={History} label="Transaction history" onClick={() => handleMenuAction('transaction-history')} />
-          <MenuButton 
-            icon={Shield} 
-            label={kycStatus?.status === 'approved' ? "KYC Verified" : "Verification status"} 
-            onClick={() => {
-              if (kycStatus?.status !== 'approved') {
-                const el = document.getElementById('kyc-status-section');
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  el.classList.add('ring-2', 'ring-blue-500/50');
-                  setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500/50'), 2000);
-                }
-              }
-            }}
-            showShield={kycStatus?.status === 'approved'}
-          />
-          <MenuButton icon={Key} label="Update the password" onClick={() => handleMenuAction('update-password')} isLast />
-        </div>
+          <div className="w-full mt-4 pt-4 border-t border-border flex flex-col gap-1.5">
+            <button
+              onClick={() => handleMenuAction('logout')}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-danger hover:bg-danger/10 transition-colors"
+            >
+              <LogOut size={13} /> Log out
+            </button>
+            {profile?.role === 'user' && (
+              <button
+                onClick={() => handleMenuAction('delete-account')}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
+              >
+                <Trash2 size={13} /> Delete account
+              </button>
+            )}
+          </div>
+        </aside>
 
-        {/* Menu Section 2 */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <MenuButton icon={FileText} label="Legal Agreements" onClick={() => handleMenuAction('privacy-policy')} />
-          <MenuButton icon={Phone} label="Customer support" onClick={() => handleMenuAction('customer-support')} isLast />
-        </div>
+        {/* Content */}
+        <div className="mt-4 lg:mt-0 space-y-4">
+          <div className="inline-flex bg-muted rounded-full p-1 gap-1">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'overview' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <TrendingUp size={12} /> Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Shield size={12} /> Security
+            </button>
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'support' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <FileText size={12} /> Support &amp; Legal
+            </button>
+          </div>
 
-        {/* Danger Section */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <MenuButton icon={LogOut} label="Log out" danger onClick={() => handleMenuAction('logout')} isLast={!profile?.role || profile?.role !== 'user'} />
-          {profile?.role === 'user' && (
-            <MenuButton icon={Trash2} label="Delete Account" danger onClick={() => handleMenuAction('delete-account')} isLast />
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              {/* Staking Section */}
+              <div
+                onClick={() => setActiveModal('staking')}
+                className="bg-card rounded-2xl border border-border p-4 cursor-pointer hover:border-primary/40 transition-colors shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center">
+                      <TrendingUp size={20} className="text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-foreground font-semibold text-sm">USDT Staking</h3>
+                      <p className="text-muted-foreground text-xs">Flexible &amp; Fixed Terms</p>
+                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-success font-bold text-lg">4.0%</span>
+                      <span className="text-muted-foreground text-xs">APY</span>
+                    </div>
+                    <div className="text-muted-foreground text-[10px] mt-0.5">Max Return</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-4 text-xs flex-wrap">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Lock size={12} className="text-primary" />
+                      <span>7-180 Days</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <DollarSign size={12} className="text-success" />
+                      <span>Min $10</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-primary text-xs font-medium self-end sm:self-auto">
+                    <span>Stake Now</span>
+                    <ChevronRight size={14} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <ActionButton icon={Wallet} label="My Wallet" onClick={() => handleQuickAction('wallet')} />
+                  <ActionButton icon={TrendingUp} label="Staking" onClick={() => handleQuickAction('staking')} />
+                </div>
+              </div>
+            </div>
           )}
-        </div>
 
-        {/* App & Notifications */}
-        <PwaControls />
+          {activeTab === 'security' && (
+            <div className="space-y-4">
+              {/* Verification Status Card - Hide when KYC is approved */}
+              {verificationDisplay.status !== 'approved' ? (
+                <div id="kyc-status-section" className="bg-card rounded-2xl border border-border p-4 shadow-sm transition-all duration-300">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${verificationDisplay.bgColor}`}>
+                      <StatusIcon size={14} className={verificationDisplay.color} />
+                    </div>
+                    <span className={`text-sm font-semibold ${verificationDisplay.color}`}>{verificationDisplay.text}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2 ml-9">{verificationDisplay.description}</p>
+
+                  {verificationDisplay.status === 'rejected' && kycStatus?.rejection_reason && (
+                    <div className="bg-danger/5 border border-danger/20 rounded-lg p-3 ml-9 mb-2">
+                      <p className="text-[11px] text-danger">{kycStatus.rejection_reason}</p>
+                    </div>
+                  )}
+
+                  {(verificationDisplay.status === 'not-submitted' || verificationDisplay.status === 'rejected') && (
+                    <p className="text-[11px] text-info ml-9">
+                      {verificationDisplay.status === 'not-submitted'
+                        ? 'Please go to the Home page to submit your KYC documents.'
+                        : 'Please go to the Home page to re-submit your KYC documents.'}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div id="kyc-status-section" className="bg-card rounded-2xl border border-border p-4 shadow-sm flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-success/10">
+                    <StatusIcon size={14} className="text-success" />
+                  </div>
+                  <span className="text-sm font-semibold text-success">Identity verified</span>
+                </div>
+              )}
+
+              <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <MenuButton icon={Key} label="Update the password" onClick={() => handleMenuAction('update-password')} isLast />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'support' && (
+            <div className="space-y-4">
+              <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <MenuButton icon={History} label="Transaction history" onClick={() => handleMenuAction('transaction-history')} isLast />
+              </div>
+              <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <MenuButton icon={FileText} label="Legal Agreements" onClick={() => handleMenuAction('privacy-policy')} />
+                <MenuButton icon={Phone} label="Customer support" onClick={() => handleMenuAction('customer-support')} isLast />
+              </div>
+            </div>
+          )}
+
+          {/* App & Notifications */}
+          <PwaControls />
+        </div>
       </div>
 
       {/* Modals */}
       <StakingModal isOpen={activeModal === 'staking'} onClose={() => setActiveModal(null)} userId={profile?.id} />
       <ChangePasswordModal isOpen={activeModal === 'change-password'} onClose={() => setActiveModal(null)} />
       <PrivacyPolicyModal isOpen={activeModal === 'privacy-policy'} onClose={() => setActiveModal(null)} />
-      <ProfilePictureModal 
-        isOpen={activeModal === 'profile-picture'} 
+      <ProfilePictureModal
+        isOpen={activeModal === 'profile-picture'}
         onClose={() => setActiveModal(null)}
         currentProfilePicture={profile.profile_picture}
         userId={profile.id}
         onPictureUpdate={handlePictureUpdate}
       />
-      <DeleteAccountModal 
-        isOpen={activeModal === 'delete-account'} 
+      <DeleteAccountModal
+        isOpen={activeModal === 'delete-account'}
         onClose={() => setActiveModal(null)}
       />
     </div>
@@ -584,38 +582,35 @@ export default function ProfilePage() {
 
 function ActionButton({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick?: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-[#0a0a0a] border border-[#1e1e1e] hover:border-[#2a2a2a] hover:bg-[#151515] transition-all cursor-pointer group" onClick={onClick}>
-      <div className="w-8 h-8 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl flex items-center justify-center group-hover:border-blue-500/30 transition-colors">
-        <Icon size={14} className="text-gray-400 group-hover:text-blue-400 transition-colors" />
+    <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-muted/50 border border-border hover:border-primary/40 hover:bg-muted transition-all cursor-pointer group" onClick={onClick}>
+      <div className="w-8 h-8 bg-muted border border-border rounded-lg flex items-center justify-center group-hover:border-primary/40 transition-colors">
+        <Icon size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
-      <span className="text-[10px] font-medium text-gray-400 text-center leading-tight">{label}</span>
+      <span className="text-[10px] font-medium text-muted-foreground text-center leading-tight">{label}</span>
     </div>
   );
 }
 
 function MenuButton({ icon: Icon, label, danger, onClick, showShield, isLast }: { icon: LucideIcon; label: string; danger?: boolean; onClick?: () => void; showShield?: boolean; isLast?: boolean }) {
   return (
-    <button 
-      className={`w-full flex items-center px-4 py-3 text-left transition-colors hover:bg-[#1a1a1a] focus:outline-none ${
-        !isLast ? 'border-b border-[#1e1e1e]' : ''
-      }`} 
+    <button
+      className={`w-full flex items-center px-4 py-3 text-left transition-colors hover:bg-muted focus:outline-none ${
+        !isLast ? 'border-b border-border' : ''
+      }`}
       onClick={onClick}
     >
       <div className={`w-7 h-7 rounded-lg flex items-center justify-center mr-3 ${
-        danger ? 'bg-red-500/10' : 'bg-[#1a1a1a]'
+        danger ? 'bg-danger/10' : 'bg-muted'
       }`}>
-        <Icon size={14} className={danger ? 'text-red-400' : 'text-gray-400'} />
+        <Icon size={14} className={danger ? 'text-danger' : 'text-muted-foreground'} />
       </div>
-      <span className={`flex-1 text-sm ${danger ? 'text-red-400' : 'text-gray-300'}`}>{label}</span>
+      <span className={`flex-1 text-sm ${danger ? 'text-danger' : 'text-foreground'}`}>{label}</span>
       {showShield ? (
-        <div className="w-5 h-5 flex items-center justify-center" title="KYC Verified">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" fill="#10b981"/>
-            <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+        <div className="w-5 h-5 flex items-center justify-center text-success" title="KYC Verified">
+          <Shield size={14} className="fill-success/20" />
         </div>
       ) : (
-        <span className="text-gray-600 text-xs">›</span>
+        <ChevronRight size={14} className="text-muted-foreground" />
       )}
     </button>
   );

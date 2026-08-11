@@ -108,11 +108,11 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
   const getResultBadge = (result: string) => {
     switch (result) {
       case 'win':
-        return <Badge className="bg-green-500/10 text-green-400 border-green-500/20"><TrendingUp className="h-3 w-3 mr-1" />Always Win</Badge>;
+        return <Badge className="bg-success/10 text-success border-success/20"><TrendingUp className="h-3 w-3 mr-1" />Always Win</Badge>;
       case 'loss':
-        return <Badge className="bg-red-500/10 text-red-400 border-red-500/20"><TrendingDown className="h-3 w-3 mr-1" />Always Lose</Badge>;
+        return <Badge className="bg-danger/10 text-danger border-danger/20"><TrendingDown className="h-3 w-3 mr-1" />Always Lose</Badge>;
       default:
-        return <Badge className="bg-gray-500/10 text-gray-400 border-gray-500/20"><Minus className="h-3 w-3 mr-1" />Auto (is_active)</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-border"><Minus className="h-3 w-3 mr-1" />Auto (is_active)</Badge>;
     }
   };
 
@@ -120,68 +120,68 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2 text-white">
-            <TrendingUp className="h-5 w-5 text-blue-400" />
+          <DialogTitle className="flex items-center space-x-2 text-foreground">
+            <TrendingUp className="h-5 w-5 text-primary" />
             <span>Futures Trade Settings</span>
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-muted-foreground">
             Configure futures trading parameters for this user.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* User Info */}
-          <Card className="bg-[#0a0a0a] border-[#1e1e1e]">
+          <Card className="bg-muted/30 border-border">
             <CardContent className="p-3">
-              <div className="text-sm text-white">
+              <div className="text-sm text-foreground">
                 <span className="font-medium">User:</span> {userName || userEmail}
               </div>
-              <div className="text-xs text-gray-500">{userEmail}</div>
+              <div className="text-xs text-muted-foreground">{userEmail}</div>
             </CardContent>
           </Card>
 
           {loading ? (
             <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-500">Loading settings...</p>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Loading settings...</p>
             </div>
           ) : (
             <>
               {/* Trade Outcome Control */}
               <div className="space-y-2">
-                <Label className="flex items-center space-x-2 text-gray-300">
-                  <AlertTriangle className="h-4 w-4 text-orange-400" />
+                <Label className="flex items-center space-x-2 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
                   <span>Trade Outcome Control</span>
                 </Label>
                 <Select value={tradeResult} onValueChange={setTradeResult}>
-                  <SelectTrigger className="bg-[#0a0a0a] border-[#1e1e1e] text-white">
+                  <SelectTrigger className="bg-background border-border text-foreground">
                     <SelectValue placeholder="Select outcome" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#111] border-[#1e1e1e]">
-                    <SelectItem value="auto" className="text-white hover:bg-[#1a1a1a]">
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="auto" className="text-foreground">
                       Auto (based on is_active flag)
                     </SelectItem>
-                    <SelectItem value="win" className="text-white hover:bg-[#1a1a1a]">
+                    <SelectItem value="win" className="text-foreground">
                       Always Win
                     </SelectItem>
-                    <SelectItem value="loss" className="text-white hover:bg-[#1a1a1a]">
+                    <SelectItem value="loss" className="text-foreground">
                       Always Lose
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Controls whether this user's futures trades result in a win or loss.
                   "Auto" uses the default is_active logic.
                 </p>
               </div>
 
               {/* Current Status Preview */}
-              <Card className="bg-blue-500/10 border-blue-500/20">
+              <Card className="bg-primary/5 border-primary/20">
                 <CardContent className="p-3">
-                  <div className="text-sm font-medium text-blue-400 mb-2">Current Settings Preview</div>
+                  <div className="text-sm font-medium text-primary mb-2">Current Settings Preview</div>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-blue-300">Trade Outcome:</span>
+                      <span className="text-muted-foreground">Trade Outcome:</span>
                       {getResultBadge(tradeResult)}
                     </div>
                   </div>
@@ -192,7 +192,7 @@ export const AdminFuturesSettingsModal: React.FC<AdminFuturesSettingsModalProps>
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Saving...' : 'Save Futures Settings'}

@@ -66,6 +66,25 @@
         }catch(e){document.documentElement.classList.add('dark');}
       })();
     </script>
+    <!-- Prevent flash: apply cached accent theme BEFORE React mounts -->
+    <script>
+      (function(){
+        try{
+          var a=localStorage.getItem('becxus-accent');
+          var valid=['amber','blue','violet','cyan','slate'];
+          document.documentElement.setAttribute('data-accent', valid.indexOf(a)!==-1 ? a : 'amber');
+        }catch(e){document.documentElement.setAttribute('data-accent','amber');}
+      })();
+    </script>
+    <!-- Prevent flash: apply cached exchange name BEFORE React mounts -->
+    <script>
+      (function(){
+        try{
+          var n=localStorage.getItem('becxus-exchange-name');
+          if(n) document.title = n + ' - Global Crypto Trading Platform';
+        }catch(e){}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

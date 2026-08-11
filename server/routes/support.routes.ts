@@ -5,6 +5,7 @@ import { syncManager } from "../sync-manager";
 import { adminNotificationService } from "../services/admin-notification.service";
 import { autoReplyService } from "../services/auto-reply.service";
 import { notifyStaffOfSupportMessage, notifyUserOfSupportReply } from "../services/support-push.service";
+import { getExchangeName, withExchangeName } from "../services/app-settings.service";
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
 import { compressUserImage, compressAdminImage } from "../utils/image-compress";
@@ -837,7 +838,14 @@ export default function registerSupportRoutes(app: Express) {
 
   // GET /api/admin/support/templates — get response templates
   app.get("/api/admin/support/templates", requireAuth, requireSupportStaff, async (_req, res) => {
-    res.json(RESPONSE_TEMPLATES);
+    const exchangeName = await getExchangeName();
+    const templates = Object.fromEntries(
+      Object.entries(RESPONSE_TEMPLATES).map(([category, entries]) => [
+        category,
+        entries.map((entry) => ({ ...entry, message: withExchangeName(entry.message, exchangeName) })),
+      ])
+    );
+    res.json(templates);
   });
 
   // PUT /api/admin/support/conversations/:id/assign — assign ticket

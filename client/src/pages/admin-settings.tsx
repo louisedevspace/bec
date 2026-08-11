@@ -8,6 +8,7 @@ import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import AdminLayout from './admin-layout';
+import { ACCENT_THEMES, ACCENT_THEME_KEYS, DEFAULT_ACCENT_THEME, type AccentThemeKey } from '@shared/accent-themes';
 
 interface User {
   id: string;
@@ -63,6 +64,12 @@ export default function AdminSettings() {
   const [showAddLimit, setShowAddLimit] = useState(false);
   const [timeLimitsSaving, setTimeLimitsSaving] = useState(false);
 
+  // Branding — exchange display name
+  const [exchangeName, setExchangeName] = useState('');
+  const [exchangeNameSaving, setExchangeNameSaving] = useState(false);
+  const [exchangeNameMessage, setExchangeNameMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [accentTheme, setAccentTheme] = useState<AccentThemeKey>(DEFAULT_ACCENT_THEME);
+
   // Standard durations that cannot be removed (only toggled)
   const standardDurations = [60, 120, 180, 240, 360, 480, 600];
 
@@ -84,6 +91,45 @@ export default function AdminSettings() {
     }
   };
 
+  const saveExchangeName = async () => {
+    const trimmed = exchangeName.trim();
+    if (!trimmed) {
+      setExchangeNameMessage({ type: 'error', text: 'Exchange name cannot be empty' });
+      return;
+    }
+    setExchangeNameSaving(true);
+    setExchangeNameMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setExchangeNameMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ exchangeName: trimmed, accentTheme })
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to save');
+      }
+      const data = await response.json();
+      setExchangeName(data.exchangeName);
+      if (data.accentTheme && ACCENT_THEME_KEYS.includes(data.accentTheme)) {
+        setAccentTheme(data.accentTheme);
+      }
+      setExchangeNameMessage({ type: 'success', text: 'Branding updated' });
+    } catch (err: any) {
+      setExchangeNameMessage({ type: 'error', text: err.message || 'Failed to save exchange name' });
+    } finally {
+      setExchangeNameSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -93,6 +139,20 @@ export default function AdminSettings() {
           setError('Not authenticated');
           setLoading(false);
           return;
+        }
+
+        // Fetch current exchange name
+        try {
+          const settingsResponse = await fetch('/api/settings');
+          if (settingsResponse.ok) {
+            const settingsData = await settingsResponse.json();
+            setExchangeName(settingsData.exchangeName || '');
+            if (settingsData.accentTheme && ACCENT_THEME_KEYS.includes(settingsData.accentTheme)) {
+              setAccentTheme(settingsData.accentTheme);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch app settings:', err);
         }
 
         // Fetch users
@@ -194,7 +254,7 @@ export default function AdminSettings() {
 
       const response = await fetch(`/api/admin/deposit-addresses/${assetSymbol}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
@@ -463,8 +523,8 @@ export default function AdminSettings() {
     <AdminLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-sm text-gray-500">Loading settings...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-primary mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading settings...</p>
         </div>
       </div>
     </AdminLayout>
@@ -472,9 +532,9 @@ export default function AdminSettings() {
   if (error) return (
     <AdminLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl p-6 text-sm flex flex-col items-center gap-3">
+        <div className="bg-danger/10 border border-danger/30 text-danger rounded-xl p-6 text-sm flex flex-col items-center gap-3 max-w-sm text-center">
           <span>{error}</span>
-          <Button size="sm" variant="outline" className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" onClick={() => { setError(null); setLoading(true); window.location.reload(); }}>
+          <Button size="sm" variant="outline" className="text-xs border-danger/30 text-danger hover:bg-danger/10" onClick={() => { setError(null); setLoading(true); window.location.reload(); }}>
             Retry
           </Button>
         </div>
@@ -487,95 +547,159 @@ export default function AdminSettings() {
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Configure platform deposit addresses and manage users</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">Configure platform deposit addresses and manage users</p>
+        </div>
+
+        {/* Branding */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border">
+            <h2 className="font-semibold text-foreground text-sm">Branding</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Controls the exchange name shown across the app, notifications, and support replies</p>
+          </div>
+          <div className="p-5 space-y-5">
+            <div>
+              <Label htmlFor="exchangeName" className="text-xs text-muted-foreground mb-1.5 block">Exchange Name</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  id="exchangeName"
+                  value={exchangeName}
+                  onChange={(e) => setExchangeName(e.target.value)}
+                  maxLength={60}
+                  placeholder="e.g. Becxus"
+                  className="rounded-lg"
+                />
+                <Button
+                  onClick={saveExchangeName}
+                  disabled={exchangeNameSaving}
+                  className="rounded-lg whitespace-nowrap"
+                >
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  {exchangeNameSaving ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+              {exchangeNameMessage && (
+                <p className={`text-xs mt-2 ${exchangeNameMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
+                  {exchangeNameMessage.text}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Accent Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {ACCENT_THEME_KEYS.map((key) => {
+                  const preset = ACCENT_THEMES[key];
+                  const isSelected = accentTheme === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setAccentTheme(key)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                        isSelected
+                          ? 'border-primary/50 bg-primary/10 text-foreground'
+                          : 'border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground'
+                      }`}
+                    >
+                      <span
+                        className="h-4 w-4 rounded-full border border-border"
+                        style={{ backgroundColor: `hsl(${preset.primary})` }}
+                      />
+                      {preset.label}
+                      {isSelected && <CheckCircle className="h-3.5 w-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Applies as the primary accent across buttons, links, and highlights app-wide. Click Save above to apply.</p>
+            </div>
+          </div>
         </div>
 
         {/* Deposit Address Management */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <div className="p-5 border-b border-[#1e1e1e] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-orange-500/10 rounded-xl flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-orange-400 fill-current" />
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-foreground" />
               </div>
               <div>
-                <h2 className="font-semibold text-white text-sm">Deposit Addresses</h2>
-                <p className="text-[11px] text-gray-500">Addresses shown to all users for deposits</p>
+                <h2 className="font-semibold text-foreground text-sm">Deposit Addresses</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Addresses shown to all users for deposits</p>
               </div>
             </div>
-            <button 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={refreshDepositAddresses}
-              className="inline-flex items-center rounded-xl text-xs font-medium border border-[#1e1e1e] bg-[#0a0a0a] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#2a2a2a] hover:text-white h-9 px-3 transition-colors w-full sm:w-auto justify-center"
+              className="rounded-lg w-full sm:w-auto"
             >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5 fill-current" />
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               Refresh
-            </button>
+            </Button>
           </div>
-          
+
           <div className="p-5 space-y-5">
-            <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 mb-4">
+            <div className="bg-background border border-border rounded-lg p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Asset Symbol</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Asset Symbol</Label>
                   <Input
                     value={newAddressForm.asset_symbol}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, asset_symbol: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="e.g., BTC, ETH, USDT"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Address</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Address</Label>
                   <Input
                     value={newAddressForm.address}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, address: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="Enter deposit address"
                   />
                 </div>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Label className="text-xs text-gray-500 mb-1 block">Network</Label>
-                    <Input
-                      value={newAddressForm.network}
-                      onChange={(e) => setNewAddressForm({ ...newAddressForm, network: e.target.value })}
-                      className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
-                      placeholder="e.g., mainnet, ethereum, trc20"
-                    />
-                  </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Network</Label>
+                  <Input
+                    value={newAddressForm.network}
+                    onChange={(e) => setNewAddressForm({ ...newAddressForm, network: e.target.value })}
+                    className="rounded-lg h-9 text-sm"
+                    placeholder="e.g., mainnet, ethereum, trc20"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Min Deposit</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Min Deposit</Label>
                   <Input
                     type="number"
                     step="any"
                     min="0"
                     value={newAddressForm.min_deposit}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, min_deposit: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="e.g., 0.001"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Max Deposit</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Max Deposit</Label>
                   <Input
                     type="number"
                     step="any"
                     min="0"
                     value={newAddressForm.max_deposit}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, max_deposit: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="e.g., 100"
                   />
-                </div>
-                <div className="flex items-end">
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Deposit Fee (%)</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Deposit Fee (%)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -583,12 +707,12 @@ export default function AdminSettings() {
                     max="100"
                     value={newAddressForm.deposit_fee_rate}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, deposit_fee_rate: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="e.g., 1.5"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500 mb-1 block">Withdrawal Fee (%)</Label>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Withdrawal Fee (%)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -596,14 +720,14 @@ export default function AdminSettings() {
                     max="100"
                     value={newAddressForm.withdrawal_fee_rate}
                     onChange={(e) => setNewAddressForm({ ...newAddressForm, withdrawal_fee_rate: e.target.value })}
-                    className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                    className="rounded-lg h-9 text-sm"
                     placeholder="e.g., 0.5"
                   />
                 </div>
                 <div className="flex items-end">
                   <Button
                     size="sm"
-                    className="h-9 rounded-lg bg-orange-500 hover:bg-orange-600 w-full md:w-auto"
+                    className="rounded-lg h-9 w-full md:w-auto"
                     onClick={createAddress}
                     disabled={!newAddressForm.asset_symbol || !newAddressForm.address || !newAddressForm.network}
                   >
@@ -615,100 +739,102 @@ export default function AdminSettings() {
 
             {depositAddresses.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-14 h-14 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <Wallet className="h-7 w-7 text-gray-500 fill-current" />
+                <div className="w-14 h-14 bg-muted rounded-xl mx-auto mb-4 flex items-center justify-center">
+                  <Wallet className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-gray-500">No deposit addresses configured</p>
-                <p className="text-xs text-gray-500 mt-1">Add addresses in the database to get started</p>
+                <p className="text-sm text-muted-foreground">No deposit addresses configured</p>
+                <p className="text-xs text-muted-foreground mt-1">Add addresses in the database to get started</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {depositAddresses.map((address) => (
-                  <div key={address.id} className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4 hover:border-[#2a2a2a] transition-all">
+                  <div key={address.id} className="bg-background border border-border rounded-lg p-4 hover:border-foreground/20 transition-colors">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-blue-400 text-sm">{address.asset_symbol}</span>
+                        <span className="font-semibold text-foreground text-sm">{address.asset_symbol}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                          address.is_active 
-                            ? 'bg-green-500/10 text-green-400' 
-                            : 'bg-red-500/10 text-red-400'
+                          address.is_active
+                            ? 'bg-success/10 text-success'
+                            : 'bg-danger/10 text-danger'
                         }`}>
                           {address.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                       {editingAddress === address.asset_symbol ? (
                         <div className="flex gap-1.5">
-                          <Button size="sm" onClick={() => saveAddress(address.asset_symbol)} className="rounded-lg h-7 w-7 p-0 bg-green-600 hover:bg-green-700">
-                            <Save className="w-3.5 h-3.5 fill-current" />
+                          <Button size="sm" onClick={() => saveAddress(address.asset_symbol)} className="rounded-lg h-7 w-7 p-0 bg-success hover:bg-success/90 text-success-foreground">
+                            <Save className="w-3.5 h-3.5" />
                           </Button>
-                          <button onClick={cancelEditing} className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 border border-[#1e1e1e] bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white transition-colors">
-                            <X className="w-3.5 h-3.5 fill-current" />
-                          </button>
+                          <Button size="sm" variant="outline" onClick={cancelEditing} className="rounded-lg h-7 w-7 p-0">
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       ) : (
                         <div className="flex gap-1.5">
-                          <button onClick={() => startEditingAddress(address)} className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                            <Edit className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                          <button
+                          <Button size="sm" variant="ghost" onClick={() => startEditingAddress(address)} className="rounded-lg h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => deleteAddress(address.asset_symbol)}
-                            className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="rounded-lg h-7 w-7 p-0 border-danger/40 text-danger hover:bg-danger/10"
                           >
-                            <X className="w-3.5 h-3.5 fill-current" />
-                          </button>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       )}
                     </div>
-                    
+
                     {editingAddress === address.asset_symbol ? (
                       <div className="space-y-3">
                         <div>
-                          <Label className="text-xs text-gray-500 mb-1 block">Address</Label>
+                          <Label className="text-xs text-muted-foreground mb-1.5 block">Address</Label>
                           <Input
                             value={editForm.address}
                             onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                            className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                            className="rounded-lg h-9 text-sm"
                             placeholder="Enter deposit address"
                           />
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500 mb-1 block">Network</Label>
+                          <Label className="text-xs text-muted-foreground mb-1.5 block">Network</Label>
                           <Input
                             value={editForm.network}
                             onChange={(e) => setEditForm({ ...editForm, network: e.target.value })}
-                            className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                            className="rounded-lg h-9 text-sm"
                             placeholder="e.g., mainnet, trc20"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1 block">Min Deposit</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Min Deposit</Label>
                             <Input
                               type="number"
                               step="any"
                               min="0"
                               value={editForm.min_deposit}
                               onChange={(e) => setEditForm({ ...editForm, min_deposit: e.target.value })}
-                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              className="rounded-lg h-9 text-sm"
                               placeholder="e.g., 0.001"
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1 block">Max Deposit</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Max Deposit</Label>
                             <Input
                               type="number"
                               step="any"
                               min="0"
                               value={editForm.max_deposit}
                               onChange={(e) => setEditForm({ ...editForm, max_deposit: e.target.value })}
-                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              className="rounded-lg h-9 text-sm"
                               placeholder="e.g., 100"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1 block">Deposit Fee (%)</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Deposit Fee (%)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -716,12 +842,12 @@ export default function AdminSettings() {
                               max="100"
                               value={editForm.deposit_fee_rate}
                               onChange={(e) => setEditForm({ ...editForm, deposit_fee_rate: e.target.value })}
-                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              className="rounded-lg h-9 text-sm"
                               placeholder="e.g., 1.5"
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-gray-500 mb-1 block">Withdrawal Fee (%)</Label>
+                            <Label className="text-xs text-muted-foreground mb-1.5 block">Withdrawal Fee (%)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -729,7 +855,7 @@ export default function AdminSettings() {
                               max="100"
                               value={editForm.withdrawal_fee_rate}
                               onChange={(e) => setEditForm({ ...editForm, withdrawal_fee_rate: e.target.value })}
-                              className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-blue-500"
+                              className="rounded-lg h-9 text-sm"
                               placeholder="e.g., 0.5"
                             />
                           </div>
@@ -739,20 +865,20 @@ export default function AdminSettings() {
                       <div className="space-y-2">
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] text-gray-400 uppercase font-medium">Address</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wide">Address</span>
                             <button
                               onClick={() => handleCopyAddress(address.address, address.asset_symbol)}
-                              className="p-0.5 hover:bg-[#1a1a1a] rounded transition-colors"
+                              className="p-0.5 hover:bg-muted rounded transition-colors"
                             >
                               {copied ? (
-                                <CheckCircle size={12} className="text-green-500 fill-current" />
+                                <CheckCircle size={12} className="text-success" />
                               ) : (
-                                <Copy size={12} className="text-gray-400 fill-current" />
+                                <Copy size={12} className="text-muted-foreground" />
                               )}
                             </button>
                           </div>
-                          <p 
-                            className="font-mono text-xs text-gray-300 break-all cursor-pointer hover:text-blue-400 transition-colors bg-[#0d0d0d] px-2.5 py-1.5 rounded-lg border border-[#1e1e1e]"
+                          <p
+                            className="font-mono text-xs text-foreground break-all cursor-pointer hover:text-primary transition-colors bg-muted px-2.5 py-1.5 rounded-lg border border-border"
                             onClick={() => handleCopyAddress(address.address, address.asset_symbol)}
                           >
                             {address.address}
@@ -760,39 +886,39 @@ export default function AdminSettings() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <div>
-                            <span className="text-gray-400">Network: </span>
-                            <span className="text-gray-300 font-medium">{address.network}</span>
+                            <span className="text-muted-foreground">Network: </span>
+                            <span className="text-foreground font-medium">{address.network}</span>
                           </div>
-                          <span className="text-[10px] text-gray-400">{formatDate(address.updated_at)}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(address.updated_at)}</span>
                         </div>
                         {(address.min_deposit != null || address.max_deposit != null) && (
-                          <div className="flex items-center gap-3 text-xs mt-1 pt-1 border-t border-[#1e1e1e]">
+                          <div className="flex items-center gap-3 text-xs pt-2 border-t border-border">
                             {address.min_deposit != null && (
                               <div>
-                                <span className="text-gray-400">Min: </span>
-                                <span className="text-orange-400 font-medium">{address.min_deposit} {address.asset_symbol}</span>
+                                <span className="text-muted-foreground">Min: </span>
+                                <span className="text-foreground font-medium">{address.min_deposit} {address.asset_symbol}</span>
                               </div>
                             )}
                             {address.max_deposit != null && (
                               <div>
-                                <span className="text-gray-400">Max: </span>
-                                <span className="text-orange-400 font-medium">{address.max_deposit} {address.asset_symbol}</span>
+                                <span className="text-muted-foreground">Max: </span>
+                                <span className="text-foreground font-medium">{address.max_deposit} {address.asset_symbol}</span>
                               </div>
                             )}
                           </div>
                         )}
                         {((address.deposit_fee_rate != null && address.deposit_fee_rate > 0) || (address.withdrawal_fee_rate != null && address.withdrawal_fee_rate > 0)) && (
-                          <div className="flex items-center gap-3 text-xs mt-1 pt-1 border-t border-[#1e1e1e]">
+                          <div className="flex items-center gap-3 text-xs pt-2 border-t border-border">
                             {address.deposit_fee_rate != null && address.deposit_fee_rate > 0 && (
                               <div>
-                                <span className="text-gray-400">Deposit Fee: </span>
-                                <span className="text-amber-400 font-medium">{(address.deposit_fee_rate * 100).toFixed(2)}%</span>
+                                <span className="text-muted-foreground">Deposit Fee: </span>
+                                <span className="text-warning font-medium">{(address.deposit_fee_rate * 100).toFixed(2)}%</span>
                               </div>
                             )}
                             {address.withdrawal_fee_rate != null && address.withdrawal_fee_rate > 0 && (
                               <div>
-                                <span className="text-gray-400">Withdrawal Fee: </span>
-                                <span className="text-amber-400 font-medium">{(address.withdrawal_fee_rate * 100).toFixed(2)}%</span>
+                                <span className="text-muted-foreground">Withdrawal Fee: </span>
+                                <span className="text-warning font-medium">{(address.withdrawal_fee_rate * 100).toFixed(2)}%</span>
                               </div>
                             )}
                           </div>
@@ -807,25 +933,25 @@ export default function AdminSettings() {
         </div>
 
         {/* Futures Time Limits Section */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-          <div className="p-5 border-b border-[#1e1e1e] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                <Timer className="h-5 w-5 text-purple-400 fill-current" />
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <Timer className="h-5 w-5 text-foreground" />
               </div>
               <div>
-                <h2 className="font-semibold text-white text-sm">Futures Time Limits</h2>
-                <p className="text-[11px] text-gray-500">Configure minimum trade amounts based on time duration</p>
+                <h2 className="font-semibold text-foreground text-sm">Futures Time Limits</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Configure minimum trade amounts based on time duration</p>
               </div>
             </div>
             {timeLimits && (
               <button
                 onClick={toggleTimeLimitsEnabled}
                 disabled={timeLimitsSaving}
-                className={`inline-flex items-center rounded-xl text-xs font-medium border h-9 px-4 transition-colors w-full sm:w-auto justify-center ${
+                className={`inline-flex items-center justify-center rounded-lg text-xs font-medium border h-9 px-4 transition-colors w-full sm:w-auto ${
                   timeLimits.enabled
-                    ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
-                    : 'bg-[#0a0a0a] border-[#1e1e1e] text-gray-400 hover:bg-[#1a1a1a]'
+                    ? 'bg-success/10 border-success/30 text-success hover:bg-success/20'
+                    : 'bg-background border-border text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {timeLimits.enabled ? 'Enabled' : 'Disabled'}
@@ -836,23 +962,23 @@ export default function AdminSettings() {
           <div className="p-5 space-y-5">
             {timeLimitsLoading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400 mx-auto"></div>
-                <div className="text-gray-500 mt-2 text-xs">Loading time limits...</div>
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-border border-t-primary mx-auto" />
+                <div className="text-muted-foreground mt-2 text-xs">Loading time limits...</div>
               </div>
             ) : !timeLimits ? (
               <div className="text-center py-8">
-                <div className="w-14 h-14 bg-[#1a1a1a] rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <Timer className="h-7 w-7 text-gray-500 fill-current" />
+                <div className="w-14 h-14 bg-muted rounded-xl mx-auto mb-4 flex items-center justify-center">
+                  <Timer className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-gray-500">Unable to load time limits</p>
+                <p className="text-sm text-muted-foreground">Unable to load time limits</p>
               </div>
             ) : (
               <>
                 {/* Default Min Amount */}
-                <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4">
+                <div className="bg-background border border-border rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
-                      <Label className="text-xs text-gray-500 mb-1 block">Default Minimum Amount (USDT)</Label>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Default Minimum Amount (USDT)</Label>
                       <Input
                         type="number"
                         step="1"
@@ -860,10 +986,10 @@ export default function AdminSettings() {
                         value={timeLimits.defaultMinAmount}
                         onChange={(e) => updateDefaultMinAmount(e.target.value)}
                         onBlur={saveDefaultMinAmount}
-                        className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-purple-500 max-w-[200px]"
+                        className="rounded-lg h-9 text-sm max-w-[200px]"
                         placeholder="e.g., 50"
                       />
-                      <p className="text-[10px] text-gray-500 mt-1">Fallback minimum when no specific duration limit applies</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">Fallback minimum when no specific duration limit applies</p>
                     </div>
                   </div>
                 </div>
@@ -872,19 +998,19 @@ export default function AdminSettings() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-[#1e1e1e]">
-                        <th className="text-left py-3 px-3 text-gray-500 font-medium text-xs uppercase tracking-wider">Duration</th>
-                        <th className="text-left py-3 px-3 text-gray-500 font-medium text-xs uppercase tracking-wider">Min Amount (USDT)</th>
-                        <th className="text-center py-3 px-3 text-gray-500 font-medium text-xs uppercase tracking-wider">Active</th>
-                        <th className="text-right py-3 px-3 text-gray-500 font-medium text-xs uppercase tracking-wider">Actions</th>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">Duration</th>
+                        <th className="text-left py-3 px-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">Min Amount (USDT)</th>
+                        <th className="text-center py-3 px-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">Active</th>
+                        <th className="text-right py-3 px-3 text-muted-foreground font-medium text-xs uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {timeLimits.limits.map((limit) => (
-                        <tr key={limit.duration} className="border-b border-[#1e1e1e] hover:bg-[#0a0a0a]">
+                        <tr key={limit.duration} className="border-b border-border hover:bg-muted/50">
                           <td className="py-3 px-3">
-                            <span className="text-white font-medium">{formatDuration(limit.duration)}</span>
-                            <span className="text-gray-500 text-xs ml-2">({limit.duration}s)</span>
+                            <span className="text-foreground font-medium">{formatDuration(limit.duration)}</span>
+                            <span className="text-muted-foreground text-xs ml-2">({limit.duration}s)</span>
                           </td>
                           <td className="py-3 px-3">
                             {editingLimit === limit.duration ? (
@@ -894,11 +1020,11 @@ export default function AdminSettings() {
                                 min="0"
                                 value={editLimitForm.minAmount}
                                 onChange={(e) => setEditLimitForm({ minAmount: e.target.value })}
-                                className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-8 text-white w-24 focus:border-purple-500"
+                                className="rounded-lg h-8 w-24 text-sm"
                                 autoFocus
                               />
                             ) : (
-                              <span className="text-purple-400 font-semibold">${limit.minAmount}</span>
+                              <span className="text-primary font-semibold">${limit.minAmount}</span>
                             )}
                           </td>
                           <td className="py-3 px-3 text-center">
@@ -906,10 +1032,10 @@ export default function AdminSettings() {
                               onClick={() => toggleLimitActive(limit.duration)}
                               disabled={timeLimitsSaving}
                               className={`w-10 h-5 rounded-full transition-colors relative ${
-                                limit.isActive ? 'bg-green-500' : 'bg-gray-600'
+                                limit.isActive ? 'bg-success' : 'bg-muted'
                               }`}
                             >
-                              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-primary-foreground transition-transform ${
                                 limit.isActive ? 'left-5' : 'left-0.5'
                               }`} />
                             </button>
@@ -918,34 +1044,41 @@ export default function AdminSettings() {
                             <div className="flex items-center justify-end gap-1.5">
                               {editingLimit === limit.duration ? (
                                 <>
-                                  <button
+                                  <Button
+                                    size="sm"
                                     onClick={() => saveLimitEdit(limit.duration)}
-                                    className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                    className="rounded-lg h-7 w-7 p-0 bg-success hover:bg-success/90 text-success-foreground"
                                   >
-                                    <Save className="w-3.5 h-3.5 fill-current" />
-                                  </button>
-                                  <button
+                                    <Save className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     onClick={cancelEditingLimit}
-                                    className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 border border-[#1e1e1e] bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white transition-colors"
+                                    className="rounded-lg h-7 w-7 p-0"
                                   >
-                                    <X className="w-3.5 h-3.5 fill-current" />
-                                  </button>
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
                                 </>
                               ) : (
                                 <>
-                                  <button
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
                                     onClick={() => startEditingLimit(limit)}
-                                    className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-[#1a1a1a] transition-colors"
+                                    className="rounded-lg h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                                   >
-                                    <Edit className="w-3.5 h-3.5 fill-current" />
-                                  </button>
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </Button>
                                   {!standardDurations.includes(limit.duration) && (
-                                    <button
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
                                       onClick={() => removeLimit(limit.duration)}
-                                      className="inline-flex items-center justify-center rounded-lg h-7 w-7 p-0 text-red-400 hover:bg-red-500/10 transition-colors"
+                                      className="rounded-lg h-7 w-7 p-0 text-danger hover:bg-danger/10"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5 fill-current" />
-                                    </button>
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
                                   )}
                                 </>
                               )}
@@ -959,29 +1092,29 @@ export default function AdminSettings() {
 
                 {/* Add Custom Duration */}
                 {showAddLimit ? (
-                  <div className="bg-[#0a0a0a] border border-[#1e1e1e] rounded-xl p-4">
+                  <div className="bg-background border border-border rounded-lg p-4">
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1">
-                        <Label className="text-xs text-gray-500 mb-1 block">Duration (seconds)</Label>
+                        <Label className="text-xs text-muted-foreground mb-1.5 block">Duration (seconds)</Label>
                         <Input
                           type="number"
                           step="1"
                           min="1"
                           value={newLimitForm.duration}
                           onChange={(e) => setNewLimitForm({ ...newLimitForm, duration: e.target.value })}
-                          className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-purple-500"
+                          className="rounded-lg h-9 text-sm"
                           placeholder="e.g., 300"
                         />
                       </div>
                       <div className="flex-1">
-                        <Label className="text-xs text-gray-500 mb-1 block">Min Amount (USDT)</Label>
+                        <Label className="text-xs text-muted-foreground mb-1.5 block">Min Amount (USDT)</Label>
                         <Input
                           type="number"
                           step="1"
                           min="0"
                           value={newLimitForm.minAmount}
                           onChange={(e) => setNewLimitForm({ ...newLimitForm, minAmount: e.target.value })}
-                          className="rounded-lg border-[#1e1e1e] bg-[#111] text-sm h-9 text-white placeholder:text-gray-500 focus:border-purple-500"
+                          className="rounded-lg h-9 text-sm"
                           placeholder="e.g., 100"
                         />
                       </div>
@@ -990,33 +1123,35 @@ export default function AdminSettings() {
                           size="sm"
                           onClick={addCustomLimit}
                           disabled={!newLimitForm.duration || !newLimitForm.minAmount || timeLimitsSaving}
-                          className="h-9 rounded-lg bg-purple-600 hover:bg-purple-700"
+                          className="rounded-lg h-9"
                         >
                           Add
                         </Button>
-                        <button
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => { setShowAddLimit(false); setNewLimitForm({ duration: '', minAmount: '' }); }}
-                          className="inline-flex items-center justify-center rounded-lg h-9 w-9 p-0 border border-[#1e1e1e] bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white transition-colors"
+                          className="rounded-lg h-9 w-9 p-0"
                         >
-                          <X className="w-4 h-4 fill-current" />
-                        </button>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <button
                     onClick={() => setShowAddLimit(true)}
-                    className="inline-flex items-center rounded-xl text-xs font-medium border border-dashed border-[#2a2a2a] bg-transparent text-gray-400 hover:bg-[#1a1a1a] hover:text-white hover:border-[#3a3a3a] h-10 px-4 transition-colors w-full justify-center"
+                    className="inline-flex items-center justify-center rounded-lg text-xs font-medium border border-dashed border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground hover:border-foreground/30 h-10 px-4 transition-colors w-full"
                   >
-                    <Plus className="h-4 w-4 mr-2 fill-current" />
+                    <Plus className="h-4 w-4 mr-2" />
                     Add Custom Duration
                   </button>
                 )}
 
                 {/* Saving indicator */}
                 {timeLimitsSaving && (
-                  <div className="flex items-center justify-center gap-2 text-xs text-purple-400">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-400"></div>
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-border border-t-primary" />
                     Saving changes...
                   </div>
                 )}
@@ -1026,23 +1161,23 @@ export default function AdminSettings() {
         </div>
 
         {/* User Management Section */}
-        <div className="bg-[#111] rounded-2xl border border-[#1e1e1e] overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
           <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-400 fill-current" />
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <Users className="h-5 w-5 text-foreground" />
               </div>
               <div>
-                <h2 className="font-semibold text-white text-sm">User Management</h2>
-                <p className="text-[11px] text-gray-500">View and manage all user accounts</p>
+                <h2 className="font-semibold text-foreground text-sm">User Management</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">View and manage all user accounts</p>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowUserManagement(true)}
-              className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              className="rounded-lg text-xs w-full sm:w-auto"
               size="sm"
             >
-              <Users className="h-3.5 w-3.5 mr-1.5 fill-current" />
+              <Users className="h-3.5 w-3.5 mr-1.5" />
               Manage Users
             </Button>
           </div>
@@ -1057,4 +1192,4 @@ export default function AdminSettings() {
       />
     </AdminLayout>
   );
-} 
+}

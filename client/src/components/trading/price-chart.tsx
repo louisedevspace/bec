@@ -72,6 +72,23 @@ function calculateHeikinAshi(candles: any[]): any[] {
   return result;
 }
 
+// Canvas-rendered chart libraries can't read CSS custom properties directly
+// (var() only resolves in the DOM/CSSOM, not in a 2D context's fillStyle), so
+// we resolve the app's design tokens to literal hsl() strings once per theme
+// change. This keeps the chart's palette locked to index.css instead of
+// drifting to arbitrary hardcoded hex.
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return val || fallback;
+}
+function hslVar(name: string, fallback: string): string {
+  const raw = readCssVar(name, fallback);
+  const parts = raw.split(/\s+/);
+  if (parts.length < 3) return `hsl(${raw})`;
+  return `hsl(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+}
+
 export function PriceChart({ symbol, className }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1s");
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
@@ -93,17 +110,27 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const needsScrollRef = useRef(true);
   const isHoveredRef = useRef(false);
 
-  const colors = useMemo(() => ({
-    bg: isDark ? "#111111" : "#ffffff",
-    text: isDark ? "#9ca3af" : "#374151",
-    grid: isDark ? "#1e1e1e" : "#e5e7eb",
-    border: isDark ? "#1e1e1e" : "#d1d5db",
-    crosshair: isDark ? "#6b7280" : "#9B7DFF",
-    up: "#22c55e", down: "#ef4444",
-    volUp: "rgba(34,197,94,0.4)", volDown: "rgba(239,68,68,0.4)",
-    areaTop: "rgba(34,197,94,0.28)", areaBottom: "rgba(34,197,94,0.02)",
-    line: "#22c55e",
-  }), [isDark]);
+  // Resolved once per theme toggle — mirrors index.css tokens exactly
+  // (--success / --danger are theme-invariant; --card, --border, --primary
+  // switch between light/dark and follow the active accent color).
+  const colors = useMemo(() => {
+    const up = hslVar("--success", "142 71% 45%");
+    const down = hslVar("--danger", "0 84% 60%");
+    const primary = hslVar("--primary", "42 78% 52%");
+    return {
+      bg: hslVar("--card", isDark ? "0 0% 7%" : "0 0% 100%"),
+      text: hslVar("--muted-foreground", isDark ? "0 0% 55%" : "215 16% 47%"),
+      grid: hslVar("--border", isDark ? "0 0% 12%" : "214 32% 91%"),
+      border: hslVar("--border", isDark ? "0 0% 12%" : "214 32% 91%"),
+      crosshair: primary,
+      up, down,
+      volUp: up.replace("hsl(", "hsla(").replace(")", ", 0.4)"),
+      volDown: down.replace("hsl(", "hsla(").replace(")", ", 0.4)"),
+      areaTop: up.replace("hsl(", "hsla(").replace(")", ", 0.28)"),
+      areaBottom: up.replace("hsl(", "hsla(").replace(")", ", 0.02)"),
+      line: up,
+    };
+  }, [isDark]);
 
   useEffect(() => { chartTypeRef.current = chartType; }, [chartType]);
   useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
@@ -114,22 +141,22 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const sym = symbolRef.current;
     if ("open" in data) {
       const up = data.close >= data.open;
-      const c = up ? "#22c55e" : "#ef4444";
+      const c = up ? colors.up : colors.down;
       legendRef.current.innerHTML =
-        `<span style="color:#6b7280;font-weight:600">${sym}/USDT</span>` +
+        `<span style="color:${colors.text};font-weight:600">${sym}/USDT</span>` +
         `<span style="margin-left:8px">` +
         `O <span style="color:${c}">${formatPrice(data.open)}</span> ` +
         `H <span style="color:${c}">${formatPrice(data.high)}</span> ` +
         `L <span style="color:${c}">${formatPrice(data.low)}</span> ` +
         `C <span style="color:${c}">${formatPrice(data.close)}</span>` +
         `</span>` +
-        (data.volume != null ? `<span style="color:#6b7280;margin-left:8px">V ${formatVolume(data.volume)}</span>` : "");
+        (data.volume != null ? `<span style="color:${colors.text};margin-left:8px">V ${formatVolume(data.volume)}</span>` : "");
     } else if ("value" in data) {
       legendRef.current.innerHTML =
-        `<span style="color:#6b7280;font-weight:600">${sym}/USDT</span>` +
-        `<span style="color:#9ca3af;margin-left:8px">${formatPrice(data.value)}</span>`;
+        `<span style="color:${colors.text};font-weight:600">${sym}/USDT</span>` +
+        `<span style="color:${colors.text};margin-left:8px">${formatPrice(data.value)}</span>`;
     }
-  }, []);
+  }, [colors]);
 
   const processedData = useMemo(() => {
     if (!candles?.length) return { mainData: [], volumeData: [] };
@@ -222,7 +249,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
     if (priceLineRef.current) { try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {} }
     const livePrice = "close" in lastMain ? lastMain.close : lastMain.value;
-    priceLineRef.current = seriesRef.current.createPriceLine({ price: livePrice, color: "#3b82f6", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "" });
+    priceLineRef.current = seriesRef.current.createPriceLine({ price: livePrice, color: colors.crosshair, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "" });
 
     if (!isHoveredRef.current) updateLegend(lastMain);
     if (needsScrollRef.current && chartRef.current) {
@@ -231,7 +258,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       const visible = Math.min(80, total);
       chartRef.current.timeScale().setVisibleLogicalRange({ from: total - visible - 0.5, to: total + 4.5 });
     }
-  }, [processedData, updateLegend]);
+  }, [processedData, updateLegend, colors]);
 
   // Real-time kline handler
   const handleKline = useCallback((kline: BinanceKlineUpdate) => {
@@ -265,7 +292,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     }
 
     if (volumeSeriesRef.current) {
-      const volColor = kline.close >= kline.open ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)";
+      const volColor = kline.close >= kline.open ? colors.volUp : colors.volDown;
       const lastVolTime = lastVolumeRef.current?.time as number | undefined;
       const volTime = (!lastVolTime || candleTime > lastVolTime) ? candleTime : lastVolumeRef.current.time;
       const vol = { time: volTime, value: kline.volume, color: volColor };
@@ -278,7 +305,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       const c = lastCandleRef.current;
       updateLegend("open" in c ? { ...c, volume: kline.volume } : c);
     }
-  }, [updateLegend]);
+  }, [updateLegend, colors]);
 
   // Tick handler
   const handleTick = useCallback((tick: BinanceTick) => {
@@ -312,14 +339,14 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
   if (isLoading) {
     return (
-      <div className={`rounded-2xl border flex flex-col overflow-hidden bg-[#111] border-[#1e1e1e] ${className || ""}`} style={{ minHeight: 0 }}>
-        <div className="flex items-center px-3 py-2 border-b border-[#1e1e1e] flex-shrink-0">
-          <div className="flex gap-1">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="w-7 h-6 rounded bg-[#1a1a1a] animate-pulse" />)}</div>
+      <div className={`rounded-xl border flex flex-col overflow-hidden bg-card border-border ${className || ""}`} style={{ minHeight: 0 }}>
+        <div className="flex items-center px-3 py-2 border-b border-border flex-shrink-0">
+          <div className="flex gap-1">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="w-7 h-6 rounded bg-muted animate-pulse" />)}</div>
         </div>
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <div className="text-center">
-            <BarChart3 size={24} className="mx-auto mb-2 animate-pulse text-gray-600" />
-            <p className="text-xs text-gray-500">Loading chart...</p>
+            <BarChart3 size={24} className="mx-auto mb-2 animate-pulse text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Loading chart...</p>
           </div>
         </div>
       </div>
@@ -327,16 +354,16 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   }
 
   return (
-    <div className={`rounded-2xl border flex flex-col overflow-hidden bg-[#111] border-[#1e1e1e] ${className || ""}`} style={{ minHeight: 0 }}>
+    <div className={`rounded-xl border flex flex-col overflow-hidden bg-card border-border ${className || ""}`} style={{ minHeight: 0 }}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e1e] flex-shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-0.5 overflow-x-auto">
           <div className="flex items-center gap-1 mr-1.5 flex-shrink-0" title={isConnected ? "Live" : "Connecting..."}>
-            {isConnected ? <Wifi size={12} className="text-emerald-400" /> : <WifiOff size={12} className="text-gray-500 animate-pulse" />}
+            {isConnected ? <Wifi size={12} className="text-buy" /> : <WifiOff size={12} className="text-muted-foreground animate-pulse" />}
           </div>
           {TIMEFRAMES.map((tf) => (
             <button key={tf.value} onClick={() => setTimeframe(tf.value)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${timeframe === tf.value ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]" : "text-gray-500 hover:text-gray-300"}`}>
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap ${timeframe === tf.value ? "bg-muted text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}>
               {tf.label}
             </button>
           ))}
@@ -344,7 +371,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         <div className="flex gap-0.5 flex-shrink-0">
           {CHART_TYPES.map((ct) => (
             <button key={ct.value} onClick={() => setChartType(ct.value)}
-              className={`p-1.5 rounded transition-colors ${chartType === ct.value ? "bg-[#1a1a1a] text-white border border-[#2a2a2a]" : "text-gray-500 hover:text-gray-300"}`}
+              className={`p-1.5 rounded transition-colors ${chartType === ct.value ? "bg-muted text-foreground border border-border" : "text-muted-foreground hover:text-foreground"}`}
               title={ct.label}>
               <ct.icon size={14} />
             </button>
@@ -354,10 +381,10 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
 
       {/* Chart Area */}
       <div className="flex-1 min-h-0 relative">
-        <div ref={legendRef} className="absolute top-2 left-3 z-10 text-[11px] leading-relaxed pointer-events-none select-none" style={{ fontFamily: "monospace" }} />
+        <div ref={legendRef} className="absolute top-2 left-3 z-10 text-[11px] leading-relaxed pointer-events-none select-none tabular-nums" style={{ fontFamily: "monospace" }} />
         <div ref={chartContainerRef} className="absolute inset-0" style={{ WebkitOverflowScrolling: "touch" }}>
           {(!candles || candles.length === 0) && !isLoading && (
-            <div className="h-full flex items-center justify-center"><p className="text-sm text-gray-600">No data available</p></div>
+            <div className="h-full flex items-center justify-center"><p className="text-sm text-muted-foreground">No data available</p></div>
           )}
         </div>
       </div>

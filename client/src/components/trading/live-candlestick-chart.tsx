@@ -16,6 +16,18 @@ const REST_FALLBACK =
 const WS_PRIMARY = "wss://stream.binance.com:9443/ws/btcusdt@kline_1s";
 const WS_FALLBACK = "wss://stream.binance.com:443/ws/btcusdt@kline_1s";
 
+// Canvas-rendered chart libraries can't read CSS custom properties directly,
+// so we resolve the app's design tokens to literal hsl() strings once at
+// mount. --success/--danger are theme-invariant in index.css, so this stays
+// in sync with the buy/sell tokens without re-subscribing to theme changes.
+function hslVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return `hsl(${fallback})`;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const parts = raw.split(/\s+/);
+  if (parts.length < 3) return `hsl(${raw})`;
+  return `hsl(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+}
+
 function CandlestickChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -29,36 +41,42 @@ function CandlestickChart() {
     let destroyed = false;
     const container = containerRef.current;
 
-    // ── Chart — matches app dark theme (#111 bg, #1e1e1e borders) ──
+    const upColor = hslVar("--success", "142 71% 45%");
+    const downColor = hslVar("--danger", "0 84% 60%");
+    const bgColor = hslVar("--card", "0 0% 7%");
+    const textColor = hslVar("--muted-foreground", "0 0% 55%");
+    const gridColor = hslVar("--border", "0 0% 12%");
+
+    // ── Chart — matches app design tokens (card bg, border, buy/sell) ──
     const chart = createChart(container, {
       width: container.clientWidth,
       height: container.clientHeight,
       layout: {
-        background: { type: ColorType.Solid, color: "#111111" },
-        textColor: "#a1a1aa",
+        background: { type: ColorType.Solid, color: bgColor },
+        textColor,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "#1e1e1e" },
-        horzLines: { color: "#1e1e1e" },
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
       },
       crosshair: { mode: CrosshairMode.Normal },
       timeScale: {
         timeVisible: true,
         secondsVisible: true,
-        borderColor: "#1e1e1e",
+        borderColor: gridColor,
       },
-      rightPriceScale: { borderColor: "#1e1e1e" },
+      rightPriceScale: { borderColor: gridColor },
     });
     chartRef.current = chart;
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      borderUpColor: "#22c55e",
-      borderDownColor: "#ef4444",
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
+      upColor,
+      downColor,
+      borderUpColor: upColor,
+      borderDownColor: downColor,
+      wickUpColor: upColor,
+      wickDownColor: downColor,
     });
     seriesRef.current = series;
 
@@ -166,16 +184,15 @@ function CandlestickChart() {
   }, []);
 
   return (
-    <div className="relative w-full h-full rounded-2xl border bg-[#111] border-[#1e1e1e] overflow-hidden" style={{ minHeight: 0 }}>
+    <div className="relative w-full h-full rounded-xl border bg-card border-border overflow-hidden" style={{ minHeight: 0 }}>
       <div ref={containerRef} className="absolute inset-0" />
 
       {/* Status badge */}
-      <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/60 text-xs text-zinc-400 pointer-events-none">
+      <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded bg-background/70 text-xs text-muted-foreground pointer-events-none">
         <span
-          className="w-2 h-2 rounded-full"
-          style={{ background: connected ? "#22c55e" : "#ef4444" }}
+          className={`w-2 h-2 rounded-full ${connected ? "bg-buy" : "bg-sell"}`}
         />
-        {connected ? "Live" : "Connecting\u2026"}
+        {connected ? "Live" : "Connecting…"}
       </div>
     </div>
   );

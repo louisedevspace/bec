@@ -144,15 +144,15 @@ export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
   if (loading) {
     return (
       <div
-        className={`bg-[#111] border border-[#1e1e1e] rounded-xl p-3 flex gap-3 ${className}`}
+        className={`bg-card border border-border rounded-xl p-3 flex gap-3 ${className}`}
       >
-        <div className="w-20 h-20 rounded-lg bg-[#1e1e1e] animate-pulse flex-shrink-0 flex items-center justify-center">
-          <Globe className="w-6 h-6 text-gray-600" />
+        <div className="w-20 h-20 rounded-lg bg-muted animate-pulse flex-shrink-0 flex items-center justify-center">
+          <Globe className="w-6 h-6 text-muted-foreground" />
         </div>
         <div className="flex-1 flex flex-col justify-center min-w-0">
-          <div className="h-4 bg-[#1e1e1e] rounded animate-pulse w-3/4" />
-          <div className="h-3 bg-[#1e1e1e] rounded animate-pulse w-full mt-2" />
-          <span className="text-blue-400 text-[10px] mt-1.5">{getDomain(url)}</span>
+          <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+          <div className="h-3 bg-muted rounded animate-pulse w-full mt-2" />
+          <span className="text-primary text-[10px] mt-1.5">{getDomain(url)}</span>
         </div>
       </div>
     );
@@ -163,13 +163,13 @@ export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
     return (
       <div
         onClick={handleClick}
-        className={`bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-colors ${className}`}
+        className={`bg-card border border-border hover:border-primary/30 rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-colors ${className}`}
       >
-        <Globe className="w-5 h-5 text-gray-400 flex-shrink-0" />
-        <span className="text-blue-400 text-sm truncate flex-1 min-w-0">
+        <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+        <span className="text-primary text-sm truncate flex-1 min-w-0">
           {url}
         </span>
-        <ExternalLink className="w-4 h-4 text-gray-500 flex-shrink-0" />
+        <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       </div>
     );
   }
@@ -181,7 +181,7 @@ export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
   return (
     <div
       onClick={handleClick}
-      className={`bg-[#111] border border-[#1e1e1e] hover:border-[#2a2a2a] rounded-xl p-3 flex gap-3 cursor-pointer transition-colors relative ${className}`}
+      className={`bg-card border border-border hover:border-primary/30 rounded-xl p-3 flex gap-3 cursor-pointer transition-colors relative ${className}`}
     >
       {/* Image thumbnail */}
       {imageUrl ? (
@@ -195,30 +195,30 @@ export function LinkPreview({ url, className = '' }: LinkPreviewProps) {
           }}
         />
       ) : (
-        <div className="w-20 h-20 rounded-lg bg-[#1e1e1e] flex items-center justify-center flex-shrink-0">
-          <Globe className="w-8 h-8 text-gray-500" />
+        <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <Globe className="w-8 h-8 text-muted-foreground" />
         </div>
       )}
 
       {/* Text content */}
       <div className="flex-1 flex flex-col justify-center min-w-0 pr-6">
         {previewData.title && (
-          <h4 className="text-white text-sm font-semibold truncate">
+          <h4 className="text-foreground text-sm font-semibold truncate">
             {previewData.title}
           </h4>
         )}
         {previewData.description && (
-          <p className="text-gray-400 text-xs line-clamp-2 mt-1">
+          <p className="text-muted-foreground text-xs line-clamp-2 mt-1">
             {previewData.description}
           </p>
         )}
-        <span className="text-blue-400 text-[10px] mt-1.5">
+        <span className="text-primary text-[10px] mt-1.5">
           {domain}
         </span>
       </div>
 
       {/* External link icon */}
-      <ExternalLink className="w-4 h-4 text-gray-500 absolute top-3 right-3" />
+      <ExternalLink className="w-4 h-4 text-muted-foreground absolute top-3 right-3" />
     </div>
   );
 }

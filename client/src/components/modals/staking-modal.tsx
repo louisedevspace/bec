@@ -7,11 +7,11 @@ import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useToast } from "@/hooks/use-toast";
 import { cryptoApi } from "@/services/crypto-api";
 import { apiRequest } from "@/lib/queryClient";
-import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles, AlertTriangle } from "lucide-react";
+import { Coins, TrendingUp, Info, X, Lock, DollarSign, Clock, Sparkles, AlertTriangle, ArrowLeft } from "lucide-react";
 import type { StakingPosition } from "@/types/crypto";
 import { StakingDetailsModal } from "./staking-details-modal";
 import { formatUsdNumber } from "@/utils/format-utils";
-import { useTheme } from "@/hooks/use-theme";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface StakingModalProps {
   isOpen: boolean;
@@ -34,8 +34,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isDark } = useTheme();
-  
+
   // Get user's USDT balance
   const { data: portfolio } = useQuery({
     queryKey: ["/api/portfolio", userId],
@@ -180,22 +179,18 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl overflow-x-hidden" hideCloseButton>
         {/* Custom Header - Sticky within dialog */}
-        <div className="sticky top-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 border-b bg-[#111] border-[#1e1e1e]">
+        <div className="sticky top-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 border-b bg-card border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <TrendingUp size={20} className="text-white" />
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+              <TrendingUp size={20} className="text-primary" />
             </div>
             <div>
-              <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>USDT Staking</h2>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Earn passive income on your crypto</p>
+              <h2 className="text-lg font-bold text-foreground">USDT Staking</h2>
+              <p className="text-xs text-muted-foreground">Earn passive income on your crypto</p>
             </div>
           </div>
-          <button onClick={onClose} className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
-            isDark 
-              ? 'bg-[#1a1a1a] border-[#2a2a2a] hover:bg-[#2a2a2a]' 
-              : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
-          }`}>
-            <X size={16} className={isDark ? 'text-gray-400' : 'text-gray-600'} />
+          <button onClick={onClose} className="w-8 h-8 rounded-lg border flex items-center justify-center transition-colors bg-muted border-border hover:bg-muted/70">
+            <X size={16} className="text-muted-foreground" />
           </button>
         </div>
 
@@ -203,48 +198,48 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
         <div className="p-4 sm:p-6 space-y-6">
           {/* Staking disabled warning */}
           {stakingLimits && !stakingLimits.isEnabled && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-              <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-red-400">Staking Disabled</p>
-                <p className="text-xs text-red-400/70 mt-0.5">Staking is currently disabled for your account. Please contact support for more details.</p>
-              </div>
-            </div>
+            <Alert className="bg-danger/10 border-danger/30 p-4">
+              <AlertTriangle size={18} className="text-danger" />
+              <AlertDescription>
+                <p className="text-sm font-medium text-danger">Staking Disabled</p>
+                <p className="text-xs text-danger/70 mt-0.5">Staking is currently disabled for your account. Please contact support for more details.</p>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* User-specific limit info */}
           {stakingLimits && stakingLimits.isEnabled && (stakingLimits.maxStakeAmount || stakingLimits.maxTotalStaked || stakingLimits.maxDuration) && (
-            <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex items-start gap-2">
-              <Info size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-yellow-400/80">
+            <Alert className="bg-info/5 border-info/20 p-3">
+              <Info size={14} className="text-info" />
+              <AlertDescription className="text-xs text-info/80">
                 Your account has custom staking limits:
                 {stakingLimits.maxStakeAmount && ` Max per stake: $${parseFloat(stakingLimits.maxStakeAmount).toLocaleString()}`}
                 {stakingLimits.maxTotalStaked && ` • Max total: $${parseFloat(stakingLimits.maxTotalStaked).toLocaleString()}`}
                 {stakingLimits.maxDuration && ` • Max duration: ${stakingLimits.maxDuration} days`}
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {!selectedProduct ? (
             <>
               {/* Balance Card */}
-              <div className="bg-gradient-to-r from-[#0a0a0a] to-[#0f0f0f] rounded-2xl border border-[#1e1e1e] p-5">
+              <div className="bg-muted/50 rounded-xl border border-border p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
-                      <DollarSign size={24} className="text-green-400" />
+                    <div className="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                      <DollarSign size={24} className="text-success" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
-                      <p className="text-2xl font-bold text-white">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Available Balance</p>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">
                         {userId ? `${formatUsdNumber(parseFloat(usdtBalance))} USDT` : '---'}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-2">
-                      <Sparkles size={14} className="text-yellow-400" />
-                      <span className="text-sm text-gray-400">Ready to stake</span>
+                      <Sparkles size={14} className="text-warning" />
+                      <span className="text-sm text-muted-foreground">Ready to stake</span>
                     </div>
                   </div>
                 </div>
@@ -252,7 +247,7 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
               {/* Staking Products */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 mb-4 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 flex items-center gap-2">
                   <Lock size={14} />
                   Choose Your Staking Plan
                 </h3>
@@ -267,29 +262,29 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     return (
                     <div
                       key={index}
-                      className={`relative bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] p-4 hover:border-blue-500/50 transition-all cursor-pointer group ${isProductDisabled ? 'opacity-50 pointer-events-none' : ''}`}
+                      className={`relative bg-muted/50 rounded-xl border border-border p-4 hover:border-primary/50 transition-colors cursor-pointer group ${isProductDisabled ? 'opacity-50 pointer-events-none' : ''}`}
                       onClick={() => !isProductDisabled && handleStake(product)}
                     >
                       {isBest && (
-                        <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-[10px] font-bold px-2 py-0.5 rounded-full text-black">
+                        <div className="absolute top-2 right-2 bg-primary text-[10px] font-bold px-2 py-0.5 rounded-full text-primary-foreground">
                           BEST
                         </div>
                       )}
                       <div className="text-center mb-3">
-                        <div className="text-xl sm:text-2xl font-bold text-green-400">{product.apy}%</div>
-                        <div className="text-xs text-gray-500">APY</div>
+                        <div className="text-xl sm:text-2xl font-bold text-success tabular-nums">{product.apy}%</div>
+                        <div className="text-xs text-muted-foreground">APY</div>
                       </div>
                       <div className="space-y-2 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 flex items-center gap-1"><Clock size={10} /> Duration</span>
-                          <span className="text-white font-medium">{product.title}</span>
+                          <span className="text-muted-foreground flex items-center gap-1"><Clock size={10} /> Duration</span>
+                          <span className="text-foreground font-medium">{product.title}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 flex items-center gap-1"><DollarSign size={10} /> Min</span>
-                          <span className="text-white font-medium">${formatUsdNumber(parseFloat(product.minAmount))}</span>
+                          <span className="text-muted-foreground flex items-center gap-1"><DollarSign size={10} /> Min</span>
+                          <span className="text-foreground font-medium tabular-nums">${formatUsdNumber(parseFloat(product.minAmount))}</span>
                         </div>
                       </div>
-                      <button className="w-full mt-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors">
+                      <button className="w-full mt-3 py-2 bg-primary/10 border border-primary/30 rounded-lg text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                         {durationExceeded ? 'Exceeds Limit' : 'Stake Now'}
                       </button>
                     </div>
@@ -300,36 +295,36 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
 
               {/* Active Positions */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 mb-4 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 flex items-center gap-2">
                   <Coins size={14} />
                   Your Active Stakes
                 </h3>
-                <div className="bg-[#0a0a0a] rounded-xl border border-[#1e1e1e] overflow-hidden">
+                <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
                   {positionsLoading ? (
                     <div className="text-center py-12">
-                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                      <p className="text-gray-500 text-sm">Loading positions...</p>
+                      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                      <p className="text-muted-foreground text-sm">Loading positions...</p>
                     </div>
                   ) : positions && positions.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-[#1e1e1e]">
-                        <div className="p-4 text-center border-r border-[#1e1e1e]">
-                          <div className="text-xs text-gray-500">Total Staked</div>
-                          <div className="text-lg font-bold text-white">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-border">
+                        <div className="p-4 text-center border-r border-border">
+                          <div className="text-xs text-muted-foreground">Total Staked</div>
+                          <div className="text-lg font-bold text-foreground tabular-nums">
                             {formatUsdNumber(positions.filter(p => p.status === 'active').reduce((sum, p) => sum + parseFloat(p.amount), 0))} USDT
                           </div>
                         </div>
                         <div className="p-4 text-center">
-                          <div className="text-xs text-gray-500">Active Positions</div>
-                          <div className="text-lg font-bold text-white">{positions.filter(p => p.status === 'active').length}</div>
+                          <div className="text-xs text-muted-foreground">Active Positions</div>
+                          <div className="text-lg font-bold text-foreground tabular-nums">{positions.filter(p => p.status === 'active').length}</div>
                         </div>
                       </div>
                       {/* Desktop table */}
                       <div className="hidden sm:block">
                         <div className="overflow-x-auto">
                           <table className="w-full">
-                            <thead className="bg-[#0a0a0a]">
-                              <tr className="text-xs text-gray-500">
+                            <thead className="bg-muted/50">
+                              <tr className="text-xs text-muted-foreground">
                                 <th className="text-left py-3 px-4">Asset</th>
                                 <th className="text-center py-3 px-4">Amount</th>
                                 <th className="text-center py-3 px-4">APY</th>
@@ -340,23 +335,23 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                             </thead>
                             <tbody>
                               {positions.map((position: StakingPosition) => (
-                                <tr key={position.id} className="border-t border-[#1e1e1e]">
+                                <tr key={position.id} className="border-t border-border">
                                   <td className="py-3 px-4 font-medium text-sm">
                                     <div className="flex items-center gap-2">
                                       <CryptoIcon symbol={position.symbol} size="xs" />
                                       {position.symbol}
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-center text-sm">{formatUsdNumber(parseFloat(position.amount))}</td>
-                                  <td className="py-3 px-4 text-center text-sm text-green-400">{position.apy}%</td>
-                                  <td className="py-3 px-4 text-center text-sm">{position.duration}d</td>
+                                  <td className="py-3 px-4 text-center text-sm tabular-nums">{formatUsdNumber(parseFloat(position.amount))}</td>
+                                  <td className="py-3 px-4 text-center text-sm text-success tabular-nums">{position.apy}%</td>
+                                  <td className="py-3 px-4 text-center text-sm tabular-nums">{position.duration}d</td>
                                   <td className="py-3 px-4 text-center">
-                                    <span className={`px-2 py-1 rounded-full text-xs ${position.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${position.status === 'active' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
                                       {position.status}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4 text-center">
-                                    <button onClick={() => handleShowDetails(position)} className="text-blue-400 hover:text-blue-300">
+                                    <button onClick={() => handleShowDetails(position)} className="text-primary hover:text-primary/80">
                                       <Info size={16} />
                                     </button>
                                   </td>
@@ -368,24 +363,24 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                       </div>
                       {/* Mobile stacked list */}
                       <div className="block sm:hidden">
-                        <div className="divide-y divide-[#1e1e1e]">
+                        <div className="divide-y divide-border">
                           {positions.map((position: StakingPosition) => (
                             <div key={position.id} className="p-4 flex items-center justify-between">
                               <div className="min-w-0">
-                                <div className="text-sm font-medium text-white flex items-center gap-1.5">
+                                <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
                                   <CryptoIcon symbol={position.symbol} size="xs" />
                                   {position.symbol}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">
+                                <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
                                   {formatUsdNumber(parseFloat(position.amount))} USDT • {position.apy}% APY • {position.duration}d
                                 </div>
                                 <div className="mt-1">
-                                  <span className={`px-2 py-1 rounded-full text-xs ${position.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${position.status === 'active' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
                                     {position.status}
                                   </span>
                                 </div>
                               </div>
-                              <button onClick={() => handleShowDetails(position)} className="ml-3 p-2 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] text-blue-400 hover:bg-[#2a2a2a]">
+                              <button onClick={() => handleShowDetails(position)} className="ml-3 p-2 rounded-lg bg-muted border border-border text-primary hover:bg-muted/70">
                                 <Info size={16} />
                               </button>
                             </div>
@@ -395,11 +390,11 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                     </>
                   ) : (
                     <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-[#0a0a0a] rounded-full mx-auto mb-4 flex items-center justify-center">
-                        <Coins size={24} className="text-gray-600" />
+                      <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <Coins size={24} className="text-muted-foreground" />
                       </div>
-                      <p className="text-gray-500">No active stakes yet</p>
-                      <p className="text-xs text-gray-600 mt-1">Choose a plan above to start earning</p>
+                      <p className="text-muted-foreground">No active stakes yet</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Choose a plan above to start earning</p>
                     </div>
                   )}
                 </div>
@@ -407,36 +402,42 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
             </>
           ) : (
             /* Stake Confirmation */
-            <div className="bg-[#0a0a0a] rounded-2xl border border-[#1e1e1e] overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-5 border-b border-[#1e1e1e]">
+            <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
+              <div className="bg-primary/10 p-5 border-b border-border">
+                <button
+                  onClick={handleCancel}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back to plans
+                </button>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-white">Stake USDT</h3>
-                    <p className="text-sm text-gray-400">{selectedProduct.title} Plan</p>
+                    <h3 className="text-lg font-bold text-foreground">Stake USDT</h3>
+                    <p className="text-sm text-muted-foreground">{selectedProduct.title} Plan</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-green-400">{selectedProduct.apy}%</div>
-                    <div className="text-xs text-gray-500">APY</div>
+                    <div className="text-3xl font-bold text-success tabular-nums">{selectedProduct.apy}%</div>
+                    <div className="text-xs text-muted-foreground">APY</div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-5 space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-[#0a0a0a] rounded-xl p-4 text-center">
-                    <Clock size={20} className="mx-auto mb-2 text-blue-400" />
-                    <div className="text-lg font-bold text-white">{selectedProduct.duration} Days</div>
-                    <div className="text-xs text-gray-500">Lock Period</div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <Clock size={20} className="mx-auto mb-2 text-info" />
+                    <div className="text-lg font-bold text-foreground">{selectedProduct.duration} Days</div>
+                    <div className="text-xs text-muted-foreground">Lock Period</div>
                   </div>
-                  <div className="bg-[#0a0a0a] rounded-xl p-4 text-center">
-                    <DollarSign size={20} className="mx-auto mb-2 text-green-400" />
-                    <div className="text-lg font-bold text-white">${formatUsdNumber(parseFloat(selectedProduct.minAmount))}</div>
-                    <div className="text-xs text-gray-500">Minimum</div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <DollarSign size={20} className="mx-auto mb-2 text-success" />
+                    <div className="text-lg font-bold text-foreground tabular-nums">${formatUsdNumber(parseFloat(selectedProduct.minAmount))}</div>
+                    <div className="text-xs text-muted-foreground">Minimum</div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Amount to Stake (USDT)</label>
+                  <label className="text-sm text-muted-foreground mb-2 block">Amount to Stake (USDT)</label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -444,52 +445,50 @@ export function StakingModal({ isOpen, onClose, userId }: StakingModalProps) {
                       placeholder={`Min: ${formatUsdNumber(parseFloat(selectedProduct.minAmount))}`}
                       value={stakeAmount}
                       onChange={(e) => setStakeAmount(e.target.value)}
-                      className="bg-[#0a0a0a] border-[#2a2a2a] text-white text-lg h-12 rounded-xl"
+                      className="bg-card border-border text-foreground text-lg h-12 rounded-xl tabular-nums"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground tabular-nums">
                       Balance: {formatUsdNumber(parseFloat(usdtBalance))}
                     </div>
                   </div>
                 </div>
 
                 {stakeAmount && parseFloat(stakeAmount) > 0 && (
-                  <div className="bg-[#0a0a0a] rounded-xl p-4 space-y-3">
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Daily Earnings</span>
-                      <span className="text-white">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 / 365)} USDT</span>
+                      <span className="text-muted-foreground">Daily Earnings</span>
+                      <span className="text-foreground tabular-nums">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 / 365)} USDT</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Total Interest</span>
-                      <span className="text-green-400">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
+                      <span className="text-muted-foreground">Total Interest</span>
+                      <span className="text-success tabular-nums">{formatUsdNumber(parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-[#1e1e1e]">
-                      <span className="text-gray-400 font-medium">Total Return</span>
-                      <span className="text-white font-bold">{formatUsdNumber(parseFloat(stakeAmount) + parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
+                    <div className="flex justify-between text-sm pt-2 border-t border-border">
+                      <span className="text-muted-foreground font-medium">Total Return</span>
+                      <span className="text-foreground font-bold tabular-nums">{formatUsdNumber(parseFloat(stakeAmount) + parseFloat(stakeAmount) * parseFloat(selectedProduct.apy) / 100 * selectedProduct.duration / 365)} USDT</span>
                     </div>
                   </div>
                 )}
 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="flex gap-3">
-                    <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-300">
-                      <p className="font-medium mb-1">Important</p>
-                      <ul className="text-xs space-y-1 text-blue-200">
-                        <li>• Your USDT will be locked for {selectedProduct.duration} days</li>
-                        <li>• Interest calculated daily at {selectedProduct.apy}% APY</li>
-                        <li>• Funds auto-return to available balance after maturity</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+                <Alert className="bg-warning/10 border-warning/20 p-4">
+                  <Lock size={18} className="text-warning" />
+                  <AlertDescription className="text-sm">
+                    <p className="font-medium text-warning mb-1">Funds will be locked</p>
+                    <ul className="text-xs space-y-1 text-warning/80">
+                      <li>• Your USDT will be locked for {selectedProduct.duration} days and cannot be withdrawn early</li>
+                      <li>• Interest calculated daily at {selectedProduct.apy}% APY</li>
+                      <li>• Funds auto-return to available balance after maturity</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button onClick={handleCancel} variant="outline" className="w-full sm:flex-1 h-11 bg-[#1a1a1a] border-[#2a2a2a] text-gray-300 hover:bg-[#2a2a2a]">
+                  <Button onClick={handleCancel} variant="outline" className="w-full sm:flex-1 h-11 bg-muted border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground">
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleConfirmStake}
-                    className="w-full sm:flex-1 h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                    className="w-full sm:flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
                     disabled={stakeMutation.isPending || !stakeAmount || parseFloat(stakeAmount) > parseFloat(usdtBalance) || parseFloat(stakeAmount) < parseFloat(selectedProduct.minAmount)}
                   >
                     {stakeMutation.isPending ? "Processing..." : "Confirm Stake"}

@@ -85,25 +85,25 @@ export function StickyTradeNotification({
   return (
     <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-2 duration-300">
       <div className={`
-        bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[280px] max-w-[320px]
-        ${isCompleted ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}
+        bg-card border rounded-lg shadow-sm p-3 min-w-[280px] max-w-[320px]
+        ${isCompleted ? 'border-success/30' : 'border-border'}
       `}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             {isCompleted ? (
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-success rounded-full"></div>
             ) : (
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-primary" />
             )}
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-foreground">
               {isCompleted ? 'Trade Completed' : 'Trade Running'}
             </span>
           </div>
           {!isCompleted && onClose && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -113,42 +113,42 @@ export function StickyTradeNotification({
         {/* Trade Info */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">Symbol</span>
-            <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><CryptoIcon symbol={symbol?.split('/')[0] || symbol} size="xs" />{symbol}</span>
+            <span className="text-xs text-muted-foreground">Symbol</span>
+            <span className="text-sm font-medium text-foreground flex items-center gap-1.5"><CryptoIcon symbol={symbol?.split('/')[0] || symbol} size="xs" />{symbol}</span>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">Position</span>
+            <span className="text-xs text-muted-foreground">Position</span>
             <div className="flex items-center gap-1">
               {side === 'long' ? (
-                <TrendingUp className="w-3 h-3 text-green-600" />
+                <TrendingUp className="w-3 h-3 text-buy" />
               ) : (
-                <TrendingDown className="w-3 h-3 text-red-600" />
+                <TrendingDown className="w-3 h-3 text-sell" />
               )}
-              <span className={`text-sm font-medium ${side === 'long' ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`text-sm font-medium ${side === 'long' ? 'text-buy' : 'text-sell'}`}>
                 {side.toUpperCase()}
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">Amount</span>
-            <span className="text-sm font-medium text-gray-800">{amount} USDT</span>
+            <span className="text-xs text-muted-foreground">Amount</span>
+            <span className="text-sm font-medium text-foreground tabular-nums">{amount} USDT</span>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">Current Price</span>
-            <span className="text-sm font-medium text-gray-800">${formatUsdNumber(parseFloat(currentPrice))}</span>
+            <span className="text-xs text-muted-foreground">Current Price</span>
+            <span className="text-sm font-medium text-foreground tabular-nums">${formatUsdNumber(parseFloat(currentPrice))}</span>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-muted-foreground">
               {isCompleted ? 'Status' : 'Time Left'}
             </span>
             {isCompleted ? (
-              <span className="text-sm font-medium text-green-600">Completed ✓</span>
+              <span className="text-sm font-medium text-success">Completed ✓</span>
             ) : (
-              <span className="text-sm font-medium text-blue-600 font-mono">
+              <span className="text-sm font-medium text-primary font-mono tabular-nums">
                 {formatTime(timeLeft)}
               </span>
             )}
@@ -158,11 +158,11 @@ export function StickyTradeNotification({
         {/* Progress Bar */}
         {!isCompleted && (
           <div className="mt-2">
-            <div className="w-full bg-gray-200 rounded-full h-1">
-              <div 
-                className="bg-blue-600 h-1 rounded-full transition-all duration-1000 ease-linear"
-                style={{ 
-                  width: `${Math.max(0, Math.min(100, (timeLeft / 60) * 100))}%` 
+            <div className="w-full bg-muted rounded-full h-1">
+              <div
+                className="bg-primary h-1 rounded-full transition-all duration-1000 ease-linear"
+                style={{
+                  width: `${Math.max(0, Math.min(100, (timeLeft / 60) * 100))}%`
                 }}
               ></div>
             </div>

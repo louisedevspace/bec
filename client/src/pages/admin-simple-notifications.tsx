@@ -184,9 +184,9 @@ export default function AdminSimpleNotifications() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Recent Success</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.recentSuccess.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-success">{stats.recentSuccess.toLocaleString()}</p>
                   </div>
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <CheckCircle className="h-8 w-8 text-success" />
                 </div>
               </CardContent>
             </Card>
@@ -195,9 +195,9 @@ export default function AdminSimpleNotifications() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Recent Failed</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.recentFailed.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-danger">{stats.recentFailed.toLocaleString()}</p>
                   </div>
-                  <AlertCircle className="h-8 w-8 text-red-600" />
+                  <AlertCircle className="h-8 w-8 text-danger" />
                 </div>
               </CardContent>
             </Card>
@@ -289,7 +289,7 @@ export default function AdminSimpleNotifications() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                <CheckCircle className="h-5 w-5 mr-2 text-success" />
                 Notification Sent Successfully
               </CardTitle>
             </CardHeader>
@@ -299,18 +299,18 @@ export default function AdminSimpleNotifications() {
                   <p className="text-2xl font-bold">{lastResult.totalUsers.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Total Users</p>
                 </div>
-                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{lastResult.sentCount.toLocaleString()}</p>
+                <div className="text-center p-4 bg-success/10 border border-success/20 rounded-lg">
+                  <p className="text-2xl font-bold text-success">{lastResult.sentCount.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Successfully Sent</p>
                 </div>
-                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{lastResult.failedCount.toLocaleString()}</p>
+                <div className="text-center p-4 bg-danger/10 border border-danger/20 rounded-lg">
+                  <p className="text-2xl font-bold text-danger">{lastResult.failedCount.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Failed</p>
                 </div>
               </div>
               
               {lastResult.errors && lastResult.errors.length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <div className="mt-4 p-4 bg-warning/10 border border-warning/20 rounded-lg">
                   <p className="text-sm font-medium mb-2">Sample Errors:</p>
                   <ul className="text-xs space-y-1">
                     {lastResult.errors.slice(0, 5).map((error, index) => (
