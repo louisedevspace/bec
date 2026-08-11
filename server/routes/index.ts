@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import LiveCryptoService from "../services/live-crypto-service";
+import { subscribeKline, unsubscribeKline, unsubscribeAllForSocket } from "../services/kline-relay-service";
 import { clients } from "../sync-manager";
 import {
   getApiMetricsSummary,
@@ -298,13 +299,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     clients.add(ws);
     sendPriceUpdate(ws);
 
+    ws.on("message", (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        if (typeof msg?.symbol !== "string" || typeof msg?.interval !== "string") return;
+        if (msg.type === "subscribe_kline") {
+          subscribeKline(ws, msg.symbol, msg.interval);
+        } else if (msg.type === "unsubscribe_kline") {
+          unsubscribeKline(ws, msg.symbol, msg.interval);
+        }
+      } catch {
+        // ignore malformed client messages
+      }
+    });
+
     ws.on("close", () => {
       clients.delete(ws);
+      unsubscribeAllForSocket(ws);
     });
 
     ws.on("error", (error) => {
       console.error("WebSocket error:", error);
       clients.delete(ws);
+      unsubscribeAllForSocket(ws);
     });
   });
 

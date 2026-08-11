@@ -2,12 +2,13 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
 import { useBinanceStream, type BinanceKlineUpdate, type BinanceTick } from "@/hooks/use-binance-stream";
 import { useTheme } from "@/hooks/use-theme";
+import { useAccentTheme } from "@/hooks/use-exchange-name";
 import type { ChartTimeframe } from "@/types/chart";
 import {
-  createChart, IChartApi, ISeriesApi,
+  createChart, createTextWatermark, IChartApi, ISeriesApi,
   CandlestickSeries, AreaSeries, BarSeries, HistogramSeries,
   ColorType, CrosshairMode, LineType, LastPriceAnimationMode,
-  LineStyle, UTCTimestamp, type IPriceLine,
+  LineStyle, UTCTimestamp, type IPriceLine, type Time,
 } from "lightweight-charts";
 import { BarChart3, TrendingUp, Activity, Wifi, WifiOff } from "lucide-react";
 
@@ -94,6 +95,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const [chartType, setChartType] = useState<ExtendedChartType>("candlestick");
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 500);
   const { isDark } = useTheme();
+  const accentTheme = useAccentTheme();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLDivElement>(null);
@@ -101,6 +103,8 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const seriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const priceLineRef = useRef<IPriceLine | null>(null);
+  const watermarkRef = useRef<ReturnType<typeof createTextWatermark<Time>> | null>(null);
+  const lastLegendHtmlRef = useRef<string>("");
   const lastCandleRef = useRef<any>(null);
   const lastVolumeRef = useRef<any>(null);
   const chartTypeRef = useRef(chartType);
@@ -130,7 +134,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       areaBottom: up.replace("hsl(", "hsla(").replace(")", ", 0.02)"),
       line: up,
     };
-  }, [isDark]);
+  }, [isDark, accentTheme]);
 
   useEffect(() => { chartTypeRef.current = chartType; }, [chartType]);
   useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
@@ -139,10 +143,11 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const updateLegend = useCallback((data: any) => {
     if (!legendRef.current) return;
     const sym = symbolRef.current;
+    let html: string;
     if ("open" in data) {
       const up = data.close >= data.open;
       const c = up ? colors.up : colors.down;
-      legendRef.current.innerHTML =
+      html =
         `<span style="color:${colors.text};font-weight:600">${sym}/USDT</span>` +
         `<span style="margin-left:8px">` +
         `O <span style="color:${c}">${formatPrice(data.open)}</span> ` +
@@ -152,10 +157,16 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         `</span>` +
         (data.volume != null ? `<span style="color:${colors.text};margin-left:8px">V ${formatVolume(data.volume)}</span>` : "");
     } else if ("value" in data) {
-      legendRef.current.innerHTML =
+      html =
         `<span style="color:${colors.text};font-weight:600">${sym}/USDT</span>` +
         `<span style="color:${colors.text};margin-left:8px">${formatPrice(data.value)}</span>`;
+    } else {
+      return;
     }
+    // Ticks arrive at up to ~20/sec; skip the DOM write when nothing changed.
+    if (html === lastLegendHtmlRef.current) return;
+    lastLegendHtmlRef.current = html;
+    legendRef.current.innerHTML = html;
   }, [colors]);
 
   const processedData = useMemo(() => {
@@ -178,20 +189,21 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     return { mainData, volumeData };
   }, [candles, chartType, colors]);
 
-  // Create chart
+  // Create chart — mount + dark/light + accent-color changes only. Symbol,
+  // timeframe, and chart-type switches are handled by the lighter effects
+  // below, which update the existing instance instead of tearing it down.
   useEffect(() => {
     if (!chartContainerRef.current || isLoading) return;
-    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; seriesRef.current = null; volumeSeriesRef.current = null; priceLineRef.current = null; }
+    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; seriesRef.current = null; volumeSeriesRef.current = null; priceLineRef.current = null; watermarkRef.current = null; }
 
     const container = chartContainerRef.current;
     const chart = createChart(container, {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: colors.bg }, textColor: colors.text, attributionLogo: false, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
-      watermark: { visible: true, text: `${symbol}USDT`, fontSize: 48, color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" },
       grid: { vertLines: { color: colors.grid, style: LineStyle.SparseDotted }, horzLines: { color: colors.grid, style: LineStyle.SparseDotted } },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair }, horzLine: { color: colors.crosshair, width: 1, style: LineStyle.Dashed, labelBackgroundColor: colors.crosshair } },
       rightPriceScale: { borderColor: colors.border, scaleMargins: { top: 0.1, bottom: 0.2 }, borderVisible: false },
-      timeScale: { borderColor: colors.border, timeVisible: true, secondsVisible: timeframe === "1s" || timeframe === "1m", borderVisible: false, rightOffset: 5 },
+      timeScale: { borderColor: colors.border, timeVisible: true, secondsVisible: timeframeRef.current === "1s" || timeframeRef.current === "1m", borderVisible: false, rightOffset: 5 },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
@@ -200,6 +212,56 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     const volSeries = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "volume", lastValueVisible: false, priceLineVisible: false });
     chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeriesRef.current = volSeries;
+
+    // lightweight-charts v5 moved the watermark out of chart options and
+    // into a pane primitive plugin (createChart's `watermark` option no
+    // longer exists as of v5 — see TextWatermarkOptions in the typings).
+    watermarkRef.current = createTextWatermark(chart.panes()[0], {
+      horzAlign: "center", vertAlign: "center",
+      lines: [{
+        text: `${symbolRef.current}USDT`,
+        color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+        fontSize: 48,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }],
+    });
+
+    // Reads series refs at call time (not via closure) so it keeps working
+    // after the series-type effect below swaps seriesRef.current out.
+    chart.subscribeCrosshairMove((param) => {
+      const mainSeries = seriesRef.current;
+      if (!param.point || param.point.x < 0 || param.point.y < 0 || !param.time) {
+        isHoveredRef.current = false;
+        if (lastCandleRef.current) updateLegend(lastCandleRef.current);
+        return;
+      }
+      isHoveredRef.current = true;
+      if (!mainSeries) return;
+      const cd = param.seriesData.get(mainSeries) as any;
+      const currentVolSeries = volumeSeriesRef.current;
+      const vd = currentVolSeries ? (param.seriesData.get(currentVolSeries) as any) : undefined;
+      if (cd) updateLegend({ ...cd, volume: vd?.value });
+    });
+
+    needsScrollRef.current = true;
+    lastCandleRef.current = null;
+    lastVolumeRef.current = null;
+
+    return () => { if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; seriesRef.current = null; volumeSeriesRef.current = null; priceLineRef.current = null; watermarkRef.current = null; } };
+  }, [isLoading, colors, isDark, updateLegend]);
+
+  // Switch main series type — removes/re-adds only the main series (not the
+  // whole chart) when the user picks a different chart type, or when the
+  // color palette changes and existing series need restyling.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    if (seriesRef.current) {
+      try { chart.removeSeries(seriesRef.current); } catch {}
+      seriesRef.current = null;
+    }
+    priceLineRef.current = null; // belonged to the removed series
 
     if (chartType === "line") {
       seriesRef.current = chart.addSeries(AreaSeries, {
@@ -216,26 +278,33 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         borderUpColor: colors.up, borderDownColor: colors.down, wickUpColor: colors.up, wickDownColor: colors.down, priceLineVisible: false,
       });
     }
+  }, [chartType, colors]);
 
-    const mainSeries = seriesRef.current;
-    chart.subscribeCrosshairMove((param) => {
-      if (!param.point || param.point.x < 0 || param.point.y < 0 || !param.time) {
-        isHoveredRef.current = false;
-        if (lastCandleRef.current) updateLegend(lastCandleRef.current);
-        return;
-      }
-      isHoveredRef.current = true;
-      const cd = param.seriesData.get(mainSeries) as any;
-      const vd = param.seriesData.get(volSeries) as any;
-      if (cd) updateLegend({ ...cd, volume: vd?.value });
-    });
+  // Timeframe only changes a chart option, not the series/data — no rebuild needed.
+  useEffect(() => {
+    chartRef.current?.applyOptions({ timeScale: { secondsVisible: timeframe === "1s" || timeframe === "1m" } });
+  }, [timeframe]);
 
+  // Pair/timeframe switch — reset per-symbol tracking so the next data load
+  // re-fits the visible range and live-update handlers don't blend the
+  // previous symbol's last candle into the new one.
+  useEffect(() => {
     needsScrollRef.current = true;
     lastCandleRef.current = null;
     lastVolumeRef.current = null;
+  }, [symbol, timeframe]);
 
-    return () => { if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; seriesRef.current = null; volumeSeriesRef.current = null; priceLineRef.current = null; } };
-  }, [chartType, isLoading, colors, timeframe, symbol, isDark, updateLegend]);
+  // Watermark text/color follows the current pair and theme without a chart rebuild.
+  useEffect(() => {
+    watermarkRef.current?.applyOptions({
+      lines: [{
+        text: `${symbol}USDT`,
+        color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+        fontSize: 48,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }],
+    });
+  }, [symbol, isDark]);
 
   // Load data
   useEffect(() => {
@@ -335,7 +404,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
     if (!isHoveredRef.current) updateLegend(lastCandleRef.current);
   }, [updateLegend]);
 
-  const { isConnected } = useBinanceStream(symbol, timeframe, handleKline, handleTick);
+  const { isConnected, isFallback } = useBinanceStream(symbol, timeframe, handleKline, handleTick);
 
   if (isLoading) {
     return (
@@ -358,8 +427,13 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-0.5 overflow-x-auto">
-          <div className="flex items-center gap-1 mr-1.5 flex-shrink-0" title={isConnected ? "Live" : "Connecting..."}>
-            {isConnected ? <Wifi size={12} className="text-buy" /> : <WifiOff size={12} className="text-muted-foreground animate-pulse" />}
+          <div
+            className="flex items-center gap-1 mr-1.5 flex-shrink-0"
+            title={isFallback ? "Live (relayed via server — direct feed unavailable)" : isConnected ? "Live" : "Connecting..."}
+          >
+            {isConnected
+              ? <Wifi size={12} className={isFallback ? "text-amber-500" : "text-buy"} />
+              : <WifiOff size={12} className="text-muted-foreground animate-pulse" />}
           </div>
           {TIMEFRAMES.map((tf) => (
             <button key={tf.value} onClick={() => setTimeframe(tf.value)}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChartTimeframe } from '@/types/chart';
+import { useWebSocket } from './use-websocket';
 
 export interface BinanceKlineUpdate {
   time: number;
@@ -50,6 +51,12 @@ export function useBinanceStream(
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
   const useFallbackRef = useRef(false);
+
+  // Server-side relay fallback — used only while the direct Binance socket
+  // above is down (regional block, CORS, ad-blocker). The server already
+  // polls MEXC for live prices via live-crypto-service.ts; kline-relay-service.ts
+  // reuses that same reachable pipeline for kline data.
+  const { subscribe: subscribeRelay, sendMessage: sendRelayMessage, isConnected: relayWsConnected } = useWebSocket('/ws');
 
   useEffect(() => { onKlineRef.current = onKlineUpdate; }, [onKlineUpdate]);
   useEffect(() => { onTickRef.current = onTick; }, [onTick]);
@@ -140,5 +147,24 @@ export function useBinanceStream(
     };
   }, [symbol, interval]);
 
-  return { isConnected };
+  // Subscribe the server relay for the current symbol/interval — kept alive
+  // in parallel with the direct Binance attempt so it's already warm the
+  // moment Binance fails, instead of only kicking in after a delay.
+  useEffect(() => {
+    if (!symbol || !relayWsConnected) return;
+    const relaySymbol = symbol.toUpperCase();
+    sendRelayMessage({ type: 'subscribe_kline', symbol: relaySymbol, interval });
+    return () => sendRelayMessage({ type: 'unsubscribe_kline', symbol: relaySymbol, interval });
+  }, [symbol, interval, relayWsConnected, sendRelayMessage]);
+
+  useEffect(() => {
+    return subscribeRelay('kline_relay', (payload: { symbol: string; interval: string; data: BinanceKlineUpdate }) => {
+      if (!payload || payload.symbol !== symbol.toUpperCase() || payload.interval !== interval) return;
+      // Direct Binance link is healthy — ignore the relay, it's a fallback only.
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+      onKlineRef.current(payload.data);
+    });
+  }, [subscribeRelay, symbol, interval]);
+
+  return { isConnected: isConnected || relayWsConnected, isFallback: !isConnected && relayWsConnected };
 }
