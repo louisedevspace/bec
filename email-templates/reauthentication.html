@@ -8,111 +8,122 @@
   <style>
     body { margin: 0; padding: 0; background-color: #0a0a0a; }
     @media only screen and (max-width: 600px) {
-      .card { border-radius: 0 !important; }
-      .card-body { padding: 28px 24px !important; }
-      .card-header { padding: 28px 24px 20px !important; }
-      .card-footer { padding: 20px 24px !important; }
+      .frame-mat { padding: 10px !important; }
+      .card-body { padding: 26px 20px 22px !important; }
+      .card-header { padding: 16px 20px !important; }
+      .card-footer { padding: 18px 20px !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background-color:#0a0a0a;background-image:url(&quot;data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%3E%3Cpath%20d%3D%22M32%200H0V32%22%20stroke%3D%22rgba(255%2C255%2C255%2C0.035)%22%20stroke-width%3D%221%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E&quot;);background-repeat:repeat;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
   <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0a0a" style="background-color:#0a0a0a;">
     <tr>
-      <td align="center" style="padding:48px 16px;">
+      <td align="center" style="padding:56px 16px;">
 
-        <table class="card" width="100%" cellpadding="0" cellspacing="0" border="0"
-               style="max-width:560px;background-color:#111111;border:1px solid #252525;border-radius:20px;overflow:hidden;">
-
-          <!-- Accent bar -->
+        <!-- Outer frame / mat -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:592px;">
           <tr>
-            <td style="height:4px;line-height:4px;font-size:0;background-color:#f59e0b;">&nbsp;</td>
+            <td style="height:3px;line-height:3px;font-size:0;background-color:#f59e0b;">&nbsp;</td>
           </tr>
-
-          <!-- Header -->
           <tr>
-            <td class="card-header" align="center"
-                style="padding:32px 40px 24px;background-color:#111111;border-bottom:1px solid #1e1e1e;">
-              <span style="color:#f9fafb;font-size:22px;font-weight:700;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">BitZen</span>
-              <br />
-              <span style="color:#6b7280;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">Crypto Exchange</span>
-            </td>
-          </tr>
+            <td class="frame-mat" bgcolor="#060606" style="padding:18px;background-color:#060606;border-left:1px solid #1c1c1c;border-right:1px solid #1c1c1c;border-bottom:1px solid #1c1c1c;">
 
-          <!-- Body -->
-          <tr>
-            <td class="card-body" style="padding:40px 40px 32px;">
-
-              <!-- Icon -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="padding-bottom:28px;">
-                    <div style="display:inline-block;width:72px;height:72px;border-radius:50%;background-color:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);text-align:center;line-height:72px;">
-                      <span style="color:#f59e0b;font-size:28px;line-height:72px;">&#128737;</span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Heading -->
-              <h1 style="margin:0 0 12px;color:#f9fafb;font-size:24px;font-weight:700;letter-spacing:-0.4px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                Verify It's You
-              </h1>
-              <p style="margin:0 0 24px;color:#9ca3af;font-size:15px;line-height:1.6;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                A sensitive action was attempted on your BitZen account. We need to verify your identity before proceeding.
-              </p>
-
-              <!-- OTP Code -->
+              <!-- Card -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:#0f0f0f;border:1px solid rgba(245,158,11,0.2);border-radius:16px;margin-bottom:28px;">
+                     style="background-color:#111111;border:1px solid #232323;border-radius:6px;overflow:hidden;">
+
+                <!-- Title bar -->
                 <tr>
-                  <td align="center" style="padding:28px 22px;">
-                    <p style="margin:0 0 12px;color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                      Your verification code
+                  <td class="card-header" style="padding:16px 26px;border-bottom:1px solid #1e1e1e;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="left" style="color:#3f4551;font-size:11px;letter-spacing:3px;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">&#9679;&nbsp;&#9679;&nbsp;&#9679;</td>
+                        <td align="right" style="color:#d1d5db;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">BitZen</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                  <td class="card-body" bgcolor="#111111"
+                      style="padding:32px 28px 30px;background-color:#111111;background-image:url(&quot;data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%3E%3Cpath%20d%3D%22M32%200H0V32%22%20stroke%3D%22rgba(255%2C255%2C255%2C0.03)%22%20stroke-width%3D%221%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E&quot;);background-repeat:repeat;">
+
+                    <!-- Eyebrow -->
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="8" height="8" bgcolor="#f59e0b" style="width:8px;height:8px;background-color:#f59e0b;font-size:0;line-height:0;">&nbsp;</td>
+                        <td style="padding-left:9px;color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">Identity Verification</td>
+                      </tr>
+                    </table>
+
+                    <!-- Heading -->
+                    <h1 style="margin:16px 0 0;color:#f9fafb;font-size:23px;font-weight:700;letter-spacing:-0.3px;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      Verify it's you
+                    </h1>
+                    <p style="margin:12px 0 24px;color:#9ca3af;font-size:14.5px;line-height:1.65;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      A sensitive action was attempted on your BitZen account. Confirm the code below before we proceed.
                     </p>
-                    <span style="display:inline-block;color:#f59e0b;font-size:40px;font-weight:700;letter-spacing:12px;font-family:monospace,Courier,serif;">
-                      {{ .Token }}
-                    </span>
-                    <p style="margin:14px 0 0;color:#6b7280;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                      Valid for <strong style="color:#9ca3af;">10 minutes</strong>
+
+                    <!-- OTP code -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0b0b0b;border:1px solid rgba(245,158,11,0.25);border-radius:8px;margin-bottom:22px;">
+                      <tr>
+                        <td align="center" style="padding:26px 20px;">
+                          <p style="margin:0 0 12px;color:#5b6472;font-size:11px;text-transform:uppercase;letter-spacing:2px;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">
+                            Your verification code
+                          </p>
+                          <span style="display:inline-block;color:#f59e0b;font-size:38px;font-weight:700;letter-spacing:11px;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">
+                            {{ .Token }}
+                          </span>
+                          <p style="margin:12px 0 0;color:#5b6472;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                            Valid for <strong style="color:#9ca3af;">10 minutes</strong>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Warning callout -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-left:2px solid #f59e0b;">
+                      <tr>
+                        <td style="padding:2px 0 2px 14px;">
+                          <p style="margin:0;color:#d1d5db;font-size:13px;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                            <strong style="color:#f59e0b;">Never share this code.</strong> BitZen staff will never ask for it. If you didn't request this, change your password immediately.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:22px 0 0;color:#6b7280;font-size:12.5px;line-height:1.5;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      This code expires in <strong style="color:#9ca3af;">10 minutes</strong>.
+                    </p>
+
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td class="card-footer" style="padding:18px 26px;border-top:1px solid #1e1e1e;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="left" style="color:#4b5563;font-size:11px;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">BITZEN &middot; {{ .SiteURL }}</td>
+                        <td align="right" style="color:#374151;font-size:11px;font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;">&copy; 2026</td>
+                      </tr>
+                    </table>
+                    <p style="margin:10px 0 0;color:#374151;font-size:11px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      This is an automated message — please do not reply.
                     </p>
                   </td>
                 </tr>
-              </table>
 
-              <!-- Warning box -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:10px;margin-bottom:20px;">
-                <tr>
-                  <td style="padding:14px 18px;">
-                    <p style="margin:0;color:#d97706;font-size:13px;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                      <strong style="color:#f59e0b;">&#9888; Security alert:</strong> Never share this code with anyone. BitZen support staff will never ask for your verification code. If you did not initiate this, please change your password immediately.
-                    </p>
-                  </td>
-                </tr>
               </table>
-
-              <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.5;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                This code expires in <strong style="color:#9ca3af;">10 minutes</strong>. Do not share it with anyone.
-              </p>
+              <!-- /Card -->
 
             </td>
           </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td class="card-footer"
-                style="padding:24px 40px;background-color:#0d0d0d;border-top:1px solid #1e1e1e;text-align:center;">
-              <p style="margin:0 0 6px;color:#4b5563;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                &copy; 2026 BitZen. All rights reserved.
-              </p>
-              <p style="margin:0;color:#374151;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-                This is an automated message – please do not reply.
-              </p>
-            </td>
-          </tr>
-
         </table>
+        <!-- /Outer frame -->
+
       </td>
     </tr>
   </table>
