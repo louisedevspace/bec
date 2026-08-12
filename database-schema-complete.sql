@@ -8,10 +8,15 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.6.0
--- Last Updated: 2026-08-11
+-- Version: 2.7.0
+-- Last Updated: 2026-08-13
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.7.0 — Added referral program: referral_settings (admin-controlled
+--         reward config) and referrals (one row per referred user,
+--         rewarded on their first approved deposit). users gains a
+--         referral_code column. See client/src/pages/profile.tsx
+--         "Referrals" tab and admin-settings.tsx "Referral Program".
 -- 2.6.0 — Added app_settings: a single-row table for admin-editable
 --         platform branding (exchange display name, accent color
 --         theme). See client/src/pages/admin-settings.tsx "Branding".
@@ -61,6 +66,7 @@ CREATE TABLE IF NOT EXISTS users (
   futures_min_amount DECIMAL(20,8) DEFAULT 50,      -- Per-user futures minimum trade amount
   futures_trade_result TEXT DEFAULT NULL,           -- NULL = use is_active logic, 'win', 'loss'
   wallet_locked BOOLEAN DEFAULT FALSE,              -- Admin can lock user wallet
+  referral_code TEXT UNIQUE,                        -- This user's own shareable referral code
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -84,6 +90,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='wallet_locked') THEN
     ALTER TABLE users ADD COLUMN wallet_locked BOOLEAN DEFAULT FALSE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='referral_code') THEN
+    ALTER TABLE users ADD COLUMN referral_code TEXT UNIQUE;
   END IF;
 END $$;
 
@@ -805,6 +814,50 @@ CREATE INDEX IF NOT EXISTS idx_admin_notifications_category ON admin_notificatio
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_type ON admin_notifications(type, created_at DESC);
 
 COMMENT ON TABLE admin_notifications IS 'Internal notifications for admin users triggered by user actions (deposits, withdrawals, support tickets, etc.)';
+
+-- ----------------------------------------------------------
+-- 1.22 Referral Settings (admin-controlled reward config — singleton row)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS referral_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  reward_type TEXT NOT NULL DEFAULT 'fixed',        -- 'fixed' | 'percentage'
+  fixed_amount DECIMAL(20,8) NOT NULL DEFAULT 5,
+  percentage_rate DECIMAL(10,8) NOT NULL DEFAULT 0.10,  -- 0.10 = 10%
+  min_deposit_amount DECIMAL(20,8) NOT NULL DEFAULT 0,
+  max_reward_amount DECIMAL(20,8),                  -- caps percentage payouts; NULL = uncapped
+  reward_symbol TEXT NOT NULL DEFAULT 'USDT',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT referral_settings_singleton CHECK (id = 1),
+  CONSTRAINT referral_settings_reward_type_valid CHECK (reward_type IN ('fixed', 'percentage'))
+);
+
+INSERT INTO referral_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+-- ----------------------------------------------------------
+-- 1.23 Referrals (one row per referred user)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS referrals (
+  id SERIAL PRIMARY KEY,
+  referrer_id TEXT NOT NULL,
+  referred_user_id TEXT NOT NULL UNIQUE,            -- a user can only be referred once
+  referral_code TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',           -- 'pending' | 'rewarded'
+  reward_amount DECIMAL(20,8),
+  reward_symbol TEXT,
+  qualifying_deposit_id INTEGER,                    -- FK-ish reference to deposit_requests.id
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  rewarded_at TIMESTAMPTZ,
+  CONSTRAINT referrals_status_valid CHECK (status IN ('pending', 'rewarded'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
+
+COMMENT ON TABLE referrals IS 'Tracks referral relationships; reward_amount/rewarded_at are set once the referred user''s first deposit is approved.';
 
 
 -- ************************************************************
@@ -1704,6 +1757,36 @@ CREATE POLICY "platform_fees_select_policy" ON platform_fees
 
 CREATE POLICY "platform_fees_insert_policy" ON platform_fees
   FOR INSERT WITH CHECK (true);   -- Service role inserts via server
+
+-- ----------------------------------------------------------
+-- 4.24 Referral Settings
+-- ----------------------------------------------------------
+ALTER TABLE referral_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "referral_settings_policy" ON referral_settings;
+
+CREATE POLICY "referral_settings_policy" ON referral_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+  -- Regular users read this via the server's /api/referrals/settings
+  -- endpoint (service role), which bypasses RLS.
+
+-- ----------------------------------------------------------
+-- 4.25 Referrals
+-- ----------------------------------------------------------
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "referrals_select_policy" ON referrals;
+DROP POLICY IF EXISTS "referrals_write_policy" ON referrals;
+
+CREATE POLICY "referrals_select_policy" ON referrals FOR SELECT USING (
+  auth.uid()::text = referrer_id
+  OR auth.uid()::text = referred_user_id
+  OR public.is_admin()
+);
+-- Writes (create on signup, reward on first deposit) only ever happen
+-- server-side via the service role, which bypasses RLS — direct client
+-- writes are blocked entirely other than by an admin.
+CREATE POLICY "referrals_write_policy" ON referrals FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 
 -- ************************************************************
