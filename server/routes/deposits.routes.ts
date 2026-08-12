@@ -9,6 +9,7 @@ import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
 import { getServerConfig } from "../config";
 import { compressUserImage } from "../utils/image-compress";
+import { updatePortfolioBalance } from "./helpers";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -411,6 +412,86 @@ export default function registerDepositsRoutes(app: Express) {
           symbol: depositRequest.symbol,
           amount: depositAmount,
         });
+
+        // Referral reward — only on the referred user's first ever approved deposit
+        try {
+          const { data: pendingReferral } = await supabaseAdmin
+            .from("referrals")
+            .select("*")
+            .eq("referred_user_id", depositRequest.user_id)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (pendingReferral) {
+            const { count: priorApprovedCount } = await supabaseAdmin
+              .from("deposit_requests")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", depositRequest.user_id)
+              .eq("status", "approved")
+              .neq("id", requestId);
+
+            if (!priorApprovedCount) {
+              const { data: referralSettings } = await supabaseAdmin
+                .from("referral_settings")
+                .select("*")
+                .eq("id", 1)
+                .maybeSingle();
+
+              if (referralSettings?.is_enabled) {
+                const minDeposit = parseFloat(referralSettings.min_deposit_amount || "0");
+                if (grossAmount >= minDeposit) {
+                  const rewardSymbol = referralSettings.reward_symbol || "USDT";
+                  let rewardAmount = 0;
+                  if (referralSettings.reward_type === "percentage") {
+                    const rate = parseFloat(referralSettings.percentage_rate || "0");
+                    rewardAmount = grossAmount * rate;
+                    const cap = referralSettings.max_reward_amount != null ? parseFloat(referralSettings.max_reward_amount) : null;
+                    if (cap != null && rewardAmount > cap) rewardAmount = cap;
+                  } else {
+                    rewardAmount = parseFloat(referralSettings.fixed_amount || "0");
+                  }
+
+                  if (rewardAmount > 0) {
+                    const { data: referrerPortfolio } = await supabaseAdmin
+                      .from("portfolios")
+                      .select("available")
+                      .eq("user_id", pendingReferral.referrer_id)
+                      .eq("symbol", rewardSymbol)
+                      .maybeSingle();
+                    const currentAvailable = referrerPortfolio ? parseFloat(referrerPortfolio.available) || 0 : 0;
+
+                    await updatePortfolioBalance(pendingReferral.referrer_id, rewardSymbol, (currentAvailable + rewardAmount).toString());
+
+                    await supabaseAdmin.from("transactions").insert({
+                      user_id: pendingReferral.referrer_id,
+                      type: "referral_reward",
+                      symbol: rewardSymbol,
+                      amount: rewardAmount.toFixed(8),
+                      status: "completed",
+                      address: `Referral reward — referred user ${depositRequest.user_id}`,
+                    });
+
+                    await supabaseAdmin
+                      .from("referrals")
+                      .update({
+                        status: "rewarded",
+                        reward_amount: rewardAmount.toFixed(8),
+                        reward_symbol: rewardSymbol,
+                        qualifying_deposit_id: parseInt(requestId, 10),
+                        rewarded_at: new Date().toISOString(),
+                      })
+                      .eq("id", pendingReferral.id);
+
+                    syncManager.syncPortfolioUpdated(pendingReferral.referrer_id, { symbol: rewardSymbol, amount: rewardAmount });
+                  }
+                }
+              }
+            }
+          }
+        } catch (referralError) {
+          // Non-critical: don't fail the deposit approval if referral crediting fails
+          console.error("Referral reward crediting error:", referralError);
+        }
       }
 
       syncManager.syncDepositRequestUpdated(updatedRequest);

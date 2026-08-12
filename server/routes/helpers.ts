@@ -307,6 +307,29 @@ export async function generateDisplayId(): Promise<string> {
 }
 
 /**
+ * Generate a unique 6-char alphanumeric referral code for a user.
+ */
+export async function generateReferralCode(): Promise<string> {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid ambiguity
+  const makeCode = () => Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+
+  let code = makeCode();
+  let exists = true;
+
+  while (exists) {
+    code = makeCode();
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('referral_code', code)
+      .maybeSingle();
+    exists = !!data;
+  }
+
+  return code;
+}
+
+/**
  * SECURITY FIX L2: Validate and constrain pagination parameters
  */
 export function validatePaginationParams(page: any, limit: any, maxLimit: number = 100): { offset: number; limit: number } {

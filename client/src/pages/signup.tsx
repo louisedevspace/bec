@@ -21,6 +21,14 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
 
+  const referralCode = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() || '';
+    } catch {
+      return '';
+    }
+  })();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -48,7 +56,8 @@ export default function SignupPage() {
         is_active: true,
         is_verified: false,
         credit_score: 0.60,
-        display_id: Math.random().toString(36).substring(2, 10).toUpperCase()
+        display_id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        referral_code: referralCode || undefined
       }));
 
       setSuccess('Signup successful! Please check your email and click the confirmation link. You will be redirected to the login page where you can sign in.');
@@ -70,6 +79,12 @@ export default function SignupPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-1 text-foreground tracking-tight">Create Your Account</h2>
           <p className="text-muted-foreground text-sm">Sign up to access {exchangeName}</p>
         </div>
+
+        {referralCode && (
+          <div className="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10 border border-primary/30 rounded-lg text-xs text-primary font-medium">
+            Referred by code {referralCode}
+          </div>
+        )}
         <div>
           <Label htmlFor="fullName" className="text-sm font-medium text-muted-foreground mb-2 block">Full Name</Label>
           <Input id="fullName" placeholder="e.g. John Doe" value={fullName} onChange={e => setFullName(e.target.value)} required />

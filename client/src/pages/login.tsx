@@ -78,6 +78,21 @@ export default function LoginPage() {
       if (createError) throw new Error('Failed to create user profile: ' + createError.message);
       profile = newProfile;
       localStorage.removeItem('pendingProfile');
+
+      if (parsed.referral_code) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            await fetch('/api/referrals/link', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referralCode: parsed.referral_code }),
+            });
+          }
+        } catch {
+          // Non-critical: referral linking failure shouldn't block account creation
+        }
+      }
     } else if (profileError) {
       throw profileError;
     }

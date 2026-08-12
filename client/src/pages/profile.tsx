@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Wallet, PieChart, History, Shield, Key, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon, ChevronRight, Lock, DollarSign } from 'lucide-react';
+import { Wallet, PieChart, History, Shield, Key, Phone, LogOut, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, Trash2, TrendingUp, Sun, Moon, ChevronRight, Lock, DollarSign, Gift, Copy, Users } from 'lucide-react';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import type { LucideIcon } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -19,11 +20,12 @@ import { userDataQueryOptions, portfolioQueryOptions } from '@/lib/queryClient';
 
 export default function ProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'support' | 'referrals'>('overview');
   const [, setLocation] = useLocation();
   const { prices } = useCryptoPrices();
   const { isDark, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+  const { copied: linkCopied, copyToClipboard: copyReferralLink } = useCopyToClipboard();
 
   // Fetch auth user first (required for all other queries)
   const { data: authUser, isLoading: authLoading, error: authError } = useQuery({
@@ -116,6 +118,41 @@ export default function ProfilePage() {
     enabled: !!authUser?.id,
     ...userDataQueryOptions,
   });
+
+  // Fetch referral code/stats (loads independently, only used by the Referrals tab)
+  const { data: referralData, isLoading: referralLoading } = useQuery({
+    queryKey: ['referrals-me', authUser?.id],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+      const response = await fetch('/api/referrals/me', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Failed to load referral data');
+      return response.json();
+    },
+    enabled: !!authUser?.id,
+    ...userDataQueryOptions,
+  });
+
+  const { data: referralSettings } = useQuery({
+    queryKey: ['referral-settings'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+      const response = await fetch('/api/referrals/settings', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Failed to load referral settings');
+      return response.json();
+    },
+    enabled: !!authUser?.id,
+    ...userDataQueryOptions,
+  });
+
+  const referralLink = referralData?.referralCode
+    ? `${window.location.origin}/signup?ref=${referralData.referralCode}`
+    : '';
 
   // Fetch portfolio (loads independently with skeleton)
   const { data: portfolio = [], isLoading: portfolioLoading } = useQuery({
@@ -446,6 +483,12 @@ export default function ProfilePage() {
             >
               <FileText size={12} /> Support &amp; Legal
             </button>
+            <button
+              onClick={() => setActiveTab('referrals')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'referrals' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Gift size={12} /> Referrals
+            </button>
           </div>
 
           {activeTab === 'overview' && (
@@ -553,6 +596,90 @@ export default function ProfilePage() {
                 <MenuButton icon={FileText} label="Legal Agreements" onClick={() => handleMenuAction('privacy-policy')} />
                 <MenuButton icon={Phone} label="Customer support" onClick={() => handleMenuAction('customer-support')} isLast />
               </div>
+            </div>
+          )}
+
+          {activeTab === 'referrals' && (
+            <div className="space-y-4">
+              {referralSettings && !referralSettings.isEnabled ? (
+                <div className="bg-card rounded-2xl border border-border p-4 shadow-sm text-center text-sm text-muted-foreground">
+                  The referral program isn't active right now. Check back later!
+                </div>
+              ) : (
+                <>
+                  <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Gift size={16} className="text-primary" />
+                      <h3 className="text-foreground font-semibold text-sm">Invite friends, earn rewards</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {referralSettings
+                        ? referralSettings.rewardType === 'percentage'
+                          ? `Earn ${(parseFloat(referralSettings.percentageRate) * 100).toFixed(0)}% of your friend's first deposit${referralSettings.maxRewardAmount ? ` (up to ${referralSettings.maxRewardAmount} ${referralSettings.rewardSymbol})` : ''} once they make it.`
+                          : `Earn ${referralSettings.fixedAmount} ${referralSettings.rewardSymbol} for every friend who makes their first deposit.`
+                        : 'Share your link and earn rewards when friends join and deposit.'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={referralLoading ? 'Loading...' : referralLink}
+                        className="flex-1 min-w-0 bg-muted rounded-lg px-3 py-2 text-xs text-foreground truncate"
+                      />
+                      <button
+                        onClick={() => referralLink && copyReferralLink(referralLink)}
+                        disabled={!referralLink}
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        {linkCopied ? <CheckCircle size={13} /> : <Copy size={13} />}
+                        {linkCopied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-card rounded-2xl border border-border p-3 text-center shadow-sm">
+                      <div className="text-lg font-bold text-foreground">{referralData?.totalReferred ?? '—'}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">Referred</div>
+                    </div>
+                    <div className="bg-card rounded-2xl border border-border p-3 text-center shadow-sm">
+                      <div className="text-lg font-bold text-foreground">{referralData?.totalRewarded ?? '—'}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">Rewarded</div>
+                    </div>
+                    <div className="bg-card rounded-2xl border border-border p-3 text-center shadow-sm">
+                      <div className="text-lg font-bold text-success">{referralData ? formatBalance(referralData.totalEarned, referralData.rewardSymbol || 'USDT', 'crypto') : '—'}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{referralData?.rewardSymbol || 'USDT'} Earned</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+                      <Users size={14} className="text-muted-foreground" />
+                      <span className="text-xs font-semibold text-foreground">Your referrals</span>
+                    </div>
+                    {!referralData?.referrals?.length ? (
+                      <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+                        No referrals yet — share your link to get started.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {referralData.referrals.map((r: any) => (
+                          <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                            <div>
+                              <div className="text-xs font-medium text-foreground">{r.referredUser?.username || r.referredUser?.display_id || 'User'}</div>
+                              <div className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</div>
+                            </div>
+                            {r.status === 'rewarded' ? (
+                              <span className="text-xs font-semibold text-success">+{r.reward_amount} {r.reward_symbol}</span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">Pending deposit</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

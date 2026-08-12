@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   futuresMinAmount: decimal("futures_min_amount", { precision: 20, scale: 8 }).default("50"),
   futuresTradeResult: text("futures_trade_result"),
   walletLocked: boolean("wallet_locked").default(false),
+  referralCode: text("referral_code").unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -453,3 +454,41 @@ export type SupportConversation = typeof supportConversations.$inferSelect;
 export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;
 export type SupportMessage = typeof supportMessages.$inferSelect;
 export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
+
+// ===== Referral program =====
+
+export const referralSettings = pgTable("referral_settings", {
+  id: integer("id").primaryKey().default(1),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  rewardType: text("reward_type").notNull().default("fixed"), // fixed, percentage
+  fixedAmount: decimal("fixed_amount", { precision: 20, scale: 8 }).notNull().default("5"),
+  percentageRate: decimal("percentage_rate", { precision: 10, scale: 8 }).notNull().default("0.10"), // 0.10 = 10%
+  minDepositAmount: decimal("min_deposit_amount", { precision: 20, scale: 8 }).notNull().default("0"),
+  maxRewardAmount: decimal("max_reward_amount", { precision: 20, scale: 8 }), // caps percentage payouts; null = uncapped
+  rewardSymbol: text("reward_symbol").notNull().default("USDT"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+export const referrals = pgTable("referrals", {
+  id: serial("id").primaryKey(),
+  referrerId: text("referrer_id").notNull(),
+  referredUserId: text("referred_user_id").notNull().unique(), // one referral record per referred user
+  referralCode: text("referral_code").notNull(),
+  status: text("status").notNull().default("pending"), // pending, rewarded
+  rewardAmount: decimal("reward_amount", { precision: 20, scale: 8 }),
+  rewardSymbol: text("reward_symbol"),
+  qualifyingDepositId: integer("qualifying_deposit_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  rewardedAt: timestamp("rewarded_at"),
+});
+
+export const insertReferralSchema = createInsertSchema(referrals).omit({
+  id: true,
+  createdAt: true,
+  rewardedAt: true,
+});
+
+export type ReferralSettings = typeof referralSettings.$inferSelect;
+export type Referral = typeof referrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;

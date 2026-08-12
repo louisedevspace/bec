@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminUserManagementModal } from '@/components/modals/admin-user-management-modal';
-import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2 } from 'lucide-react';
+import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import AdminLayout from './admin-layout';
@@ -70,6 +70,20 @@ export default function AdminSettings() {
   const [exchangeNameMessage, setExchangeNameMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [accentTheme, setAccentTheme] = useState<AccentThemeKey>(DEFAULT_ACCENT_THEME);
 
+  // Referral program
+  const [referralSettings, setReferralSettings] = useState({
+    isEnabled: false,
+    rewardType: 'fixed' as 'fixed' | 'percentage',
+    fixedAmount: '5',
+    percentageRate: '0.10',
+    minDepositAmount: '0',
+    maxRewardAmount: '',
+    rewardSymbol: 'USDT',
+  });
+  const [referralSettingsLoading, setReferralSettingsLoading] = useState(true);
+  const [referralSettingsSaving, setReferralSettingsSaving] = useState(false);
+  const [referralSettingsMessage, setReferralSettingsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Standard durations that cannot be removed (only toggled)
   const standardDurations = [60, 120, 180, 240, 360, 480, 600];
 
@@ -130,6 +144,35 @@ export default function AdminSettings() {
     }
   };
 
+  const saveReferralSettings = async () => {
+    setReferralSettingsSaving(true);
+    setReferralSettingsMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setReferralSettingsMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+      const response = await fetch('/api/admin/referral-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(referralSettings)
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to save');
+      }
+      setReferralSettingsMessage({ type: 'success', text: 'Referral settings updated' });
+    } catch (err: any) {
+      setReferralSettingsMessage({ type: 'error', text: err.message || 'Failed to save referral settings' });
+    } finally {
+      setReferralSettingsSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -164,6 +207,32 @@ export default function AdminSettings() {
         });
         const usersData = await usersResponse.json();
         setUsers(usersData.users || []);
+
+        // Fetch referral settings
+        try {
+          const referralResponse = await fetch('/api/admin/referral-settings', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (referralResponse.ok) {
+            const r = await referralResponse.json();
+            setReferralSettings({
+              isEnabled: !!r.is_enabled,
+              rewardType: r.reward_type === 'percentage' ? 'percentage' : 'fixed',
+              fixedAmount: String(r.fixed_amount ?? '5'),
+              percentageRate: String(r.percentage_rate ?? '0.10'),
+              minDepositAmount: String(r.min_deposit_amount ?? '0'),
+              maxRewardAmount: r.max_reward_amount != null ? String(r.max_reward_amount) : '',
+              rewardSymbol: r.reward_symbol || 'USDT',
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch referral settings:', err);
+        } finally {
+          setReferralSettingsLoading(false);
+        }
 
         // Fetch deposit addresses
         const addressesResponse = await fetch('/api/admin/deposit-addresses', {
@@ -615,6 +684,114 @@ export default function AdminSettings() {
               <p className="text-xs text-muted-foreground mt-2">Applies as the primary accent across buttons, links, and highlights app-wide. Click Save above to apply.</p>
             </div>
           </div>
+        </div>
+
+        {/* Referral Program */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-foreground text-sm flex items-center gap-2"><Gift className="h-4 w-4" /> Referral Program</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Rewards trigger only on a referred user's first approved deposit — prevents fake-signup abuse.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReferralSettings((s) => ({ ...s, isEnabled: !s.isEnabled }))}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${referralSettings.isEnabled ? 'bg-primary' : 'bg-muted'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${referralSettings.isEnabled ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+
+          {!referralSettingsLoading && (
+            <div className="p-5 space-y-5">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Reward Type</Label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReferralSettings((s) => ({ ...s, rewardType: 'fixed' }))}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${referralSettings.rewardType === 'fixed' ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border bg-background text-muted-foreground hover:border-foreground/20'}`}
+                  >
+                    Fixed amount
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReferralSettings((s) => ({ ...s, rewardType: 'percentage' }))}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${referralSettings.rewardType === 'percentage' ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border bg-background text-muted-foreground hover:border-foreground/20'}`}
+                  >
+                    Percentage of deposit
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {referralSettings.rewardType === 'fixed' ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Fixed Reward Amount</Label>
+                    <Input
+                      value={referralSettings.fixedAmount}
+                      onChange={(e) => setReferralSettings((s) => ({ ...s, fixedAmount: e.target.value }))}
+                      placeholder="5"
+                      className="rounded-lg"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Percentage Rate (e.g. 0.10 = 10%)</Label>
+                      <Input
+                        value={referralSettings.percentageRate}
+                        onChange={(e) => setReferralSettings((s) => ({ ...s, percentageRate: e.target.value }))}
+                        placeholder="0.10"
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Max Reward Cap (optional)</Label>
+                      <Input
+                        value={referralSettings.maxRewardAmount}
+                        onChange={(e) => setReferralSettings((s) => ({ ...s, maxRewardAmount: e.target.value }))}
+                        placeholder="No cap"
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Minimum Qualifying Deposit</Label>
+                  <Input
+                    value={referralSettings.minDepositAmount}
+                    onChange={(e) => setReferralSettings((s) => ({ ...s, minDepositAmount: e.target.value }))}
+                    placeholder="0"
+                    className="rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Reward Asset</Label>
+                  <Input
+                    value={referralSettings.rewardSymbol}
+                    onChange={(e) => setReferralSettings((s) => ({ ...s, rewardSymbol: e.target.value.toUpperCase() }))}
+                    placeholder="USDT"
+                    className="rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button onClick={saveReferralSettings} disabled={referralSettingsSaving} className="rounded-lg">
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  {referralSettingsSaving ? 'Saving...' : 'Save Referral Settings'}
+                </Button>
+                {referralSettingsMessage && (
+                  <p className={`text-xs ${referralSettingsMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
+                    {referralSettingsMessage.text}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Deposit Address Management */}
