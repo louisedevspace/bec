@@ -7,12 +7,12 @@ import { isCachedSupportAgent } from '@/lib/user-role';
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/market", icon: TrendingUp, label: "Markets" },
-  { path: "/exchange", icon: RefreshCw, label: "Exchange" },
-  { path: "/wallet", icon: Wallet, label: "Wallet" },
   { path: "/futures", icon: Zap, label: "Futures" },
   { path: "/support", icon: MessageSquare, label: "Support" },
-  { path: "/about", icon: Info, label: "About" },
   { path: "/profile", icon: User, label: "Profile" },
+  { path: "/exchange", icon: RefreshCw, label: "Exchange" },
+  { path: "/wallet", icon: Wallet, label: "Wallet" },
+  { path: "/about", icon: Info, label: "About" },
 ];
 
 export function BottomNavigation() {

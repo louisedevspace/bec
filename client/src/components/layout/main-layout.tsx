@@ -9,13 +9,13 @@ import { useExchangeName } from '@/hooks/use-exchange-name';
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/about", label: "About", icon: Info },
   { path: "/market", label: "Markets", icon: TrendingUp },
-  { path: "/exchange", label: "Exchange", icon: RefreshCw },
-  { path: "/wallet", label: "Wallet", icon: Wallet },
   { path: "/futures", label: "Trading", icon: Zap },
   { path: "/support", label: "Support", icon: MessageSquare },
   { path: "/profile", label: "Profile", icon: User },
+  { path: "/exchange", label: "Exchange", icon: RefreshCw },
+  { path: "/wallet", label: "Wallet", icon: Wallet },
+  { path: "/about", label: "About", icon: Info },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
