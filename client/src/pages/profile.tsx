@@ -20,7 +20,14 @@ import { userDataQueryOptions, portfolioQueryOptions } from '@/lib/queryClient';
 
 export default function ProfilePage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'support' | 'referrals'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'security' | 'support' | 'referrals'>(() => {
+    try {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      return tab === 'referrals' || tab === 'security' || tab === 'support' ? tab : 'overview';
+    } catch {
+      return 'overview';
+    }
+  });
   const [, setLocation] = useLocation();
   const { prices } = useCryptoPrices();
   const { isDark, toggleTheme } = useTheme();

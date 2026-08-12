@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { supabase } from '../lib/supabaseClient';
 import { config } from '../lib/config';
@@ -21,13 +21,21 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
 
-  const referralCode = (() => {
+  const [referralEnabled, setReferralEnabled] = useState(false);
+  const [referralCode, setReferralCode] = useState(() => {
     try {
       return new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() || '';
     } catch {
       return '';
     }
-  })();
+  });
+
+  useEffect(() => {
+    fetch('/api/referrals/status')
+      .then(res => res.json())
+      .then(data => setReferralEnabled(!!data.isEnabled))
+      .catch(() => setReferralEnabled(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +65,7 @@ export default function SignupPage() {
         is_verified: false,
         credit_score: 0.60,
         display_id: Math.random().toString(36).substring(2, 10).toUpperCase(),
-        referral_code: referralCode || undefined
+        referral_code: (referralEnabled && referralCode.trim()) ? referralCode.trim().toUpperCase() : undefined
       }));
 
       setSuccess('Signup successful! Please check your email and click the confirmation link. You will be redirected to the login page where you can sign in.');
@@ -80,9 +88,16 @@ export default function SignupPage() {
           <p className="text-muted-foreground text-sm">Sign up to access {exchangeName}</p>
         </div>
 
-        {referralCode && (
-          <div className="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10 border border-primary/30 rounded-lg text-xs text-primary font-medium">
-            Referred by code {referralCode}
+        {referralEnabled && (
+          <div>
+            <Label htmlFor="referralCode" className="text-sm font-medium text-muted-foreground mb-2 block">Referral Code (optional)</Label>
+            <Input
+              id="referralCode"
+              placeholder="e.g. K7X2P9"
+              value={referralCode}
+              onChange={e => setReferralCode(e.target.value.toUpperCase())}
+              className="uppercase"
+            />
           </div>
         )}
         <div>

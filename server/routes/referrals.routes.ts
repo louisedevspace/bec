@@ -35,6 +35,18 @@ async function getOrCreateSettings() {
 }
 
 export default function registerReferralsRoutes(app: Express) {
+  // GET /api/referrals/status — public, no auth. Lets the signup page (no
+  // session yet) decide whether to show the referral code field at all.
+  app.get("/api/referrals/status", async (_req, res) => {
+    try {
+      const settings = await getOrCreateSettings();
+      res.json({ isEnabled: !!settings.is_enabled });
+    } catch (error) {
+      console.error("Failed to load referral status:", error);
+      res.json({ isEnabled: false });
+    }
+  });
+
   // GET /api/referrals/settings — logged-in users see the current reward terms
   app.get("/api/referrals/settings", requireAuth, async (_req, res) => {
     try {

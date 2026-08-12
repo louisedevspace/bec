@@ -221,7 +221,7 @@ export default function HomePage() {
               <ActionButton icon={Wallet} label="Deposit" onClick={() => openModal('deposit')} />
               <ActionButton icon={ArrowRightLeft} label="Convert" onClick={() => openModal('convert')} />
               <ActionButton icon={CreditCard} label="Loan" onClick={() => openModal('loan-application')} />
-              <ActionButton icon={UserPlus} label="Invite" onClick={() => {}} />
+              <ActionButton icon={UserPlus} label="Invite" onClick={() => setLocation('/profile?tab=referrals')} />
               <ActionButton icon={Banknote} label="Withdraw" onClick={() => openModal('withdraw')} />
               <ActionButton icon={PieChart} label="Portfolio" onClick={() => openModal('portfolio')} />
               <ActionButton icon={History} label="History" onClick={() => openModal('transaction-history')} />
