@@ -836,6 +836,27 @@ export default function registerSupportRoutes(app: Express) {
     }
   });
 
+  // GET /api/admin/support/staff — everyone who can be assigned a ticket
+  // (admins + dedicated support agents). Staff-accessible, unlike
+  // /api/admin/support-agents which is admin-only and support-role-only.
+  app.get("/api/admin/support/staff", requireAuth, requireSupportStaff, async (_req, res) => {
+    try {
+      const { data: staff, error } = await supabaseAdmin
+        .from("users")
+        .select("id, username, full_name, role")
+        .in("role", ["admin", "support"])
+        .order("full_name");
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to fetch staff list" });
+      }
+
+      res.json({ staff: staff || [] });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // GET /api/admin/support/templates — get response templates
   app.get("/api/admin/support/templates", requireAuth, requireSupportStaff, async (_req, res) => {
     const exchangeName = await getExchangeName();

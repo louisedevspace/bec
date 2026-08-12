@@ -11,7 +11,7 @@ import {
   MessageSquare, Send, User, Shield, Search, MessageCircle, ArrowLeft,
   AlertTriangle, CheckCircle, Clock, XCircle, ChevronDown, Filter,
   Zap, FileText, Tag, BarChart3, RefreshCw, CheckSquare, Square,
-  ArrowUpRight, Inbox, Loader2, Paperclip, X,
+  ArrowUpRight, Inbox, Loader2, Paperclip, X, UserCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDataSync } from "@/hooks/use-data-sync";
@@ -134,6 +134,19 @@ export default function AdminSupportPage() {
     refetchInterval: 20000,
   });
 
+  const { data: staffData } = useQuery<{ staff: { id: string; username: string; full_name: string | null; role: string }[] }>({
+    queryKey: ["/api/admin/support/staff"],
+    queryFn: async () => {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/support/staff", { headers });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    staleTime: 60 * 1000,
+  });
+  const staffList = staffData?.staff || [];
+  const staffMap = useMemo(() => new Map(staffList.map((s) => [s.id, s.full_name || s.username])), [staffList]);
+
   const { data: templates } = useQuery<Record<TemplateCategory, Template[]>>({
     queryKey: ["/api/admin/support/templates"],
     queryFn: async () => {
@@ -206,6 +219,17 @@ export default function AdminSupportPage() {
     },
     onSuccess: () => { refetchAll(); toast({ title: "Ticket escalated to urgent" }); },
     onError: () => toast({ title: "Error", description: "Failed to escalate", variant: "destructive" }),
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ id, assignedTo }: { id: number; assignedTo: string | null }) => {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/admin/support/conversations/${id}/assign`, { method: "PUT", headers, body: JSON.stringify({ assignedTo }) });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => { refetchAll(); toast({ title: "Assignment updated" }); },
+    onError: () => toast({ title: "Error", description: "Failed to update assignment", variant: "destructive" }),
   });
 
   // ─── Mark messages as read (bulk) ───────────────────────────
@@ -572,6 +596,11 @@ export default function AdminSupportPage() {
                                 {conv.category && conv.category !== "general" && (
                                   <span className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground">{categoryLabels[conv.category] || conv.category}</span>
                                 )}
+                                {conv.assigned_to && staffMap.get(conv.assigned_to) && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground flex items-center gap-0.5">
+                                    <UserCheck className="h-2 w-2" /> {staffMap.get(conv.assigned_to)}
+                                  </span>
+                                )}
                                 <span className="text-[10px] text-muted-foreground/70 ml-auto">{formatTime(conv.last_message_at)}</span>
                               </div>
                               {lastMsg && (
@@ -679,7 +708,21 @@ export default function AdminSupportPage() {
                         {selectedConversation.users.is_verified ? "Verified" : "Unverified"}
                       </span>
                     )}
-                    <div className="ml-auto flex gap-1.5">
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <div className="relative">
+                        <select
+                          value={selectedConversation.assigned_to || ""}
+                          onChange={(e) => assignMutation.mutate({ id: selectedConversation.id, assignedTo: e.target.value || null })}
+                          className="text-[10px] h-6 pl-2 pr-5 rounded-lg border border-border text-muted-foreground bg-transparent appearance-none cursor-pointer focus:outline-none"
+                          title="Assign ticket"
+                        >
+                          <option value="" className="bg-card text-foreground">Unassigned</option>
+                          {staffList.map((s) => (
+                            <option key={s.id} value={s.id} className="bg-card text-foreground">{s.full_name || s.username}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="h-2.5 w-2.5 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+                      </div>
                       {selectedConversation.priority !== "urgent" && (
                         <Button size="sm" variant="outline" onClick={() => escalateMutation.mutate(selectedConversation.id)} className="h-6 px-2 text-[10px] border-danger/20 text-danger hover:bg-danger/10 rounded-lg">
                           <Zap className="h-2.5 w-2.5 mr-1" /> Escalate
