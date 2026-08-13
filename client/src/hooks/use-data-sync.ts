@@ -27,7 +27,8 @@ export type SyncAction =
   | 'create-support-conversation'
   | 'update-support-conversation'
   | 'create-support-message'
-  | 'update-support-message';
+  | 'update-support-message'
+  | 'support-typing';
 
 // Synchronization event interface
 export interface SyncEvent {
@@ -165,7 +166,9 @@ const QUERY_INVALIDATION_PATTERNS = {
     ['/api/support/conversation', userId],
     ['/api/admin/support/conversations'],
     ['/api/admin/support/stats']
-  ]
+  ],
+  // Ephemeral typing signal — nothing to invalidate, handled directly via onSync.
+  'support-typing': () => []
 };
 
 /**

@@ -190,6 +190,30 @@ export async function hasSupportAccess(userId: string): Promise<boolean> {
 }
 
 /**
+ * True only for dedicated support-role accounts (not full admins).
+ * Used to scope admin-wide data (notifications, pending counts) down to
+ * support-relevant info only when a support agent — not an admin — is asking.
+ */
+export async function isSupportOnlyRole(userId: string): Promise<boolean> {
+  try {
+    const cachedUser = await getUserDataCached(userId, async () => {
+      const { data: user, error } = await supabaseAdmin
+        .from('users')
+        .select('role, is_active, wallet_locked')
+        .eq('id', userId)
+        .single();
+
+      if (error || !user) return null;
+      return user;
+    });
+
+    return cachedUser?.role === 'support';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Support-staff middleware — allows admins and support agents.
  * Must run after requireAuth.
  */

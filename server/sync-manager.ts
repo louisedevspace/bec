@@ -33,7 +33,8 @@ export type SyncAction =
   | 'create-support-conversation'
   | 'update-support-conversation'
   | 'create-support-message'
-  | 'update-support-message';
+  | 'update-support-message'
+  | 'support-typing';
 
 // Synchronization event interface
 export interface SyncEvent {
@@ -352,6 +353,20 @@ export class SyncManager {
       data: {
         action: 'update-crypto-prices',
         timestamp: new Date().toISOString()
+      }
+    });
+  }
+
+  // Ephemeral "customer is typing" signal — never persisted, agent-side only
+  // (the agent's own composer never emits this back to the customer).
+  public syncSupportTyping(conversationId: number, userId: string): void {
+    this.broadcastSyncEvent({
+      type: 'data_sync',
+      data: {
+        action: 'support-typing',
+        userId,
+        entityId: conversationId,
+        timestamp: new Date().toISOString(),
       }
     });
   }

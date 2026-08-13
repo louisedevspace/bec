@@ -97,11 +97,20 @@ export default function AdminSupportPage() {
   // Real-time delivery. useDataSync already invalidates the conversation
   // queries; the explicit refetch makes the open thread update immediately
   // instead of on the next poll.
+  const [typingConversationId, setTypingConversationId] = useState<number | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
   const { invalidateQueries } = useDataSync({
-    onSync: (action) => {
+    onSync: (action, data) => {
       if (action.startsWith("create-support") || action.startsWith("update-support")) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/support/conversations"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/support/stats"] });
+      } else if (action === "support-typing") {
+        const conversationId = typeof data?.entityId === "number" ? data.entityId : parseInt(data?.entityId, 10);
+        if (isNaN(conversationId)) return;
+        setTypingConversationId(conversationId);
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setTypingConversationId(null), 4000);
       }
     },
   });
@@ -824,6 +833,18 @@ export default function AdminSupportPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Typing indicator */}
+                  {typingConversationId === selectedConversation.id && (
+                    <div className="px-4 py-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground border-t border-border bg-card">
+                      <span className="flex gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </span>
+                      Customer is typing...
                     </div>
                   )}
 

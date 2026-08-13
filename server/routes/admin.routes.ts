@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth, requireAdmin, supabaseAdmin, invalidateUserCache } from "./middleware";
+import { requireAuth, requireAdmin, requireSupportStaff, isSupportOnlyRole, supabaseAdmin, invalidateUserCache } from "./middleware";
 import { syncManager } from "../sync-manager";
 import supabase from "../supabaseClient";
 import { logAuditEvent, getClientIP, getUserAgent } from "../utils/security";
@@ -950,8 +950,20 @@ export default function registerAdminRoutes(app: Express) {
   });
 
   // GET /api/admin/pending-counts — lightweight pending item counts for badges
-  app.get("/api/admin/pending-counts", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/admin/pending-counts", requireAuth, requireSupportStaff, async (req, res) => {
     try {
+      // Support agents only have access to the support inbox anywhere else in
+      // the app — don't hand them deposit/withdrawal/KYC/etc. counts too.
+      if (await isSupportOnlyRole(req.user.id)) {
+        const { data: unreadRows } = await supabaseAdmin
+          .from("support_messages")
+          .select("conversation_id")
+          .eq("sender_type", "user")
+          .eq("is_read", false);
+        const support = new Set((unreadRows || []).map((m: any) => m.conversation_id)).size;
+        return res.json({ deposits: 0, withdrawals: 0, trades: 0, futures: 0, loans: 0, kyc: 0, support });
+      }
+
       // Check Redis cache first (10s TTL for real-time data)
       try {
         const cached = await redisGetJSON<any>(REDIS_KEYS.ADMIN_PENDING);

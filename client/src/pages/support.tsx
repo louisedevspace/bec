@@ -52,11 +52,14 @@ async function authHeadersMultipart(): Promise<Record<string, string>> {
   };
 }
 
+const TYPING_PING_INTERVAL_MS = 2500;
+
 export default function SupportPage() {
   const [, setLocation] = useLocation();
   const [conversations, setConversations] = useState<SupportConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<SupportConversation | null>(null);
   const [message, setMessage] = useState('');
+  const lastTypingSentRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -161,6 +164,25 @@ export default function SupportPage() {
     setPendingImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Lets the agent see "customer is typing" — throttled, fire-and-forget,
+  // never persisted. Nothing is shown back to the customer for this.
+  const notifyTyping = useCallback(async () => {
+    if (!selectedConversation) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < TYPING_PING_INTERVAL_MS) return;
+    lastTypingSentRef.current = now;
+    try {
+      const headers = await authHeaders();
+      await fetch(buildApiUrl('/support/typing'), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ conversationId: selectedConversation.id }),
+      });
+    } catch {
+      // Non-critical: a missed typing ping doesn't affect chat delivery
+    }
+  }, [selectedConversation]);
 
   // Send message
   const handleSendMessage = async () => {
@@ -713,7 +735,7 @@ export default function SupportPage() {
                       </button>
                       <textarea
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={(e) => { setMessage(e.target.value); if (e.target.value.trim()) notifyTyping(); }}
                         onKeyDown={handleKeyDown}
                         placeholder={selectedConversation.status === 'resolved' ? 'Reply to reopen this ticket...' : 'Type your message...'}
                         rows={1}

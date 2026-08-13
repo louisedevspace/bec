@@ -479,6 +479,35 @@ export default function registerSupportRoutes(app: Express) {
     }
   });
 
+  // POST /api/support/typing — user is typing in their support chat.
+  // Ephemeral, never persisted; broadcast to agents only (the agent side
+  // never emits this back, so customers never see an "agent typing" signal).
+  app.post("/api/support/typing", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const conversationId = parseInt(req.body?.conversationId, 10);
+      if (isNaN(conversationId)) {
+        return res.status(400).json({ message: "conversationId is required" });
+      }
+
+      const { data: conversation } = await supabaseAdmin
+        .from("support_conversations")
+        .select("id")
+        .eq("id", conversationId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+
+      syncManager.syncSupportTyping(conversationId, userId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ====================================================================
   //  ADMIN ENDPOINTS
   // ====================================================================

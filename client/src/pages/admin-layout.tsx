@@ -52,7 +52,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const bellRef = useRef<HTMLDivElement>(null);
 
   // Support agents can only reach the support inbox — the admin-only
-  // notification and pending-count endpoints would just 403, so stop polling them.
+  // Both endpoints now accept support agents too (server-side scoped to the
+  // 'support' category/count only), so polling stays on for both roles.
   const isSupportAgent = viewerRole === 'support';
   const roleResolved = viewerRole !== null;
 
@@ -63,10 +64,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     markAsRead,
     markAllAsRead,
     markCategoryRead,
-  } = useAdminNotifications(isSupportAgent ? 0 : 30000);
+  } = useAdminNotifications(30000);
 
   const { counts: pendingCounts, totalPending, getBadgeCount, acknowledgeSection } =
-    useAdminPendingCounts(isSupportAgent ? 0 : 15000);
+    useAdminPendingCounts(15000);
 
   // Until the role is known, show placeholders rather than the admin items —
   // guessing wrong for one frame is exactly the flash we're avoiding.
