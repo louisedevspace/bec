@@ -111,7 +111,8 @@ export const stakingPositions = pgTable("staking_positions", {
   symbol: text("symbol").notNull(),
   amount: decimal("amount", { precision: 20, scale: 8 }).notNull(),
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
-  duration: integer("duration").notNull(), // days
+  duration: integer("duration").notNull(), // days — nominal APY-tier duration for flexible positions
+  type: text("type").notNull().default("fixed"), // fixed | flexible — flexible can be unstaked any time
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date").notNull(),
   status: text("status").notNull(), // active, completed
@@ -135,9 +136,10 @@ export const userStakingLimits = pgTable("user_staking_limits", {
 // Staking Products — admin-configurable staking product list
 export const stakingProducts = pgTable("staking_products", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(), // e.g. "7 Days", "30 Days"
-  duration: integer("duration").notNull(), // days
+  title: text("title").notNull(), // e.g. "7 Days", "30 Days", "Flexible"
+  duration: integer("duration").notNull(), // days — nominal duration flexible products use for APY display only
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(), // e.g. 0.50, 4.00
+  type: text("type").notNull().default("fixed"), // fixed | flexible
   minAmount: decimal("min_amount", { precision: 20, scale: 8 }).notNull(),
   maxAmount: decimal("max_amount", { precision: 20, scale: 8 }).notNull(),
   isEnabled: boolean("is_enabled").notNull().default(true),

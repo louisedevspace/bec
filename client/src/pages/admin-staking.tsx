@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Coins, Users, TrendingUp, Clock, DollarSign, Search, RefreshCw,
   ChevronDown, ChevronUp, CheckCircle, Timer, Trash2, BarChart3, Activity,
-  Plus, ToggleLeft, ToggleRight, Edit2, Save, X, Settings2
+  Plus, ToggleLeft, ToggleRight, Edit2, Save, X, Settings2, Zap, Lock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./admin-layout";
@@ -57,6 +57,7 @@ interface StakingProductConfig {
   title: string;
   duration: number;
   apy: string;
+  type: "fixed" | "flexible";
   min_amount: string;
   max_amount: string;
   is_enabled: boolean;
@@ -184,7 +185,7 @@ export default function AdminStakingPage() {
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [productEditForm, setProductEditForm] = useState<Partial<StakingProductConfig>>({});
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newProduct, setNewProduct] = useState({ title: '', duration: '30', apy: '1.00', minAmount: '100', maxAmount: '100000' });
+  const [newProduct, setNewProduct] = useState({ title: '', duration: '30', apy: '1.00', type: 'fixed' as 'fixed' | 'flexible', minAmount: '100', maxAmount: '100000' });
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -232,13 +233,13 @@ export default function AdminStakingPage() {
       const headers = await getAuthHeaders();
       const response = await fetch('/api/admin/staking-products', {
         method: 'POST', headers,
-        body: JSON.stringify({ title: newProduct.title, duration: parseInt(newProduct.duration), apy: newProduct.apy, minAmount: newProduct.minAmount, maxAmount: newProduct.maxAmount, sortOrder: products.length + 1 }),
+        body: JSON.stringify({ title: newProduct.title, duration: parseInt(newProduct.duration), apy: newProduct.apy, type: newProduct.type, minAmount: newProduct.minAmount, maxAmount: newProduct.maxAmount, sortOrder: products.length + 1 }),
       });
       if (response.ok) {
         const data = await response.json();
         setProducts(prev => [...prev, data]);
         setShowAddForm(false);
-        setNewProduct({ title: '', duration: '30', apy: '1.00', minAmount: '100', maxAmount: '100000' });
+        setNewProduct({ title: '', duration: '30', apy: '1.00', type: 'fixed', minAmount: '100', maxAmount: '100000' });
         toast({ title: 'Success', description: `${data.title} added` });
       } else {
         const err = await response.json();
@@ -249,7 +250,7 @@ export default function AdminStakingPage() {
 
   const startProductEdit = (product: StakingProductConfig) => {
     setEditingProductId(product.id);
-    setProductEditForm({ title: product.title, duration: product.duration, apy: product.apy, min_amount: product.min_amount, max_amount: product.max_amount, sort_order: product.sort_order });
+    setProductEditForm({ title: product.title, duration: product.duration, apy: product.apy, type: product.type, min_amount: product.min_amount, max_amount: product.max_amount, sort_order: product.sort_order });
   };
 
   const handleProductSaveEdit = async () => {
@@ -258,7 +259,7 @@ export default function AdminStakingPage() {
       const headers = await getAuthHeaders();
       const response = await fetch(`/api/admin/staking-products/${editingProductId}`, {
         method: 'PUT', headers,
-        body: JSON.stringify({ title: productEditForm.title, duration: productEditForm.duration, apy: productEditForm.apy, minAmount: productEditForm.min_amount, maxAmount: productEditForm.max_amount, sortOrder: productEditForm.sort_order }),
+        body: JSON.stringify({ title: productEditForm.title, duration: productEditForm.duration, apy: productEditForm.apy, type: productEditForm.type, minAmount: productEditForm.min_amount, maxAmount: productEditForm.max_amount, sortOrder: productEditForm.sort_order }),
       });
       if (response.ok) {
         const updated = await response.json();
@@ -452,14 +453,25 @@ export default function AdminStakingPage() {
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Plus size={16} className="text-primary" /> Add New Staking Product
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Title</label>
                     <Input value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. 30 Days" className="h-9 bg-background border-border text-foreground text-xs" />
                   </div>
                   <div>
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Type</label>
+                    <select
+                      value={newProduct.type}
+                      onChange={(e) => setNewProduct({ ...newProduct, type: e.target.value as 'fixed' | 'flexible' })}
+                      className="h-9 w-full px-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="fixed">Fixed</option>
+                      <option value="flexible">Flexible</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Duration (Days)</label>
-                    <Input type="number" min="1" value={newProduct.duration} onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
+                    <Input type="number" min="1" value={newProduct.duration} onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })} disabled={newProduct.type === 'flexible'} className="h-9 bg-background border-border text-foreground text-xs tabular-nums disabled:opacity-50" />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase mb-1 block">APY (%)</label>
@@ -507,6 +519,7 @@ export default function AdminStakingPage() {
                       <thead>
                         <tr className="text-xs text-muted-foreground uppercase border-b border-border bg-muted/40">
                           <th className="text-left py-3 px-4">Product</th>
+                          <th className="text-center py-3 px-3">Type</th>
                           <th className="text-center py-3 px-3">Duration</th>
                           <th className="text-center py-3 px-3">APY</th>
                           <th className="text-center py-3 px-3">Status</th>
@@ -528,9 +541,26 @@ export default function AdminStakingPage() {
                             </td>
                             <td className="text-center py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" min="1" value={productEditForm.duration || ''} onChange={(e) => setProductEditForm({ ...productEditForm, duration: parseInt(e.target.value) || 0 })} className="h-7 bg-background border-border text-foreground text-xs w-20 mx-auto tabular-nums" />
+                                <select
+                                  value={productEditForm.type || 'fixed'}
+                                  onChange={(e) => setProductEditForm({ ...productEditForm, type: e.target.value as 'fixed' | 'flexible' })}
+                                  className="h-7 px-1.5 bg-background border border-border rounded-md text-foreground text-xs mx-auto focus:outline-none focus:ring-1 focus:ring-ring"
+                                >
+                                  <option value="fixed">Fixed</option>
+                                  <option value="flexible">Flexible</option>
+                                </select>
                               ) : (
-                                <span className="text-sm text-muted-foreground tabular-nums">{product.duration} days</span>
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${product.type === 'flexible' ? 'bg-info/15 text-info' : 'bg-primary/15 text-primary'}`}>
+                                  {product.type === 'flexible' ? <Zap size={9} /> : <Lock size={9} />}
+                                  {product.type === 'flexible' ? 'Flexible' : 'Fixed'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-center py-3 px-3">
+                              {editingProductId === product.id ? (
+                                <Input type="number" min="1" value={productEditForm.duration || ''} onChange={(e) => setProductEditForm({ ...productEditForm, duration: parseInt(e.target.value) || 0 })} disabled={productEditForm.type === 'flexible'} className="h-7 bg-background border-border text-foreground text-xs w-20 mx-auto tabular-nums disabled:opacity-50" />
+                              ) : (
+                                <span className="text-sm text-muted-foreground tabular-nums">{product.type === 'flexible' ? 'None' : `${product.duration} days`}</span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
@@ -595,6 +625,10 @@ export default function AdminStakingPage() {
                           <div className="flex items-center gap-2">
                             <Coins size={16} className="text-warning" />
                             <span className="font-bold text-foreground">{product.title}</span>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${product.type === 'flexible' ? 'bg-info/15 text-info' : 'bg-primary/15 text-primary'}`}>
+                              {product.type === 'flexible' ? <Zap size={9} /> : <Lock size={9} />}
+                              {product.type === 'flexible' ? 'Flexible' : 'Fixed'}
+                            </span>
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning/10 text-warning tabular-nums">{parseFloat(product.apy).toFixed(2)}% APY</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -606,7 +640,7 @@ export default function AdminStakingPage() {
                           </div>
                         </div>
                         <div className="flex gap-4 text-xs text-muted-foreground tabular-nums">
-                          <span>{product.duration} days</span>
+                          <span>{product.type === 'flexible' ? 'No lock-up' : `${product.duration} days`}</span>
                           <span>Min: ${parseFloat(product.min_amount).toLocaleString()}</span>
                           <span>Max: ${parseFloat(product.max_amount).toLocaleString()}</span>
                         </div>

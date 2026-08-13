@@ -52,10 +52,13 @@ export default function registerStakingProductsRoutes(app: Express) {
   // POST /api/admin/staking-products — admin: create new product
   app.post("/api/admin/staking-products", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { title, duration, apy, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
+      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
 
       if (!title || !duration || apy === undefined || !minAmount || !maxAmount) {
         return res.status(400).json({ message: "title, duration, apy, minAmount, and maxAmount are required" });
+      }
+      if (type !== undefined && type !== "fixed" && type !== "flexible") {
+        return res.status(400).json({ message: 'type must be "fixed" or "flexible"' });
       }
 
       const { data, error } = await supabaseAdmin
@@ -64,6 +67,7 @@ export default function registerStakingProductsRoutes(app: Express) {
           title,
           duration: parseInt(duration),
           apy: parseFloat(apy).toFixed(2),
+          type: type || "fixed",
           min_amount: minAmount,
           max_amount: maxAmount,
           is_enabled: isEnabled !== undefined ? isEnabled : true,
@@ -93,12 +97,17 @@ export default function registerStakingProductsRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      const { title, duration, apy, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
+      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
+
+      if (type !== undefined && type !== "fixed" && type !== "flexible") {
+        return res.status(400).json({ message: 'type must be "fixed" or "flexible"' });
+      }
 
       const updateData: any = { updated_at: new Date().toISOString() };
       if (title !== undefined) updateData.title = title;
       if (duration !== undefined) updateData.duration = parseInt(duration);
       if (apy !== undefined) updateData.apy = parseFloat(apy).toFixed(2);
+      if (type !== undefined) updateData.type = type;
       if (minAmount !== undefined) updateData.min_amount = minAmount;
       if (maxAmount !== undefined) updateData.max_amount = maxAmount;
       if (isEnabled !== undefined) updateData.is_enabled = isEnabled;

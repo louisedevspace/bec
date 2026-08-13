@@ -8,10 +8,14 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.7.0
--- Last Updated: 2026-08-13
+-- Version: 2.8.0
+-- Last Updated: 2026-08-14
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.8.0 — Flexible staking: staking_products and staking_positions gain
+--         a `type` column ('fixed' | 'flexible'). Flexible positions can
+--         be unstaked any time via POST /api/staking/:id/unstake instead
+--         of waiting for maturity. Seeds one default flexible product.
 -- 2.7.0 — Added referral program: referral_settings (admin-controlled
 --         reward config) and referrals (one row per referred user,
 --         rewarded on their first approved deposit). users gains a
@@ -345,10 +349,18 @@ CREATE TABLE IF NOT EXISTS staking_positions (
   amount DECIMAL(20,8) NOT NULL,
   apy DECIMAL(5,2) NOT NULL,
   duration INTEGER NOT NULL,          -- days
+  type TEXT NOT NULL DEFAULT 'fixed', -- fixed | flexible (flexible can be unstaked any time)
   start_date TIMESTAMPTZ DEFAULT NOW(),
   end_date TIMESTAMPTZ NOT NULL,
   status TEXT NOT NULL                -- active, completed
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_positions' AND column_name='type') THEN
+    ALTER TABLE staking_positions ADD COLUMN type TEXT NOT NULL DEFAULT 'fixed';
+  END IF;
+END $$;
 
 -- Performance indexes for staking positions
 CREATE INDEX IF NOT EXISTS idx_staking_positions_user_id ON staking_positions(user_id);
@@ -383,6 +395,7 @@ CREATE TABLE IF NOT EXISTS staking_products (
   title TEXT NOT NULL,
   duration INTEGER NOT NULL,                  -- days
   apy DECIMAL(5,2) NOT NULL,                 -- e.g. 0.50, 4.00
+  type TEXT NOT NULL DEFAULT 'fixed',        -- fixed | flexible
   min_amount DECIMAL(20,8) NOT NULL,
   max_amount DECIMAL(20,8) NOT NULL,
   is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -390,6 +403,18 @@ CREATE TABLE IF NOT EXISTS staking_products (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_products' AND column_name='type') THEN
+    ALTER TABLE staking_products ADD COLUMN type TEXT NOT NULL DEFAULT 'fixed';
+  END IF;
+END $$;
+
+-- Seed a default flexible product if none exists yet
+INSERT INTO staking_products (title, duration, apy, type, min_amount, max_amount, is_enabled, sort_order)
+SELECT 'Flexible', 1, '0.60', 'flexible', '10', '1000000', TRUE, 0
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE type = 'flexible');
 
 -- ----------------------------------------------------------
 -- 1.9 Loan Applications

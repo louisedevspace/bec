@@ -221,6 +221,7 @@ export class MemStorage implements IStorage {
       ...insertPosition,
       id: this.currentStakingId++,
       userId: (raw.userId as string) ?? '',
+      type: (raw.type as string) ?? 'fixed',
       startDate: new Date(),
       endDate: raw.end_date ? new Date(raw.end_date as string) : new Date(),
     };

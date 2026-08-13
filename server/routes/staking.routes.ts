@@ -35,10 +35,13 @@ export default function registerStakingRoutes(app: Express) {
       const stakeDuration = validatedData.duration;
       const stakeApy = parseFloat(validatedData.apy);
 
+      const requestedType = (validatedData as any).type === "flexible" ? "flexible" : "fixed";
+
       const { data: product } = await supabaseAdmin
         .from("staking_products")
         .select("*")
         .eq("duration", stakeDuration)
+        .eq("type", requestedType)
         .eq("is_enabled", true)
         .single();
 
@@ -46,7 +49,7 @@ export default function registerStakingRoutes(app: Express) {
         // Validate APY matches the product
         const productApy = parseFloat(product.apy);
         if (Math.abs(stakeApy - productApy) > 0.01) {
-          return res.status(400).json({ message: "Invalid APY for the selected staking duration" });
+          return res.status(400).json({ message: "Invalid APY for the selected staking plan" });
         }
         // Validate amount within product limits
         const minAmount = parseFloat(product.min_amount);
@@ -107,6 +110,7 @@ export default function registerStakingRoutes(app: Express) {
             amount: validatedData.amount,
             apy: validatedData.apy,
             duration: validatedData.duration,
+            type: requestedType,
             start_date: startDate,
             end_date: endDate,
             status: validatedData.status,
@@ -153,6 +157,7 @@ export default function registerStakingRoutes(app: Express) {
         amount: position.amount,
         apy: position.apy,
         duration: position.duration,
+        type: position.type,
         startDate: position.start_date,
         endDate: position.end_date,
         status: position.status,
@@ -216,6 +221,7 @@ export default function registerStakingRoutes(app: Express) {
         amount: p.amount,
         apy: p.apy,
         duration: p.duration,
+        type: p.type || "fixed",
         startDate: p.start_date,
         endDate: p.end_date,
         status: p.status,
@@ -224,6 +230,105 @@ export default function registerStakingRoutes(app: Express) {
       res.json(transformed);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch staking positions" });
+    }
+  });
+
+  // POST /api/staking/:id/unstake — early withdraw for flexible positions only.
+  // Fixed positions stay locked and release automatically at maturity via
+  // /api/staking/process-completed (hourly cron) — unchanged behavior.
+  app.post("/api/staking/:id/unstake", requireAuth, requireUnlockedWallet, async (req, res) => {
+    try {
+      const positionId = parseInt(req.params.id, 10);
+      if (isNaN(positionId)) {
+        return res.status(400).json({ message: "Invalid position ID" });
+      }
+      const userId = req.user.id;
+
+      const { data: position, error: fetchError } = await supabaseAdmin
+        .from("staking_positions")
+        .select("*")
+        .eq("id", positionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fetchError || !position) {
+        return res.status(404).json({ message: "Staking position not found" });
+      }
+      if (position.status !== "active") {
+        return res.status(400).json({ message: "This position is not active" });
+      }
+      if (position.type !== "flexible") {
+        return res.status(400).json({ message: "Only flexible staking positions can be unstaked early. Fixed positions release automatically at maturity." });
+      }
+
+      const stakeAmount = parseFloat(position.amount);
+      const apy = parseFloat(position.apy);
+      const startDate = new Date(position.start_date);
+      const now = new Date();
+      const daysElapsed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const dailyRate = apy / 100 / 365;
+      const interestEarned = stakeAmount * dailyRate * daysElapsed;
+      const totalReturn = stakeAmount + interestEarned;
+
+      const { data: portfolio, error: portfolioError } = await supabaseAdmin
+        .from("portfolios")
+        .select("available, frozen")
+        .eq("user_id", userId)
+        .eq("symbol", "USDT")
+        .single();
+
+      if (portfolioError || !portfolio) {
+        return res.status(500).json({ message: "Failed to load portfolio" });
+      }
+
+      const currentFrozen = parseFloat(portfolio.frozen || "0");
+      const newFrozen = Math.max(0, currentFrozen - stakeAmount);
+      const currentAvailable = parseFloat(portfolio.available || "0");
+
+      const { error: updateError } = await supabaseAdmin
+        .from("portfolios")
+        .update({
+          frozen: newFrozen.toString(),
+          available: (currentAvailable + totalReturn).toString(),
+        })
+        .eq("user_id", userId)
+        .eq("symbol", "USDT");
+
+      if (updateError) {
+        return res.status(500).json({ message: "Failed to update portfolio balance" });
+      }
+
+      await supabaseAdmin
+        .from("staking_positions")
+        .update({ status: "completed", end_date: now.toISOString() })
+        .eq("id", positionId);
+
+      await supabaseAdmin.from("transactions").insert({
+        user_id: userId,
+        type: "staking_reward",
+        symbol: "USDT",
+        amount: totalReturn.toString(),
+        status: "completed",
+        metadata: {
+          staking_position_id: positionId,
+          original_stake: stakeAmount,
+          profit: interestEarned,
+          days_held: Math.floor(daysElapsed),
+          apy,
+          early_unstake: true,
+        },
+      });
+
+      syncManager.syncStakingUpdated({ id: positionId, userId, status: "completed" });
+
+      res.json({
+        message: "Position unstaked successfully",
+        amountReturned: totalReturn.toFixed(8),
+        interestEarned: interestEarned.toFixed(8),
+        daysHeld: Math.floor(daysElapsed),
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unstake position" });
     }
   });
 

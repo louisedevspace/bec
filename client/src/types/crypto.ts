@@ -73,6 +73,7 @@ export interface StakingPosition {
   amount: string;
   apy: string;
   duration: number;
+  type: 'fixed' | 'flexible';
   startDate: string;
   endDate: string;
   status: 'active' | 'completed';
@@ -81,8 +82,10 @@ export interface StakingPosition {
 export interface StakingProduct {
   duration: number;
   apy: string;
+  type: 'fixed' | 'flexible';
   minAmount: string;
   maxAmount: string;
+  title: string;
 }
 
 export interface LoanApplication {
