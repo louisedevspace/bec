@@ -444,8 +444,10 @@ class AutoReplyService {
         .limit(5);
 
       // If there are admin messages that don't start with auto-reply prefix, skip
+      // (.includes, not .startsWith, so this still matches the old emoji-prefixed
+      // format for tickets with history predating the plain-text prefix)
       const hasManualAdminReply = adminMessages?.some(
-        (m: any) => !m.message.startsWith("🤖 [Auto-Reply]")
+        (m: any) => !m.message.includes("[Auto-Reply]")
       );
       if (hasManualAdminReply) {
         return { allowed: false, reason: "Conversation has manual admin replies" };
@@ -468,7 +470,7 @@ class AutoReplyService {
     }
 
     const settings = await this.getSettings();
-    const prefixedMessage = `🤖 [Auto-Reply] ${message}`;
+    const prefixedMessage = `[Auto-Reply] ${message}`;
 
     try {
       // Insert the auto-reply message

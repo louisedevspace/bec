@@ -382,7 +382,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: userId,
         sender_type: "user",
-        message: "✅ User confirmed the issue has been resolved. Ticket closed.",
+        message: "User confirmed the issue has been resolved. Ticket closed.",
         message_type: "system",
       });
 
@@ -425,7 +425,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: userId,
         sender_type: "user",
-        message: "🔄 User reopened this ticket — issue not resolved.",
+        message: "User reopened this ticket — issue not resolved.",
         message_type: "system",
       });
 
@@ -772,7 +772,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: adminId,
         sender_type: "admin",
-        message: `📋 Ticket status changed to "${statusLabels[status]}"`,
+        message: `Ticket status changed to "${statusLabels[status]}"`,
         message_type: "system",
       });
 
@@ -808,7 +808,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: adminId,
         sender_type: "admin",
-        message: `🔔 Ticket priority changed to "${priority.charAt(0).toUpperCase() + priority.slice(1)}"`,
+        message: `Ticket priority changed to "${priority.charAt(0).toUpperCase() + priority.slice(1)}"`,
         message_type: "system",
       });
 
@@ -853,7 +853,7 @@ export default function registerSupportRoutes(app: Express) {
           conversation_id: cid,
           sender_id: adminId,
           sender_type: "admin",
-          message: `📋 Ticket status changed to "${statusLabels[status]}" (bulk action)`,
+          message: `Ticket status changed to "${statusLabels[status]}" (bulk action)`,
           message_type: "system",
         })
       );
@@ -919,7 +919,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: adminId,
         sender_type: "admin",
-        message: `👤 Ticket ${action}${assignedTo ? " to admin" : ""}`,
+        message: `Ticket ${action}${assignedTo ? " to admin" : ""}`,
         message_type: "system",
       });
 
@@ -969,7 +969,7 @@ export default function registerSupportRoutes(app: Express) {
         conversation_id: parseInt(id),
         sender_id: adminId,
         sender_type: "admin",
-        message: "🚨 This ticket has been escalated to URGENT priority.",
+        message: "This ticket has been escalated to URGENT priority.",
         message_type: "system",
       });
 

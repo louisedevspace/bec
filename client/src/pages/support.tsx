@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDate, formatTime } from '@/lib/date-utils';
 import { useLocation } from 'wouter';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Info, Paperclip, X } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, XCircle, ArrowLeft, Search, Plus, RefreshCw, ThumbsUp, RotateCcw, Shield, Lock, Paperclip, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { LinkPreview, extractUrls } from '@/components/ui/link-preview';
 import { compressUserImage } from '@/lib/image-compress';
@@ -10,6 +10,7 @@ import { getImageDisplayUrl, openImageViewer } from '@/lib/image';
 import { buildApiUrl } from '@/lib/config';
 import { useDataSync } from '@/hooks/use-data-sync';
 import { EnablePushButton } from '@/components/notifications/enable-push-button';
+import { getSystemMessageDisplay, isAutoReplyMessage, stripAutoReplyPrefix, AutoReplyIcon } from '@/lib/support-message-icons';
 
 
 interface SupportConversation {
@@ -396,12 +397,19 @@ export default function SupportPage() {
   const renderMessage = (msg: SupportMessage) => {
     // System messages rendered as centered pills
     if (msg.message_type === 'system') {
+      const { Icon: SystemIcon, text: systemText, tone } = getSystemMessageDisplay(msg.message);
+      const toneClasses = {
+        default: 'bg-muted border-border text-muted-foreground',
+        success: 'bg-success/10 border-success/25 text-success',
+        warning: 'bg-warning/10 border-warning/25 text-warning',
+        danger: 'bg-danger/10 border-danger/25 text-danger',
+      }[tone];
       return (
         <div key={msg.id} className="flex justify-center my-2">
-          <div className="bg-muted border border-border rounded-full px-4 py-1.5 flex items-center gap-2">
-            <Info size={12} className="text-muted-foreground flex-shrink-0" />
-            <span className="text-xs text-muted-foreground">{msg.message}</span>
-            <span className="text-[10px] text-muted-foreground/70 ml-1">
+          <div className={`border rounded-full px-4 py-1.5 flex items-center gap-2 ${toneClasses}`}>
+            <SystemIcon size={12} className="flex-shrink-0" />
+            <span className="text-xs font-medium">{systemText}</span>
+            <span className="text-[10px] opacity-70 ml-1">
               {formatTime(msg.created_at)}
             </span>
           </div>
@@ -410,24 +418,33 @@ export default function SupportPage() {
     }
 
     const isUser = msg.sender_type === 'user';
+    const isAutoReply = isAutoReplyMessage(msg.message || '');
+    const displayText = isAutoReply ? stripAutoReplyPrefix(msg.message) : msg.message;
     // Extract first URL for preview (only for non-system messages)
-    const urls = extractUrls(msg.message || '');
+    const urls = extractUrls(displayText || '');
     const firstUrl = urls.length > 0 ? urls[0] : null;
 
     return (
       <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
         {!isUser && (
-          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 ring-2 ring-background flex items-center justify-center mr-2 mt-1 flex-shrink-0">
             <Shield size={12} className="text-primary" />
           </div>
         )}
-        <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl ${
+        <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-sm ${
           isUser
             ? 'bg-primary text-primary-foreground rounded-br-md'
             : 'bg-muted border border-border text-foreground rounded-bl-md'
         }`}>
           {!isUser && (
-            <p className="text-[10px] text-primary font-medium mb-1">Support Agent</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <p className="text-[10px] text-primary font-medium">Support Agent</p>
+              {isAutoReply && (
+                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <AutoReplyIcon className="h-2.5 w-2.5" /> Auto-Reply
+                </span>
+              )}
+            </div>
           )}
           {/* Image attachment */}
           {msg.message_type === 'image' && msg.attachment_url && (
@@ -435,7 +452,7 @@ export default function SupportPage() {
               <img
                 src={getImageDisplayUrl(msg.attachment_url)}
                 alt="Attachment"
-                className="w-auto max-w-full sm:max-w-[16rem] md:max-w-xs max-h-52 rounded-lg cursor-pointer object-cover"
+                className="w-auto max-w-full sm:max-w-[16rem] md:max-w-xs max-h-52 rounded-xl cursor-pointer object-cover"
                 onClick={() => openImageViewer(msg.attachment_url, 'Support Attachment')}
                 loading="lazy"
               />
@@ -443,8 +460,8 @@ export default function SupportPage() {
           )}
           {/* Text content (skip placeholder for image-only).
               break-words keeps long links from stretching the bubble. */}
-          {msg.message && msg.message !== '(Image)' && (
-            <p className="text-sm whitespace-pre-wrap break-words text-left leading-relaxed">{msg.message}</p>
+          {displayText && displayText !== '(Image)' && (
+            <p className="text-sm whitespace-pre-wrap break-words text-left leading-relaxed">{displayText}</p>
           )}
           {/* Link preview for first URL in message */}
           {firstUrl && (

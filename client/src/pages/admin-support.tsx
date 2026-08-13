@@ -21,6 +21,7 @@ import type { SupportMessage, SendSupportMessageData } from "@/types/support";
 import { compressAdminImage } from "@/lib/image-compress";
 import { getImageDisplayUrl, openImageViewer } from "@/lib/image";
 import { EnablePushButton } from "@/components/notifications/enable-push-button";
+import { getSystemMessageDisplay, isAutoReplyMessage, stripAutoReplyPrefix, AutoReplyIcon } from "@/lib/support-message-icons";
 
 // ─── Types ───────────────────────────────────────────────────────
 interface ConversationUser {
@@ -747,21 +748,30 @@ export default function AdminSupportPage() {
                         selectedConversation.support_messages.map((msg: SupportMessage) => {
                           const isSystem = (msg as any).message_type === "system";
                           if (isSystem) {
+                            const { Icon: SystemIcon, text: systemText, tone } = getSystemMessageDisplay(msg.message);
+                            const toneClasses = {
+                              default: "bg-muted border-border text-muted-foreground",
+                              success: "bg-success/10 border-success/25 text-success",
+                              warning: "bg-warning/10 border-warning/25 text-warning",
+                              danger: "bg-danger/10 border-danger/25 text-danger",
+                            }[tone];
                             return (
                               <div key={msg.id} className="flex justify-center">
-                                <div className="px-3 py-1.5 rounded-full bg-muted border border-border">
-                                  <p className="text-[11px] text-muted-foreground">{msg.message}</p>
+                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-medium ${toneClasses}`}>
+                                  <SystemIcon className="h-3 w-3 flex-shrink-0" />
+                                  {systemText}
                                 </div>
                               </div>
                             );
                           }
 
                           const isAdmin = msg.sender_type === "admin";
-                          const isAutoReply = msg.message.startsWith('🤖 [Auto-Reply]');
+                          const isAutoReply = isAutoReplyMessage(msg.message);
+                          const displayText = isAutoReply ? stripAutoReplyPrefix(msg.message) : msg.message;
                           return (
                             <div key={msg.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
                               <div className={`flex items-end gap-2 max-w-[88%] sm:max-w-[80%] ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
-                                <Avatar className="h-7 w-7 flex-shrink-0">
+                                <Avatar className="h-7 w-7 flex-shrink-0 ring-2 ring-background">
                                   <AvatarFallback className={`text-[10px] ${isAdmin ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                                     {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
                                   </AvatarFallback>
@@ -769,7 +779,7 @@ export default function AdminSupportPage() {
                                 {/* Message text always reads left-to-right — only the
                                     bubble and its timestamp sit on the right. */}
                                 <div className="space-y-0.5 text-left min-w-0">
-                                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm ${
+                                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm shadow-sm ${
                                     isAdmin ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md border border-border"
                                   }`}>
                                     {msg.message_type === "image" && msg.attachment_url && (
@@ -777,21 +787,21 @@ export default function AdminSupportPage() {
                                         <img
                                           src={getImageDisplayUrl(msg.attachment_url)}
                                           alt="Attachment"
-                                          className="w-auto max-w-full sm:max-w-[16rem] md:max-w-xs max-h-52 rounded-lg cursor-pointer object-cover"
+                                          className="w-auto max-w-full sm:max-w-[16rem] md:max-w-xs max-h-52 rounded-xl cursor-pointer object-cover"
                                           onClick={() => openImageViewer(msg.attachment_url!, "Support Attachment")}
                                           loading="lazy"
                                           decoding="async"
                                         />
                                       </div>
                                     )}
-                                    {msg.message && msg.message !== "(Image)" && (
-                                      <p className="whitespace-pre-wrap break-words text-left leading-relaxed">{msg.message}</p>
+                                    {displayText && displayText !== "(Image)" && (
+                                      <p className="whitespace-pre-wrap break-words text-left leading-relaxed">{displayText}</p>
                                     )}
                                   </div>
                                   <div className={`flex items-center gap-1.5 text-[10px] text-muted-foreground ${isAdmin ? "justify-end" : "justify-start"}`}>
                                     {isAutoReply && (
-                                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                                        Auto-Reply
+                                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                        <AutoReplyIcon className="h-2.5 w-2.5" /> Auto-Reply
                                       </span>
                                     )}
                                     <span>{formatTime(msg.created_at)}</span>
@@ -808,43 +818,53 @@ export default function AdminSupportPage() {
                           <p className="text-sm text-muted-foreground">No messages yet</p>
                         </div>
                       )}
+                      {typingConversationId === selectedConversation.id && (
+                        <div className="flex justify-start">
+                          <div className="flex items-end gap-2 max-w-[88%] sm:max-w-[80%]">
+                            <Avatar className="h-7 w-7 flex-shrink-0 ring-2 ring-background">
+                              <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
+                                <User className="h-3 w-3" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-muted border border-border shadow-sm">
+                              <span className="flex gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
 
                   {/* Response Templates */}
                   {showTemplates && templates && (
-                    <div className="border-t border-border bg-muted/40 max-h-48 overflow-y-auto">
-                      <div className="p-2">
-                        <p className="text-[11px] text-muted-foreground font-medium mb-2 px-2">Quick Response Templates</p>
+                    <div className="border-t border-border bg-card max-h-56 overflow-y-auto shadow-[0_-4px_12px_-4px_rgba(0,0,0,0.08)]">
+                      <div className="p-2.5">
+                        <p className="text-[11px] text-muted-foreground font-semibold mb-2 px-1.5 flex items-center gap-1.5">
+                          <FileText className="h-3 w-3" /> Quick Response Templates
+                        </p>
                         {Object.entries(templates).map(([category, items]) => (
-                          <div key={category} className="mb-2">
-                            <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider px-2 mb-1">{category}</p>
-                            {items.map((t, i) => (
-                              <button
-                                key={i}
-                                onClick={() => handleTemplateSelect(t.message)}
-                                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted transition-colors group"
-                              >
-                                <p className="text-xs text-foreground/90 group-hover:text-foreground">{t.name}</p>
-                                <p className="text-[10px] text-muted-foreground/70 truncate">{t.message.substring(0, 80)}...</p>
-                              </button>
-                            ))}
+                          <div key={category} className="mb-2.5 last:mb-0">
+                            <p className="text-[9px] text-muted-foreground/70 uppercase tracking-wider px-1.5 mb-1 font-semibold">{category}</p>
+                            <div className="space-y-0.5">
+                              {items.map((t, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => handleTemplateSelect(t.message)}
+                                  className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-muted transition-colors group"
+                                >
+                                  <p className="text-xs font-medium text-foreground/90 group-hover:text-foreground">{t.name}</p>
+                                  <p className="text-[10px] text-muted-foreground/70 truncate">{t.message.substring(0, 80)}...</p>
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Typing indicator */}
-                  {typingConversationId === selectedConversation.id && (
-                    <div className="px-4 py-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground border-t border-border bg-card">
-                      <span className="flex gap-0.5">
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1 h-1 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </span>
-                      Customer is typing...
                     </div>
                   )}
 
