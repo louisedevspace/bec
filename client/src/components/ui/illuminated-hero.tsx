@@ -167,30 +167,25 @@ export function IlluminatedHero({
             </feMerge>
           </filter>
 
-          {/* Light: blue/indigo glow (dark text on light bg) */}
+          {/* Light: soft accent-colored glow (dark text on light bg).
+              Near-identity color matrices — like #glow-dark below — so the
+              glow just inherits whatever color the text already is
+              (text-primary, i.e. the site's configured accent) instead of
+              forcing a fixed hue. This used to hard-multiply everything
+              toward blue/indigo/purple regardless of the actual accent
+              theme, which read as an awkward, mismatched flare. */}
           <filter id="glow-light" colorInterpolationFilters="sRGB" x="-50%" y="-200%" width="200%" height="500%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur4" />
             <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur14" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur8" />
             <feGaussianBlur in="SourceGraphic" stdDeviation="24" result="blur24" />
-            {/* Tight inner glow — deep blue */}
-            <feColorMatrix in="blur4" result="c0" type="matrix" values="0.15 0 0 0 0  0 0.25 0 0 0  0 0 0.95 0 0  0 0 0 0.85 0" />
+            <feColorMatrix in="blur4" result="c0" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0" />
             <feOffset in="c0" result="l0" dx="0" dy="0" />
-            {/* Mid spread — indigo */}
-            <feColorMatrix in="blur14" result="c1" type="matrix" values="0.20 0 0 0 0  0 0.15 0 0 0  0 0 0.90 0 0  0 0 0 0.7 0" />
+            <feColorMatrix in="blur14" result="c1" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.3 0" />
             <feOffset in="c1" result="l1" dx="0" dy="2" />
-            {/* Wide bloom — purple */}
-            <feColorMatrix in="blur8" result="c2" type="matrix" values="0.30 0 0 0 0  0 0.10 0 0 0  0 0 0.85 0 0  0 0 0 0.5 0" />
-            <feOffset in="c2" result="l2" dx="0" dy="2" />
-            {/* Outer haze */}
-            <feColorMatrix in="blur24" result="c3" type="matrix" values="0.25 0 0 0 0  0 0.20 0 0 0  0 0 0.80 0 0  0 0 0 0.6 0" />
-            <feOffset in="c3" result="l3" dx="0" dy="4" />
-            {/* Deep drop */}
-            <feColorMatrix in="blur24" result="c4" type="matrix" values="0.15 0 0 0 0  0 0.08 0 0 0  0 0 0.60 0 0  0 0 0 0.4 0" />
-            <feOffset in="c4" result="l4" dx="0" dy="16" />
+            <feColorMatrix in="blur24" result="c2" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.18 0" />
+            <feOffset in="c2" result="l2" dx="0" dy="4" />
             <feMerge>
               <feMergeNode in="l0" /><feMergeNode in="l1" /><feMergeNode in="l2" />
-              <feMergeNode in="l3" /><feMergeNode in="l4" />
               <feMergeNode in="l0" /><feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>

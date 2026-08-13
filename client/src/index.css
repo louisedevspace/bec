@@ -36,21 +36,24 @@
     0 -20px 200px 20px rgba(140, 80, 30, 0.2);
 }
 
-/* ── Light theme: white spheres, blue/indigo rim glow ── */
+/* ── Light theme: white spheres, accent-colored rim glow ──
+   Was hardcoded blue/indigo regardless of the site's configured accent
+   theme (amber by default) — clashed with everything else on the page.
+   hsl(var(--primary)) makes it always match the active accent. */
 .sphere-light {
-  background: radial-gradient(circle, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%);
+  background: radial-gradient(circle, #ffffff 0%, #f4f6f8 60%, #e9ecf0 100%);
 }
 .sphere-glow-light-top {
   box-shadow:
-    0  40px 80px -20px rgba(59, 130, 246, 0.45),
-    0  30px 120px 0px rgba(99, 102, 241, 0.3),
-    0  20px 200px 20px rgba(79, 70, 229, 0.18);
+    0  40px 80px -20px hsl(var(--primary) / 0.35),
+    0  30px 120px 0px hsl(var(--primary) / 0.20),
+    0  20px 200px 20px hsl(var(--primary) / 0.12);
 }
 .sphere-glow-light-bottom {
   box-shadow:
-    0 -40px 80px -20px rgba(59, 130, 246, 0.45),
-    0 -30px 120px 0px rgba(99, 102, 241, 0.3),
-    0 -20px 200px 20px rgba(79, 70, 229, 0.18);
+    0 -40px 80px -20px hsl(var(--primary) / 0.35),
+    0 -30px 120px 0px hsl(var(--primary) / 0.20),
+    0 -20px 200px 20px hsl(var(--primary) / 0.12);
 }
 
 /* Stop global light-mode overrides from breaking hero glow text color */
@@ -61,24 +64,28 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
    LIGHT THEME (default :root values)
    ============================================================ */
 :root {
-  --background: 210 40% 98%;
+  /* Page canvas sits visibly below --card (94% vs 100% lightness) so
+     white cards actually read as elevated surfaces instead of blending
+     into the page. The old 98%/100% pairing was nearly indistinguishable,
+     which is why the whole UI looked like a flat white expanse. */
+  --background: 220 18% 94%;
   --foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 220 16% 90%;
+  --muted-foreground: 215 16% 45%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --input-bg: 210 40% 96%;
-  --input-bg-hover: 214 32% 91%;
-  --input-bg-focus: 213 27% 84%;
+  --border: 220 14% 87%;
+  --input: 220 14% 87%;
+  --input-bg: 220 16% 90%;
+  --input-bg-hover: 220 14% 85%;
+  --input-bg-focus: 220 14% 78%;
   --primary: 42 78% 52%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96%;
+  --secondary: 220 16% 90%;
   --secondary-foreground: 222 47% 11%;
-  --accent: 210 40% 96%;
+  --accent: 220 16% 90%;
   --accent-foreground: 222 47% 11%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -170,7 +177,7 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
     background-color: #0a0a0a;
   }
   html:not(.dark) {
-    background-color: #f8fafc;
+    background-color: #eef0f3;
   }
 
   body {
@@ -439,41 +446,41 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
    ================================================================ */
 
 /* ---- Background overrides ---- */
-html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #f8fafc !important; }
-html:not(.dark) .bg-\[\#0f0f0f\]  { background-color: #f1f5f9 !important; } /* slate-100, used in staking cards */
+html:not(.dark) .bg-\[\#0a0a0a\]  { background-color: #eef0f3 !important; }
+html:not(.dark) .bg-\[\#0f0f0f\]  { background-color: #e4e7ec !important; } /* used in staking cards */
 html:not(.dark) .bg-\[\#111\],
 html:not(.dark) .bg-\[\#111111\]  { background-color: #ffffff !important; }
 html:not(.dark) .bg-\[\#111\]\/95  { background-color: rgba(255,255,255,0.95) !important; }
-html:not(.dark) .bg-\[\#1a1a1a\]  { background-color: #f1f5f9 !important; }
-html:not(.dark) .bg-\[\#151515\]  { background-color: #f1f5f9 !important; }
-html:not(.dark) .bg-\[\#161616\]  { background-color: #f1f5f9 !important; }
-html:not(.dark) .bg-\[\#1e1e1e\]  { background-color: #e2e8f0 !important; }
-html:not(.dark) .bg-\[\#222\]     { background-color: #e2e8f0 !important; }
-html:not(.dark) .bg-\[\#252525\]  { background-color: #e2e8f0 !important; }
-html:not(.dark) .bg-\[\#0a0a0a\]\/95 { background-color: rgba(248,250,252,0.95) !important; }
+html:not(.dark) .bg-\[\#1a1a1a\]  { background-color: #e4e7ec !important; }
+html:not(.dark) .bg-\[\#151515\]  { background-color: #e4e7ec !important; }
+html:not(.dark) .bg-\[\#161616\]  { background-color: #e4e7ec !important; }
+html:not(.dark) .bg-\[\#1e1e1e\]  { background-color: #d8dce2 !important; }
+html:not(.dark) .bg-\[\#222\]     { background-color: #d8dce2 !important; }
+html:not(.dark) .bg-\[\#252525\]  { background-color: #d8dce2 !important; }
+html:not(.dark) .bg-\[\#0a0a0a\]\/95 { background-color: rgba(238,240,243,0.95) !important; }
 
 /* ---- Hover background overrides ---- */
-html:not(.dark) .hover\:bg-\[\#1a1a1a\]:hover  { background-color: #e2e8f0 !important; }
-html:not(.dark) .hover\:bg-\[\#151515\]:hover   { background-color: #e2e8f0 !important; }
-html:not(.dark) .hover\:bg-\[\#222\]:hover      { background-color: #e2e8f0 !important; }
-html:not(.dark) .hover\:bg-\[\#252525\]:hover   { background-color: #e2e8f0 !important; }
-html:not(.dark) .hover\:bg-\[\#2a2a2a\]:hover   { background-color: #cbd5e1 !important; }
+html:not(.dark) .hover\:bg-\[\#1a1a1a\]:hover  { background-color: #d8dce2 !important; }
+html:not(.dark) .hover\:bg-\[\#151515\]:hover   { background-color: #d8dce2 !important; }
+html:not(.dark) .hover\:bg-\[\#222\]:hover      { background-color: #d8dce2 !important; }
+html:not(.dark) .hover\:bg-\[\#252525\]:hover   { background-color: #d8dce2 !important; }
+html:not(.dark) .hover\:bg-\[\#2a2a2a\]:hover   { background-color: #c7ccd4 !important; }
 
 /* Focus background overrides (Select / dropdown items) */
-html:not(.dark) .focus\:bg-\[\#1a1a1a\]:focus  { background-color: #e2e8f0 !important; }
+html:not(.dark) .focus\:bg-\[\#1a1a1a\]:focus  { background-color: #d8dce2 !important; }
 
 /* Active state */
-html:not(.dark) .active\:bg-\[\#222\]:active    { background-color: #cbd5e1 !important; }
+html:not(.dark) .active\:bg-\[\#222\]:active    { background-color: #c7ccd4 !important; }
 
 /* ---- Border overrides ---- */
-html:not(.dark) .border-\[\#1e1e1e\] { border-color: #e2e8f0 !important; }
-html:not(.dark) .border-\[\#2a2a2a\] { border-color: #cbd5e1 !important; }
-html:not(.dark) .border-\[\#3a3a3a\] { border-color: #94a3b8 !important; }
-html:not(.dark) .border-\[\#222\]    { border-color: #e2e8f0 !important; }
+html:not(.dark) .border-\[\#1e1e1e\] { border-color: #d8dce2 !important; }
+html:not(.dark) .border-\[\#2a2a2a\] { border-color: #c7ccd4 !important; }
+html:not(.dark) .border-\[\#3a3a3a\] { border-color: #8b93a0 !important; }
+html:not(.dark) .border-\[\#222\]    { border-color: #d8dce2 !important; }
 
 /* Hover border */
-html:not(.dark) .hover\:border-\[\#2a2a2a\]:hover { border-color: #cbd5e1 !important; }
-html:not(.dark) .hover\:border-\[\#3a3a3a\]:hover { border-color: #94a3b8 !important; }
+html:not(.dark) .hover\:border-\[\#2a2a2a\]:hover { border-color: #c7ccd4 !important; }
+html:not(.dark) .hover\:border-\[\#3a3a3a\]:hover { border-color: #8b93a0 !important; }
 
 /* ---- Text color overrides ---- */
 html:not(.dark) .text-white        { color: #0f172a !important; }  /* slate-900 */
