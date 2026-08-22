@@ -8,10 +8,17 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.8.0
--- Last Updated: 2026-08-14
+-- Version: 2.9.0
+-- Last Updated: 2026-08-22
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.9.0 — Wallet-connect deposits: deposit_requests gains optional
+--         tx_hash/wallet_address/network columns so users who connect
+--         their own wallet (MetaMask/TronLink/WalletConnect) can submit
+--         on-chain proof alongside the still-required screenshot.
+--         New wallet_connect_settings singleton table (admin
+--         enable/disable toggle + optional WalletConnect Project ID).
+--         Admin deposit-approval logic is unchanged.
 -- 2.8.0 — Flexible staking: staking_products and staking_positions gain
 --         a `type` column ('fixed' | 'flexible'). Flexible positions can
 --         be unstaked any time via POST /api/staking/:id/unstake instead
@@ -540,6 +547,9 @@ CREATE TABLE IF NOT EXISTS deposit_requests (
   fee_rate DECIMAL(10,8),
   net_amount DECIMAL(20,8),
   screenshot_url TEXT NOT NULL,
+  tx_hash TEXT,
+  wallet_address TEXT,
+  network TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   admin_notes TEXT,
   rejection_reason TEXT,
@@ -574,6 +584,15 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='net_amount') THEN
     ALTER TABLE deposit_requests ADD COLUMN net_amount DECIMAL(20,8);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='tx_hash') THEN
+    ALTER TABLE deposit_requests ADD COLUMN tx_hash TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='wallet_address') THEN
+    ALTER TABLE deposit_requests ADD COLUMN wallet_address TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deposit_requests' AND column_name='network') THEN
+    ALTER TABLE deposit_requests ADD COLUMN network TEXT;
   END IF;
 END $$;
 
@@ -883,6 +902,22 @@ CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
 
 COMMENT ON TABLE referrals IS 'Tracks referral relationships; reward_amount/rewarded_at are set once the referred user''s first deposit is approved.';
+
+-- ----------------------------------------------------------
+-- 1.24 Wallet Connect Settings (admin-controlled toggle — singleton row)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS wallet_connect_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  walletconnect_project_id TEXT,            -- WalletConnect Cloud Project ID; not a secret, safe to expose to the client
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT wallet_connect_settings_singleton CHECK (id = 1)
+);
+
+INSERT INTO wallet_connect_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ************************************************************
@@ -1812,6 +1847,18 @@ CREATE POLICY "referrals_select_policy" ON referrals FOR SELECT USING (
 -- server-side via the service role, which bypasses RLS — direct client
 -- writes are blocked entirely other than by an admin.
 CREATE POLICY "referrals_write_policy" ON referrals FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.26 Wallet Connect Settings
+-- ----------------------------------------------------------
+ALTER TABLE wallet_connect_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "wallet_connect_settings_policy" ON wallet_connect_settings;
+
+CREATE POLICY "wallet_connect_settings_policy" ON wallet_connect_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+  -- Regular users read this via the server's /api/wallet-connect/status
+  -- endpoint (service role), which bypasses RLS.
 
 
 -- ************************************************************

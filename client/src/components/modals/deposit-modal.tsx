@@ -8,13 +8,17 @@ import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QRCode } from "@/components/ui/qr-code";
-import { Copy, CheckCircle, AlertTriangle, Upload, X, Check, Info, ArrowLeft } from "lucide-react";
+import { Copy, CheckCircle, AlertTriangle, Upload, X, Check, Info, ArrowLeft, Wallet, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { cryptoApi } from "@/services/crypto-api";
 import { supabase } from "@/lib/supabase";
 import { buildApiUrl } from "@/lib/config";
 import { compressUserImage } from "@/lib/image-compress";
+import { useWalletConnectStatus } from "@/hooks/use-wallet-connect-status";
+import { detectChainFamily, explorerTxUrl } from "@/lib/wallet-connect/chain-utils";
+import { connectInjectedEvmWallet, connectWalletConnectEvm, sendNativeEvmDeposit } from "@/lib/wallet-connect/evm";
+import { connectTronLink, sendTronDeposit } from "@/lib/wallet-connect/tron";
 
 const GENERIC_DEPOSIT_PLACEHOLDER = "0x000000000";
 
@@ -34,8 +38,15 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [userDisabled, setUserDisabled] = useState(false);
   const [depositAddresses, setDepositAddresses] = useState<any[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [walletDepositAmount, setWalletDepositAmount] = useState("");
+  const [walletSending, setWalletSending] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [walletTxHash, setWalletTxHash] = useState<string | null>(null);
+  const [walletSenderAddress, setWalletSenderAddress] = useState<string | null>(null);
   const { toast } = useToast();
   const { copied, copyToClipboard } = useCopyToClipboard();
+  const wcStatus = useWalletConnectStatus();
+  const chainFamily = detectChainFamily(selectedNetwork, selectedCrypto);
 
   const fetchDepositAddresses = async () => {
     setLoadingAddresses(true);
@@ -172,6 +183,11 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
     setAmount("");
     setScreenshot(null);
     setScreenshotPreview(null);
+    setWalletDepositAmount("");
+    setWalletSending(false);
+    setWalletError(null);
+    setWalletTxHash(null);
+    setWalletSenderAddress(null);
     onClose();
   };
 
@@ -179,6 +195,11 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
     if (step === 2) {
       setStep(1);
       setDepositAddress("");
+      setWalletDepositAmount("");
+      setWalletSending(false);
+      setWalletError(null);
+      setWalletTxHash(null);
+      setWalletSenderAddress(null);
     } else if (step === 3) {
       setStep(2);
     }
@@ -186,6 +207,37 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
   const handleCopyAddress = async () => {
     await copyToClipboard(depositAddress, "Deposit address copied to clipboard.");
+  };
+
+  const handleWalletDeposit = async (method: 'evm-injected' | 'evm-walletconnect' | 'tron') => {
+    setWalletError(null);
+    setWalletSending(true);
+    try {
+      let hash: string;
+      let sender: string;
+      if (method === 'evm-injected') {
+        const { address, provider } = await connectInjectedEvmWallet();
+        sender = address;
+        hash = await sendNativeEvmDeposit(provider, depositAddress, walletDepositAmount);
+      } else if (method === 'evm-walletconnect') {
+        if (!wcStatus.data?.projectId) throw new Error('WalletConnect is not configured yet');
+        const { address, provider } = await connectWalletConnectEvm(wcStatus.data.projectId);
+        sender = address;
+        hash = await sendNativeEvmDeposit(provider, depositAddress, walletDepositAmount);
+      } else {
+        const { address, tronWeb } = await connectTronLink();
+        sender = address;
+        hash = await sendTronDeposit(tronWeb, depositAddress, walletDepositAmount, selectedCrypto);
+      }
+      setWalletTxHash(hash);
+      setWalletSenderAddress(sender);
+      setAmount(walletDepositAmount);
+      setStep(3);
+    } catch (err: any) {
+      setWalletError(err?.message || 'Wallet transaction failed');
+    } finally {
+      setWalletSending(false);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,6 +277,9 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       formData.append('amount', amount);
       const compressedScreenshot = await compressUserImage(screenshot);
       formData.append('screenshot', compressedScreenshot);
+      if (walletTxHash) formData.append('txHash', walletTxHash);
+      if (walletSenderAddress) formData.append('walletAddress', walletSenderAddress);
+      if (selectedNetwork) formData.append('network', selectedNetwork);
 
       const response = await fetch(buildApiUrl('/deposit-requests'), {
         method: 'POST',
@@ -536,6 +591,88 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 </Button>
               </div>
             </div>
+
+            {wcStatus.data?.isEnabled && chainFamily !== 'unsupported' && (
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-foreground">
+                  <Wallet className="w-4 h-4" />
+                  <span className="text-sm font-medium">Or connect your wallet and send directly</span>
+                </div>
+
+                {walletTxHash ? (
+                  <div className="text-sm text-success space-y-1">
+                    <p>Sent! Tx: {walletTxHash.slice(0, 10)}...{walletTxHash.slice(-6)}</p>
+                    {explorerTxUrl(chainFamily, walletTxHash) && (
+                      <a
+                        href={explorerTxUrl(chainFamily, walletTxHash) as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-info underline"
+                      >
+                        View
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <Label htmlFor="wallet-amount" className="text-muted-foreground text-xs">Amount ({selectedCrypto})</Label>
+                      <Input
+                        id="wallet-amount"
+                        type="number"
+                        step="0.00000001"
+                        placeholder="0.00000000"
+                        value={walletDepositAmount}
+                        onChange={(e) => setWalletDepositAmount(e.target.value)}
+                        className="bg-muted border-border text-foreground placeholder-gray-600 rounded-xl h-9 mt-1.5 text-sm tabular-nums"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {chainFamily === 'evm' && (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={() => handleWalletDeposit('evm-injected')}
+                            disabled={walletSending || !walletDepositAmount}
+                            className="h-9 rounded-xl bg-muted border border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground text-xs disabled:opacity-40"
+                          >
+                            {walletSending && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}
+                            MetaMask / Browser Wallet
+                          </Button>
+                          {wcStatus.data?.projectId && (
+                            <Button
+                              type="button"
+                              onClick={() => handleWalletDeposit('evm-walletconnect')}
+                              disabled={walletSending || !walletDepositAmount}
+                              className="h-9 rounded-xl bg-muted border border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground text-xs disabled:opacity-40"
+                            >
+                              {walletSending && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}
+                              Other Wallets (WalletConnect)
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      {chainFamily === 'tron' && (
+                        <Button
+                          type="button"
+                          onClick={() => handleWalletDeposit('tron')}
+                          disabled={walletSending || !walletDepositAmount}
+                          className="h-9 rounded-xl bg-muted border border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground text-xs disabled:opacity-40"
+                        >
+                          {walletSending && <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />}
+                          TronLink
+                        </Button>
+                      )}
+                    </div>
+
+                    {walletError && (
+                      <p className="text-xs text-danger">{walletError}</p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <Alert className="bg-warning/10 border-warning/20 p-3.5">
               <AlertTriangle className="text-warning" size={16} />

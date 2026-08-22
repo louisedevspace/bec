@@ -26,6 +26,9 @@ interface DepositRequest {
   rejection_reason?: string;
   require_reverification: boolean;
   submitted_at: string;
+  tx_hash?: string;
+  wallet_address?: string;
+  network?: string;
   users?: {
     email: string;
     full_name?: string;
@@ -248,6 +251,27 @@ export function AdminDepositRequestsModal({ isOpen, onClose }: AdminDepositReque
                         )}
                       </div>
                     </div>
+
+                    {request.tx_hash && (
+                      <div className="mt-3 p-2 rounded-lg border border-border bg-muted/40 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">On-chain Tx:</span>
+                          <span className="text-foreground">{`${request.tx_hash.slice(0, 14)}...${request.tx_hash.slice(-6)}`}</span>
+                        </div>
+                        {request.wallet_address && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Sender Wallet:</span>
+                            <span className="text-foreground">{`${request.wallet_address.slice(0, 14)}...${request.wallet_address.slice(-6)}`}</span>
+                          </div>
+                        )}
+                        {request.network && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Network:</span>
+                            <span className="text-foreground">{request.network}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))

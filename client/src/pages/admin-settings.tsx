@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminUserManagementModal } from '@/components/modals/admin-user-management-modal';
-import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift } from 'lucide-react';
+import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import AdminLayout from './admin-layout';
@@ -83,6 +83,12 @@ export default function AdminSettings() {
   const [referralSettingsLoading, setReferralSettingsLoading] = useState(true);
   const [referralSettingsSaving, setReferralSettingsSaving] = useState(false);
   const [referralSettingsMessage, setReferralSettingsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Wallet-connect deposits
+  const [walletConnectSettings, setWalletConnectSettings] = useState({ isEnabled: false, walletconnectProjectId: '' });
+  const [walletConnectSettingsLoading, setWalletConnectSettingsLoading] = useState(true);
+  const [walletConnectSettingsSaving, setWalletConnectSettingsSaving] = useState(false);
+  const [walletConnectSettingsMessage, setWalletConnectSettingsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Standard durations that cannot be removed (only toggled)
   const standardDurations = [60, 120, 180, 240, 360, 480, 600];
@@ -173,6 +179,35 @@ export default function AdminSettings() {
     }
   };
 
+  const saveWalletConnectSettings = async () => {
+    setWalletConnectSettingsSaving(true);
+    setWalletConnectSettingsMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setWalletConnectSettingsMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+      const response = await fetch('/api/admin/wallet-connect-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(walletConnectSettings)
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to save');
+      }
+      setWalletConnectSettingsMessage({ type: 'success', text: 'Wallet-connect settings updated' });
+    } catch (err: any) {
+      setWalletConnectSettingsMessage({ type: 'error', text: err.message || 'Failed to save wallet-connect settings' });
+    } finally {
+      setWalletConnectSettingsSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -232,6 +267,27 @@ export default function AdminSettings() {
           console.error('Failed to fetch referral settings:', err);
         } finally {
           setReferralSettingsLoading(false);
+        }
+
+        // Fetch wallet-connect settings
+        try {
+          const walletConnectResponse = await fetch('/api/admin/wallet-connect-settings', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (walletConnectResponse.ok) {
+            const wc = await walletConnectResponse.json();
+            setWalletConnectSettings({
+              isEnabled: !!wc.isEnabled,
+              walletconnectProjectId: wc.walletconnectProjectId || '',
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch wallet-connect settings:', err);
+        } finally {
+          setWalletConnectSettingsLoading(false);
         }
 
         // Fetch deposit addresses
@@ -1107,6 +1163,49 @@ export default function AdminSettings() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Wallet-Connect Deposits */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-foreground text-sm flex items-center gap-2"><Link2 className="h-4 w-4" /> Wallet-Connect Deposits</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Let users deposit by connecting MetaMask, TronLink, or WalletConnect directly, instead of only manual copy-paste.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWalletConnectSettings((s) => ({ ...s, isEnabled: !s.isEnabled }))}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${walletConnectSettings.isEnabled ? 'bg-primary' : 'bg-muted'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${walletConnectSettings.isEnabled ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+
+          {!walletConnectSettingsLoading && (
+            <div className="p-5 space-y-5">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">WalletConnect Project ID (optional — enables mobile wallets via QR scan; get one free at cloud.walletconnect.com)</Label>
+                <Input
+                  value={walletConnectSettings.walletconnectProjectId}
+                  onChange={(e) => setWalletConnectSettings((s) => ({ ...s, walletconnectProjectId: e.target.value }))}
+                  placeholder="e.g. 3fbb6bba6f1de962d911bb5b5c9dba88"
+                  className="rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button onClick={saveWalletConnectSettings} disabled={walletConnectSettingsSaving} className="rounded-lg">
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  {walletConnectSettingsSaving ? 'Saving...' : 'Save Wallet-Connect Settings'}
+                </Button>
+                {walletConnectSettingsMessage && (
+                  <p className={`text-xs ${walletConnectSettingsMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
+                    {walletConnectSettingsMessage.text}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Futures Time Limits Section */}

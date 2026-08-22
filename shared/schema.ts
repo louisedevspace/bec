@@ -223,6 +223,9 @@ export const depositRequests = pgTable("deposit_requests", {
   feeRate: decimal("fee_rate", { precision: 10, scale: 8 }),
   netAmount: decimal("net_amount", { precision: 20, scale: 8 }),
   screenshotUrl: text("screenshot_url").notNull(),
+  txHash: text("tx_hash"),
+  walletAddress: text("wallet_address"),
+  network: text("network"),
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   adminNotes: text("admin_notes"),
   rejectionReason: text("rejection_reason"),
@@ -472,6 +475,14 @@ export const referralSettings = pgTable("referral_settings", {
   updatedBy: text("updated_by"),
 });
 
+export const walletConnectSettings = pgTable("wallet_connect_settings", {
+  id: integer("id").primaryKey().default(1),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  walletconnectProjectId: text("walletconnect_project_id"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
 export const referrals = pgTable("referrals", {
   id: serial("id").primaryKey(),
   referrerId: text("referrer_id").notNull(),
@@ -492,5 +503,6 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({
 });
 
 export type ReferralSettings = typeof referralSettings.$inferSelect;
+export type WalletConnectSettings = typeof walletConnectSettings.$inferSelect;
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;

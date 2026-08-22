@@ -13,11 +13,31 @@ import { updatePortfolioBalance } from "./helpers";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+async function getOrCreateWalletConnectSettings() {
+  const { data, error } = await supabaseAdmin
+    .from("wallet_connect_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return data;
+
+  const { data: created, error: createError } = await supabaseAdmin
+    .from("wallet_connect_settings")
+    .insert({ id: 1 })
+    .select()
+    .single();
+
+  if (createError) throw createError;
+  return created;
+}
+
 export default function registerDepositsRoutes(app: Express) {
   // POST /api/deposit-requests — submit deposit request
   app.post("/api/deposit-requests", requireAuth, requireUnlockedWallet, upload.single("screenshot"), async (req, res) => {
     try {
-      const { symbol, amount } = req.body;
+      const { symbol, amount, txHash, walletAddress, network } = req.body;
       const userId = req.user.id;
       const file = req.file;
       const ipAddress = getClientIP(req);
@@ -56,6 +76,9 @@ export default function registerDepositsRoutes(app: Express) {
           symbol: symbol.toUpperCase(),
           amount: amountNum.toString(),
           screenshot_url: screenshotUrl,
+          tx_hash: txHash || null,
+          wallet_address: walletAddress || null,
+          network: network || null,
           status: "pending",
         })
         .select()
@@ -86,6 +109,9 @@ export default function registerDepositsRoutes(app: Express) {
             symbol: symbol.toUpperCase(),
             amount: amountNum.toString(),
             screenshot_url: screenshotUrl,
+            tx_hash: txHash || null,
+            wallet_address: walletAddress || null,
+            network: network || null,
             status: "pending",
           })
           .select()
@@ -715,6 +741,68 @@ export default function registerDepositsRoutes(app: Express) {
 
       res.json({ addresses });
     } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== WALLET CONNECT SETTINGS =====
+
+  // GET /api/wallet-connect/status — public, no auth. Lets the deposit page
+  // decide whether to show the "connect wallet" option at all.
+  app.get("/api/wallet-connect/status", async (_req, res) => {
+    try {
+      const settings = await getOrCreateWalletConnectSettings();
+      res.json({ isEnabled: !!settings.is_enabled, projectId: settings.walletconnect_project_id || null });
+    } catch (error) {
+      console.error("Failed to load wallet-connect status:", error);
+      res.json({ isEnabled: false, projectId: null });
+    }
+  });
+
+  // GET /api/admin/wallet-connect-settings
+  app.get("/api/admin/wallet-connect-settings", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await getOrCreateWalletConnectSettings();
+      res.json({
+        isEnabled: !!settings.is_enabled,
+        walletconnectProjectId: settings.walletconnect_project_id || "",
+      });
+    } catch (error) {
+      console.error("Failed to load wallet-connect settings:", error);
+      res.status(500).json({ message: "Failed to load wallet-connect settings" });
+    }
+  });
+
+  // PUT /api/admin/wallet-connect-settings
+  app.put("/api/admin/wallet-connect-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { isEnabled, walletconnectProjectId } = req.body;
+
+      const trimmedProjectId = typeof walletconnectProjectId === "string" ? walletconnectProjectId.trim() : "";
+      const projectIdValue = trimmedProjectId ? trimmedProjectId : null;
+
+      const { data, error } = await supabaseAdmin
+        .from("wallet_connect_settings")
+        .upsert({
+          id: 1,
+          is_enabled: !!isEnabled,
+          walletconnect_project_id: projectIdValue,
+          updated_at: new Date().toISOString(),
+          updated_by: req.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to update wallet-connect settings" });
+      }
+
+      res.json({
+        isEnabled: !!data.is_enabled,
+        walletconnectProjectId: data.walletconnect_project_id || "",
+      });
+    } catch (error) {
+      console.error("Failed to update wallet-connect settings:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
