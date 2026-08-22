@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AdminUserManagementModal } from '@/components/modals/admin-user-management-modal';
-import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2 } from 'lucide-react';
+import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2, Menu } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import AdminLayout from './admin-layout';
 import { ACCENT_THEMES, ACCENT_THEME_KEYS, DEFAULT_ACCENT_THEME, type AccentThemeKey } from '@shared/accent-themes';
+import { NAV_ITEMS } from '@/config/nav-items';
 
 interface User {
   id: string;
@@ -69,6 +70,11 @@ export default function AdminSettings() {
   const [exchangeNameSaving, setExchangeNameSaving] = useState(false);
   const [exchangeNameMessage, setExchangeNameMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [accentTheme, setAccentTheme] = useState<AccentThemeKey>(DEFAULT_ACCENT_THEME);
+
+  // Navigation visibility
+  const [navVisibility, setNavVisibility] = useState<Record<string, boolean>>({});
+  const [navVisibilitySaving, setNavVisibilitySaving] = useState(false);
+  const [navVisibilityMessage, setNavVisibilityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Referral program
   const [referralSettings, setReferralSettings] = useState({
@@ -150,6 +156,41 @@ export default function AdminSettings() {
     }
   };
 
+  const toggleNavItemVisibility = (key: string) => {
+    setNavVisibility((v) => ({ ...v, [key]: v[key] === false ? true : false }));
+  };
+
+  const saveNavVisibility = async () => {
+    setNavVisibilitySaving(true);
+    setNavVisibilityMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setNavVisibilityMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ exchangeName: exchangeName.trim(), accentTheme, navVisibility })
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to save');
+      }
+      const data = await response.json();
+      setNavVisibility(data.navVisibility || navVisibility);
+      setNavVisibilityMessage({ type: 'success', text: 'Navigation settings updated' });
+    } catch (err: any) {
+      setNavVisibilityMessage({ type: 'error', text: err.message || 'Failed to save navigation settings' });
+    } finally {
+      setNavVisibilitySaving(false);
+    }
+  };
+
   const saveReferralSettings = async () => {
     setReferralSettingsSaving(true);
     setReferralSettingsMessage(null);
@@ -228,6 +269,7 @@ export default function AdminSettings() {
             if (settingsData.accentTheme && ACCENT_THEME_KEYS.includes(settingsData.accentTheme)) {
               setAccentTheme(settingsData.accentTheme);
             }
+            setNavVisibility(settingsData.navVisibility || {});
           }
         } catch (err) {
           console.error('Failed to fetch app settings:', err);
@@ -738,6 +780,47 @@ export default function AdminSettings() {
                 })}
               </div>
               <p className="text-xs text-muted-foreground mt-2">Applies as the primary accent across buttons, links, and highlights app-wide. Click Save above to apply.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Visibility */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-border">
+            <h2 className="font-semibold text-foreground text-sm flex items-center gap-2"><Menu className="h-4 w-4" /> Navigation Visibility</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Hide any nav item from both the mobile and desktop navigation bars. Hiding an item does not disable its page — direct links still work.</p>
+          </div>
+          <div className="p-5 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isVisible = navVisibility[item.key] !== false;
+              return (
+                <div key={item.key} className="flex items-center justify-between py-2.5 border-b border-border last:border-b-0">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{item.label}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleNavItemVisibility(item.key)}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isVisible ? 'bg-primary' : 'bg-muted'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isVisible ? 'translate-x-5' : ''}`} />
+                  </button>
+                </div>
+              );
+            })}
+
+            <div className="flex items-center gap-3 pt-4">
+              <Button onClick={saveNavVisibility} disabled={navVisibilitySaving} className="rounded-lg">
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {navVisibilitySaving ? 'Saving...' : 'Save Navigation Settings'}
+              </Button>
+              {navVisibilityMessage && (
+                <p className={`text-xs ${navVisibilityMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
+                  {navVisibilityMessage.text}
+                </p>
+              )}
             </div>
           </div>
         </div>

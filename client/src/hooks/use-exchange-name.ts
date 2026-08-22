@@ -7,10 +7,12 @@ import { DEFAULT_ACCENT_THEME, isAccentThemeKey, type AccentThemeKey } from "@sh
 // name (Settings → Branding) has loaded from /api/settings for the first time.
 export const DEFAULT_EXCHANGE_NAME = (import.meta.env.VITE_APP_NAME as string | undefined)?.trim() || "Exchange";
 const NAME_CACHE_KEY = "becxus-exchange-name";
+const NAV_VISIBILITY_CACHE_KEY = "becxus-nav-visibility";
 
 interface AppSettingsResponse {
   exchangeName: string;
   accentTheme: string;
+  navVisibility?: Record<string, boolean>;
 }
 
 // Same flash problem the theme/accent inline scripts already solve for
@@ -28,6 +30,24 @@ function getCachedExchangeName(): string {
 function cacheExchangeName(name: string) {
   try {
     localStorage.setItem(NAME_CACHE_KEY, name);
+  } catch {}
+}
+
+// Same flash problem as the exchange name above: cache the last-known nav
+// visibility map so repeat loads hide/show nav items correctly immediately
+// instead of flashing every item before /api/settings resolves.
+function getCachedNavVisibility(): Record<string, boolean> {
+  try {
+    const cached = localStorage.getItem(NAV_VISIBILITY_CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  } catch {
+    return {};
+  }
+}
+
+function cacheNavVisibility(navVisibility: Record<string, boolean>) {
+  try {
+    localStorage.setItem(NAV_VISIBILITY_CACHE_KEY, JSON.stringify(navVisibility));
   } catch {}
 }
 
@@ -59,4 +79,16 @@ export function useExchangeName(): string {
 export function useAccentTheme(): AccentThemeKey {
   const { data } = useAppSettingsQuery();
   return data?.accentTheme && isAccentThemeKey(data.accentTheme) ? data.accentTheme : DEFAULT_ACCENT_THEME;
+}
+
+// Reads the admin-configured nav item visibility map (Settings → Branding).
+// Falls back to the cached last-known map while the request is in flight or
+// if it fails, so nav items never flash visible before disappearing.
+export function useNavVisibility(): Record<string, boolean> {
+  const { data } = useAppSettingsQuery();
+  if (data?.navVisibility) {
+    cacheNavVisibility(data.navVisibility);
+    return data.navVisibility;
+  }
+  return getCachedNavVisibility();
 }

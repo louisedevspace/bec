@@ -8,10 +8,13 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.9.0
--- Last Updated: 2026-08-22
+-- Version: 2.10.0
+-- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.10.0 — app_settings gains nav_visibility JSONB column —
+--          admin-configurable per-item nav bar visibility, defaults
+--          to {} (all items visible).
 -- 2.9.0 — Wallet-connect deposits: deposit_requests gains optional
 --         tx_hash/wallet_address/network columns so users who connect
 --         their own wallet (MetaMask/TronLink/WalletConnect) can submit
@@ -48,6 +51,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   exchange_name TEXT NOT NULL DEFAULT 'Becxus',
   accent_theme TEXT NOT NULL DEFAULT 'amber',
+  nav_visibility JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by TEXT,
   CONSTRAINT app_settings_singleton CHECK (id = 1),
@@ -57,6 +61,13 @@ CREATE TABLE IF NOT EXISTS app_settings (
 INSERT INTO app_settings (id, exchange_name, accent_theme)
 VALUES (1, 'Becxus', 'amber')
 ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='app_settings' AND column_name='nav_visibility') THEN
+    ALTER TABLE app_settings ADD COLUMN nav_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
+  END IF;
+END $$;
 
 -- ----------------------------------------------------------
 -- 1.1 Users

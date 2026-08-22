@@ -53,6 +53,7 @@ const AdminGold = lazy(() => import('./pages/admin-gold'));
 const AdminReferrals = lazy(() => import('./pages/admin-referrals'));
 const AdminUserDetail = lazy(() => import('./pages/admin-user-detail'));
 const WalletPage = lazy(() => import('./pages/wallet'));
+const StakingPage = lazy(() => import('@/pages/staking'));
 
 function Router() {
   const [loading, setLoading] = useState(true);
@@ -251,6 +252,7 @@ function Router() {
           <Route path="/profile" component={protectedRoute(ProfilePage)} />
           <Route path="/support" component={protectedRoute(SupportPage)} />
           <Route path="/wallet" component={protectedRoute(WalletPage)} />
+          <Route path="/staking" component={protectedRoute(StakingPage)} />
           <Route path="/image-viewer" component={protectedRoute(ImageViewerPage)} />
 
           <Route component={NotFound} />

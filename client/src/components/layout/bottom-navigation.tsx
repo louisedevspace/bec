@@ -1,19 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Home, TrendingUp, BarChart3, RefreshCw, User, Info, Zap, Settings, MessageSquare, Wallet } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { isCachedSupportAgent } from '@/lib/user-role';
-
-const navItems = [
-  { path: "/", icon: Home, label: "Home" },
-  { path: "/market", icon: TrendingUp, label: "Markets" },
-  { path: "/futures", icon: Zap, label: "Futures" },
-  { path: "/support", icon: MessageSquare, label: "Support" },
-  { path: "/profile", icon: User, label: "Profile" },
-  { path: "/exchange", icon: RefreshCw, label: "Exchange" },
-  { path: "/wallet", icon: Wallet, label: "Wallet" },
-  { path: "/about", icon: Info, label: "About" },
-];
+import { NAV_ITEMS } from '@/config/nav-items';
+import { useNavVisibility } from '@/hooks/use-exchange-name';
 
 export function BottomNavigation() {
   const [location] = useLocation();
@@ -64,6 +55,12 @@ export function BottomNavigation() {
 
   const isAdminActive = useMemo(() => location.startsWith('/admin'), [location]);
 
+  const navVisibility = useNavVisibility();
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => navVisibility[item.key] !== false),
+    [navVisibility]
+  );
+
   // Chat support accounts only use the support console — the customer
   // navigation would just bounce them back to /admin/support.
   if (isSupportAgent) return null;
@@ -72,10 +69,10 @@ export function BottomNavigation() {
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="h-16 overflow-x-auto scrollbar-hide flex items-center">
         <div className="flex h-full min-w-max">
-          {navItems.map(({ path, icon: Icon, label }) => {
+          {visibleNavItems.map(({ key, path, icon: Icon, label }) => {
             const isActive = location === path;
             return (
-              <Link key={path} href={path} className={`flex flex-col items-center justify-center gap-1 h-full px-2.5 transition-colors duration-200 ${
+              <Link key={key} href={path} className={`flex flex-col items-center justify-center gap-1 h-full px-2.5 transition-colors duration-200 ${
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}>
                 <span

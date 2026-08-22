@@ -26,6 +26,7 @@ export const appSettings = pgTable("app_settings", {
   id: integer("id").primaryKey().default(1),
   exchangeName: text("exchange_name").notNull().default("Becxus"),
   accentTheme: text("accent_theme").notNull().default("amber"),
+  navVisibility: json("nav_visibility").notNull().default({}),
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: text("updated_by"),
 });

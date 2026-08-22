@@ -2,21 +2,11 @@ import { BottomNavigation } from "./bottom-navigation";
 import { useLocation } from "wouter";
 import { Logo } from "@/components/brand/logo";
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Home, Info, TrendingUp, RefreshCw, Zap, MessageSquare, User, Settings, Wallet, Bell } from "lucide-react";
+import { Settings, Bell } from "lucide-react";
 import { supabase } from '../../lib/supabaseClient';
 import { isCachedSupportAgent } from '@/lib/user-role';
-import { useExchangeName } from '@/hooks/use-exchange-name';
-
-const navItems = [
-  { path: "/", label: "Home", icon: Home },
-  { path: "/market", label: "Markets", icon: TrendingUp },
-  { path: "/futures", label: "Trading", icon: Zap },
-  { path: "/support", label: "Support", icon: MessageSquare },
-  { path: "/profile", label: "Profile", icon: User },
-  { path: "/exchange", label: "Exchange", icon: RefreshCw },
-  { path: "/wallet", label: "Wallet", icon: Wallet },
-  { path: "/about", label: "About", icon: Info },
-];
+import { useExchangeName, useNavVisibility } from '@/hooks/use-exchange-name';
+import { NAV_ITEMS } from '@/config/nav-items';
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -26,6 +16,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isSupportAgent, setIsSupportAgent] = useState(isCachedSupportAgent);
   const [notifCount, setNotifCount] = useState(0);
   const exchangeName = useExchangeName();
+  const navVisibility = useNavVisibility();
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => navVisibility[item.key] !== false),
+    [navVisibility]
+  );
 
   // Memoize admin check to avoid unnecessary re-runs
   const checkAdminAccess = useCallback(async () => {
@@ -118,9 +113,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
           {/* Navigation Items */}
           <div className="flex items-center gap-1">
-            {navItems.map(({ path, label, icon: Icon }) => (
+            {visibleNavItems.map(({ key, path, label, icon: Icon }) => (
               <a
-                key={path}
+                key={key}
                 href={path}
                 className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
                   location === path
