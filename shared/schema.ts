@@ -116,7 +116,8 @@ export const stakingPositions = pgTable("staking_positions", {
   type: text("type").notNull().default("fixed"), // fixed | flexible — flexible can be unstaked any time
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date").notNull(),
-  status: text("status").notNull(), // active, completed
+  status: text("status").notNull(), // active, completed, pending_approval
+  productId: integer("product_id"), // references staking_products.id — nullable: historical positions predate this column and some paths create positions without a matching product row
 });
 
 // User Staking Limits — per-user overrides for staking amounts & durations
@@ -140,11 +141,14 @@ export const stakingProducts = pgTable("staking_products", {
   title: text("title").notNull(), // e.g. "7 Days", "30 Days", "Flexible"
   duration: integer("duration").notNull(), // days — nominal duration flexible products use for APY display only
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(), // e.g. 0.50, 4.00
+  apyMax: decimal("apy_max", { precision: 5, scale: 2 }), // optional upper bound — when set, product APY is a range [apy, apyMax]; null = single fixed rate (unchanged behavior)
   type: text("type").notNull().default("fixed"), // fixed | flexible
   minAmount: decimal("min_amount", { precision: 20, scale: 8 }).notNull(),
   maxAmount: decimal("max_amount", { precision: 20, scale: 8 }).notNull(),
   isEnabled: boolean("is_enabled").notNull().default(true),
   sortOrder: integer("sort_order").default(0),
+  maxParticipants: integer("max_participants"), // null = unlimited
+  requiresApproval: boolean("requires_approval").notNull().default(false), // true = Book flow — new positions start as pending_approval instead of active
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

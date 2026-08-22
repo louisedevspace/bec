@@ -224,6 +224,7 @@ export class MemStorage implements IStorage {
       type: (raw.type as string) ?? 'fixed',
       startDate: new Date(),
       endDate: raw.end_date ? new Date(raw.end_date as string) : new Date(),
+      productId: (raw.productId as number | null | undefined) ?? null,
     };
     this.stakingPositions.set(position.id, position);
     return position;

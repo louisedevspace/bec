@@ -6,6 +6,25 @@ async function invalidateStakingProductsCache(): Promise<void> {
   await cacheInvalidate(REDIS_KEYS.STAKING_PRODUCTS);
 }
 
+// Merges a participantCount field onto each product — total staking_positions rows
+// (any status) whose product_id matches, tallied in JS since row counts are small.
+async function withParticipantCounts(products: any[]): Promise<any[]> {
+  const { data: positionRows } = await supabaseAdmin
+    .from("staking_positions")
+    .select("product_id")
+    .not("product_id", "is", null);
+
+  const countByProductId = new Map<number, number>();
+  for (const row of positionRows || []) {
+    countByProductId.set(row.product_id, (countByProductId.get(row.product_id) || 0) + 1);
+  }
+
+  return products.map((product) => ({
+    ...product,
+    participantCount: countByProductId.get(product.id) || 0,
+  }));
+}
+
 export default function registerStakingProductsRoutes(app: Express) {
 
   // GET /api/staking-products — public: returns enabled products sorted by sort_order (CACHED)
@@ -19,7 +38,7 @@ export default function registerStakingProductsRoutes(app: Express) {
           .order("sort_order", { ascending: true });
 
         if (error) throw error;
-        return data || [];
+        return await withParticipantCounts(data || []);
       });
 
       res.json(data);
@@ -43,7 +62,7 @@ export default function registerStakingProductsRoutes(app: Express) {
         return res.status(500).json({ message: "Failed to fetch staking products" });
       }
 
-      res.json(data || []);
+      res.json(await withParticipantCounts(data || []));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch staking products" });
     }
@@ -52,13 +71,28 @@ export default function registerStakingProductsRoutes(app: Express) {
   // POST /api/admin/staking-products — admin: create new product
   app.post("/api/admin/staking-products", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
+      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder, apyMax, maxParticipants, requiresApproval } = req.body;
 
       if (!title || !duration || apy === undefined || !minAmount || !maxAmount) {
         return res.status(400).json({ message: "title, duration, apy, minAmount, and maxAmount are required" });
       }
       if (type !== undefined && type !== "fixed" && type !== "flexible") {
         return res.status(400).json({ message: 'type must be "fixed" or "flexible"' });
+      }
+      if (apyMax !== undefined && apyMax !== null) {
+        const apyMaxNum = parseFloat(apyMax);
+        if (isNaN(apyMaxNum) || apyMaxNum < parseFloat(apy)) {
+          return res.status(400).json({ message: "apyMax must be a number greater than or equal to apy" });
+        }
+      }
+      if (maxParticipants !== undefined && maxParticipants !== null) {
+        const maxParticipantsNum = Number(maxParticipants);
+        if (!Number.isInteger(maxParticipantsNum) || maxParticipantsNum <= 0) {
+          return res.status(400).json({ message: "maxParticipants must be a positive integer" });
+        }
+      }
+      if (requiresApproval !== undefined && typeof requiresApproval !== "boolean") {
+        return res.status(400).json({ message: "requiresApproval must be a boolean" });
       }
 
       const { data, error } = await supabaseAdmin
@@ -67,11 +101,14 @@ export default function registerStakingProductsRoutes(app: Express) {
           title,
           duration: parseInt(duration),
           apy: parseFloat(apy).toFixed(2),
+          apy_max: apyMax !== undefined && apyMax !== null ? parseFloat(apyMax).toFixed(2) : null,
           type: type || "fixed",
           min_amount: minAmount,
           max_amount: maxAmount,
           is_enabled: isEnabled !== undefined ? isEnabled : true,
           sort_order: sortOrder || 0,
+          max_participants: maxParticipants !== undefined && maxParticipants !== null ? Number(maxParticipants) : null,
+          requires_approval: requiresApproval !== undefined ? requiresApproval : false,
         })
         .select()
         .single();
@@ -97,10 +134,37 @@ export default function registerStakingProductsRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder } = req.body;
+      const { title, duration, apy, type, minAmount, maxAmount, isEnabled, sortOrder, apyMax, maxParticipants, requiresApproval } = req.body;
 
       if (type !== undefined && type !== "fixed" && type !== "flexible") {
         return res.status(400).json({ message: 'type must be "fixed" or "flexible"' });
+      }
+      if (maxParticipants !== undefined && maxParticipants !== null) {
+        const maxParticipantsNum = Number(maxParticipants);
+        if (!Number.isInteger(maxParticipantsNum) || maxParticipantsNum <= 0) {
+          return res.status(400).json({ message: "maxParticipants must be a positive integer" });
+        }
+      }
+      if (requiresApproval !== undefined && typeof requiresApproval !== "boolean") {
+        return res.status(400).json({ message: "requiresApproval must be a boolean" });
+      }
+      if (apyMax !== undefined && apyMax !== null) {
+        const apyMaxNum = parseFloat(apyMax);
+        if (isNaN(apyMaxNum)) {
+          return res.status(400).json({ message: "apyMax must be a number" });
+        }
+        let baseApy = apy !== undefined ? parseFloat(apy) : undefined;
+        if (baseApy === undefined) {
+          const { data: existingProduct } = await supabaseAdmin
+            .from("staking_products")
+            .select("apy")
+            .eq("id", id)
+            .single();
+          baseApy = existingProduct ? parseFloat(existingProduct.apy) : undefined;
+        }
+        if (baseApy !== undefined && apyMaxNum < baseApy) {
+          return res.status(400).json({ message: "apyMax must be a number greater than or equal to apy" });
+        }
       }
 
       const updateData: any = { updated_at: new Date().toISOString() };
@@ -112,6 +176,9 @@ export default function registerStakingProductsRoutes(app: Express) {
       if (maxAmount !== undefined) updateData.max_amount = maxAmount;
       if (isEnabled !== undefined) updateData.is_enabled = isEnabled;
       if (sortOrder !== undefined) updateData.sort_order = sortOrder;
+      if (apyMax !== undefined) updateData.apy_max = apyMax === null ? null : parseFloat(apyMax).toFixed(2);
+      if (maxParticipants !== undefined) updateData.max_participants = maxParticipants === null ? null : Number(maxParticipants);
+      if (requiresApproval !== undefined) updateData.requires_approval = requiresApproval;
 
       const { data, error } = await supabaseAdmin
         .from("staking_products")

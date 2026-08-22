@@ -179,7 +179,7 @@ export default function registerAdminStakingRoutes(app: Express) {
   app.put("/api/admin/staking/positions/:id/status", requireAuth, requireAdmin, async (req, res) => {
     try {
       const positionId = parseInt(req.params.id);
-      const { status } = z.object({ status: z.enum(["active", "completed"]) }).parse(req.body);
+      const { status } = z.object({ status: z.enum(["active", "completed", "pending_approval"]) }).parse(req.body);
 
       // Get current position
       const { data: position, error: fetchError } = await supabaseAdmin
@@ -394,8 +394,10 @@ export default function registerAdminStakingRoutes(app: Express) {
         return res.status(404).json({ message: "Staking position not found" });
       }
 
-      // If active, return funds to user
-      if (position.status === "active") {
+      // If active or pending_approval, return funds to user (both statuses have
+      // funds frozen — pending_approval positions freeze funds at creation same
+      // as active ones, only the stored status differs).
+      if (position.status === "active" || position.status === "pending_approval") {
         const stakeAmount = parseFloat(position.amount);
         const { data: portfolio } = await supabaseAdmin
           .from("portfolios")

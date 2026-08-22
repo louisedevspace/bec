@@ -62,6 +62,23 @@ export default function registerStakingRoutes(app: Express) {
         }
       }
 
+      // Enforce participant cap (if set) BEFORE any funds are moved, so a race
+      // against the cap never freezes funds for a position that gets rejected.
+      if (product && product.max_participants) {
+        const { count: participantCount, error: participantCountError } = await supabaseAdmin
+          .from("staking_positions")
+          .select("*", { count: "exact", head: true })
+          .eq("product_id", product.id);
+
+        if (participantCountError) {
+          return res.status(500).json({ message: "Failed to verify plan availability" });
+        }
+
+        if ((participantCount || 0) >= product.max_participants) {
+          return res.status(400).json({ message: "This plan has reached its participant limit." });
+        }
+      }
+
       // Check balance
       const { data: portfolio } = await supabaseAdmin
         .from("portfolios")
@@ -100,6 +117,7 @@ export default function registerStakingRoutes(app: Express) {
 
       const startDate = new Date();
       const endDate = new Date(startDate.getTime() + validatedData.duration * 24 * 60 * 60 * 1000);
+      const positionStatus = product && product.requires_approval ? "pending_approval" : validatedData.status;
 
       const { data: position, error: positionError } = await supabaseAdmin
         .from("staking_positions")
@@ -113,7 +131,8 @@ export default function registerStakingRoutes(app: Express) {
             type: requestedType,
             start_date: startDate,
             end_date: endDate,
-            status: validatedData.status,
+            status: positionStatus,
+            product_id: product ? product.id : null,
           },
         ])
         .select()

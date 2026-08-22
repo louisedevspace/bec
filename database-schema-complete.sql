@@ -8,10 +8,19 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.10.0
+-- Version: 2.11.0
 -- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.11.0 — Tiered staking plans: staking_products gains optional
+--          apy_max (APY range), max_participants (participant cap),
+--          and requires_approval (Book-instead-of-instant-Stake flow)
+--          columns; staking_positions gains a nullable product_id
+--          link. Positions on a requires_approval product start as
+--          'pending_approval' instead of 'active' until an admin
+--          approves them. Seeds 8 new tiered example plans
+--          (Mobile AMM through Exclusive Booking Plan III). All
+--          existing Fixed/Flexible products are unaffected.
 -- 2.10.0 — app_settings gains nav_visibility JSONB column —
 --          admin-configurable per-item nav bar visibility, defaults
 --          to {} (all items visible).
@@ -370,13 +379,18 @@ CREATE TABLE IF NOT EXISTS staking_positions (
   type TEXT NOT NULL DEFAULT 'fixed', -- fixed | flexible (flexible can be unstaked any time)
   start_date TIMESTAMPTZ DEFAULT NOW(),
   end_date TIMESTAMPTZ NOT NULL,
-  status TEXT NOT NULL                -- active, completed
+  status TEXT NOT NULL,               -- active, completed, pending_approval
+  product_id INTEGER -- nullable: historical positions predate this column; FK constraint added below once staking_products exists
 );
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_positions' AND column_name='type') THEN
     ALTER TABLE staking_positions ADD COLUMN type TEXT NOT NULL DEFAULT 'fixed';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_positions' AND column_name='product_id') THEN
+    ALTER TABLE staking_positions ADD COLUMN product_id INTEGER;
   END IF;
 END $$;
 
@@ -413,11 +427,14 @@ CREATE TABLE IF NOT EXISTS staking_products (
   title TEXT NOT NULL,
   duration INTEGER NOT NULL,                  -- days
   apy DECIMAL(5,2) NOT NULL,                 -- e.g. 0.50, 4.00
+  apy_max DECIMAL(5,2),                      -- optional upper bound — when set, product APY is a range [apy, apy_max]; null = single fixed rate (unchanged behavior)
   type TEXT NOT NULL DEFAULT 'fixed',        -- fixed | flexible
   min_amount DECIMAL(20,8) NOT NULL,
   max_amount DECIMAL(20,8) NOT NULL,
   is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   sort_order INTEGER DEFAULT 0,
+  max_participants INTEGER,                  -- null = unlimited
+  requires_approval BOOLEAN NOT NULL DEFAULT FALSE, -- true = Book flow — new positions start as pending_approval instead of active
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -427,12 +444,72 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_products' AND column_name='type') THEN
     ALTER TABLE staking_products ADD COLUMN type TEXT NOT NULL DEFAULT 'fixed';
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_products' AND column_name='apy_max') THEN
+    ALTER TABLE staking_products ADD COLUMN apy_max DECIMAL(5,2);
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_products' AND column_name='max_participants') THEN
+    ALTER TABLE staking_products ADD COLUMN max_participants INTEGER;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='staking_products' AND column_name='requires_approval') THEN
+    ALTER TABLE staking_products ADD COLUMN requires_approval BOOLEAN NOT NULL DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- staking_positions.product_id can only reference staking_products once this table exists —
+-- add the FK constraint here rather than at staking_positions' own CREATE TABLE above.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'staking_positions' AND constraint_name = 'staking_positions_product_id_fkey'
+  ) THEN
+    ALTER TABLE staking_positions
+      ADD CONSTRAINT staking_positions_product_id_fkey
+      FOREIGN KEY (product_id) REFERENCES staking_products(id);
+  END IF;
 END $$;
 
 -- Seed a default flexible product if none exists yet
 INSERT INTO staking_products (title, duration, apy, type, min_amount, max_amount, is_enabled, sort_order)
 SELECT 'Flexible', 1, '0.60', 'flexible', '10', '1000000', TRUE, 0
 WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE type = 'flexible');
+
+-- Seed 8 tiered plans (Mobile AMM + Booking/Exclusive tiers) — larger-ticket
+-- plans require admin approval before the position activates.
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Mobile AMM', 2, '4.00', '5.50', '1000', '10000', 'fixed', FALSE, TRUE, 100
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Mobile AMM');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'AMM Mobile Plan II', 5, '6.00', '7.50', '10000', '50000', 'fixed', FALSE, TRUE, 101
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'AMM Mobile Plan II');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Amm Booking Plan III', 8, '9.00', '11.00', '50000', '75000', 'fixed', TRUE, TRUE, 102
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Amm Booking Plan III');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Amm Booking Plan IV', 10, '12.00', '14.50', '75000', '200000', 'fixed', TRUE, TRUE, 103
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Amm Booking Plan IV');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Amm Booking Plan V', 15, '16.00', '19.00', '200000', '500000', 'fixed', TRUE, TRUE, 104
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Amm Booking Plan V');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Exclusive Booking Plan', 20, '20.00', '23.50', '500000', '1000000', 'fixed', TRUE, TRUE, 105
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Exclusive Booking Plan');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Exclusive Booking Plan II', 25, '25.00', '28.50', '1000000', '5000000', 'fixed', TRUE, TRUE, 106
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Exclusive Booking Plan II');
+
+INSERT INTO staking_products (title, duration, apy, apy_max, min_amount, max_amount, type, requires_approval, is_enabled, sort_order)
+SELECT 'Exclusive Booking Plan III', 30, '30.00', '34.00', '5000000', '100000000', 'fixed', TRUE, TRUE, 107
+WHERE NOT EXISTS (SELECT 1 FROM staking_products WHERE title = 'Exclusive Booking Plan III');
 
 -- ----------------------------------------------------------
 -- 1.9 Loan Applications

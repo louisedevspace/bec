@@ -259,7 +259,7 @@ export default function HomePage() {
 
           {/* Featured Staking Section — simplified, single accent, no decorative gradients */}
           <button
-            onClick={() => openModal('staking')}
+            onClick={() => setLocation('/staking')}
             className="w-full text-left bg-card rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors group shadow-sm"
           >
             <div className="flex items-center justify-between gap-3 flex-wrap">

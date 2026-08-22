@@ -35,7 +35,7 @@ interface StakingPosition {
   duration: number;
   startDate: string;
   endDate: string;
-  status: "active" | "completed";
+  status: "active" | "completed" | "pending_approval";
   user: StakingUser | null;
 }
 
@@ -57,9 +57,13 @@ interface StakingProductConfig {
   title: string;
   duration: number;
   apy: string;
+  apyMax?: string | null;
   type: "fixed" | "flexible";
   min_amount: string;
   max_amount: string;
+  maxParticipants?: number | null;
+  requiresApproval?: boolean;
+  participantCount?: number;
   is_enabled: boolean;
   sort_order: number;
   created_at: string;
@@ -185,7 +189,7 @@ export default function AdminStakingPage() {
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [productEditForm, setProductEditForm] = useState<Partial<StakingProductConfig>>({});
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newProduct, setNewProduct] = useState({ title: '', duration: '30', apy: '1.00', type: 'fixed' as 'fixed' | 'flexible', minAmount: '100', maxAmount: '100000' });
+  const [newProduct, setNewProduct] = useState({ title: '', duration: '30', apy: '1.00', apyMax: '', type: 'fixed' as 'fixed' | 'flexible', minAmount: '100', maxAmount: '100000', maxParticipants: '', requiresApproval: false });
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -233,13 +237,24 @@ export default function AdminStakingPage() {
       const headers = await getAuthHeaders();
       const response = await fetch('/api/admin/staking-products', {
         method: 'POST', headers,
-        body: JSON.stringify({ title: newProduct.title, duration: parseInt(newProduct.duration), apy: newProduct.apy, type: newProduct.type, minAmount: newProduct.minAmount, maxAmount: newProduct.maxAmount, sortOrder: products.length + 1 }),
+        body: JSON.stringify({
+          title: newProduct.title,
+          duration: parseInt(newProduct.duration),
+          apy: newProduct.apy,
+          apyMax: newProduct.apyMax.trim() ? newProduct.apyMax : null,
+          type: newProduct.type,
+          minAmount: newProduct.minAmount,
+          maxAmount: newProduct.maxAmount,
+          maxParticipants: newProduct.maxParticipants.trim() ? parseInt(newProduct.maxParticipants) : null,
+          requiresApproval: newProduct.requiresApproval,
+          sortOrder: products.length + 1,
+        }),
       });
       if (response.ok) {
         const data = await response.json();
         setProducts(prev => [...prev, data]);
         setShowAddForm(false);
-        setNewProduct({ title: '', duration: '30', apy: '1.00', type: 'fixed', minAmount: '100', maxAmount: '100000' });
+        setNewProduct({ title: '', duration: '30', apy: '1.00', apyMax: '', type: 'fixed', minAmount: '100', maxAmount: '100000', maxParticipants: '', requiresApproval: false });
         toast({ title: 'Success', description: `${data.title} added` });
       } else {
         const err = await response.json();
@@ -250,7 +265,18 @@ export default function AdminStakingPage() {
 
   const startProductEdit = (product: StakingProductConfig) => {
     setEditingProductId(product.id);
-    setProductEditForm({ title: product.title, duration: product.duration, apy: product.apy, type: product.type, min_amount: product.min_amount, max_amount: product.max_amount, sort_order: product.sort_order });
+    setProductEditForm({
+      title: product.title,
+      duration: product.duration,
+      apy: product.apy,
+      apyMax: product.apyMax ?? null,
+      type: product.type,
+      min_amount: product.min_amount,
+      max_amount: product.max_amount,
+      maxParticipants: product.maxParticipants ?? null,
+      requiresApproval: product.requiresApproval ?? false,
+      sort_order: product.sort_order,
+    });
   };
 
   const handleProductSaveEdit = async () => {
@@ -259,7 +285,18 @@ export default function AdminStakingPage() {
       const headers = await getAuthHeaders();
       const response = await fetch(`/api/admin/staking-products/${editingProductId}`, {
         method: 'PUT', headers,
-        body: JSON.stringify({ title: productEditForm.title, duration: productEditForm.duration, apy: productEditForm.apy, type: productEditForm.type, minAmount: productEditForm.min_amount, maxAmount: productEditForm.max_amount, sortOrder: productEditForm.sort_order }),
+        body: JSON.stringify({
+          title: productEditForm.title,
+          duration: productEditForm.duration,
+          apy: productEditForm.apy,
+          apyMax: productEditForm.apyMax === '' || productEditForm.apyMax == null ? null : productEditForm.apyMax,
+          type: productEditForm.type,
+          minAmount: productEditForm.min_amount,
+          maxAmount: productEditForm.max_amount,
+          maxParticipants: productEditForm.maxParticipants == null ? null : productEditForm.maxParticipants,
+          requiresApproval: productEditForm.requiresApproval ?? false,
+          sortOrder: productEditForm.sort_order,
+        }),
       });
       if (response.ok) {
         const updated = await response.json();
@@ -350,6 +387,9 @@ export default function AdminStakingPage() {
             <TabsTrigger value="active" className="data-[state=active]:bg-success/15 data-[state=active]:text-success text-xs md:text-sm">
               <Activity size={14} className="mr-1.5" /> Active
             </TabsTrigger>
+            <TabsTrigger value="pending" className="data-[state=active]:bg-warning/15 data-[state=active]:text-warning text-xs md:text-sm">
+              <Clock size={14} className="mr-1.5" /> Pending Approval
+            </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-info/15 data-[state=active]:text-info text-xs md:text-sm">
               <CheckCircle size={14} className="mr-1.5" /> Completed
             </TabsTrigger>
@@ -358,8 +398,8 @@ export default function AdminStakingPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* All / Active / Completed → same positions list with filter */}
-          {["overview", "active", "completed"].map((tabKey) => (
+          {/* All / Active / Pending / Completed → same positions list with filter */}
+          {["overview", "active", "pending", "completed"].map((tabKey) => (
             <TabsContent key={tabKey} value={tabKey} className="mt-4 space-y-4">
               {/* Filter bar */}
               <div className="flex flex-col md:flex-row gap-3">
@@ -391,6 +431,8 @@ export default function AdminStakingPage() {
                   ? filteredPositions.filter((p) => p.status === "active")
                   : tabKey === "completed"
                   ? filteredPositions.filter((p) => p.status === "completed")
+                  : tabKey === "pending"
+                  ? filteredPositions.filter((p) => p.status === "pending_approval")
                   : filteredPositions
                 }
                 loading={positionsLoading}
@@ -485,7 +527,24 @@ export default function AdminStakingPage() {
                     <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Max Amount</label>
                     <Input type="number" step="any" value={newProduct.maxAmount} onChange={(e) => setNewProduct({ ...newProduct, maxAmount: e.target.value })} className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
                   </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Max APY (optional)</label>
+                    <Input type="number" step="0.01" min="0" value={newProduct.apyMax} onChange={(e) => setNewProduct({ ...newProduct, apyMax: e.target.value })} placeholder="Blank = fixed rate" className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Max Participants (optional)</label>
+                    <Input type="number" min="1" value={newProduct.maxParticipants} onChange={(e) => setNewProduct({ ...newProduct, maxParticipants: e.target.value })} placeholder="Unlimited" className="h-9 bg-background border-border text-foreground text-xs tabular-nums" />
+                  </div>
                 </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={newProduct.requiresApproval}
+                    onChange={(e) => setNewProduct({ ...newProduct, requiresApproval: e.target.checked })}
+                    className="h-4 w-4 rounded border-border accent-primary"
+                  />
+                  Requires admin approval (Book instead of instant Stake)
+                </label>
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" size="sm" onClick={() => setShowAddForm(false)} className="border-border bg-background text-muted-foreground">Cancel</Button>
                   <Button size="sm" onClick={handleProductAdd}><Plus size={14} className="mr-1" /> Add Product</Button>
@@ -534,9 +593,38 @@ export default function AdminStakingPage() {
                           <tr key={product.id} className={`border-b border-border hover:bg-muted/50 transition-colors ${!product.is_enabled ? 'opacity-50' : ''}`}>
                             <td className="py-3 px-4">
                               {editingProductId === product.id ? (
-                                <Input value={productEditForm.title || ''} onChange={(e) => setProductEditForm({ ...productEditForm, title: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-32" />
+                                <div className="space-y-1.5">
+                                  <Input value={productEditForm.title || ''} onChange={(e) => setProductEditForm({ ...productEditForm, title: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-36" placeholder="Title" />
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={productEditForm.maxParticipants ?? ''}
+                                    onChange={(e) => setProductEditForm({ ...productEditForm, maxParticipants: e.target.value === '' ? null : (parseInt(e.target.value) || 0) })}
+                                    placeholder="Max participants"
+                                    className="h-7 bg-background border-border text-foreground text-xs w-36 tabular-nums"
+                                  />
+                                  <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!productEditForm.requiresApproval}
+                                      onChange={(e) => setProductEditForm({ ...productEditForm, requiresApproval: e.target.checked })}
+                                      className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                    />
+                                    Requires Approval
+                                  </label>
+                                </div>
                               ) : (
-                                <span className="font-semibold text-foreground text-sm">{product.title}</span>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-semibold text-foreground text-sm">{product.title}</span>
+                                    {product.requiresApproval && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-warning/15 text-warning">Approval Required</span>
+                                    )}
+                                  </div>
+                                  {product.maxParticipants != null && (
+                                    <span className="block text-[10px] text-muted-foreground tabular-nums">{product.participantCount ?? 0}/{product.maxParticipants} participants</span>
+                                  )}
+                                </div>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
@@ -565,9 +653,15 @@ export default function AdminStakingPage() {
                             </td>
                             <td className="text-center py-3 px-3">
                               {editingProductId === product.id ? (
-                                <Input type="number" step="0.01" value={productEditForm.apy || ''} onChange={(e) => setProductEditForm({ ...productEditForm, apy: e.target.value })} className="h-7 bg-background border-border text-foreground text-xs w-20 mx-auto tabular-nums" />
+                                <div className="flex items-center gap-1 justify-center">
+                                  <Input type="number" step="0.01" value={productEditForm.apy || ''} onChange={(e) => setProductEditForm({ ...productEditForm, apy: e.target.value })} placeholder="APY" className="h-7 bg-background border-border text-foreground text-xs w-16 tabular-nums" />
+                                  <span className="text-muted-foreground text-xs">–</span>
+                                  <Input type="number" step="0.01" min="0" value={productEditForm.apyMax ?? ''} onChange={(e) => setProductEditForm({ ...productEditForm, apyMax: e.target.value === '' ? null : e.target.value })} placeholder="Max" className="h-7 bg-background border-border text-foreground text-xs w-16 tabular-nums" />
+                                </div>
                               ) : (
-                                <span className="text-sm font-medium text-warning tabular-nums">{parseFloat(product.apy).toFixed(2)}%</span>
+                                <span className="text-sm font-medium text-warning tabular-nums">
+                                  {parseFloat(product.apy).toFixed(2)}%{product.apyMax ? `–${parseFloat(product.apyMax).toFixed(2)}%` : ''}
+                                </span>
                               )}
                             </td>
                             <td className="text-center py-3 px-3">
@@ -622,14 +716,19 @@ export default function AdminStakingPage() {
                     {filteredProducts.map((product) => (
                       <div key={product.id} className={`p-4 ${!product.is_enabled ? 'opacity-50' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Coins size={16} className="text-warning" />
                             <span className="font-bold text-foreground">{product.title}</span>
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${product.type === 'flexible' ? 'bg-info/15 text-info' : 'bg-primary/15 text-primary'}`}>
                               {product.type === 'flexible' ? <Zap size={9} /> : <Lock size={9} />}
                               {product.type === 'flexible' ? 'Flexible' : 'Fixed'}
                             </span>
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning/10 text-warning tabular-nums">{parseFloat(product.apy).toFixed(2)}% APY</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning/10 text-warning tabular-nums">
+                              {parseFloat(product.apy).toFixed(2)}{product.apyMax ? `–${parseFloat(product.apyMax).toFixed(2)}` : ''}% APY
+                            </span>
+                            {product.requiresApproval && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">Approval Required</span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => handleProductToggle(product.id)}>
@@ -639,10 +738,13 @@ export default function AdminStakingPage() {
                             <button onClick={() => handleProductDelete(product.id, product.title)} className="p-1 rounded text-danger hover:bg-danger/10"><Trash2 size={14} /></button>
                           </div>
                         </div>
-                        <div className="flex gap-4 text-xs text-muted-foreground tabular-nums">
+                        <div className="flex gap-4 text-xs text-muted-foreground tabular-nums flex-wrap">
                           <span>{product.type === 'flexible' ? 'No lock-up' : `${product.duration} days`}</span>
                           <span>Min: ${parseFloat(product.min_amount).toLocaleString()}</span>
                           <span>Max: ${parseFloat(product.max_amount).toLocaleString()}</span>
+                          {product.maxParticipants != null && (
+                            <span>{product.participantCount ?? 0}/{product.maxParticipants} participants</span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -746,6 +848,7 @@ function PositionsList({
         const days = daysRemaining(p.endDate);
         const progress = progressPercent(p.startDate, p.endDate);
         const isActive = p.status === "active";
+        const isPendingApproval = p.status === "pending_approval";
         const stakeAmount = parseFloat(p.amount);
         const apy = parseFloat(p.apy);
         const estimatedReward = stakeAmount * (apy / 100) * (p.duration / 365);
@@ -759,7 +862,7 @@ function PositionsList({
                 className="w-full flex items-center gap-3 p-4 text-left"
               >
                 {/* Status indicator */}
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? "bg-success" : "bg-muted-foreground"}`} />
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? "bg-success" : isPendingApproval ? "bg-warning" : "bg-muted-foreground"}`} />
 
                 {/* User Info */}
                 <div className="flex-1 min-w-0">
@@ -767,8 +870,8 @@ function PositionsList({
                     <p className="text-sm font-medium text-foreground truncate">
                       {p.user?.full_name || p.user?.email || p.userId.slice(0, 12) + "..."}
                     </p>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 ${isActive ? "border-success/30 text-success bg-success/5" : "border-border text-muted-foreground bg-muted/50"}`}>
-                      {p.status}
+                    <Badge variant="outline" className={`text-[10px] px-1.5 ${isActive ? "border-success/30 text-success bg-success/5" : isPendingApproval ? "border-warning/30 text-warning bg-warning/5" : "border-border text-muted-foreground bg-muted/50"}`}>
+                      {isPendingApproval ? "Pending Approval" : p.status}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
@@ -856,6 +959,17 @@ function PositionsList({
 
                   {/* Actions */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+                    {isPendingApproval && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onStatusChange(p.id, "active")}
+                        className="h-7 text-xs bg-warning/10 border-warning/30 text-warning hover:bg-warning/20"
+                      >
+                        <CheckCircle size={12} className="mr-1" /> Approve
+                      </Button>
+                    )}
+
                     {isActive && (
                       <>
                         <Button
@@ -891,7 +1005,7 @@ function PositionsList({
                       </>
                     )}
 
-                    {!isActive && (
+                    {p.status === "completed" && (
                       <Button
                         variant="outline"
                         size="sm"

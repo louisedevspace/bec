@@ -306,7 +306,7 @@ export default function ProfilePage() {
         setLocation('/wallet');
         break;
       case 'staking':
-        setActiveModal(action);
+        setLocation('/staking');
         break;
       default:
         break;
@@ -502,7 +502,7 @@ export default function ProfilePage() {
             <div className="space-y-4">
               {/* Staking Section */}
               <div
-                onClick={() => setActiveModal('staking')}
+                onClick={() => setLocation('/staking')}
                 className="bg-card rounded-2xl border border-border p-4 cursor-pointer hover:border-primary/40 transition-colors shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
