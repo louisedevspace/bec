@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { buildApiUrl } from "@/lib/config";
 import { compressUserImage } from "@/lib/image-compress";
 import { useWalletConnectStatus } from "@/hooks/use-wallet-connect-status";
-import { detectChainFamily, explorerTxUrl } from "@/lib/wallet-connect/chain-utils";
+import { detectChainFamily, explorerTxUrl, getExpectedEvmChainId } from "@/lib/wallet-connect/chain-utils";
 import { connectInjectedEvmWallet, connectWalletConnectEvm, sendNativeEvmDeposit } from "@/lib/wallet-connect/evm";
 import { connectTronLink, sendTronDeposit } from "@/lib/wallet-connect/tron";
 
@@ -43,10 +43,12 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [walletError, setWalletError] = useState<string | null>(null);
   const [walletTxHash, setWalletTxHash] = useState<string | null>(null);
   const [walletSenderAddress, setWalletSenderAddress] = useState<string | null>(null);
+  const [walletChainId, setWalletChainId] = useState<number | null>(null);
   const { toast } = useToast();
   const { copied, copyToClipboard } = useCopyToClipboard();
   const wcStatus = useWalletConnectStatus();
   const chainFamily = detectChainFamily(selectedNetwork, selectedCrypto);
+  const expectedEvmChainId = getExpectedEvmChainId(selectedNetwork);
 
   const fetchDepositAddresses = async () => {
     setLoadingAddresses(true);
@@ -188,6 +190,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
     setWalletError(null);
     setWalletTxHash(null);
     setWalletSenderAddress(null);
+    setWalletChainId(null);
     onClose();
   };
 
@@ -200,6 +203,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       setWalletError(null);
       setWalletTxHash(null);
       setWalletSenderAddress(null);
+      setWalletChainId(null);
     } else if (step === 3) {
       setStep(2);
     }
@@ -215,14 +219,17 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
     try {
       let hash: string;
       let sender: string;
+      let evmChainId: number | null = null;
       if (method === 'evm-injected') {
-        const { address, provider } = await connectInjectedEvmWallet();
+        const { address, provider, chainId } = await connectInjectedEvmWallet(expectedEvmChainId);
         sender = address;
+        evmChainId = chainId;
         hash = await sendNativeEvmDeposit(provider, depositAddress, walletDepositAmount);
       } else if (method === 'evm-walletconnect') {
         if (!wcStatus.data?.projectId) throw new Error('WalletConnect is not configured yet');
-        const { address, provider } = await connectWalletConnectEvm(wcStatus.data.projectId);
+        const { address, provider, chainId } = await connectWalletConnectEvm(wcStatus.data.projectId, expectedEvmChainId);
         sender = address;
+        evmChainId = chainId;
         hash = await sendNativeEvmDeposit(provider, depositAddress, walletDepositAmount);
       } else {
         const { address, tronWeb } = await connectTronLink();
@@ -231,6 +238,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       }
       setWalletTxHash(hash);
       setWalletSenderAddress(sender);
+      setWalletChainId(evmChainId);
       setAmount(walletDepositAmount);
       setStep(3);
     } catch (err: any) {
@@ -602,9 +610,9 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 {walletTxHash ? (
                   <div className="text-sm text-success space-y-1">
                     <p>Sent! Tx: {walletTxHash.slice(0, 10)}...{walletTxHash.slice(-6)}</p>
-                    {explorerTxUrl(chainFamily, walletTxHash) && (
+                    {explorerTxUrl(chainFamily, walletTxHash, walletChainId) && (
                       <a
-                        href={explorerTxUrl(chainFamily, walletTxHash) as string}
+                        href={explorerTxUrl(chainFamily, walletTxHash, walletChainId) as string}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-info underline"
