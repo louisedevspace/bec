@@ -5,16 +5,6 @@ export interface TronConnection {
 
 const USDT_TRC20_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
-// A wallet pointed at Shasta/Nile testnet will "successfully" call
-// tronWeb.contract().at(...) against an address that isn't the real USDT
-// contract there, which reverts during TronLink's pre-send simulation — this
-// is what "smart contract simulation failed" actually meant. Catch it early
-// with a clear message instead of a cryptic on-chain revert.
-function isTronMainnet(tronWeb: any): boolean {
-  const host: string = tronWeb?.fullNode?.host || tronWeb?.fullHost || '';
-  return /trongrid\.io|tronstack\.io/i.test(host) && !/shasta|nile/i.test(host);
-}
-
 export async function connectTronLink(): Promise<TronConnection> {
   const tronLink = (window as any).tronLink;
   if (!tronLink) {
@@ -30,10 +20,6 @@ export async function connectTronLink(): Promise<TronConnection> {
   const tronWeb = (window as any).tronWeb;
   if (!tronWeb?.defaultAddress?.base58) {
     throw new Error('TronLink wallet is locked or no account is selected.');
-  }
-
-  if (!isTronMainnet(tronWeb)) {
-    throw new Error('Your TronLink wallet is set to a test network. Please switch TronLink to Tron Mainnet and try again.');
   }
 
   return { address: tronWeb.defaultAddress.base58, tronWeb };
@@ -56,6 +42,21 @@ export async function sendTronDeposit(tronWeb: any, toAddress: string, amount: s
       contract = await tronWeb.contract().at(USDT_TRC20_CONTRACT);
     } catch {
       throw new Error('Could not load the USDT contract — make sure TronLink is set to Tron Mainnet.');
+    }
+
+    // Verify this actually IS the real, working USDT contract by calling a
+    // known view method, rather than guessing the network from a hostname
+    // string (that heuristic was unreliable and blocked legitimate wallets).
+    // USDT-TRC20 always reports 6 decimals; anything else means this wallet
+    // isn't really talking to the real contract (e.g. wrong network).
+    try {
+      const rawDecimals = await contract.decimals().call();
+      const decimals = Number(rawDecimals?.toString?.() ?? rawDecimals);
+      if (decimals !== 6) {
+        throw new Error('unexpected-decimals');
+      }
+    } catch {
+      throw new Error('This wallet is not connected to Tron Mainnet (the USDT contract did not respond as expected). Please check your TronLink network and try again.');
     }
 
     const amountInSun = Math.round(parseFloat(amount) * 1_000_000); // USDT-TRC20 uses 6 decimals
