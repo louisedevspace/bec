@@ -8,10 +8,17 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.12.0
+-- Version: 2.13.0
 -- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.13.0 — New roi_calculator_settings (admin-controlled toggle,
+--          singleton row, off by default) for the staking page's
+--          ROI Calculator tab.
+-- 2.12.1 — bank_deposit_requests.merchant_account_id now ON DELETE
+--          SET NULL instead of the default NO ACTION, which silently
+--          blocked deleting a merchant account once any request had
+--          been submitted against it.
 -- 2.12.0 — Bank deposit requests: new bank_deposit_settings
 --          (admin-controlled toggle, singleton row, off by default),
 --          bank_merchant_accounts (admin-managed per-country bank
@@ -998,6 +1005,21 @@ CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
 COMMENT ON TABLE referrals IS 'Tracks referral relationships; reward_amount/rewarded_at are set once the referred user''s first deposit is approved.';
 
 -- ----------------------------------------------------------
+-- 1.23a ROI Calculator Settings (admin-controlled toggle — singleton row)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS roi_calculator_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT roi_calculator_settings_singleton CHECK (id = 1)
+);
+
+INSERT INTO roi_calculator_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+-- ----------------------------------------------------------
 -- 1.24 Wallet Connect Settings (admin-controlled toggle — singleton row)
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wallet_connect_settings (
@@ -1057,7 +1079,7 @@ CREATE TABLE IF NOT EXISTS bank_deposit_requests (
   country TEXT NOT NULL,
   amount_usd DECIMAL(20,2) NOT NULL,
   bank_name TEXT NOT NULL,         -- the user's own sending bank
-  merchant_account_id INTEGER REFERENCES bank_merchant_accounts(id),
+  merchant_account_id INTEGER REFERENCES bank_merchant_accounts(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   admin_notes TEXT,
   rejection_reason TEXT,
@@ -1999,6 +2021,18 @@ CREATE POLICY "referrals_select_policy" ON referrals FOR SELECT USING (
 -- server-side via the service role, which bypasses RLS — direct client
 -- writes are blocked entirely other than by an admin.
 CREATE POLICY "referrals_write_policy" ON referrals FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.25a ROI Calculator Settings
+-- ----------------------------------------------------------
+ALTER TABLE roi_calculator_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "roi_calculator_settings_policy" ON roi_calculator_settings;
+
+CREATE POLICY "roi_calculator_settings_policy" ON roi_calculator_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+  -- Regular users read this via the server's /api/roi-calculator/status
+  -- endpoint (service role), which bypasses RLS.
 
 -- ----------------------------------------------------------
 -- 4.26 Wallet Connect Settings

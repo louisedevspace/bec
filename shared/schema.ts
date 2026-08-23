@@ -480,6 +480,13 @@ export const referralSettings = pgTable("referral_settings", {
   updatedBy: text("updated_by"),
 });
 
+export const roiCalculatorSettings = pgTable("roi_calculator_settings", {
+  id: integer("id").primaryKey().default(1),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
 export const walletConnectSettings = pgTable("wallet_connect_settings", {
   id: integer("id").primaryKey().default(1),
   isEnabled: boolean("is_enabled").notNull().default(false),
@@ -520,7 +527,7 @@ export const bankDepositRequests = pgTable("bank_deposit_requests", {
   country: text("country").notNull(),
   amountUsd: decimal("amount_usd", { precision: 20, scale: 2 }).notNull(),
   bankName: text("bank_name").notNull(), // the user's own sending bank
-  merchantAccountId: integer("merchant_account_id"), // which merchant account they were shown, for admin reference
+  merchantAccountId: integer("merchant_account_id").references(() => bankMerchantAccounts.id, { onDelete: "set null" }), // which merchant account they were shown, for admin reference
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   adminNotes: text("admin_notes"),
   rejectionReason: text("rejection_reason"),

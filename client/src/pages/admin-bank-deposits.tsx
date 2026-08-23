@@ -49,6 +49,7 @@ export default function AdminBankDeposits() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   const authHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -110,6 +111,7 @@ export default function AdminBankDeposits() {
   const saveAccount = async () => {
     if (!form.country.trim() || !form.bankName.trim() || !form.accountName.trim() || !form.accountNumber.trim()) return;
     setSavingAccount(true);
+    setAccountError(null);
     try {
       const headers = await authHeaders();
       const url = editingId ? `/api/admin/bank-merchant-accounts/${editingId}` : '/api/admin/bank-merchant-accounts';
@@ -117,36 +119,61 @@ export default function AdminBankDeposits() {
       if (res.ok) {
         cancelEdit();
         await loadAll();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setAccountError(err.message || 'Failed to save merchant account');
       }
+    } catch {
+      setAccountError('Failed to save merchant account');
     } finally {
       setSavingAccount(false);
     }
   };
 
   const toggleAccountActive = async (account: MerchantAccount) => {
-    const headers = await authHeaders();
-    await fetch(`/api/admin/bank-merchant-accounts/${account.id}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        country: account.country,
-        bankName: account.bank_name,
-        accountName: account.account_name,
-        accountNumber: account.account_number,
-        routingInfo: account.routing_info,
-        instructions: account.instructions,
-        isActive: !account.is_active,
-        sortOrder: account.sort_order,
-      }),
-    });
-    await loadAll();
+    setAccountError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/admin/bank-merchant-accounts/${account.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          country: account.country,
+          bankName: account.bank_name,
+          accountName: account.account_name,
+          accountNumber: account.account_number,
+          routingInfo: account.routing_info,
+          instructions: account.instructions,
+          isActive: !account.is_active,
+          sortOrder: account.sort_order,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setAccountError(err.message || 'Failed to update merchant account');
+        return;
+      }
+      await loadAll();
+    } catch {
+      setAccountError('Failed to update merchant account');
+    }
   };
 
   const deleteAccount = async (id: number) => {
     if (!confirm('Delete this merchant account?')) return;
-    const headers = await authHeaders();
-    await fetch(`/api/admin/bank-merchant-accounts/${id}`, { method: 'DELETE', headers });
-    await loadAll();
+    setAccountError(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/admin/bank-merchant-accounts/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setAccountError(err.message || 'Failed to delete merchant account');
+        return;
+      }
+      await loadAll();
+    } catch {
+      setAccountError('Failed to delete merchant account');
+    }
   };
 
   const reviewRequest = async (id: number, action: 'approve' | 'reject') => {
@@ -211,6 +238,14 @@ export default function AdminBankDeposits() {
           </div>
 
           <div className="p-5 space-y-4">
+            {accountError && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+                <span>{accountError}</span>
+                <button onClick={() => setAccountError(null)} className="text-danger hover:text-danger/80">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-muted/40 border border-border rounded-xl p-4">
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Country</Label>

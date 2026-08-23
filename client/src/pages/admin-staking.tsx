@@ -4,11 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Coins, Users, TrendingUp, Clock, DollarSign, Search, RefreshCw,
   ChevronDown, ChevronUp, CheckCircle, Timer, Trash2, BarChart3, Activity,
-  Plus, ToggleLeft, ToggleRight, Edit2, Save, X, Settings2, Zap, Lock
+  Plus, ToggleLeft, ToggleRight, Edit2, Save, X, Settings2, Zap, Lock, Calculator
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./admin-layout";
@@ -105,6 +106,28 @@ export default function AdminStakingPage() {
   const qc = useQueryClient();
 
   // ─── Queries ────────────────────────────────
+
+  const { data: roiCalculatorSettings } = useQuery<{ isEnabled: boolean }>({
+    queryKey: ["/api/admin/roi-calculator-settings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/roi-calculator-settings");
+      return res.json();
+    },
+  });
+
+  const roiCalculatorToggle = useMutation({
+    mutationFn: async (isEnabled: boolean) => {
+      const res = await apiRequest("PUT", "/api/admin/roi-calculator-settings", { isEnabled });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/roi-calculator-settings"] });
+      qc.invalidateQueries({ queryKey: ["/api/roi-calculator/status"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update ROI Calculator setting", variant: "destructive" });
+    },
+  });
 
   const { data: stats, isLoading: statsLoading } = useQuery<StakingStats>({
     queryKey: ["/api/admin/staking/stats"],
@@ -355,6 +378,30 @@ export default function AdminStakingPage() {
           >
             <RefreshCw size={14} className="mr-2" /> Refresh
           </Button>
+        </div>
+
+        {/* ROI Calculator toggle */}
+        <div className="bg-card rounded-xl border border-border p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Calculator size={18} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground text-sm">
+                ROI Calculator {roiCalculatorSettings?.isEnabled ? "Enabled" : "Disabled"}
+              </h2>
+              <p className="text-[11px] text-muted-foreground">
+                {roiCalculatorSettings?.isEnabled
+                  ? "Users can see and use the Calculator tab on the Staking page."
+                  : "Hidden from users — built from your real staking plans below, enable when ready."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={!!roiCalculatorSettings?.isEnabled}
+            onCheckedChange={(checked) => roiCalculatorToggle.mutate(checked)}
+            disabled={roiCalculatorToggle.isPending}
+          />
         </div>
 
         {/* Stats Grid */}

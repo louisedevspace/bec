@@ -11,10 +11,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { formatUsdNumber } from "@/utils/format-utils";
 import {
   Layers, ClipboardList, Zap, Users, Unlock, Lock, Clock,
-  DollarSign, Info, ArrowLeft, Loader2,
+  DollarSign, Info, ArrowLeft, Loader2, Calculator,
 } from "lucide-react";
+import { RoiCalculator } from "@/components/staking/roi-calculator";
+import { useRoiCalculatorStatus } from "@/hooks/use-roi-calculator-status";
 
-type PageTab = "plans" | "orders";
+type PageTab = "plans" | "orders" | "calculator";
 type StakeType = "flexible" | "fixed";
 
 interface RawStakingProduct {
@@ -99,6 +101,7 @@ export default function StakingPage() {
   const [activeTab, setActiveTab] = useState<PageTab>("plans");
   const [selectedProduct, setSelectedProduct] = useState<StakingProduct | null>(null);
   const [stakeAmount, setStakeAmount] = useState("");
+  const roiStatus = useRoiCalculatorStatus();
 
   const { data: portfolio } = useQuery({
     queryKey: ["/api/portfolio", userId],
@@ -234,6 +237,11 @@ export default function StakingPage() {
           <button onClick={() => setActiveTab("orders")} className={pillClass(activeTab === "orders")}>
             <ClipboardList size={14} /> Orders
           </button>
+          {roiStatus.data?.isEnabled && (
+            <button onClick={() => setActiveTab("calculator")} className={pillClass(activeTab === "calculator")}>
+              <Calculator size={14} /> Calculator
+            </button>
+          )}
         </div>
 
         {activeTab === "plans" ? (
@@ -453,7 +461,7 @@ export default function StakingPage() {
               )}
             </div>
           )
-        ) : (
+        ) : activeTab === "orders" ? (
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
               <ClipboardList size={14} />
@@ -645,6 +653,8 @@ export default function StakingPage() {
               )}
             </div>
           </div>
+        ) : (
+          <RoiCalculator products={products} />
         )}
       </div>
     </div>

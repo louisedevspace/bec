@@ -25,6 +25,26 @@ async function withParticipantCounts(products: any[]): Promise<any[]> {
   }));
 }
 
+async function getOrCreateRoiCalculatorSettings() {
+  const { data, error } = await supabaseAdmin
+    .from("roi_calculator_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return data;
+
+  const { data: created, error: createError } = await supabaseAdmin
+    .from("roi_calculator_settings")
+    .insert({ id: 1 })
+    .select()
+    .single();
+
+  if (createError) throw createError;
+  return created;
+}
+
 export default function registerStakingProductsRoutes(app: Express) {
 
   // GET /api/staking-products — public: returns enabled products sorted by sort_order (CACHED)
@@ -296,6 +316,56 @@ export default function registerStakingProductsRoutes(app: Express) {
       res.json({ message: "Staking products seeded successfully", count: data.length, products: data });
     } catch (error) {
       res.status(500).json({ message: "Failed to seed staking products" });
+    }
+  });
+
+  // ───── ROI CALCULATOR TOGGLE ─────
+
+  // GET /api/roi-calculator/status — public, no auth. Lets the staking page
+  // decide whether to show the "Calculator" tab at all.
+  app.get("/api/roi-calculator/status", async (_req, res) => {
+    try {
+      const settings = await getOrCreateRoiCalculatorSettings();
+      res.json({ isEnabled: !!settings.is_enabled });
+    } catch (error) {
+      console.error("Failed to load ROI calculator status:", error);
+      res.json({ isEnabled: false });
+    }
+  });
+
+  // GET /api/admin/roi-calculator-settings
+  app.get("/api/admin/roi-calculator-settings", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await getOrCreateRoiCalculatorSettings();
+      res.json({ isEnabled: !!settings.is_enabled });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to load ROI calculator settings" });
+    }
+  });
+
+  // PUT /api/admin/roi-calculator-settings
+  app.put("/api/admin/roi-calculator-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { isEnabled } = req.body;
+
+      const { data, error } = await supabaseAdmin
+        .from("roi_calculator_settings")
+        .upsert({
+          id: 1,
+          is_enabled: !!isEnabled,
+          updated_at: new Date().toISOString(),
+          updated_by: req.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to update ROI calculator settings" });
+      }
+
+      res.json({ isEnabled: !!data.is_enabled });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 }
