@@ -25,12 +25,14 @@ export default function registerWalletRoutes(app: Express) {
           portfolioRes, pricesRes, stakingRes,
           // Aggregate queries — ALL matching records for accurate totals
           allApprovedDepositsRes, allApprovedWithdrawalsRes, allCompletedTradesRes, allCompletedFuturesRes,
+          allApprovedBankDepositsRes,
           // All trades/futures (any status) for analytics
           allTradesAnyStatusRes, allFuturesAnyStatusRes,
           // Fee records from platform_fees
           platformFeesRes,
           // Transaction list queries — limited for display
           recentDepositsRes, recentWithdrawalsRes, recentTradesRes, recentFuturesRes,
+          recentBankDepositsRes, recentGenericTxRes,
         ] = await Promise.all([
           supabaseAdmin.from("portfolios").select("*").eq("user_id", userId),
           supabaseAdmin.from("crypto_prices").select("symbol, price, change24h, volume24h"),
@@ -41,6 +43,8 @@ export default function registerWalletRoutes(app: Express) {
           supabaseAdmin.from("withdraw_requests").select("symbol, amount, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
           supabaseAdmin.from("trades").select("side, amount, price, fee_amount, fee_rate, created_at").eq("user_id", userId).in("status", ["completed", "approved", "executed", "filled"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
           supabaseAdmin.from("futures_trades").select("final_result, side, amount, created_at").eq("user_id", userId).in("status", ["completed", "closed"]).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
+          // Bank deposit requests credit USDT 1:1 — same approved/not-hidden filter as crypto deposits
+          supabaseAdmin.from("bank_deposit_requests").select("amount_usd, status").eq("user_id", userId).eq("status", "approved").or("hidden_for_user.is.null,hidden_for_user.eq.false"),
           // All trades/futures regardless of status for total counts
           supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, fee_amount, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
           supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false"),
@@ -51,6 +55,10 @@ export default function registerWalletRoutes(app: Express) {
           supabaseAdmin.from("withdraw_requests").select("id, symbol, amount, status, submitted_at, wallet_address, fee_amount, fee_symbol, fee_rate, net_amount").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
           supabaseAdmin.from("trades").select("id, symbol, side, amount, price, status, created_at, fee_amount, fee_symbol, fee_rate").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
           supabaseAdmin.from("futures_trades").select("id, symbol, side, amount, status, final_result, created_at").eq("user_id", userId).or("deleted_for_user.is.null,deleted_for_user.eq.false").order("created_at", { ascending: false }).limit(50),
+          // Bank deposit requests — recent list, any status, for display (mirrors deposit_requests)
+          supabaseAdmin.from("bank_deposit_requests").select("id, country, bank_name, amount_usd, status, submitted_at").eq("user_id", userId).or("hidden_for_user.is.null,hidden_for_user.eq.false").order("submitted_at", { ascending: false }).limit(50),
+          // Generic transactions table — covers activity types with no dedicated request table (convert, referral rewards)
+          supabaseAdmin.from("transactions").select("id, type, symbol, amount, status, metadata, created_at").eq("user_id", userId).in("type", ["convert", "referral_reward"]).order("created_at", { ascending: false }).limit(50),
         ]);
 
         if (portfolioRes.error) {
@@ -65,6 +73,7 @@ export default function registerWalletRoutes(app: Express) {
         const allApprovedWithdrawals = allApprovedWithdrawalsRes.data || [];
         const allCompletedTrades = allCompletedTradesRes.data || [];
         const allCompletedFutures = allCompletedFuturesRes.data || [];
+        const allApprovedBankDeposits = allApprovedBankDepositsRes.data || [];
         // All trades/futures for analytics
         const allTradesAny = allTradesAnyStatusRes.data || [];
         const allFuturesAny = allFuturesAnyStatusRes.data || [];
@@ -74,6 +83,8 @@ export default function registerWalletRoutes(app: Express) {
         const withdrawals = recentWithdrawalsRes.data || [];
         const trades = recentTradesRes.data || [];
         const futures = recentFuturesRes.data || [];
+        const bankDeposits = recentBankDepositsRes.data || [];
+        const genericTxs = recentGenericTxRes.data || [];
 
         // Build price map
         const priceMap: Record<string, number> = {};
@@ -111,7 +122,9 @@ export default function registerWalletRoutes(app: Express) {
             // Use net_amount (after fee) since that's what was actually credited
             const amt = parseFloat(d.net_amount || d.amount || "0");
             return sum + amt * price;
-          }, 0);
+          }, 0)
+          // Bank deposits credit USDT 1:1, no fee concept
+          + allApprovedBankDeposits.reduce((sum: number, d: any) => sum + parseFloat(d.amount_usd || "0"), 0);
 
         // Calculate total withdrawals (all approved — use GROSS amount deducted from portfolio)
         const totalWithdrawn = allApprovedWithdrawals
@@ -134,25 +147,8 @@ export default function registerWalletRoutes(app: Express) {
         const futuresPnl = allCompletedFutures
           .reduce((sum: number, f: any) => sum + parseFloat(f.final_result || "0"), 0);
 
-        // Build unified transaction history
-        const allTransactions: any[] = [];
-
-        deposits.forEach((d: any) => {
-          allTransactions.push({
-            id: `dep-${d.id}`,
-            type: "deposit",
-            symbol: d.symbol || "USDT",
-            amount: parseFloat(d.amount || "0"),
-            feeAmount: parseFloat(d.fee_amount || "0"),
-            feeSymbol: d.fee_symbol || d.symbol || "USDT",
-            feeRate: parseFloat(d.fee_rate || "0"),
-            netAmount: parseFloat(d.net_amount || d.amount || "0"),
-            status: d.status,
-            date: d.submitted_at,
-          });
-        });
-
-        // Construct partial result - we'll continue building allTransactions outside
+        // Transaction list building happens after the cache boundary (below) so it
+        // always reflects the freshly-shaped fields here, cached or not.
         return {
           portfolio,
           prices,
@@ -168,6 +164,8 @@ export default function registerWalletRoutes(app: Express) {
           withdrawals,
           trades,
           futures,
+          bankDeposits,
+          genericTxs,
           priceMap,
           assets,
           totalValue,
@@ -182,6 +180,7 @@ export default function registerWalletRoutes(app: Express) {
       const {
         staking, allApprovedDeposits, allApprovedWithdrawals, allCompletedTrades, allCompletedFutures,
         allTradesAny, allFuturesAny, platformFees, deposits, withdrawals, trades, futures,
+        bankDeposits, genericTxs,
         priceMap, assets, totalValue, totalDeposited, totalWithdrawn, tradePnl, futuresPnl,
       } = summary;
 
@@ -245,6 +244,33 @@ export default function registerWalletRoutes(app: Express) {
           status: f.status,
           result: parseFloat(f.final_result || "0"),
           date: f.created_at,
+        });
+      });
+
+      bankDeposits.forEach((d: any) => {
+        allTransactions.push({
+          id: `bankdep-${d.id}`,
+          type: "deposit",
+          symbol: "USDT",
+          amount: parseFloat(d.amount_usd || "0"),
+          status: d.status,
+          date: d.submitted_at,
+          note: `Bank transfer — ${d.bank_name}, ${d.country}`,
+        });
+      });
+
+      genericTxs.forEach((tx: any) => {
+        const metadata = typeof tx.metadata === "string" ? JSON.parse(tx.metadata || "{}") : (tx.metadata || {});
+        allTransactions.push({
+          id: `tx-${tx.id}`,
+          type: tx.type,
+          symbol: tx.symbol,
+          amount: parseFloat(tx.amount || "0"),
+          status: tx.status,
+          date: tx.created_at,
+          note: tx.type === "convert" && metadata.toAmount != null && metadata.toSymbol
+            ? `Converted to ${metadata.toAmount} ${metadata.toSymbol}`
+            : undefined,
         });
       });
 
@@ -415,7 +441,7 @@ export default function registerWalletRoutes(app: Express) {
         })),
         transactions: allTransactions.slice(0, 100),
         transactionCounts: {
-          deposits: deposits.length,
+          deposits: deposits.length + bankDeposits.length,
           withdrawals: withdrawals.length,
           trades: trades.length,
           futures: futures.length,

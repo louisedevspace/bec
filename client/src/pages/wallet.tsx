@@ -19,7 +19,7 @@ import {
   RefreshCw, Lock, Eye, EyeOff, Clock, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, Snowflake, Info, X,
-  ChevronLeft, ChevronRight, Landmark
+  ChevronLeft, ChevronRight, Landmark, Gift
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -35,7 +35,7 @@ interface WalletAsset {
 
 interface WalletTransaction {
   id: string;
-  type: "deposit" | "withdrawal" | "trade" | "futures";
+  type: "deposit" | "withdrawal" | "trade" | "futures" | "convert" | "referral_reward";
   symbol: string;
   amount: number;
   feeAmount?: number;
@@ -48,6 +48,7 @@ interface WalletTransaction {
   date: string;
   result?: number;
   walletAddress?: string;
+  note?: string;
 }
 
 interface WalletSummary {
@@ -477,6 +478,8 @@ export default function WalletPage() {
                   { id: "withdrawal", label: "Withdrawals" },
                   { id: "trade", label: "Trades" },
                   { id: "futures", label: "Futures" },
+                  { id: "convert", label: "Converts" },
+                  { id: "referral_reward", label: "Referrals" },
                 ].map(f => (
                   <button
                     key={f.id}
@@ -577,6 +580,10 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
         return { icon: ArrowRightLeft, color: "text-info", bg: "bg-info/10", label: `${tx.side?.toUpperCase()} Trade` };
       case "futures":
         return { icon: Zap, color: "text-primary", bg: "bg-primary/10", label: `Futures ${tx.side?.toUpperCase() || ''}` };
+      case "convert":
+        return { icon: RefreshCw, color: "text-info", bg: "bg-info/10", label: "Convert" };
+      case "referral_reward":
+        return { icon: Gift, color: "text-success", bg: "bg-success/10", label: "Referral Reward" };
       default:
         return { icon: Clock, color: "text-muted-foreground", bg: "bg-muted", label: tx.type };
     }
@@ -618,10 +625,10 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
               <div className="text-right flex-shrink-0 flex items-center gap-2">
                 <div>
                   <p className={`text-sm font-medium tabular-nums ${
-                    tx.type === "deposit" ? "text-success" :
+                    tx.type === "deposit" || tx.type === "referral_reward" ? "text-success" :
                     tx.type === "withdrawal" ? "text-danger" : "text-foreground"
                   }`}>
-                    {hideBalances ? "••••" : `${tx.type === "deposit" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
+                    {hideBalances ? "••••" : `${tx.type === "deposit" || tx.type === "referral_reward" ? '+' : tx.type === "withdrawal" ? '-' : ''}${formatCryptoNumber(tx.amount)}`}
                   </p>
                   {!hideBalances && typeof tx.feeAmount === "number" && tx.feeAmount > 0 && (
                     <p className="text-[10px] text-warning tabular-nums">
@@ -678,8 +685,8 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Amount</span>
-                    <span className={`font-medium tabular-nums ${selectedTx.type === "deposit" ? "text-success" : selectedTx.type === "withdrawal" ? "text-danger" : "text-foreground"}`}>
-                      {selectedTx.type === "deposit" ? "+" : selectedTx.type === "withdrawal" ? "-" : ""}{formatCryptoNumber(selectedTx.amount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}
+                    <span className={`font-medium tabular-nums ${selectedTx.type === "deposit" || selectedTx.type === "referral_reward" ? "text-success" : selectedTx.type === "withdrawal" ? "text-danger" : "text-foreground"}`}>
+                      {selectedTx.type === "deposit" || selectedTx.type === "referral_reward" ? "+" : selectedTx.type === "withdrawal" ? "-" : ""}{formatCryptoNumber(selectedTx.amount)} {selectedTx.symbol?.split("/")[0] || selectedTx.symbol}
                     </span>
                   </div>
                   {selectedTx.price != null && selectedTx.price > 0 && (
@@ -731,7 +738,7 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
               )}
 
               {/* Additional Info */}
-              {(selectedTx.walletAddress || selectedTx.result || selectedTx.side) && (
+              {(selectedTx.walletAddress || selectedTx.result || selectedTx.side || selectedTx.note) && (
                 <div className="bg-muted/50 rounded-xl border border-border p-3">
                   <p className="text-[10px] text-muted-foreground uppercase font-medium mb-2">Additional Details</p>
                   <div className="space-y-2">
@@ -751,6 +758,12 @@ function TransactionList({ transactions, hideBalances }: { transactions: WalletT
                       <div className="text-xs">
                         <span className="text-muted-foreground block mb-1">Wallet Address</span>
                         <span className="text-foreground font-mono text-[10px] break-all bg-card px-2 py-1 rounded-lg border border-border block">{selectedTx.walletAddress}</span>
+                      </div>
+                    )}
+                    {selectedTx.note && (
+                      <div className="text-xs">
+                        <span className="text-muted-foreground block mb-1">Details</span>
+                        <span className="text-foreground text-[11px] break-words bg-card px-2 py-1 rounded-lg border border-border block">{selectedTx.note}</span>
                       </div>
                     )}
                   </div>
