@@ -480,6 +480,13 @@ export const referralSettings = pgTable("referral_settings", {
   updatedBy: text("updated_by"),
 });
 
+export const priceTickerSettings = pgTable("price_ticker_settings", {
+  id: integer("id").primaryKey().default(1),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
 export const roiCalculatorSettings = pgTable("roi_calculator_settings", {
   id: integer("id").primaryKey().default(1),
   isEnabled: boolean("is_enabled").notNull().default(false),

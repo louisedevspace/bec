@@ -8,10 +8,13 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.13.0
+-- Version: 2.14.0
 -- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.14.0 — New price_ticker_settings (admin-controlled toggle,
+--          singleton row, off by default) for the global scrolling
+--          price ticker strip at the top of the main app chrome.
 -- 2.13.0 — New roi_calculator_settings (admin-controlled toggle,
 --          singleton row, off by default) for the staking page's
 --          ROI Calculator tab.
@@ -1003,6 +1006,21 @@ CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals(status);
 
 COMMENT ON TABLE referrals IS 'Tracks referral relationships; reward_amount/rewarded_at are set once the referred user''s first deposit is approved.';
+
+-- ----------------------------------------------------------
+-- 1.22a Price Ticker Settings (admin-controlled toggle — singleton row)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS price_ticker_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT price_ticker_settings_singleton CHECK (id = 1)
+);
+
+INSERT INTO price_ticker_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
 
 -- ----------------------------------------------------------
 -- 1.23a ROI Calculator Settings (admin-controlled toggle — singleton row)
@@ -2021,6 +2039,18 @@ CREATE POLICY "referrals_select_policy" ON referrals FOR SELECT USING (
 -- server-side via the service role, which bypasses RLS — direct client
 -- writes are blocked entirely other than by an admin.
 CREATE POLICY "referrals_write_policy" ON referrals FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- ----------------------------------------------------------
+-- 4.24a Price Ticker Settings
+-- ----------------------------------------------------------
+ALTER TABLE price_ticker_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "price_ticker_settings_policy" ON price_ticker_settings;
+
+CREATE POLICY "price_ticker_settings_policy" ON price_ticker_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+  -- Regular users read this via the server's /api/price-ticker/status
+  -- endpoint (service role), which bypasses RLS.
 
 -- ----------------------------------------------------------
 -- 4.25a ROI Calculator Settings

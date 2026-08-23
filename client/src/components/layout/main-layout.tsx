@@ -7,6 +7,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { isCachedSupportAgent } from '@/lib/user-role';
 import { useExchangeName, useNavVisibility } from '@/hooks/use-exchange-name';
 import { NAV_ITEMS } from '@/config/nav-items';
+import { usePriceTickerStatus } from '@/hooks/use-price-ticker-status';
+import { PriceTickerStrip } from '@/components/crypto/price-ticker-strip';
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -17,6 +19,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const [notifCount, setNotifCount] = useState(0);
   const exchangeName = useExchangeName();
   const navVisibility = useNavVisibility();
+  const tickerStatus = usePriceTickerStatus();
   const visibleNavItems = useMemo(
     () => NAV_ITEMS.filter((item) => navVisibility[item.key] !== false),
     [navVisibility]
@@ -95,11 +98,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {!isAuthPage && tickerStatus.data?.isEnabled && <PriceTickerStrip />}
       {/* Top Navigation - desktop only */}
       {!isAuthPage && (
         <nav
           className="hidden lg:flex items-center justify-between px-6 h-16 backdrop-blur-xl sticky top-0 z-50 bg-background/85 border-b border-border"
-          style={{ marginTop: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          style={{ marginTop: 'calc(var(--pwa-banner-top, 0px) + var(--ticker-height, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           {/* Logo Area */}
           <a href="/" className="flex items-center gap-3 group">
@@ -165,7 +169,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       {!isAuthPage && (
         <div
           className="flex lg:hidden items-center justify-between px-4 h-14 backdrop-blur-xl sticky top-0 z-50 bg-background/85 border-b border-border"
-          style={{ marginTop: 'var(--pwa-banner-top, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          style={{ marginTop: 'calc(var(--pwa-banner-top, 0px) + var(--ticker-height, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           {/* Logo Area */}
           <a href="/" className="flex items-center gap-2.5">

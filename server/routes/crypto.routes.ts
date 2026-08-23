@@ -14,6 +14,26 @@ const priceHistoryCache = new Map<string, { data: any; time: number }>();
 const HISTORY_CACHE_DURATION = 60000; // 60 seconds
 const REDIS_HISTORY_TTL = 60; // 60 seconds for Redis
 
+async function getOrCreatePriceTickerSettings() {
+  const { data, error } = await supabaseAdmin
+    .from("price_ticker_settings")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return data;
+
+  const { data: created, error: createError } = await supabaseAdmin
+    .from("price_ticker_settings")
+    .insert({ id: 1 })
+    .select()
+    .single();
+
+  if (createError) throw createError;
+  return created;
+}
+
 export default function registerCryptoRoutes(app: Express) {
   // Get all crypto prices with caching
   app.get("/api/crypto/prices", async (req, res) => {
@@ -455,6 +475,56 @@ export default function registerCryptoRoutes(app: Express) {
     } catch (error) {
       console.error('Error initializing crypto logos:', (error as Error).message);
       res.status(500).json({ message: 'Failed to initialize crypto logos' });
+    }
+  });
+
+  // ───── PRICE TICKER TOGGLE ─────
+
+  // GET /api/price-ticker/status — public, no auth. Lets the app shell
+  // decide whether to show the scrolling price ticker strip at all.
+  app.get("/api/price-ticker/status", async (_req, res) => {
+    try {
+      const settings = await getOrCreatePriceTickerSettings();
+      res.json({ isEnabled: !!settings.is_enabled });
+    } catch (error) {
+      console.error("Failed to load price ticker status:", error);
+      res.json({ isEnabled: false });
+    }
+  });
+
+  // GET /api/admin/price-ticker-settings
+  app.get("/api/admin/price-ticker-settings", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      const settings = await getOrCreatePriceTickerSettings();
+      res.json({ isEnabled: !!settings.is_enabled });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to load price ticker settings" });
+    }
+  });
+
+  // PUT /api/admin/price-ticker-settings
+  app.put("/api/admin/price-ticker-settings", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { isEnabled } = req.body;
+
+      const { data, error } = await supabaseAdmin
+        .from("price_ticker_settings")
+        .upsert({
+          id: 1,
+          is_enabled: !!isEnabled,
+          updated_at: new Date().toISOString(),
+          updated_by: req.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to update price ticker settings" });
+      }
+
+      res.json({ isEnabled: !!data.is_enabled });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 }

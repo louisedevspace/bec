@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDate } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { AdminUserManagementModal } from '@/components/modals/admin-user-management-modal';
-import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2, Menu } from 'lucide-react';
+import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2, Menu, Activity } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import AdminLayout from './admin-layout';
@@ -46,6 +49,27 @@ interface TimeLimitsConfig {
 }
 
 export default function AdminSettings() {
+  const qc = useQueryClient();
+
+  const { data: priceTickerSettings } = useQuery<{ isEnabled: boolean }>({
+    queryKey: ["/api/admin/price-ticker-settings"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/price-ticker-settings");
+      return res.json();
+    },
+  });
+
+  const priceTickerToggle = useMutation({
+    mutationFn: async (isEnabled: boolean) => {
+      const res = await apiRequest("PUT", "/api/admin/price-ticker-settings", { isEnabled });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/price-ticker-settings"] });
+      qc.invalidateQueries({ queryKey: ["/api/price-ticker/status"] });
+    },
+  });
+
   const [users, setUsers] = useState<User[]>([]);
   const [depositAddresses, setDepositAddresses] = useState<DepositAddress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1289,6 +1313,30 @@ export default function AdminSettings() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Price Ticker Strip */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Activity className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground text-sm">
+                  Price Ticker Strip {priceTickerSettings?.isEnabled ? 'Enabled' : 'Disabled'}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  A scrolling strip of live coin prices at the top of the app. Off by default.
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={!!priceTickerSettings?.isEnabled}
+              onCheckedChange={(checked) => priceTickerToggle.mutate(checked)}
+              disabled={priceTickerToggle.isPending}
+            />
+          </div>
         </div>
 
         {/* Futures Time Limits Section */}

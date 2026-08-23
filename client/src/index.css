@@ -377,6 +377,28 @@ html:not(.dark) .hero-glow-text span { color: inherit !important; }
   100% { transform: translateX(200%) rotate(45deg); }
 }
 
+/* Price ticker strip — content is duplicated 2x in the DOM, so a 50%
+   translate loops seamlessly. */
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker-scroll {
+  animation: tickerScroll 60s linear infinite;
+}
+
+.animate-ticker-scroll:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker-scroll {
+    animation: none;
+    overflow-x: auto;
+  }
+}
+
 @keyframes neonGlow {
   0%, 100% { 
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3),
