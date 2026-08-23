@@ -488,6 +488,72 @@ export const walletConnectSettings = pgTable("wallet_connect_settings", {
   updatedBy: text("updated_by"),
 });
 
+// ===== Bank deposit requests (manual bank-transfer deposits) =====
+
+export const bankDepositSettings = pgTable("bank_deposit_settings", {
+  id: integer("id").primaryKey().default(1),
+  isEnabled: boolean("is_enabled").notNull().default(false), // off until admin has configured + tested merchant accounts
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+// Admin-managed merchant/bank accounts users are shown per country
+export const bankMerchantAccounts = pgTable("bank_merchant_accounts", {
+  id: serial("id").primaryKey(),
+  country: text("country").notNull(),
+  bankName: text("bank_name").notNull(),
+  accountName: text("account_name").notNull(), // beneficiary / account holder name
+  accountNumber: text("account_number").notNull(),
+  routingInfo: text("routing_info"), // IBAN / SWIFT / routing number, optional
+  instructions: text("instructions"), // optional extra guidance shown to the user
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+// User-submitted bank deposit requests — reviewed and credited manually by admin
+export const bankDepositRequests = pgTable("bank_deposit_requests", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  country: text("country").notNull(),
+  amountUsd: decimal("amount_usd", { precision: 20, scale: 2 }).notNull(),
+  bankName: text("bank_name").notNull(), // the user's own sending bank
+  merchantAccountId: integer("merchant_account_id"), // which merchant account they were shown, for admin reference
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  adminNotes: text("admin_notes"),
+  rejectionReason: text("rejection_reason"),
+  hiddenForUser: boolean("hidden_for_user").default(false),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by"),
+  isNew: boolean("is_new").default(true),
+});
+
+export const insertBankMerchantAccountSchema = createInsertSchema(bankMerchantAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  updatedBy: true,
+});
+
+export const insertBankDepositRequestSchema = createInsertSchema(bankDepositRequests).omit({
+  id: true,
+  submittedAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  isNew: true,
+  hiddenForUser: true,
+  status: true,
+});
+
+export type BankDepositSettings = typeof bankDepositSettings.$inferSelect;
+export type BankMerchantAccount = typeof bankMerchantAccounts.$inferSelect;
+export type InsertBankMerchantAccount = z.infer<typeof insertBankMerchantAccountSchema>;
+export type BankDepositRequest = typeof bankDepositRequests.$inferSelect;
+export type InsertBankDepositRequest = z.infer<typeof insertBankDepositRequestSchema>;
+
 export const referrals = pgTable("referrals", {
   id: serial("id").primaryKey(),
   referrerId: text("referrer_id").notNull(),

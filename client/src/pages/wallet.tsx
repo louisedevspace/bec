@@ -8,6 +8,8 @@ import { DepositModal } from "@/components/modals/deposit-modal";
 import { WithdrawModal } from "@/components/modals/withdraw-modal";
 import { ConvertModal } from "@/components/modals/convert-modal";
 import { PortfolioModal } from "@/components/modals/portfolio-modal";
+import { BankDepositModal } from "@/components/modals/bank-deposit-modal";
+import { useBankDepositStatus } from "@/hooks/use-bank-deposit-status";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -17,7 +19,7 @@ import {
   RefreshCw, Lock, Eye, EyeOff, Clock, Search, PieChart,
   History, Zap, ArrowRightLeft, ChevronDown, ChevronUp,
   Plus, Send, Snowflake, Info, X,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Landmark
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -117,6 +119,7 @@ export default function WalletPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const bankDepositStatus = useBankDepositStatus();
   const [historyDateRange, setHistoryDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
   const [historySearch, setHistorySearch] = useState("");
   const [historyPage, setHistoryPage] = useState(0);
@@ -329,6 +332,20 @@ export default function WalletPage() {
               <PieChart size={18} className="text-primary" />
               <span className="text-xs font-medium text-primary">Portfolio</span>
             </button>
+            {bankDepositStatus.data?.isEnabled && (
+              <button
+                onClick={() => !wallet.walletLocked && setActiveModal("bank-deposit")}
+                disabled={wallet.walletLocked}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                  wallet.walletLocked
+                    ? 'bg-muted/50 border-border opacity-50 cursor-not-allowed'
+                    : 'bg-success/10 border-success/20 hover:bg-success/20'
+                }`}
+              >
+                <Landmark size={18} className={wallet.walletLocked ? "text-muted-foreground" : "text-success"} />
+                <span className={`text-xs font-medium ${wallet.walletLocked ? "text-muted-foreground" : "text-success"}`}>Bank Transfer</span>
+              </button>
+            )}
           </div>
         </aside>
 
@@ -533,6 +550,10 @@ export default function WalletPage() {
       />
       <PortfolioModal
         isOpen={activeModal === "portfolio"}
+        onClose={() => setActiveModal(null)}
+      />
+      <BankDepositModal
+        isOpen={activeModal === "bank-deposit"}
         onClose={() => setActiveModal(null)}
       />
     </div>

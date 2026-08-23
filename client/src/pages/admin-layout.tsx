@@ -4,7 +4,7 @@ import { Link, useLocation } from 'wouter';
 import {
   Menu, X, LayoutDashboard, Users, MessageSquare, Settings,
   ChevronRight, LogOut, Shield, Megaphone, TrendingUp, Wallet,
-  Bell, Check, CheckCheck, ExternalLink, Coins, CircleDot, Headphones, Gift
+  Bell, Check, CheckCheck, ExternalLink, Coins, CircleDot, Headphones, Gift, Landmark
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Logo } from '@/components/brand/logo';
@@ -32,6 +32,7 @@ const navItems = [
   { label: 'Staking', href: '/admin/staking', icon: Coins, description: 'Staking Management' },
   { label: 'Gold Trading', href: '/admin/gold', icon: CircleDot, description: 'Gold Trade Management' },
   { label: 'Wallets', href: '/admin/wallets', icon: Wallet, description: 'User Wallet Management', badgeKey: 'wallets' as BadgeKey },
+  { label: 'Bank Deposits', href: '/admin/bank-deposits', icon: Landmark, description: 'Bank Transfer Deposits' },
   { label: 'Referrals', href: '/admin/referrals', icon: Gift, description: 'Referral Program Oversight' },
   { label: 'Support', href: '/admin/support', icon: MessageSquare, description: 'Customer Support', badgeKey: 'support' as BadgeKey, supportStaff: true },
   { label: 'Support Agents', href: '/admin/support-agents', icon: Headphones, description: 'Chat Support Accounts' },

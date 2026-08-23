@@ -1,5 +1,5 @@
 -- ============================================================
--- Becxus Exchange — Complete Consolidated Database Schema
+-- APP Exchange — Complete Consolidated Database Schema
 -- ============================================================
 -- This is the SINGLE SOURCE OF TRUTH for all Supabase tables,
 -- indexes, RLS policies, storage bucket policies, and initial data.
@@ -8,10 +8,16 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.11.0
+-- Version: 2.12.0
 -- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.12.0 — Bank deposit requests: new bank_deposit_settings
+--          (admin-controlled toggle, singleton row, off by default),
+--          bank_merchant_accounts (admin-managed per-country bank
+--          accounts shown to users), and bank_deposit_requests
+--          (user-submitted country + USD amount + sending bank name,
+--          reviewed by admin, credited to USDT balance on approval).
 -- 2.11.0 — Tiered staking plans: staking_products gains optional
 --          apy_max (APY range), max_participants (participant cap),
 --          and requires_approval (Book-instead-of-instant-Stake flow)
@@ -58,7 +64,7 @@
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS app_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  exchange_name TEXT NOT NULL DEFAULT 'Becxus',
+  exchange_name TEXT NOT NULL DEFAULT 'APP',
   accent_theme TEXT NOT NULL DEFAULT 'amber',
   nav_visibility JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -68,7 +74,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 INSERT INTO app_settings (id, exchange_name, accent_theme)
-VALUES (1, 'Becxus', 'amber')
+VALUES (1, 'APP', 'amber')
 ON CONFLICT (id) DO NOTHING;
 
 DO $$
@@ -1006,6 +1012,64 @@ CREATE TABLE IF NOT EXISTS wallet_connect_settings (
 INSERT INTO wallet_connect_settings (id)
 VALUES (1)
 ON CONFLICT (id) DO NOTHING;
+
+-- ----------------------------------------------------------
+-- 1.25 Bank Deposit Requests (manual bank-transfer deposits)
+-- ----------------------------------------------------------
+-- Admin-controlled toggle — off by default. Admin configures
+-- bank_merchant_accounts and tests the flow via the admin
+-- dashboard, then enables this for all users when satisfied.
+CREATE TABLE IF NOT EXISTS bank_deposit_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT,
+  CONSTRAINT bank_deposit_settings_singleton CHECK (id = 1)
+);
+
+INSERT INTO bank_deposit_settings (id, is_enabled)
+VALUES (1, FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+-- Admin-managed merchant/bank accounts users are shown per country
+CREATE TABLE IF NOT EXISTS bank_merchant_accounts (
+  id SERIAL PRIMARY KEY,
+  country TEXT NOT NULL,
+  bank_name TEXT NOT NULL,
+  account_name TEXT NOT NULL,      -- beneficiary / account holder name
+  account_number TEXT NOT NULL,
+  routing_info TEXT,               -- IBAN / SWIFT / routing number, optional
+  instructions TEXT,               -- optional extra guidance shown to the user
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_merchant_accounts_active ON bank_merchant_accounts(is_active, sort_order);
+CREATE INDEX IF NOT EXISTS idx_bank_merchant_accounts_country ON bank_merchant_accounts(country);
+
+-- User-submitted bank deposit requests — reviewed and credited manually by admin
+CREATE TABLE IF NOT EXISTS bank_deposit_requests (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  country TEXT NOT NULL,
+  amount_usd DECIMAL(20,2) NOT NULL,
+  bank_name TEXT NOT NULL,         -- the user's own sending bank
+  merchant_account_id INTEGER REFERENCES bank_merchant_accounts(id),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  admin_notes TEXT,
+  rejection_reason TEXT,
+  hidden_for_user BOOLEAN DEFAULT FALSE,
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by TEXT,
+  is_new BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_deposit_requests_user ON bank_deposit_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_bank_deposit_requests_status ON bank_deposit_requests(status);
 
 
 -- ************************************************************
@@ -1948,6 +2012,37 @@ CREATE POLICY "wallet_connect_settings_policy" ON wallet_connect_settings
   -- Regular users read this via the server's /api/wallet-connect/status
   -- endpoint (service role), which bypasses RLS.
 
+-- ----------------------------------------------------------
+-- 4.27 Bank Deposit Requests
+-- ----------------------------------------------------------
+ALTER TABLE bank_deposit_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_merchant_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_deposit_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "bank_deposit_settings_policy" ON bank_deposit_settings;
+CREATE POLICY "bank_deposit_settings_policy" ON bank_deposit_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+  -- Regular users read the enabled flag via /api/bank-deposits/status
+  -- (service role), which bypasses RLS.
+
+DROP POLICY IF EXISTS "bank_merchant_accounts_select_policy" ON bank_merchant_accounts;
+DROP POLICY IF EXISTS "bank_merchant_accounts_write_policy" ON bank_merchant_accounts;
+CREATE POLICY "bank_merchant_accounts_select_policy" ON bank_merchant_accounts FOR SELECT USING (
+  auth.uid() IS NOT NULL
+);
+CREATE POLICY "bank_merchant_accounts_write_policy" ON bank_merchant_accounts
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "bank_deposit_requests_select_policy" ON bank_deposit_requests;
+DROP POLICY IF EXISTS "bank_deposit_requests_insert_policy" ON bank_deposit_requests;
+CREATE POLICY "bank_deposit_requests_select_policy" ON bank_deposit_requests FOR SELECT USING (
+  auth.uid() = user_id::uuid
+  OR public.is_admin()
+);
+CREATE POLICY "bank_deposit_requests_insert_policy" ON bank_deposit_requests FOR INSERT WITH CHECK (
+  auth.uid() = user_id::uuid
+);
+
 
 -- ************************************************************
 -- SECTION 5: STORAGE BUCKETS & POLICIES
@@ -2163,16 +2258,16 @@ ON CONFLICT (asset_symbol) DO NOTHING;
 -- Sample welcome news (only insert if no news exists yet)
 INSERT INTO news (title, content, type, priority, created_by)
 SELECT
-  'Welcome to Becxus Exchange!',
+  'Welcome to APP Exchange!',
   'We are excited to have you join our platform. Explore our trading features and start your crypto journey today!',
   'announcement',
   'normal',
   (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
-WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'Welcome to Becxus Exchange!');
+WHERE NOT EXISTS (SELECT 1 FROM news WHERE title = 'Welcome to APP Exchange!');
 
 -- Sample broadcast notifications
 INSERT INTO broadcast_notifications (title, body, target_role, total_users, sent_count, failed_count, status, sent_at) VALUES
-('Welcome to Becxus Exchange!', 'Thank you for joining our platform. Start trading today!', 'all', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
+('Welcome to APP Exchange!', 'Thank you for joining our platform. Start trading today!', 'all', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
 ('New Features Available', 'Check out our latest trading tools and features!', 'user', 0, 0, 0, 'completed', NOW() - INTERVAL '3 days')
 ON CONFLICT DO NOTHING;
 
@@ -2208,7 +2303,7 @@ ON CONFLICT (user_id, symbol, trade_type) DO NOTHING;
 -- END OF COMPLETE SCHEMA
 -- ************************************************************
 -- 
--- This completes the Becxus Exchange database schema.
+-- This completes the APP Exchange database schema.
 -- All tables, indexes, RLS policies, and sample data are now in place.
 -- 
 -- Summary:

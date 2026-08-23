@@ -51,6 +51,7 @@ import registerStakingProductsRoutes from "./staking-products.routes";
 import registerGoldRoutes from "./gold.routes";
 import registerSettingsRoutes from "./settings.routes";
 import registerReferralsRoutes from "./referrals.routes";
+import registerBankDepositsRoutes from "./bank-deposits.routes";
 
 // Redis subscriber instance for Pub/Sub
 let redisSubscriber: Redis | null = null;
@@ -363,6 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLoansRoutes(app);
   registerKycRoutes(app);
   registerDepositsRoutes(app);
+  registerBankDepositsRoutes(app);
   registerWithdrawalsRoutes(app);
   registerAdminRoutes(app);
   registerSupportRoutes(app);
