@@ -471,28 +471,28 @@ export default function ProfilePage() {
 
         {/* Content */}
         <div className="mt-4 lg:mt-0 space-y-4">
-          <div className="inline-flex bg-muted rounded-full p-1 gap-1">
+          <div className="flex bg-muted rounded-full p-1 gap-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'overview' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'overview' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <TrendingUp size={12} /> Overview
             </button>
             <button
               onClick={() => setActiveTab('security')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'security' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <Shield size={12} /> Security
             </button>
             <button
               onClick={() => setActiveTab('support')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'support' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'support' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <FileText size={12} /> Support &amp; Legal
             </button>
             <button
               onClick={() => setActiveTab('referrals')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === 'referrals' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'referrals' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <Gift size={12} /> Referrals
             </button>
