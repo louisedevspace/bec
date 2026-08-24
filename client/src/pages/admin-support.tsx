@@ -7,11 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   MessageSquare, Send, User, Shield, Search, MessageCircle, ArrowLeft,
   AlertTriangle, CheckCircle, Clock, XCircle, ChevronDown, Filter,
   Zap, FileText, Tag, BarChart3, RefreshCw, CheckSquare, Square,
-  ArrowUpRight, Inbox, Loader2, Paperclip, X, UserCheck,
+  ArrowUpRight, Inbox, Loader2, Paperclip, X, UserCheck, Plus, UserPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDataSync } from "@/hooks/use-data-sync";
@@ -92,6 +94,27 @@ export default function AdminSupportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // ─── New chat (admin-initiated) ────────────────────────────────
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [newChatUserSearch, setNewChatUserSearch] = useState("");
+  const [newChatDebouncedSearch, setNewChatDebouncedSearch] = useState("");
+  const [newChatSelectedUser, setNewChatSelectedUser] = useState<{ id: string; email: string; full_name: string | null; username: string | null } | null>(null);
+  const [newChatSubject, setNewChatSubject] = useState("");
+  const [newChatMessage, setNewChatMessage] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setNewChatDebouncedSearch(newChatUserSearch.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [newChatUserSearch]);
+
+  const resetNewChatForm = () => {
+    setNewChatUserSearch("");
+    setNewChatDebouncedSearch("");
+    setNewChatSelectedUser(null);
+    setNewChatSubject("");
+    setNewChatMessage("");
+  };
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -168,6 +191,18 @@ export default function AdminSupportPage() {
     staleTime: Infinity,
   });
 
+  const { data: newChatUsersData, isFetching: newChatUsersLoading } = useQuery<{ users: { id: string; email: string; full_name: string | null; username: string | null }[] }>({
+    queryKey: ["/api/admin/support/users", newChatDebouncedSearch],
+    queryFn: async () => {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/admin/support/users?search=${encodeURIComponent(newChatDebouncedSearch)}`, { headers });
+      if (!res.ok) throw new Error("Failed to search users");
+      return res.json();
+    },
+    enabled: showNewChatDialog && newChatDebouncedSearch.length >= 2,
+  });
+  const newChatUserResults = newChatUsersData?.users || [];
+
   // ─── Mutations ───────────────────────────────────────────────
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/support/conversations"] });
@@ -184,6 +219,25 @@ export default function AdminSupportPage() {
       return res.json();
     },
     onSuccess: () => { setMessage(""); refetchAll(); },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const startConversationMutation = useMutation({
+    mutationFn: async (data: { userId: string; subject: string; message: string }) => {
+      const headers = await authHeaders();
+      const res = await fetch("/api/admin/support/conversations", { method: "POST", headers, body: JSON.stringify(data) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Failed to start conversation"); }
+      return res.json();
+    },
+    onSuccess: async (created: AdminConversation) => {
+      setShowNewChatDialog(false);
+      resetNewChatForm();
+      toast({ title: "Conversation started" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/stats"] });
+      const result = await refetch();
+      const found = result.data?.find((c) => c.id === created.id);
+      if (found) setSelectedConversation(found);
+    },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
@@ -464,8 +518,88 @@ export default function AdminSupportPage() {
             <Button variant="outline" size="sm" onClick={() => refetchAll()} className="border-border text-muted-foreground hover:text-foreground hover:bg-muted">
               <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh
             </Button>
+            <Button size="sm" onClick={() => setShowNewChatDialog(true)}>
+              <UserPlus className="h-4 w-4 mr-1.5" /> New Chat
+            </Button>
           </div>
         </div>
+
+        <Dialog open={showNewChatDialog} onOpenChange={(open) => { setShowNewChatDialog(open); if (!open) resetNewChatForm(); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Start a New Chat</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">User</Label>
+                {newChatSelectedUser ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{newChatSelectedUser.full_name || newChatSelectedUser.username || newChatSelectedUser.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{newChatSelectedUser.email}</p>
+                    </div>
+                    <button onClick={() => setNewChatSelectedUser(null)} className="text-muted-foreground hover:text-foreground flex-shrink-0">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={newChatUserSearch}
+                        onChange={(e) => setNewChatUserSearch(e.target.value)}
+                        placeholder="Search by name, username, or email..."
+                        className="pl-9"
+                      />
+                    </div>
+                    {newChatDebouncedSearch.length >= 2 && (
+                      <div className="max-h-40 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                        {newChatUsersLoading ? (
+                          <div className="p-3 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
+                        ) : newChatUserResults.length === 0 ? (
+                          <p className="p-3 text-xs text-muted-foreground text-center">No users found</p>
+                        ) : (
+                          newChatUserResults.map((u) => (
+                            <button
+                              key={u.id}
+                              onClick={() => setNewChatSelectedUser(u)}
+                              className="w-full text-left px-3 py-2 hover:bg-muted transition-colors"
+                            >
+                              <p className="text-sm font-medium text-foreground truncate">{u.full_name || u.username || u.email}</p>
+                              <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Subject</Label>
+                <Input value={newChatSubject} onChange={(e) => setNewChatSubject(e.target.value)} placeholder="e.g. Regarding your recent withdrawal" />
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Message</Label>
+                <Textarea value={newChatMessage} onChange={(e) => setNewChatMessage(e.target.value)} placeholder="Type your first message..." rows={4} />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => startConversationMutation.mutate({ userId: newChatSelectedUser!.id, subject: newChatSubject, message: newChatMessage })}
+                disabled={!newChatSelectedUser || !newChatSubject.trim() || !newChatMessage.trim() || startConversationMutation.isPending}
+              >
+                {startConversationMutation.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Send className="h-4 w-4 mr-1.5" />}
+                Start Chat
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats Grid */}
         {stats && (

@@ -4,7 +4,7 @@ import { requireAuth, requireSupportStaff, supabaseAdmin } from "./middleware";
 import { syncManager } from "../sync-manager";
 import { adminNotificationService } from "../services/admin-notification.service";
 import { autoReplyService } from "../services/auto-reply.service";
-import { notifyStaffOfSupportMessage, notifyUserOfSupportReply } from "../services/support-push.service";
+import { notifyStaffOfSupportMessage, notifyUserOfSupportReply, notifyUserOfNewSupportConversation } from "../services/support-push.service";
 import { getExchangeName, withExchangeName } from "../services/app-settings.service";
 import { buildInternalAssetPath } from "../../shared/supabase-storage";
 import { sanitizeUploadFileName } from "../utils/uploads";
@@ -631,6 +631,111 @@ export default function registerSupportRoutes(app: Express) {
       }
 
       res.json(supportMessage);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // GET /api/admin/support/users — lightweight search for the "start new chat" picker
+  app.get("/api/admin/support/users", requireAuth, requireSupportStaff, async (req, res) => {
+    try {
+      const raw = String(req.query.search || "").trim().slice(0, 100);
+      const q = raw.replace(/[,()]/g, ""); // strip PostgREST .or() filter-syntax chars
+
+      if (!q) {
+        return res.json({ users: [] });
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("id, email, full_name, username")
+        .eq("role", "user")
+        .or(`email.ilike.%${q}%,full_name.ilike.%${q}%,username.ilike.%${q}%`)
+        .limit(20);
+
+      if (error) {
+        return res.status(500).json({ message: "Failed to search users" });
+      }
+
+      res.json({ users: data || [] });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // POST /api/admin/support/conversations — admin starts a new conversation with a user
+  app.post("/api/admin/support/conversations", requireAuth, requireSupportStaff, async (req, res) => {
+    try {
+      const adminId = req.user.id;
+      const { userId, subject, message, priority = "medium" } = req.body;
+
+      if (!userId || !subject || !message) {
+        return res.status(400).json({ message: "userId, subject, and message are required" });
+      }
+
+      const { data: targetUser, error: userError } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (userError || !targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const category = autoCategorizTicket(subject, message);
+
+      const { data: conversation, error: conversationError } = await supabaseAdmin
+        .from("support_conversations")
+        .insert({
+          user_id: userId,
+          subject,
+          priority,
+          status: "in_progress", // admin already sent the first message
+          is_active: true,
+          category,
+          assigned_to: adminId,
+        })
+        .select()
+        .single();
+
+      if (conversationError) {
+        return res.status(500).json({ message: "Failed to create conversation", error: conversationError.message });
+      }
+
+      const { data: supportMessage, error: messageError } = await supabaseAdmin
+        .from("support_messages")
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: adminId,
+          sender_type: "admin",
+          message,
+          message_type: "text",
+        })
+        .select()
+        .single();
+
+      if (messageError) {
+        await supabaseAdmin.from("support_conversations").delete().eq("id", conversation.id);
+        return res.status(500).json({ message: "Failed to create message", error: messageError.message });
+      }
+
+      const now = new Date().toISOString();
+      await supabaseAdmin
+        .from("support_conversations")
+        .update({ last_message_at: now, updated_at: now })
+        .eq("id", conversation.id);
+
+      syncManager.syncData("create-support-conversation", { ...conversation, userId });
+
+      void notifyUserOfNewSupportConversation({
+        userId,
+        conversationId: conversation.id,
+        subject,
+        message,
+      });
+
+      res.json({ ...conversation, support_messages: [supportMessage] });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }

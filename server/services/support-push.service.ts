@@ -88,6 +88,33 @@ export async function notifyUserOfSupportReply(params: {
 }
 
 /**
+ * Staff started a brand-new conversation with a user (not a reply to an
+ * existing ticket).
+ */
+export async function notifyUserOfNewSupportConversation(params: {
+  userId: string;
+  conversationId: number | string;
+  subject?: string;
+  message: string;
+}) {
+  try {
+    await pushToUsers([params.userId], {
+      title: "New message from Support",
+      body: previewMessage(params.message),
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: `support-${params.conversationId}`,
+      data: {
+        url: "/support",
+        conversationId: params.conversationId,
+      },
+    });
+  } catch (error) {
+    console.error("[SupportPush] Failed to notify user of new conversation:", (error as Error).message);
+  }
+}
+
+/**
  * A user wrote in — notify admins and support agents.
  */
 export async function notifyStaffOfSupportMessage(params: {
