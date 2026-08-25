@@ -9,7 +9,7 @@ const currentProtocol = window.location.protocol;
 const currentHost = window.location.host;
 
 // App metadata and URLs (Vite envs)
-const appName = import.meta.env.VITE_APP_NAME || 'Becxus Exchange';
+const appName = import.meta.env.VITE_APP_NAME || 'Exchange';
 const publicUrl = (import.meta.env.VITE_PUBLIC_URL || `${currentProtocol}//${currentHost}`).replace(/\/+$/, '');
 const forceHttps = (import.meta.env.VITE_FORCE_HTTPS || 'false').toLowerCase() === 'true';
 const authRedirectUrl = `${publicUrl}/login`;

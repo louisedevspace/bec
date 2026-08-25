@@ -1,5 +1,5 @@
 -- ============================================================
--- Becxus Exchange — Complete Database Schema
+-- Exchange — Complete Database Schema
 -- ============================================================
 -- This is the single source of truth for all Supabase tables,
 -- indexes, RLS policies, and storage bucket policies.
@@ -1009,7 +1009,7 @@ CREATE TRIGGER update_news_updated_at_trigger
 -- Insert sample news for testing with app theme
 INSERT INTO news (title, content, type, priority, created_by) VALUES
 (
-  'Welcome to Becxus Exchange!',
+  'Welcome to Exchange!',
   'We are excited to have you join our platform. Explore our trading features and start your crypto journey today!',
   'announcement',
   'normal',
@@ -1215,7 +1215,7 @@ CREATE POLICY "System can create delivery logs" ON broadcast_delivery_logs
 
 -- Insert sample data for testing
 INSERT INTO broadcast_notifications (title, body, target_role, total_users, sent_count, failed_count, status, sent_at) VALUES
-('Welcome to Becxus Exchange!', 'Thank you for joining our platform. Start trading today!', 'all', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
+('Welcome to Exchange!', 'Thank you for joining our platform. Start trading today!', 'all', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
 ('New Features Available', 'Check out our latest trading tools and features!', 'user', 0, 0, 0, 'completed', NOW() - INTERVAL '3 days')
 ON CONFLICT DO NOTHING;
 
@@ -1224,7 +1224,7 @@ ON CONFLICT DO NOTHING;
 -- ************************************************************
 
 -- 
--- This completes the Becxus Exchange database schema.
+-- This completes the Exchange database schema.
 -- All tables, indexes, RLS policies, and sample data are now in place.
 -- 
 -- To run this schema:

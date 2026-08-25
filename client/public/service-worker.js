@@ -95,7 +95,7 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const title = data.title || 'Notification';
   const body = data.body || '';
-  const tag = data.tag || 'becxus-notification';
+  const tag = data.tag || 'exchange-notification';
 
   const options = {
     body,

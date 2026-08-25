@@ -1,6 +1,6 @@
 {
-  "name": "Becxus Exchange",
-  "short_name": "Becxus",
+  "name": "Exchange",
+  "short_name": "Exchange",
   "description": "Professional crypto trading platform with futures, staking, and more.",
   "start_url": "/",
   "scope": "/",

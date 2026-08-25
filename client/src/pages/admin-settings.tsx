@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDate } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { AdminUserManagementModal } from '@/components/modals/admin-user-management-modal';
-import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2, Menu, Activity } from 'lucide-react';
+import { useBrandLogoUrl } from '@/hooks/use-exchange-name';
+import { buildApiUrl } from '@/lib/config';
+import { Users, Wallet, Edit, Save, X, Copy, CheckCircle, RefreshCw, Timer, Plus, Trash2, Gift, Link2, Menu, Activity, Upload, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -94,6 +96,10 @@ export default function AdminSettings() {
   const [exchangeNameSaving, setExchangeNameSaving] = useState(false);
   const [exchangeNameMessage, setExchangeNameMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [accentTheme, setAccentTheme] = useState<AccentThemeKey>(DEFAULT_ACCENT_THEME);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoMessage, setLogoMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoUrl = useBrandLogoUrl();
 
   // Navigation visibility
   const [navVisibility, setNavVisibility] = useState<Record<string, boolean>>({});
@@ -177,6 +183,35 @@ export default function AdminSettings() {
       setExchangeNameMessage({ type: 'error', text: err.message || 'Failed to save exchange name' });
     } finally {
       setExchangeNameSaving(false);
+    }
+  };
+
+  const uploadLogo = async (file: File) => {
+    setLogoUploading(true);
+    setLogoMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setLogoMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/admin/settings/logo', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        body: formData,
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to upload logo');
+      }
+      qc.invalidateQueries({ queryKey: [buildApiUrl('/settings')] });
+      setLogoMessage({ type: 'success', text: 'Logo updated — favicon and app icons regenerated automatically' });
+    } catch (err: any) {
+      setLogoMessage({ type: 'error', text: err.message || 'Failed to upload logo' });
+    } finally {
+      setLogoUploading(false);
     }
   };
 
@@ -772,6 +807,42 @@ export default function AdminSettings() {
               {exchangeNameMessage && (
                 <p className={`text-xs mt-2 ${exchangeNameMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
                   {exchangeNameMessage.text}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Logo</Label>
+              <p className="text-xs text-muted-foreground mb-2">Upload once — the favicon and PWA app icons are generated from this automatically. No separate favicon to set.</p>
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-xl border border-border bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img src={brandLogoUrl} alt="Current logo" className="w-full h-full object-contain" />
+                </div>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadLogo(file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={logoUploading}
+                  className="rounded-lg"
+                >
+                  {logoUploading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                  {logoUploading ? 'Uploading...' : 'Upload Logo'}
+                </Button>
+              </div>
+              {logoMessage && (
+                <p className={`text-xs mt-2 ${logoMessage.type === 'success' ? 'text-success' : 'text-danger'}`}>
+                  {logoMessage.text}
                 </p>
               )}
             </div>

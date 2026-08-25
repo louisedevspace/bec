@@ -82,6 +82,6 @@ CREATE POLICY "System can create delivery logs" ON broadcast_delivery_logs
 
 -- Insert sample data for testing
 INSERT INTO broadcast_notifications (title, body, deeplink_url, total_users, sent_count, failed_count, status, sent_at) VALUES
-('Welcome to Becxus Exchange!', 'Thank you for joining our platform. Start trading today!', '/', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
+('Welcome to Exchange!', 'Thank you for joining our platform. Start trading today!', '/', 0, 0, 0, 'completed', NOW() - INTERVAL '7 days'),
 ('New Features Available', 'Check out our latest trading tools and features!', '/features', 0, 0, 0, 'completed', NOW() - INTERVAL '3 days')
 ON CONFLICT DO NOTHING;

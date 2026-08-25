@@ -3,7 +3,7 @@ import { z } from "zod";
 const EnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORT: z.string().optional(),
-  APP_NAME: z.string().default("Becxus Exchange"),
+  APP_NAME: z.string().default("Exchange"),
   PUBLIC_URL: z.string().optional(),
   DEPOSIT_FEE_RATE: z.string().optional(),
   WITHDRAWAL_FEE_RATE: z.string().optional(),

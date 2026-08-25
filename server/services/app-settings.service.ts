@@ -12,6 +12,7 @@ export interface AppSettings {
   exchangeName: string;
   accentTheme: AccentThemeKey;
   navVisibility: Record<string, boolean>;
+  logoUpdatedAt: string | null;
 }
 
 let cachedSettings: AppSettings | null = null;
@@ -24,7 +25,7 @@ export async function getAppSettings(): Promise<AppSettings> {
 
   const { data, error } = await supabaseAdmin
     .from("app_settings")
-    .select("exchange_name, accent_theme, nav_visibility")
+    .select("exchange_name, accent_theme, nav_visibility, logo_updated_at")
     .eq("id", 1)
     .maybeSingle();
 
@@ -32,6 +33,7 @@ export async function getAppSettings(): Promise<AppSettings> {
     exchangeName: (!error && data?.exchange_name) ? data.exchange_name : DEFAULT_EXCHANGE_NAME,
     accentTheme: (!error && data?.accent_theme && isAccentThemeKey(data.accent_theme)) ? data.accent_theme : DEFAULT_ACCENT_THEME,
     navVisibility: (!error && data?.nav_visibility && typeof data.nav_visibility === "object") ? data.nav_visibility : {},
+    logoUpdatedAt: (!error && data?.logo_updated_at) ? data.logo_updated_at : null,
   };
   cachedAt = Date.now();
   return cachedSettings;

@@ -13,6 +13,7 @@ interface AppSettingsResponse {
   exchangeName: string;
   accentTheme: string;
   navVisibility?: Record<string, boolean>;
+  logoUpdatedAt?: string | null;
 }
 
 // Same flash problem the theme/accent inline scripts already solve for
@@ -91,4 +92,14 @@ export function useNavVisibility(): Record<string, boolean> {
     return data.navVisibility;
   }
   return getCachedNavVisibility();
+}
+
+// The 512px icon the server derives from the admin's uploaded logo (falls
+// back to the bundled default logo server-side if none is uploaded yet).
+// The version query param busts the browser cache the moment the admin
+// uploads a new one -- same file the favicon/PWA icons come from too.
+export function useBrandLogoUrl(): string {
+  const { data } = useAppSettingsQuery();
+  const version = data?.logoUpdatedAt ? new Date(data.logoUpdatedAt).getTime() : 0;
+  return `/icons/icon-512.png?v=${version}`;
 }

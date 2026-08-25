@@ -24,9 +24,10 @@ export const users = pgTable("users", {
 
 export const appSettings = pgTable("app_settings", {
   id: integer("id").primaryKey().default(1),
-  exchangeName: text("exchange_name").notNull().default("Becxus"),
+  exchangeName: text("exchange_name").notNull().default("Exchange"),
   accentTheme: text("accent_theme").notNull().default("amber"),
   navVisibility: json("nav_visibility").notNull().default({}),
+  logoUpdatedAt: timestamp("logo_updated_at"), // null = using the bundled default logo
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: text("updated_by"),
 });

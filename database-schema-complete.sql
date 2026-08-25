@@ -8,10 +8,15 @@
 -- a complete database from scratch. All statements use 
 -- IF NOT EXISTS / IF EXISTS so they are safe to re-run.
 --
--- Version: 2.14.0
+-- Version: 2.15.0
 -- Last Updated: 2026-08-23
 -- Compatible with: Supabase PostgreSQL 15+
 --
+-- 2.15.0 — app_settings gains logo_updated_at: tracks whether the admin
+--          has uploaded a custom logo (Settings -> Branding). When set,
+--          the server derives favicon.ico/icon-192.png/icon-512.png and
+--          the in-app logo from that one image instead of the bundled
+--          static default.
 -- 2.14.0 — New price_ticker_settings (admin-controlled toggle,
 --          singleton row, off by default) for the global scrolling
 --          price ticker strip at the top of the main app chrome.
@@ -77,6 +82,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
   exchange_name TEXT NOT NULL DEFAULT 'APP',
   accent_theme TEXT NOT NULL DEFAULT 'amber',
   nav_visibility JSONB NOT NULL DEFAULT '{}'::jsonb,
+  logo_updated_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by TEXT,
   CONSTRAINT app_settings_singleton CHECK (id = 1),
@@ -89,6 +95,9 @@ ON CONFLICT (id) DO NOTHING;
 
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='app_settings' AND column_name='logo_updated_at') THEN
+    ALTER TABLE app_settings ADD COLUMN logo_updated_at TIMESTAMPTZ;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='app_settings' AND column_name='nav_visibility') THEN
     ALTER TABLE app_settings ADD COLUMN nav_visibility JSONB NOT NULL DEFAULT '{}'::jsonb;
   END IF;
