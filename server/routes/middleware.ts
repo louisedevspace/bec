@@ -71,6 +71,50 @@ function matchesInternalTaskSecret(headerValue: string | undefined): boolean {
   return timingSafeEqual(expected, received);
 }
 
+type UsersRow = { id: string; is_active: boolean; role: string; wallet_locked: boolean; email?: string; full_name?: string };
+
+/**
+ * Creates the public.users row for a Supabase Auth user that doesn't have
+ * one yet, mirroring the defaults client/src/pages/login.tsx's
+ * ensureUserProfile() already uses for the same situation. Race-safe: if a
+ * concurrent request already created the row, re-fetches it instead of
+ * erroring.
+ */
+async function createMissingUserProfile(authUser: { id: string; email?: string | null }): Promise<UsersRow | null> {
+  const email = authUser.email || '';
+
+  const { data: created, error } = await supabaseAdmin
+    .from('users')
+    .insert({
+      id: authUser.id,
+      username: email.split('@')[0] || 'user',
+      email,
+      full_name: '',
+      phone: '',
+      role: 'user',
+      is_active: true,
+      is_verified: true,
+      credit_score: 0.60,
+      display_id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+    })
+    .select('id, is_active, role, wallet_locked, email, full_name')
+    .single();
+
+  if (!error) return created;
+
+  if (/duplicate key|already exists/i.test(error.message)) {
+    const { data: existing } = await supabaseAdmin
+      .from('users')
+      .select('id, is_active, role, wallet_locked, email, full_name')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    return existing || null;
+  }
+
+  console.error('Failed to auto-create missing user profile:', error.message);
+  return null;
+}
+
 /**
  * Auth middleware — verifies Bearer token via Supabase and attaches user to req.
  * Also validates session for activity tracking and security.
@@ -105,8 +149,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         .eq('id', data.user.id)
         .maybeSingle();
 
-      if (userError || !userRecord) return null;
-      return userRecord;
+      if (userRecord) return userRecord;
+      if (userError) return null;
+
+      // A verified Supabase Auth session exists but no matching users row —
+      // this happens whenever a session gets established without going
+      // through login.tsx's handleLogin() (e.g. clicking an email
+      // confirmation or magic link auto-signs the browser in directly,
+      // bypassing the client-side ensureUserProfile() call that normally
+      // creates this row). Create it here so access never depends on which
+      // specific client code path first established the session.
+      return createMissingUserProfile(data.user);
     });
 
     if (!cachedUser) {

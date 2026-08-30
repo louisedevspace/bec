@@ -41,6 +41,30 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // Clicking an email-confirmation or magic-link auto-establishes a Supabase
+  // session right here on /login (Supabase reads the token out of the URL)
+  // without ever going through handleLogin() below — so without this, the
+  // user would just see the plain login form with no indication they're
+  // already signed in. Detect that case and finish the same way a manual
+  // login would: ensure the profile row exists, then continue into the app.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || cancelled) return;
+      setLoading(true);
+      try {
+        const profile = await ensureUserProfile(session.user.id, session.user.email);
+        if (cancelled) return;
+        window.location.href = profile?.role === 'support' ? '/admin/support' : '/';
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Shared helper: fetch or auto-create user profile after auth
   const ensureUserProfile = async (userId: string, userEmail: string | undefined) => {
     let { data: profile, error: profileError } = await supabase
