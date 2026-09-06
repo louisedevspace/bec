@@ -300,25 +300,25 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
           <div className="space-y-4">
             {filteredApplications.map((application) => (
               <Card key={application.id} className="bg-muted/30 border-border">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-foreground font-medium">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 min-w-0 sm:flex-1">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1 min-w-0">
+                          <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-foreground font-medium truncate">
                             {application.user?.full_name || 'Unknown User'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="w-3 h-3" />
-                          {application.user?.email}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{application.user?.email}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
+                    <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-4">
+                      <div className="sm:text-right">
                         <div className="text-foreground font-medium tabular-nums">
                           {formatCurrency(application.amount)}
                         </div>
@@ -327,63 +327,63 @@ export const AdminLoanManagementModal: React.FC<AdminLoanManagementModalProps> =
                         </div>
                       </div>
 
-                      <div className="text-center">
+                      <div>
                         <div className="text-sm text-muted-foreground mb-1">Purpose</div>
-                        <div className="text-foreground text-sm max-w-32 truncate">
+                        <div className="text-foreground text-sm truncate max-w-[10rem]">
                           {application.purpose}
                         </div>
                       </div>
 
-                      <div className="text-center">
+                      <div>
                         <div className="text-sm text-muted-foreground mb-1">Status</div>
                         {getStatusBadge(application.status)}
                       </div>
 
-                      <div className="text-center">
+                      <div>
                         <div className="text-sm text-muted-foreground mb-1">Applied</div>
                         <div className="text-foreground text-sm">
                           {formatDate(application.created_at)}
                         </div>
                       </div>
+                    </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewApplicationDetails(application)}
-                          className="text-xs bg-transparent border-border text-foreground/90 hover:bg-muted hover:text-foreground"
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          View Details
-                        </Button>
+                    <div className="flex flex-wrap gap-2 sm:flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewApplicationDetails(application)}
+                        className="text-xs bg-transparent border-border text-foreground/90 hover:bg-muted hover:text-foreground"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        View Details
+                      </Button>
 
-                        {application.status === 'pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleApproveLoan(application)}
-                              className="text-xs text-success border-success/30 bg-success/10 hover:bg-success/20"
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedApplication(application);
-                                setRejectionReason('');
-                                setShowRejectionModal(true);
-                              }}
-                              className="text-xs text-danger border-danger/30 bg-danger/10 hover:bg-danger/20"
-                            >
-                              <XCircle className="w-3 h-3 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      {application.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApproveLoan(application)}
+                            className="text-xs text-success border-success/30 bg-success/10 hover:bg-success/20"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedApplication(application);
+                              setRejectionReason('');
+                              setShowRejectionModal(true);
+                            }}
+                            className="text-xs text-danger border-danger/30 bg-danger/10 hover:bg-danger/20"
+                          >
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>

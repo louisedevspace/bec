@@ -679,22 +679,22 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
               {filteredUsers.map((user) => (
                 <Card key={user.id} className="bg-muted/40 border-border">
                   <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                           <User className="w-5 h-5 text-muted-foreground" />
                         </div>
-                        <div>
-                          <CardTitle className="text-foreground text-lg">
+                        <div className="min-w-0">
+                          <CardTitle className="text-foreground text-lg truncate">
                             {user.full_name || 'No Name'}
                           </CardTitle>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="w-3 h-3" />
-                            {user.email}
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                            <Mail className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{user.email}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
                         {getVerificationBadge(user.is_verified)}
                         {getStatusBadge(user.is_active ?? true)}
                       </div>
@@ -1004,8 +1004,8 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
 
                   {selectedUser.staking_positions && selectedUser.staking_positions.length > 0 && (
                     <div className="mt-4 border border-border rounded-xl bg-muted/40 overflow-hidden">
-                      <div className="max-h-64 overflow-y-auto">
-                        <table className="w-full text-xs">
+                      <div className="max-h-64 overflow-y-auto overflow-x-auto">
+                        <table className="w-full text-xs min-w-[560px]">
                           <thead className="bg-card">
                             <tr className="text-muted-foreground">
                               <th className="text-left py-2 px-3 font-medium">Asset</th>
@@ -1129,35 +1129,37 @@ export const AdminUserManagementModal: React.FC<AdminUserManagementModalProps> =
               </DialogDescription>
             </DialogHeader>
 
-            <div className="border border-border rounded-lg bg-muted/40">
-              <div className="grid grid-cols-5 text-xs text-muted-foreground px-3 py-2 border-b border-border">
-                <div>Type</div>
-                <div>Symbol</div>
-                <div>Amount</div>
-                <div>Status</div>
-                <div>Select</div>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {manageTransactionsData.map(t => (
-                  <div key={`${t.type}-${t.id}`} className="grid grid-cols-5 items-center text-sm px-3 py-2 border-b border-border">
-                    <div className="text-foreground">{t.type}</div>
-                    <div className="text-foreground flex items-center gap-1"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</div>
-                    <div className="text-foreground tabular-nums">{Number(t.amount).toFixed(8)}</div>
-                    <div className="text-foreground">{t.status}</div>
-                    <div>
-                      <input
-                        type="checkbox"
-                        checked={selectedTransactionIds.has(t.id)}
-                        onChange={(e) => {
-                          const next = new Set(selectedTransactionIds);
-                          if (e.target.checked) next.add(t.id); else next.delete(t.id);
-                          setSelectedTransactionIds(next);
-                        }}
-                        className="accent-primary"
-                      />
+            <div className="border border-border rounded-lg bg-muted/40 overflow-x-auto">
+              <div className="min-w-[480px]">
+                <div className="grid grid-cols-5 text-xs text-muted-foreground px-3 py-2 border-b border-border">
+                  <div>Type</div>
+                  <div>Symbol</div>
+                  <div>Amount</div>
+                  <div>Status</div>
+                  <div>Select</div>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {manageTransactionsData.map(t => (
+                    <div key={`${t.type}-${t.id}`} className="grid grid-cols-5 items-center text-sm px-3 py-2 border-b border-border">
+                      <div className="text-foreground">{t.type}</div>
+                      <div className="text-foreground flex items-center gap-1"><CryptoIcon symbol={t.symbol?.split('/')[0] || t.symbol} size="xs" />{t.symbol}</div>
+                      <div className="text-foreground tabular-nums">{Number(t.amount).toFixed(8)}</div>
+                      <div className="text-foreground">{t.status}</div>
+                      <div>
+                        <input
+                          type="checkbox"
+                          checked={selectedTransactionIds.has(t.id)}
+                          onChange={(e) => {
+                            const next = new Set(selectedTransactionIds);
+                            if (e.target.checked) next.add(t.id); else next.delete(t.id);
+                            setSelectedTransactionIds(next);
+                          }}
+                          className="accent-primary"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
