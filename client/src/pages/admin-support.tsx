@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { formatDate } from '@/lib/date-utils';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -118,14 +118,56 @@ export default function AdminSupportPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Real-time delivery. useDataSync already invalidates the conversation
-  // queries; the explicit refetch makes the open thread update immediately
-  // instead of on the next poll.
+  // Patches one message straight into the conversations query cache instead
+  // of invalidating and re-fetching every ticket + message array — used for
+  // optimistic sends and for incoming sync events, which already carry the
+  // full message row. selectedConversation re-syncs from this automatically
+  // via the effect below (keyed on the conversations query data).
+  const patchConversation = useCallback((conversationId: number, updater: (c: AdminConversation) => AdminConversation) => {
+    queryClient.setQueryData<AdminConversation[]>(["/api/admin/support/conversations"], (old) =>
+      old?.map((c) => (c.id === conversationId ? updater(c) : c))
+    );
+  }, [queryClient]);
+
+  const appendMessageToConversation = useCallback((conversationId: number, msg: SupportMessage) => {
+    patchConversation(conversationId, (c) => {
+      if (c.support_messages.some((m) => m.id === msg.id)) return c;
+      const unreadCount = msg.sender_type === "user" && !msg.is_read ? c.unreadCount + 1 : c.unreadCount;
+      return { ...c, support_messages: [...c.support_messages, msg], unreadCount, last_message_at: msg.created_at };
+    });
+  }, [patchConversation]);
+
+  const replaceMessageInConversation = useCallback((conversationId: number, tempId: number, real: SupportMessage) => {
+    patchConversation(conversationId, (c) => {
+      const withoutTemp = c.support_messages.filter((m) => m.id !== tempId);
+      const support_messages = withoutTemp.some((m) => m.id === real.id) ? withoutTemp : [...withoutTemp, real];
+      return { ...c, support_messages, last_message_at: real.created_at };
+    });
+  }, [patchConversation]);
+
+  const removeMessageFromConversation = useCallback((conversationId: number, tempId: number) => {
+    patchConversation(conversationId, (c) => ({ ...c, support_messages: c.support_messages.filter((m) => m.id !== tempId) }));
+  }, [patchConversation]);
+
+  // Real-time delivery. A new message already carries its full row in the
+  // sync payload, so patch it straight in below instead of invalidating —
+  // everything else (new conversations, status changes) still invalidates
+  // since there's no single-row payload to patch from.
   const [typingConversationId, setTypingConversationId] = useState<number | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const { invalidateQueries } = useDataSync({
     onSync: (action, data) => {
+      if (
+        action === "create-support-message" &&
+        data &&
+        typeof data.conversation_id === "number" &&
+        typeof data.id === "number" &&
+        conversations?.some((c) => c.id === data.conversation_id)
+      ) {
+        appendMessageToConversation(data.conversation_id, data as SupportMessage);
+        return;
+      }
       if (action.startsWith("create-support") || action.startsWith("update-support")) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/support/conversations"] });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/support/stats"] });
@@ -203,6 +245,42 @@ export default function AdminSupportPage() {
   });
   const newChatUserResults = newChatUsersData?.users || [];
 
+  // Deep-link into a specific conversation from a push notification. If the
+  // notification opened a fresh tab, the id arrives as a URL query param
+  // (captured once on mount, then stripped); if it focused an already-open
+  // tab instead, the service worker posts it directly — see
+  // client/public/service-worker.js's notificationclick handler.
+  const [pendingConversationId] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("conversationId"); } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (!pendingConversationId) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("conversationId");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    } catch { /* non-critical */ }
+  }, [pendingConversationId]);
+
+  useEffect(() => {
+    if (!pendingConversationId || !conversations?.length) return;
+    const id = parseInt(pendingConversationId, 10);
+    const found = conversations.find((c) => c.id === id);
+    if (found) setSelectedConversation(found);
+  }, [pendingConversationId, conversations]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "open-support-conversation" || !event.data.conversationId) return;
+      const id = typeof event.data.conversationId === "number" ? event.data.conversationId : parseInt(event.data.conversationId, 10);
+      const found = conversations?.find((c) => c.id === id);
+      if (found) setSelectedConversation(found);
+    };
+    navigator.serviceWorker?.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker?.removeEventListener("message", onMessage);
+  }, [conversations]);
+
   // ─── Mutations ───────────────────────────────────────────────
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/support/conversations"] });
@@ -218,8 +296,35 @@ export default function AdminSupportPage() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Failed"); }
       return res.json();
     },
-    onSuccess: () => { setMessage(""); refetchAll(); },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    // Show it immediately instead of waiting on the round-trip — this is
+    // what makes replying feel instant rather than gated on a network call.
+    // Fully synchronous (no await) so the message appears with zero delay.
+    onMutate: (data) => {
+      const tempId = -Date.now();
+      let adminId = "";
+      try { adminId = JSON.parse(localStorage.getItem("userProfile") || "{}").id || ""; } catch {}
+      appendMessageToConversation(data.conversationId, {
+        id: tempId,
+        conversation_id: data.conversationId,
+        sender_id: adminId,
+        sender_type: "admin",
+        message: data.message,
+        message_type: (data.messageType as "text" | "image" | "file") || "text",
+        attachment_url: data.attachmentUrl,
+        is_read: true,
+        created_at: new Date().toISOString(),
+      });
+      setMessage("");
+      return { tempId, conversationId: data.conversationId };
+    },
+    onSuccess: (real, _vars, context) => {
+      if (context) replaceMessageInConversation(context.conversationId, context.tempId, real);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support/stats"] });
+    },
+    onError: (err: any, _vars, context) => {
+      if (context) removeMessageFromConversation(context.conversationId, context.tempId);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
   });
 
   const startConversationMutation = useMutation({

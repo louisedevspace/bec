@@ -118,6 +118,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   const campaignId = event.notification.data && event.notification.data.campaignId;
+  const conversationId = event.notification.data && event.notification.data.conversationId;
   event.waitUntil(
     (async () => {
       try {
@@ -129,9 +130,21 @@ self.addEventListener('notificationclick', (event) => {
           });
         }
       } catch {}
+      // client.url is always an absolute URL (e.g. https://host/support) while
+      // targetUrl is a bare relative path/path+query — compare by path only,
+      // and match an already-open tab even if its current query string
+      // differs, then tell it which conversation to open via postMessage
+      // instead of forcing a full reload with openWindow.
+      const targetPath = targetUrl.split('?')[0];
       const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of clientList) {
-        if (client.url === targetUrl && 'focus' in client) return client.focus();
+        const clientPath = client.url.split('?')[0];
+        if (clientPath === targetPath || clientPath.endsWith(targetPath)) {
+          if (conversationId && 'postMessage' in client) {
+            client.postMessage({ type: 'open-support-conversation', conversationId });
+          }
+          if ('focus' in client) return client.focus();
+        }
       }
       if (clients.openWindow) return clients.openWindow(targetUrl);
     })()

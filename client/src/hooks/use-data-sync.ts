@@ -261,6 +261,9 @@ export function useDataSync(config: UseDataSyncConfig = {}) {
     if (!enabled) return;
 
     let cleaned = false;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
 
     // Stable message handler that reads from ref
     const onMessage = (event: MessageEvent) => {
@@ -271,31 +274,65 @@ export function useDataSync(config: UseDataSyncConfig = {}) {
       handleLocalSyncRef.current(event);
     }) as EventListener;
 
-    // WebSocket connection for real-time updates
-    let ws: WebSocket | null = null;
-    
-    try {
-      // Use the configuration to build the WebSocket URL
-      const wsUrl = buildWsUrl('/ws');
-      ws = new WebSocket(wsUrl);
-      ws.addEventListener('message', onMessage);
-      
-      ws.onopen = () => {
-        if (!cleaned) {
+    // A dead socket used to just sit there forever — no reconnect, no
+    // backoff — silently downgrading "real-time" to whatever poll interval
+    // the page happens to have (often 20-30s). Any network blip (phone
+    // lock, wifi<->cellular handoff, tab backgrounding) killed live
+    // delivery for the rest of the session. Reconnect with capped
+    // exponential backoff instead.
+    const scheduleReconnect = () => {
+      if (cleaned) return;
+      const delay = Math.min(1000 * 2 ** reconnectAttempt, 15000);
+      reconnectAttempt += 1;
+      reconnectTimer = setTimeout(connect, delay);
+    };
+
+    function connect() {
+      if (cleaned) return;
+      try {
+        const wsUrl = buildWsUrl('/ws');
+        ws = new WebSocket(wsUrl);
+        ws.addEventListener('message', onMessage);
+
+        ws.onopen = () => {
+          if (cleaned) return;
+          reconnectAttempt = 0;
           console.log('Data sync WebSocket connected');
-        }
-      };
-      
-      ws.onerror = () => {
-        // Suppress errors during cleanup (StrictMode unmount)
-      };
-      
-      ws.onclose = () => {
-        // Suppress close logs during cleanup
-      };
-    } catch (error) {
-      console.warn('WebSocket connection failed for data sync:', error);
+        };
+
+        ws.onerror = () => {
+          // A close event follows an error per the WebSocket spec — the
+          // reconnect is scheduled there, not here.
+        };
+
+        ws.onclose = () => {
+          if (cleaned) return;
+          scheduleReconnect();
+        };
+      } catch (error) {
+        console.warn('WebSocket connection failed for data sync:', error);
+        scheduleReconnect();
+      }
     }
+
+    connect();
+
+    // Reconnect immediately on the common mobile case instead of waiting
+    // out the backoff: network comes back, or the tab regains focus after
+    // being backgrounded (many browsers suspend/close sockets in the
+    // background without ever firing onclose until you return to the tab).
+    const reconnectIfDead = () => {
+      if (!cleaned && (!ws || ws.readyState === WebSocket.CLOSED)) {
+        reconnectAttempt = 0;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        connect();
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') reconnectIfDead();
+    };
+    window.addEventListener('online', reconnectIfDead);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Local event listener for admin actions
     window.addEventListener('userDataChanged', onLocalSync);
@@ -303,11 +340,14 @@ export function useDataSync(config: UseDataSyncConfig = {}) {
     // Cleanup
     return () => {
       cleaned = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
         ws.close();
         ws = null;
       }
       window.removeEventListener('userDataChanged', onLocalSync);
+      window.removeEventListener('online', reconnectIfDead);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [enabled]);
 

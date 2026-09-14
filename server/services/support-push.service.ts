@@ -78,7 +78,7 @@ export async function notifyUserOfSupportReply(params: {
       badge: "/icons/icon-192.png",
       tag: `support-${params.conversationId}`,
       data: {
-        url: "/support",
+        url: `/support?conversationId=${params.conversationId}`,
         conversationId: params.conversationId,
       },
     });
@@ -105,7 +105,7 @@ export async function notifyUserOfNewSupportConversation(params: {
       badge: "/icons/icon-192.png",
       tag: `support-${params.conversationId}`,
       data: {
-        url: "/support",
+        url: `/support?conversationId=${params.conversationId}`,
         conversationId: params.conversationId,
       },
     });
@@ -140,7 +140,7 @@ export async function notifyStaffOfSupportMessage(params: {
       badge: "/icons/icon-192.png",
       tag: `support-staff-${params.conversationId}`,
       data: {
-        url: "/admin/support",
+        url: `/admin/support?conversationId=${params.conversationId}`,
         conversationId: params.conversationId,
       },
     });

@@ -130,10 +130,54 @@ export default function SupportPage() {
     }
   }, []);
 
+  // Patches a single message into both the list and the open conversation —
+  // used for optimistic sends and for incoming sync events — instead of
+  // re-fetching the whole conversation list for a one-message change.
+  const patchConversationMessages = useCallback(
+    (conversationId: number, updater: (messages: SupportMessage[]) => SupportMessage[]) => {
+      const patch = (c: SupportConversation) =>
+        c.id === conversationId ? { ...c, support_messages: updater(c.support_messages) } : c;
+      setConversations(prev => prev.map(patch));
+      setSelectedConversation(prev => (prev ? patch(prev) : prev));
+    },
+    []
+  );
+
+  const appendMessageToConversation = useCallback((conversationId: number, msg: SupportMessage) => {
+    patchConversationMessages(conversationId, messages =>
+      messages.some(m => m.id === msg.id) ? messages : [...messages, msg]
+    );
+  }, [patchConversationMessages]);
+
+  const replaceMessageInConversation = useCallback((conversationId: number, tempId: number, real: SupportMessage) => {
+    patchConversationMessages(conversationId, messages => {
+      const withoutTemp = messages.filter(m => m.id !== tempId);
+      return withoutTemp.some(m => m.id === real.id) ? withoutTemp : [...withoutTemp, real];
+    });
+  }, [patchConversationMessages]);
+
+  const removeMessageFromConversation = useCallback((conversationId: number, tempId: number) => {
+    patchConversationMessages(conversationId, messages => messages.filter(m => m.id !== tempId));
+  }, [patchConversationMessages]);
+
   // Real-time delivery: the server broadcasts support events over the sync
-  // socket, so refetch the moment one lands instead of waiting for a poll.
+  // socket. A new message already carries its full row in the payload, so
+  // patch it straight into state instead of re-fetching the whole
+  // conversation list — cuts a full round-trip out of the incoming path.
+  // Everything else (new conversations, status changes) still triggers a
+  // refetch since there's no single-row payload to patch from.
   useDataSync({
-    onSync: (action) => {
+    onSync: (action, data) => {
+      if (
+        action === 'create-support-message' &&
+        data &&
+        typeof data.conversation_id === 'number' &&
+        typeof data.id === 'number' &&
+        conversations.some(c => c.id === data.conversation_id)
+      ) {
+        appendMessageToConversation(data.conversation_id, data as SupportMessage);
+        return;
+      }
       if (action.startsWith('create-support') || action.startsWith('update-support')) {
         fetchConversations(true);
       }
@@ -147,6 +191,42 @@ export default function SupportPage() {
     const interval = setInterval(() => fetchConversations(true), 30000);
     return () => clearInterval(interval);
   }, [fetchConversations]);
+
+  // Deep-link into a specific conversation from a push notification. If the
+  // notification opened a fresh tab, the id arrives as a URL query param
+  // (captured once on mount, then stripped); if it focused an already-open
+  // tab instead, the service worker posts it directly — see
+  // client/public/service-worker.js's notificationclick handler.
+  const [pendingConversationId] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('conversationId'); } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (!pendingConversationId) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('conversationId');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    } catch { /* non-critical */ }
+  }, [pendingConversationId]);
+
+  useEffect(() => {
+    if (!pendingConversationId || conversations.length === 0) return;
+    const id = parseInt(pendingConversationId, 10);
+    const found = conversations.find(c => c.id === id);
+    if (found) setSelectedConversation(found);
+  }, [pendingConversationId, conversations]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'open-support-conversation' || !event.data.conversationId) return;
+      const id = typeof event.data.conversationId === 'number' ? event.data.conversationId : parseInt(event.data.conversationId, 10);
+      const found = conversations.find(c => c.id === id);
+      if (found) setSelectedConversation(found);
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [conversations]);
 
   // Image upload handlers
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,7 +267,12 @@ export default function SupportPage() {
 
   // Send message
   const handleSendMessage = async () => {
-    if ((!message.trim() && !pendingImage) || !selectedConversation) return;
+    if ((!message.trim() && !pendingImage) || !selectedConversation || sending) return;
+
+    const conversationId = selectedConversation.id;
+    const trimmedMessage = message.trim() || '(Image)';
+    const tempId = -Date.now();
+    let optimisticallyAdded = false;
 
     setSending(true);
     try {
@@ -223,28 +308,44 @@ export default function SupportPage() {
         }
       }
 
+      // Show it immediately instead of waiting on the round-trip — this is
+      // what makes sending feel instant rather than gated on a network call.
+      appendMessageToConversation(conversationId, {
+        id: tempId,
+        conversation_id: conversationId,
+        message: trimmedMessage,
+        sender_type: 'user',
+        message_type: messageType,
+        attachment_url: attachmentUrl,
+        created_at: new Date().toISOString(),
+      });
+      optimisticallyAdded = true;
+      setMessage('');
+      clearPendingImage();
+
       const headers = await authHeaders();
       const response = await fetch(buildApiUrl('/support/messages'), {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          conversationId: selectedConversation.id,
-          message: message.trim() || '(Image)',
+          conversationId,
+          message: trimmedMessage,
           messageType,
           attachmentUrl,
         }),
       });
 
       if (response.ok) {
-        setMessage('');
-        clearPendingImage();
-        await fetchConversations(true);
+        const real = await response.json();
+        replaceMessageInConversation(conversationId, tempId, real);
       } else {
+        removeMessageFromConversation(conversationId, tempId);
         const err = await response.json().catch(() => ({ message: 'Failed to send message' }));
         alert(err.message || 'Failed to send message');
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      if (optimisticallyAdded) removeMessageFromConversation(conversationId, tempId);
     } finally {
       setSending(false);
     }

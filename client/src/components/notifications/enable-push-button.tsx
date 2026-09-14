@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { Bell, BellOff, AlertTriangle, Loader2 } from 'lucide-react';
 import { requestNotificationPermission, subscribePush } from '@/lib/push';
 import { getPushSupport } from '@/sw-register';
 
-type State = 'checking' | 'unsupported' | 'prompt' | 'granted' | 'denied' | 'working';
+type State = 'checking' | 'unsupported' | 'prompt' | 'granted' | 'denied' | 'working' | 'failed';
 
 /**
  * Asks for OS notification permission and registers the push subscription.
@@ -28,9 +28,12 @@ export function EnablePushButton({ className = '' }: { className?: string }) {
       }
 
       if (Notification.permission === 'granted') {
-        if (!cancelled) setState('granted');
-        // Make sure this device is registered server-side
-        await subscribePush();
+        // Make sure this device is registered server-side. Don't just
+        // assume it worked — a failed subscribe here means the OS
+        // permission is on but the server never actually learned about
+        // this device, so pushes silently never arrive.
+        const sub = await subscribePush();
+        if (!cancelled) setState(sub ? 'granted' : 'failed');
         return;
       }
 
@@ -48,8 +51,8 @@ export function EnablePushButton({ className = '' }: { className?: string }) {
       setState(Notification.permission === 'denied' ? 'denied' : 'prompt');
       return;
     }
-    await subscribePush();
-    setState('granted');
+    const sub = await subscribePush();
+    setState(sub ? 'granted' : 'failed');
   };
 
   if (state === 'checking' || state === 'granted' || state === 'unsupported') return null;
@@ -60,6 +63,19 @@ export function EnablePushButton({ className = '' }: { className?: string }) {
         <BellOff size={13} />
         Notifications blocked in browser settings
       </span>
+    );
+  }
+
+  if (state === 'failed') {
+    return (
+      <button
+        type="button"
+        onClick={enable}
+        className={`inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl border border-warning/30 bg-warning/10 text-warning text-xs font-medium hover:bg-warning/20 transition-colors ${className}`}
+      >
+        <AlertTriangle size={13} />
+        Couldn't enable notifications — tap to retry
+      </button>
     );
   }
 
