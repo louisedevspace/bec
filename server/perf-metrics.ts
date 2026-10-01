@@ -24,6 +24,29 @@ const clientMetrics: ClientMetricRecord[] = [];
 
 const MAX_CLIENT_METRICS = 500;
 const MAX_API_DURATIONS = 100;
+// This codebase has ~70 route patterns. 500 is generous headroom for
+// anything normalizePathForMetrics doesn't catch, while still being a hard
+// ceiling — without one, a key built from the raw (unnormalized) path grows
+// once per distinct id ever seen (every user, trade, order, ...), forever.
+const MAX_API_METRIC_ROUTES = 500;
+
+// recordApiMetric is called with req.path captured before Express routing
+// runs, so it still has real values in it (/api/portfolio/<uuid>, not
+// /api/portfolio/:userId). Used as-is, the map below grows by one entry per
+// distinct id ever requested and never shrinks — confirmed as the cause of
+// a multi-day continuous RAM climb in production. Collapse dynamic segments
+// to a placeholder so requests to the same route aggregate into one entry,
+// which is also what you actually want from "which routes are slow" stats.
+function normalizePathForMetrics(path: string): string {
+  return path
+    .split('/')
+    .map((segment) => {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)) return ':id';
+      if (/^\d+$/.test(segment)) return ':id';
+      return segment;
+    })
+    .join('/');
+}
 
 export function recordApiMetric(options: {
   path: string;
@@ -31,12 +54,18 @@ export function recordApiMetric(options: {
   statusCode: number;
   durationMs: number;
 }): void {
-  const key = `${options.method} ${options.path}`;
+  const normalizedPath = normalizePathForMetrics(options.path);
+  const key = `${options.method} ${normalizedPath}`;
   const existing = apiMetrics.get(key);
 
   if (!existing) {
+    if (apiMetrics.size >= MAX_API_METRIC_ROUTES) {
+      // Map iteration order is insertion order — evict the oldest entry.
+      const oldestKey = apiMetrics.keys().next().value;
+      if (oldestKey !== undefined) apiMetrics.delete(oldestKey);
+    }
     apiMetrics.set(key, {
-      path: options.path,
+      path: normalizedPath,
       method: options.method,
       count: 1,
       errorCount: options.statusCode >= 500 ? 1 : 0,

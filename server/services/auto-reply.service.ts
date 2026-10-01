@@ -42,6 +42,28 @@ const REDIS_KEYS = {
 
 const cooldownMap = new Map<string, number>(); // conversationId -> timestamp
 const countMap = new Map<string, number>(); // conversationId -> count
+const countMapTimestamps = new Map<string, number>(); // conversationId -> last-updated, for sweeping countMap
+
+// Every other in-memory Redis fallback in this codebase (sessionCache,
+// rateLimitStore, memoryCache, fallbackCache) sweeps itself on an interval.
+// These two didn't: cooldownMap only self-cleans when the SAME conversation
+// is checked again after its cooldown elapses, and countMap was never
+// cleaned at all — a conversation that's never revisited leaves its entry
+// forever. On a live exchange that's unbounded growth for the life of the
+// process. TTL mirrors the Redis COUNT key's own 24h expiry.
+const MEMORY_FALLBACK_TTL_MS = 24 * 60 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, ts] of cooldownMap) {
+    if (now - ts > MEMORY_FALLBACK_TTL_MS) cooldownMap.delete(id);
+  }
+  for (const [id, ts] of countMapTimestamps) {
+    if (now - ts > MEMORY_FALLBACK_TTL_MS) {
+      countMap.delete(id);
+      countMapTimestamps.delete(id);
+    }
+  }
+}, 60 * 60 * 1000);
 
 // ─── Default Auto-Reply Rules ────────────────────────────────────────────────
 
@@ -287,6 +309,7 @@ class AutoReplyService {
 
     // Always set in memory as fallback
     countMap.set(conversationId, currentCount + 1);
+    countMapTimestamps.set(conversationId, Date.now());
   }
 
   // ─── Scoring Algorithm ───────────────────────────────────────────────────
