@@ -5,7 +5,7 @@ import { getExchangeName } from "../services/app-settings.service";
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
-const vapidSubject = process.env.VAPID_SUBJECT || "mailto:admin@becxus.com";
+const vapidSubject = process.env.VAPID_SUBJECT || "mailto:admin@example.com";
 
 // Configure web-push if VAPID keys are available
 let pushConfigured = false;

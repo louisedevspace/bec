@@ -792,7 +792,7 @@ export default function AdminSettings() {
                   value={exchangeName}
                   onChange={(e) => setExchangeName(e.target.value)}
                   maxLength={60}
-                  placeholder="e.g. Becxus"
+                  placeholder="e.g. Exchange"
                   className="rounded-lg"
                 />
                 <Button
