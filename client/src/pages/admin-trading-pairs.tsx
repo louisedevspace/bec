@@ -33,12 +33,6 @@ function rateToPercent(rate: string | number): string {
   return (numeric * 100).toFixed(4).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
 }
 
-const AVAILABLE_ASSETS = [
-  'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'DOGE', 'AVAX', 'LINK',
-  'LTC', 'MATIC', 'ATOM', 'TRX', 'SHIB', 'BCH', 'DASH', 'XMR', 'XLM', 'FIL',
-  'APT', 'SUI', 'ARB', 'OP', 'PEPE', 'INJ', 'XAU', 'XAUT'
-];
-
 const PAIR_TYPE_STYLES: Record<string, string> = {
   both: 'bg-primary/10 text-primary',
   futures: 'bg-warning/10 text-warning',
@@ -130,8 +124,10 @@ export default function AdminTradingPairs() {
   };
 
   const handleAdd = async () => {
-    if (!newPair.baseAsset) {
-      toast({ title: 'Error', description: 'Select a base asset', variant: 'destructive' });
+    const baseAsset = newPair.baseAsset.trim();
+    const quoteAsset = (newPair.quoteAsset || '').trim() || 'USDT';
+    if (!baseAsset) {
+      toast({ title: 'Error', description: 'Enter a base asset symbol', variant: 'destructive' });
       return;
     }
     try {
@@ -140,9 +136,9 @@ export default function AdminTradingPairs() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          symbol: `${newPair.baseAsset}/${newPair.quoteAsset}`,
-          baseAsset: newPair.baseAsset,
-          quoteAsset: newPair.quoteAsset,
+          symbol: `${baseAsset}/${quoteAsset}`,
+          baseAsset,
+          quoteAsset,
           pairType: newPair.pairType,
           minTradeAmount: newPair.minTradeAmount,
           maxTradeAmount: newPair.maxTradeAmount,
@@ -286,30 +282,29 @@ export default function AdminTradingPairs() {
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Plus size={16} className="text-primary" /> Add New Trading Pair
             </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Type any symbol — the live price is fetched free &amp; automatically:
+              metals (XAU, XAG, XPT, XPD) from gold-api.com, and any crypto listed on MEXC.
+              For anything else, set Type to <span className="font-medium text-foreground">Custom API</span> and give a URL that returns <span className="font-mono">{'{ "price": number }'}</span>.
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Base Asset</label>
-                <Select value={newPair.baseAsset} onValueChange={(v) => setNewPair({ ...newPair, baseAsset: v })}>
-                  <SelectTrigger className="h-9 bg-background border-border text-foreground text-xs">
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {AVAILABLE_ASSETS.filter(a => !pairs.some(p => p.base_asset === a && p.quote_asset === newPair.quoteAsset)).map(a => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={newPair.baseAsset}
+                  onChange={(e) => setNewPair({ ...newPair, baseAsset: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                  placeholder="e.g. XAG, BTC, any"
+                  className="h-9 bg-background border-border text-foreground text-xs uppercase"
+                />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Quote Asset</label>
-                <Select value={newPair.quoteAsset} onValueChange={(v) => setNewPair({ ...newPair, quoteAsset: v })}>
-                  <SelectTrigger className="h-9 bg-background border-border text-foreground text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    <SelectItem value="USDT">USDT</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={newPair.quoteAsset}
+                  onChange={(e) => setNewPair({ ...newPair, quoteAsset: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                  placeholder="USDT"
+                  className="h-9 bg-background border-border text-foreground text-xs uppercase"
+                />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Type</label>

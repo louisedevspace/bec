@@ -19,6 +19,15 @@ const SUPPORTED_CRYPTOS = [
   'XAUT', // Tether Gold — trades on Binance/MEXC as XAUTUSDT
 ];
 
+// Precious-metal symbols priced from gold-api.com (free, no key) instead of
+// crypto exchanges. gold-api.com exposes XAU (gold), XAG (silver),
+// XPT (platinum), XPD (palladium). Any of these added as a trading pair is
+// priced automatically. (XAUT is Tether Gold, a real crypto pair — not here.)
+const METAL_SYMBOLS = new Set(['XAU', 'XAG', 'XPT', 'XPD']);
+const METAL_YAHOO_FUTURES: { [key: string]: string } = {
+  XAU: 'GC=F', XAG: 'SI=F', XPT: 'PL=F', XPD: 'PA=F',
+};
+
 export interface CryptoPriceData {
   symbol: string;
   price: string;
@@ -31,6 +40,12 @@ class LiveCryptoService {
   private lastUpdate: Date = new Date(0);
   private updateInterval: number = 30000; // 30 seconds
 
+  // The live symbol universe = the hardcoded base set UNION whatever enabled
+  // trading pairs an admin has added. Refreshed from the DB on a short cache
+  // so adding any pair gets it priced automatically, with no code change.
+  private activeSymbols: string[] = [...SUPPORTED_CRYPTOS];
+  private activeSymbolsCacheTime = 0;
+
   public static getInstance(): LiveCryptoService {
     if (!LiveCryptoService.instance) {
       LiveCryptoService.instance = new LiveCryptoService();
@@ -39,10 +54,40 @@ class LiveCryptoService {
   }
 
   /**
+   * Refresh the active symbol universe from the trading_pairs table so any
+   * pair an admin adds gets priced automatically. Falls back to the hardcoded
+   * SUPPORTED_CRYPTOS set if the DB read fails, so pricing never breaks.
+   * Cached 60s to avoid a DB hit on every 30s price cycle.
+   */
+  private async refreshActiveSymbols(): Promise<void> {
+    const now = Date.now();
+    if (this.activeSymbolsCacheTime && now - this.activeSymbolsCacheTime < 60000) return;
+    try {
+      const { data, error } = await supabase
+        .from('trading_pairs')
+        .select('base_asset')
+        .eq('is_enabled', true);
+      if (!error && Array.isArray(data)) {
+        const dbSymbols = data
+          .map((r: { base_asset: string }) => (r.base_asset || '').toUpperCase())
+          .filter(Boolean);
+        this.activeSymbols = Array.from(new Set([...SUPPORTED_CRYPTOS, ...dbSymbols]));
+      }
+      this.activeSymbolsCacheTime = now;
+    } catch {
+      // Keep whatever activeSymbols we already had — never break pricing.
+    }
+  }
+
+  /**
    * Fetch live crypto prices with dual mechanism: MEXC first, then Binance, then CoinGecko fallback
    */
   private async fetchLivePrices(): Promise<CryptoPriceData[]> {
     let prices: CryptoPriceData[] = [];
+
+    // Refresh the symbol universe from trading_pairs so newly-added pairs
+    // get fetched this cycle (cached 60s; never throws).
+    await this.refreshActiveSymbols();
 
     // Try MEXC first (free, no key, Binance-compatible)
     try {
@@ -91,14 +136,24 @@ class LiveCryptoService {
       }
     }
 
-    // Always append real gold price from gold-api.com / Yahoo Finance GC=F
-    const goldPrice = await this.fetchGoldPrice();
-    if (goldPrice) {
-      prices = prices.filter(p => p.symbol !== 'XAU');
-      prices.push(goldPrice);
-      console.log(`🥇 Gold price appended: $${goldPrice.price}`);
+    // Metal prices (gold always; plus any metal an admin added as a trading
+    // pair — silver XAG, platinum XPT, palladium XPD) from gold-api.com
+    // (free, no key) with a Yahoo Finance futures fallback.
+    const metalsToFetch = Array.from(new Set(['XAU', ...this.activeSymbols.filter(s => METAL_SYMBOLS.has(s))]));
+    const metalResults = await Promise.allSettled(metalsToFetch.map(m => this.fetchMetalPrice(m)));
+    const fetchedMetals: string[] = [];
+    for (const r of metalResults) {
+      if (r.status === 'fulfilled' && r.value) {
+        const mp = r.value;
+        prices = prices.filter(p => p.symbol !== mp.symbol);
+        prices.push(mp);
+        fetchedMetals.push(`${mp.symbol} $${mp.price}`);
+      }
+    }
+    if (fetchedMetals.length > 0) {
+      console.log(`🥇 Metal prices appended: ${fetchedMetals.join(', ')}`);
     } else {
-      console.warn('⚠️ Gold price fetch failed, XAU will use stale cache or be absent');
+      console.warn('⚠️ Metal price fetch failed, metals will use stale cache or be absent');
     }
 
     // Append custom coin prices (trading pairs with admin-provided price API URLs)
@@ -163,7 +218,9 @@ class LiveCryptoService {
    * Fetch prices from MEXC API (Binance-compatible format)
    */
   private async fetchFromMexc(): Promise<CryptoPriceData[]> {
-    const mexcSymbols = this.getBinanceSymbols(); // Same format: BTCUSDT, ETHUSDT, etc.
+    // MEXC bulk-fetches ALL tickers, so we can include every active symbol
+    // (hardcoded + admin-added) — unknown ones are simply absent, never error.
+    const mexcSymbols = this.getUsdtPairs(this.activeSymbols);
     // MEXC ticker/24hr supports multiple symbols via repeated symbol params or single request for all
     // Fetch all tickers at once (weight: 40) then filter
     const response = await axios.get(
@@ -202,7 +259,11 @@ class LiveCryptoService {
    * Fetch prices from Binance API
    */
   private async fetchFromBinance(): Promise<CryptoPriceData[]> {
-    const binanceSymbols = this.getBinanceSymbols();
+    // Binance's ?symbols=[...] rejects the WHOLE batch if any symbol is
+    // invalid, so this fallback requests only the known-valid hardcoded set.
+    // Admin-added symbols are priced via MEXC (primary, above) and the
+    // metal/custom-URL paths instead.
+    const binanceSymbols = this.getUsdtPairs(SUPPORTED_CRYPTOS);
     const symbolsParam = JSON.stringify(binanceSymbols);
     const response = await axios.get(
       `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`,
@@ -235,15 +296,15 @@ class LiveCryptoService {
   }
 
   /**
-   * Fetch gold spot price — primary: gold-api.com (free, no key)
-   * Fallback: Yahoo Finance GC=F
+   * Fetch a precious-metal spot price — primary: gold-api.com (free, no key;
+   * supports XAU/XAG/XPT/XPD), fallback: Yahoo Finance futures (GC=F, SI=F, …).
    */
-  private async fetchGoldPrice(): Promise<CryptoPriceData | null> {
+  private async fetchMetalPrice(symbol: string): Promise<CryptoPriceData | null> {
     // Primary: gold-api.com
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch('https://api.gold-api.com/price/XAU', {
+      const res = await fetch(`https://api.gold-api.com/price/${symbol}`, {
         headers: { Accept: 'application/json' },
         signal: controller.signal,
       });
@@ -252,7 +313,7 @@ class LiveCryptoService {
         const data = await res.json();
         if (typeof data?.price === 'number' && data.price > 0) {
           return {
-            symbol: 'XAU',
+            symbol,
             price: data.price.toString(),
             change24h: '0.00', // gold-api.com doesn't return 24h change
             volume24h: '0',
@@ -263,12 +324,14 @@ class LiveCryptoService {
       // fall through to Yahoo Finance
     }
 
-    // Fallback: Yahoo Finance GC=F
+    // Fallback: Yahoo Finance futures for this metal
+    const future = METAL_YAHOO_FUTURES[symbol];
+    if (!future) return null;
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 6000);
       const res = await fetch(
-        'https://query1.finance.yahoo.com/v7/finance/quote?symbols=GC%3DF&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume',
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(future)}&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume`,
         { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal }
       );
       clearTimeout(timer);
@@ -277,7 +340,7 @@ class LiveCryptoService {
       const r = data?.quoteResponse?.result?.[0];
       if (!r || typeof r.regularMarketPrice !== 'number' || r.regularMarketPrice <= 0) return null;
       return {
-        symbol: 'XAU',
+        symbol,
         price: r.regularMarketPrice.toString(),
         change24h: typeof r.regularMarketChangePercent === 'number' ? r.regularMarketChangePercent.toFixed(2) : '0.00',
         volume24h: typeof r.regularMarketVolume === 'number' ? r.regularMarketVolume.toFixed(0) : '0',
@@ -409,92 +472,27 @@ class LiveCryptoService {
   }
 
   /**
-   * Get Binance symbols for supported cryptocurrencies
+   * Build {BASE}USDT exchange tickers for the given symbols. The exchange
+   * pair for any asset is just its symbol followed by USDT — so this works
+   * for arbitrary admin-added symbols, no per-symbol map needed. Excludes
+   * USDT itself (no USDTUSDT pair) and metals (priced from gold-api.com).
    */
-  private getBinanceSymbols(): string[] {
-    const binanceMap: { [key: string]: string } = {
-      'BTC': 'BTCUSDT',
-      'ETH': 'ETHUSDT',
-      // USDT is always 1.00 — no Binance pair exists for USDTUSDT
-      'BNB': 'BNBUSDT',
-      'XRP': 'XRPUSDT',
-      'ADA': 'ADAUSDT',
-      'DOGE': 'DOGEUSDT',
-      'MATIC': 'MATICUSDT',
-      'DOT': 'DOTUSDT',
-      'LTC': 'LTCUSDT',
-      'BCH': 'BCHUSDT',
-      'LINK': 'LINKUSDT',
-      'UNI': 'UNIUSDT',
-      'ATOM': 'ATOMUSDT',
-      'ETC': 'ETCUSDT',
-      'XLM': 'XLMUSDT',
-      'TRX': 'TRXUSDT',
-      'XMR': 'XMRUSDT',
-      'EOS': 'EOSUSDT',
-      'FIL': 'FILUSDT',
-      'VET': 'VETUSDT',
-      'THETA': 'THETAUSDT',
-      'AAVE': 'AAVEUSDT',
-      'ALGO': 'ALGOUSDT',
-      'AVAX': 'AVAXUSDT',
-      'SOL': 'SOLUSDT',
-      'SHIB': 'SHIBUSDT',
-      'APT': 'APTUSDT',
-      'SUI': 'SUIUSDT',
-      'ARB': 'ARBUSDT',
-      'OP': 'OPUSDT',
-      'PEPE': 'PEPEUSDT',
-      'INJ': 'INJUSDT',
-      'DASH': 'DASHUSDT',
-      'XAUT': 'XAUTUSDT',
-    };
-
-    return SUPPORTED_CRYPTOS.map(symbol => binanceMap[symbol]).filter(Boolean);
+  private getUsdtPairs(symbols: string[]): string[] {
+    return symbols
+      .filter(s => s && s !== 'USDT' && !METAL_SYMBOLS.has(s))
+      .map(s => `${s}USDT`);
   }
 
   /**
-   * Get symbol from Binance ticker symbol
+   * Reverse a {BASE}USDT exchange ticker back to its base symbol. Generic
+   * (strips the trailing USDT) — safe because callers only pass tickers that
+   * matched our own {BASE}USDT request set.
    */
   private getSymbolFromBinanceTicker(tickerSymbol: string): string | null {
-    const reverseMap: { [key: string]: string } = {
-      'BTCUSDT': 'BTC',
-      'ETHUSDT': 'ETH',
-      'BNBUSDT': 'BNB',
-      'XRPUSDT': 'XRP',
-      'ADAUSDT': 'ADA',
-      'DOGEUSDT': 'DOGE',
-      'MATICUSDT': 'MATIC',
-      'DOTUSDT': 'DOT',
-      'LTCUSDT': 'LTC',
-      'BCHUSDT': 'BCH',
-      'LINKUSDT': 'LINK',
-      'UNIUSDT': 'UNI',
-      'ATOMUSDT': 'ATOM',
-      'ETCUSDT': 'ETC',
-      'XLMUSDT': 'XLM',
-      'TRXUSDT': 'TRX',
-      'XMRUSDT': 'XMR',
-      'EOSUSDT': 'EOS',
-      'FILUSDT': 'FIL',
-      'VETUSDT': 'VET',
-      'THETAUSDT': 'THETA',
-      'AAVEUSDT': 'AAVE',
-      'ALGOUSDT': 'ALGO',
-      'AVAXUSDT': 'AVAX',
-      'SOLUSDT': 'SOL',
-      'SHIBUSDT': 'SHIB',
-      'APTUSDT': 'APT',
-      'SUIUSDT': 'SUI',
-      'ARBUSDT': 'ARB',
-      'OPUSDT': 'OP',
-      'PEPEUSDT': 'PEPE',
-      'INJUSDT': 'INJ',
-      'DASHUSDT': 'DASH',
-      'XAUTUSDT': 'XAUT',
-    };
-
-    return reverseMap[tickerSymbol] || null;
+    if (tickerSymbol && tickerSymbol.endsWith('USDT') && tickerSymbol.length > 4) {
+      return tickerSymbol.slice(0, -4);
+    }
+    return null;
   }
 
   /**

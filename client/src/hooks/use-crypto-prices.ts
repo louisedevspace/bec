@@ -15,6 +15,14 @@ const SUPPORTED_SYMBOLS = [
   'PEPE', 'INJ', 'XAU', 'XAUT',
 ];
 
+// Which symbols to keep from Binance's full miniTicker stream. Seeded with
+// the known set, then extended at runtime with any symbol the server is
+// already pricing (e.g. a pair an admin just added) so new pairs get live
+// updates too — not only the 60s REST poll. Symbols Binance doesn't stream
+// (metals, custom-API coins) simply never arrive here and fall back to the
+// poll, which is fine.
+const acceptedSymbols = new Set(SUPPORTED_SYMBOLS);
+
 // ── Singleton Binance WebSocket manager ──
 // Shared across all useCryptoPrices() consumers — only ONE connection.
 type Listener = () => void;
@@ -83,7 +91,7 @@ function connectShared() {
           const pairStr = d.s || ''; // e.g. "BTCUSDT"
           if (!pairStr.endsWith('USDT')) continue;
           const sym = pairStr.replace('USDT', '');
-          if (!sym || !SUPPORTED_SYMBOLS.includes(sym)) continue;
+          if (!sym || !acceptedSymbols.has(sym)) continue;
 
           shared.livePrices[sym] = {
             symbol: sym,
@@ -203,6 +211,9 @@ export function useCryptoPrices() {
   // Merge initial + live prices
   useEffect(() => {
     if (initialPrices) {
+      // Let the live WS accept any symbol the server already prices (covers
+      // newly-added pairs), so they get 4fps updates instead of only polling.
+      for (const p of initialPrices) acceptedSymbols.add(p.symbol);
       setPrices(mergeLivePrices(initialPrices, livePrices));
     }
   }, [initialPrices, livePrices, mergeLivePrices]);
