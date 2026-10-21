@@ -274,6 +274,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/manifest.webmanifest", async (_req, res) => {
     const exchangeName = await getExchangeName().catch(() => "Exchange");
     res.type("application/manifest+json").json({
+      // id gives the PWA a stable identity (recommended by Chrome and used by
+      // PWABuilder when packaging the Android app) independent of start_url.
+      id: "/",
       name: exchangeName,
       short_name: exchangeName,
       description: "Professional crypto trading platform with futures, staking, and more.",
@@ -289,6 +292,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
       ],
     });
+  });
+
+  // Digital Asset Links for the Android app (a Trusted Web Activity generated
+  // from this PWA via PWABuilder). Android checks this file to confirm the app
+  // owns this domain; once it matches, the app opens full-screen with no
+  // browser address bar. After building the APK, PWABuilder gives you a package
+  // name and a signing-key SHA-256 fingerprint — set ANDROID_PACKAGE_NAME and
+  // ANDROID_SHA256_FINGERPRINT (comma-separate multiple fingerprints) in the
+  // server env, then redeploy. Until configured this serves a valid empty [],
+  // which never affects the website.
+  app.get("/.well-known/assetlinks.json", (_req, res) => {
+    const packageName = (process.env.ANDROID_PACKAGE_NAME || "").trim();
+    const fingerprints = (process.env.ANDROID_SHA256_FINGERPRINT || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    res.type("application/json");
+    if (!packageName || fingerprints.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    res.json([
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: packageName,
+          sha256_cert_fingerprints: fingerprints,
+        },
+      },
+    ]);
   });
 
   app.get("/api/metrics/perf", (_req, res) => {
