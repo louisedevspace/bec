@@ -245,7 +245,9 @@ export default function FuturesPage() {
         date = new Date(dateString);
       }
       if (isNaN(date.getTime())) return 'Invalid Date';
-      return date.toLocaleString(undefined, {
+      // Force en-US so the AM/PM marker is English — passing undefined uses
+      // the device locale, which renders "下午"/"上午" on a Chinese phone.
+      return date.toLocaleString('en-US', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
       });
