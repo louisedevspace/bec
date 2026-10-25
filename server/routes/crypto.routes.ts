@@ -367,14 +367,24 @@ export default function registerCryptoRoutes(app: Express) {
               "4h": 14400000, "1d": 86400000, "1w": 604800000,
             };
             const step = intervalMs[interval] || 3600000;
+            // Deterministic, stable candles anchored to the REAL current price.
+            // An asset with no exchange kline feed (a metal like silver, or any
+            // custom coin) otherwise got fabricated ±2% random candles that
+            // reshuffled on every fetch — looking fake and jumpy. Seeding the
+            // tiny wobble by candle time keeps history stable across fetches,
+            // and the latest candle closes exactly at the live price, so the
+            // chart tracks the real price as it moves instead of inventing one.
+            const seeded = (n: number) => { const x = Math.sin(n) * 10000; return x - Math.floor(x); };
+            let prevClose = basePrice;
             for (let i = limit - 1; i >= 0; i--) {
               const t = now - i * step;
-              const drift = (Math.random() - 0.5) * 0.02 * basePrice;
-              const open = basePrice + drift;
-              const close = open + (Math.random() - 0.5) * 0.01 * basePrice;
-              const high = Math.max(open, close) + Math.random() * 0.005 * basePrice;
-              const low = Math.min(open, close) - Math.random() * 0.005 * basePrice;
-              candles.push({ time: t, open, high, low, close, volume: Math.random() * 1000 });
+              const isLast = i === 0;
+              const open = prevClose;
+              const close = isLast ? basePrice : basePrice + (seeded(t / step) - 0.5) * 0.004 * basePrice; // ±0.2%
+              const high = Math.max(open, close) + seeded(t + 1) * 0.0015 * basePrice;
+              const low = Math.min(open, close) - seeded(t + 2) * 0.0015 * basePrice;
+              candles.push({ time: t, open, high, low, close, volume: Math.floor(seeded(t + 3) * 500 + 100) });
+              prevClose = close;
             }
           }
         } catch (fallbackErr) {

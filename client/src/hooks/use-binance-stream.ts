@@ -51,6 +51,12 @@ export function useBinanceStream(
   const reconnectAttempts = useRef(0);
   const mountedRef = useRef(true);
   const useFallbackRef = useRef(false);
+  // When the direct Binance socket last delivered a real message. Binance
+  // accepts the connection even for a symbol it doesn't list (socket reads
+  // OPEN) but then sends nothing — so "readyState === OPEN" is NOT proof the
+  // feed is alive. Tracking real data lets us hand off to the server relay
+  // whenever the direct feed goes silent, instead of freezing the chart.
+  const lastDirectDataAt = useRef(0);
 
   // Server-side relay fallback — used only while the direct Binance socket
   // above is down (regional block, CORS, ad-blocker). The server already
@@ -95,6 +101,7 @@ export function useBinanceStream(
             const msg = JSON.parse(event.data);
 
             if (msg.e === 'kline' && msg.k) {
+              lastDirectDataAt.current = Date.now();
               const k = msg.k;
               onKlineRef.current({
                 time: Math.floor(k.t / 1000),
@@ -107,12 +114,15 @@ export function useBinanceStream(
               });
             }
 
-            if (msg.e === 'trade' && onTickRef.current) {
-              onTickRef.current({
-                price: parseFloat(msg.p),
-                quantity: parseFloat(msg.q || '0'),
-                time: Math.floor(msg.T / 1000),
-              });
+            if (msg.e === 'trade') {
+              lastDirectDataAt.current = Date.now();
+              if (onTickRef.current) {
+                onTickRef.current({
+                  price: parseFloat(msg.p),
+                  quantity: parseFloat(msg.q || '0'),
+                  time: Math.floor(msg.T / 1000),
+                });
+              }
             }
           } catch { /* ignore */ }
         };
@@ -160,8 +170,16 @@ export function useBinanceStream(
   useEffect(() => {
     return subscribeRelay('kline_relay', (payload: { symbol: string; interval: string; data: BinanceKlineUpdate }) => {
       if (!payload || payload.symbol !== symbol.toUpperCase() || payload.interval !== interval) return;
-      // Direct Binance link is healthy — ignore the relay, it's a fallback only.
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+      // Use the relay unless the DIRECT Binance feed is actually alive — i.e.
+      // it's not enough that the socket is OPEN; it must have delivered real
+      // data within the last few seconds. This lets the MEXC-backed relay take
+      // over whenever Binance is open-but-silent (unlisted symbol, regional
+      // block), instead of the chart sitting frozen showing "Live".
+      const directAlive =
+        wsRef.current &&
+        wsRef.current.readyState === WebSocket.OPEN &&
+        Date.now() - lastDirectDataAt.current < 8000;
+      if (directAlive) return;
       onKlineRef.current(payload.data);
     });
   }, [subscribeRelay, symbol, interval]);

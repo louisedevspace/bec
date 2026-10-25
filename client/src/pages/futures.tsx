@@ -133,22 +133,30 @@ export default function FuturesPage() {
     return (trade.profit_loss ?? 0) >= 0;
   };
 
-  const fetchTrades = async () => {
+  const fetchTrades = async (silent = false) => {
     if (!user) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      if (!token) throw new Error('No authentication token available');
+      // Token briefly unavailable (session refreshing) — skip this poll and
+      // keep the current list instead of throwing into the error toast.
+      if (!token) return;
 
       const response = await fetch(`/api/future-trades?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (!response.ok) throw new Error('Failed to fetch trades');
       const data = await response.json();
-      setTrades(data || []);
+      setTrades(Array.isArray(data) ? data : []);
     } catch (error) {
+      // Background polls (every 10s + on window focus) must fail quietly and
+      // keep the last good list — otherwise one transient network blip or edge
+      // challenge fired a destructive toast again and again. Only the first
+      // load / manual refresh surfaces an error.
       console.error('Error fetching trades:', error);
-      toast({ title: 'Error', description: 'Failed to fetch trades.', variant: 'destructive' });
+      if (!silent) {
+        toast({ title: 'Error', description: 'Failed to fetch trades.', variant: 'destructive' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -216,12 +224,12 @@ export default function FuturesPage() {
   useEffect(() => { fetchTradingLimits(); }, [user, currentPair]);
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(fetchTrades, 10000);
+    const interval = setInterval(() => fetchTrades(true), 10000);
     return () => clearInterval(interval);
   }, [user]);
   useEffect(() => {
     if (!user) return;
-    const handleFocus = () => fetchTrades();
+    const handleFocus = () => fetchTrades(true);
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [user]);

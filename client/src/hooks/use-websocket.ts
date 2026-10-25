@@ -13,61 +13,90 @@ export function useWebSocket(url: string) {
   const messageHandlers = useRef<Map<string, (data: any) => void>>(new Map());
 
   useEffect(() => {
-    // Use the configuration to build the WebSocket URL
     const wsUrl = buildWsUrl(url);
-    
+
     // Validate URL before creating WebSocket
     if (!wsUrl || wsUrl === 'undefined' || wsUrl === undefined || wsUrl.includes('undefined')) {
       console.error('Invalid WebSocket URL:', { url, wsUrl });
       return;
     }
-    
-    let cleaned = false;
 
-    console.log('Connecting to WebSocket:', wsUrl);
-    try {
-      ws.current = new WebSocket(wsUrl);
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      return;
+    let cleaned = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+
+    // Without this, a single dropped /ws connection (phone sleep, network
+    // blip, server restart) stayed dead for the rest of the session — which
+    // silently killed the chart kline relay and the price-update fallback.
+    const scheduleReconnect = () => {
+      if (cleaned) return;
+      const delay = Math.min(1000 * 2 ** attempts, 15000);
+      attempts += 1;
+      reconnectTimer = setTimeout(connect, delay);
+    };
+
+    function connect() {
+      if (cleaned) return;
+      let socket: WebSocket;
+      try {
+        socket = new WebSocket(wsUrl);
+      } catch (error) {
+        console.error('Failed to create WebSocket:', error);
+        scheduleReconnect();
+        return;
+      }
+      ws.current = socket;
+
+      socket.onopen = () => {
+        if (cleaned) return;
+        attempts = 0;
+        setIsConnected(true);
+      };
+
+      socket.onmessage = (event) => {
+        if (cleaned) return;
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data);
+          setLastMessage(message);
+          const handler = messageHandlers.current.get(message.type);
+          if (handler) handler(message.data);
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
+        }
+      };
+
+      socket.onclose = () => {
+        if (cleaned || ws.current !== socket) return;
+        setIsConnected(false);
+        scheduleReconnect();
+      };
+
+      socket.onerror = () => {
+        // A close event follows an error — reconnect is scheduled there.
+      };
     }
 
-    ws.current.onopen = () => {
-      if (cleaned) return;
-      setIsConnected(true);
-      console.log("WebSocket connected");
-    };
+    connect();
 
-    ws.current.onmessage = (event) => {
-      if (cleaned) return;
-      try {
-        const message: WebSocketMessage = JSON.parse(event.data);
-        setLastMessage(message);
-        
-        // Call registered handler for this message type
-        const handler = messageHandlers.current.get(message.type);
-        if (handler) {
-          handler(message.data);
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+    // Reconnect promptly on the common mobile cases rather than waiting out
+    // the backoff: network returns, or the tab regains focus after the browser
+    // suspended the socket in the background.
+    const reconnectIfDead = () => {
+      if (!cleaned && (!ws.current || ws.current.readyState === WebSocket.CLOSED)) {
+        attempts = 0;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        connect();
       }
     };
-
-    ws.current.onclose = () => {
-      if (cleaned) return;
-      setIsConnected(false);
-      console.log("WebSocket disconnected");
-    };
-
-    ws.current.onerror = (error) => {
-      if (cleaned) return;
-      console.error("WebSocket error:", error);
-      setIsConnected(false);
-    };
+    const onVisible = () => { if (document.visibilityState === 'visible') reconnectIfDead(); };
+    window.addEventListener('online', reconnectIfDead);
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       cleaned = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      window.removeEventListener('online', reconnectIfDead);
+      document.removeEventListener('visibilitychange', onVisible);
       if (ws.current) {
         // Null handlers before closing so stale socket doesn't fire events
         ws.current.onopen = null;
