@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { usePriceHistory } from "@/hooks/use-price-history";
 import { useBinanceStream, type BinanceKlineUpdate, type BinanceTick } from "@/hooks/use-binance-stream";
+import { useCryptoPrices } from "@/hooks/use-crypto-prices";
 import { useTheme } from "@/hooks/use-theme";
 import { useAccentTheme } from "@/hooks/use-exchange-name";
 import type { ChartTimeframe } from "@/types/chart";
@@ -96,6 +97,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const { data: candles, isLoading } = usePriceHistory(symbol, timeframe, 500);
   const { isDark } = useTheme();
   const accentTheme = useAccentTheme();
+  const { getPriceBySymbol } = useCryptoPrices();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLDivElement>(null);
@@ -113,6 +115,10 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   const lastTickTimeRef = useRef(0);
   const needsScrollRef = useRef(true);
   const isHoveredRef = useRef(false);
+  // When the chart last got a real update from a live stream (direct Binance
+  // or the MEXC relay). Used by the live-price heartbeat below to know whether
+  // to drive the candle itself (for assets with no stream, like metals).
+  const lastRealDataAtRef = useRef(0);
 
   // Resolved once per theme toggle — mirrors index.css tokens exactly
   // (--success / --danger are theme-invariant; --card, --border, --primary
@@ -332,6 +338,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   // Real-time kline handler
   const handleKline = useCallback((kline: BinanceKlineUpdate) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
+    lastRealDataAtRef.current = Date.now();
     const ct = chartTypeRef.current;
     const candleTime = kline.time as UTCTimestamp;
 
@@ -379,6 +386,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   // Tick handler
   const handleTick = useCallback((tick: BinanceTick) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
+    lastRealDataAtRef.current = Date.now();
     const ct = chartTypeRef.current;
     if (ct === "heikin-ashi") return;
 
@@ -405,6 +413,43 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
   }, [updateLegend]);
 
   const { isConnected, isFallback } = useBinanceStream(symbol, timeframe, handleKline, handleTick);
+
+  // Live-price heartbeat. When no live stream is feeding the chart — a metal
+  // (gold/silver/…) that trades on no crypto exchange, or any symbol while the
+  // direct Binance + MEXC-relay sockets are both down — ease the forming
+  // candle's close toward the real engine price (useCryptoPrices) a few times a
+  // second. The easing makes it read as smooth, continuous movement instead of
+  // stair-stepping each time the 30s engine price refreshes. It stays idle
+  // while a real stream is actively ticking, so it never fights a working feed.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (Date.now() - lastRealDataAtRef.current < 5000) return; // a real stream is live
+      if (isHoveredRef.current || chartTypeRef.current === "heikin-ashi") return;
+      const series = seriesRef.current;
+      const last = lastCandleRef.current;
+      if (!series || !last) return;
+      const engine = getPriceBySymbol(symbolRef.current);
+      const target = engine ? parseFloat(engine.price) : NaN;
+      if (!isFinite(target) || target <= 0) return;
+      const curClose = "close" in last ? last.close : last.value;
+      if (!isFinite(curClose)) return;
+      const diff = target - curClose;
+      if (Math.abs(diff) < target * 1e-7) return; // already there — nothing to animate
+      const next = curClose + diff * 0.25; // ease 25% of the remaining gap each step
+      if (chartTypeRef.current === "line") {
+        const pt = { time: last.time, value: next };
+        series.update(pt);
+        lastCandleRef.current = pt;
+      } else {
+        const updated = { time: last.time, open: last.open, high: Math.max(last.high, next), low: Math.min(last.low, next), close: next };
+        series.update(updated);
+        lastCandleRef.current = updated;
+      }
+      if (priceLineRef.current) priceLineRef.current.applyOptions({ price: next });
+      if (!isHoveredRef.current) updateLegend(lastCandleRef.current);
+    }, 250);
+    return () => clearInterval(id);
+  }, [getPriceBySymbol, updateLegend]);
 
   if (isLoading) {
     return (

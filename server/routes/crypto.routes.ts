@@ -267,8 +267,13 @@ export default function registerCryptoRoutes(app: Express) {
       // Try MEXC klines API first (free, no key, Binance-compatible format)
       let candles: any[] = [];
 
-      // Gold (XAU): fetch directly from Yahoo Finance GC=F chart endpoint
-      if (symbol === 'XAU') {
+      // Precious metals: fetch REAL OHLC candles from Yahoo Finance's futures
+      // chart endpoint (free, no key). These assets aren't on crypto exchanges,
+      // so this is their real market-data source. GC=F gold, SI=F silver,
+      // PL=F platinum, PA=F palladium.
+      const METAL_YAHOO: Record<string, string> = { XAU: 'GC=F', XAG: 'SI=F', XPT: 'PL=F', XPD: 'PA=F' };
+      const isMetal = !!METAL_YAHOO[symbol];
+      if (isMetal) {
         try {
           const yhIntervalMap: Record<string, string> = {
             '1m': '1m', '5m': '5m', '15m': '15m', '1h': '60m',
@@ -278,9 +283,10 @@ export default function registerCryptoRoutes(app: Express) {
             '1m': '1d', '5m': '5d', '15m': '5d', '1h': '30d',
             '4h': '60d', '1d': '1y', '1w': '5y',
           };
-          const yhInterval = yhIntervalMap[interval] || '60m';
-          const yhRange = yhRangeMap[interval] || '30d';
-          const yhUrl = `https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?range=${yhRange}&interval=${yhInterval}&includePrePost=false`;
+          const yhInterval = yhIntervalMap[interval] || '1m';
+          const yhRange = yhRangeMap[interval] || '1d';
+          const yhSymbol = encodeURIComponent(METAL_YAHOO[symbol]); // "GC=F" -> "GC%3DF"
+          const yhUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yhSymbol}?range=${yhRange}&interval=${yhInterval}&includePrePost=false`;
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 8000);
           const yhRes = await fetch(yhUrl, {
@@ -305,36 +311,41 @@ export default function registerCryptoRoutes(app: Express) {
                 }))
                 .filter((c: any) => c.open !== null && c.close !== null)
                 .slice(-limit);
-              console.log(`🥇 Yahoo Finance chart: ${candles.length} candles for XAU ${interval}`);
+              console.log(`🥇 Yahoo Finance chart: ${candles.length} candles for ${symbol} (${METAL_YAHOO[symbol]}) ${interval}`);
             }
           }
         } catch (yhErr) {
-          console.warn('Yahoo Finance chart failed for XAU:', (yhErr as Error).message);
+          console.warn(`Yahoo Finance chart failed for ${symbol}:`, (yhErr as Error).message);
         }
       }
-      try {
-        const mexcInterval = MEXC_INTERVALS[interval] || interval;
-        const mexcUrl = `https://api.mexc.com/api/v3/klines?symbol=${symbol}USDT&interval=${mexcInterval}&limit=${limit}`;
-        const mexcRes = await fetch(mexcUrl);
-        if (mexcRes.ok) {
-          const raw = await mexcRes.json();
-          if (Array.isArray(raw) && raw.length > 0) {
-            candles = raw.map((k: any[]) => ({
-              time: k[0],
-              open: parseFloat(k[1]),
-              high: parseFloat(k[2]),
-              low: parseFloat(k[3]),
-              close: parseFloat(k[4]),
-              volume: parseFloat(k[5]),
-            }));
+
+      // Crypto exchanges — skipped for metals (not listed there; a stray
+      // XAUUSDT lookup must not clobber the real Yahoo candles above).
+      if (!isMetal) {
+        try {
+          const mexcInterval = MEXC_INTERVALS[interval] || interval;
+          const mexcUrl = `https://api.mexc.com/api/v3/klines?symbol=${symbol}USDT&interval=${mexcInterval}&limit=${limit}`;
+          const mexcRes = await fetch(mexcUrl);
+          if (mexcRes.ok) {
+            const raw = await mexcRes.json();
+            if (Array.isArray(raw) && raw.length > 0) {
+              candles = raw.map((k: any[]) => ({
+                time: k[0],
+                open: parseFloat(k[1]),
+                high: parseFloat(k[2]),
+                low: parseFloat(k[3]),
+                close: parseFloat(k[4]),
+                volume: parseFloat(k[5]),
+              }));
+            }
           }
+        } catch (e) {
+          console.warn("MEXC klines failed for", symbol, (e as Error).message);
         }
-      } catch (e) {
-        console.warn("MEXC klines failed for", symbol, (e as Error).message);
       }
 
       // Fallback: try Binance klines API
-      if (candles.length === 0) {
+      if (!isMetal && candles.length === 0) {
         try {
           const binanceUrl = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`;
           const binanceRes = await fetch(binanceUrl);

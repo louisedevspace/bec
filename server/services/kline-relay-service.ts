@@ -17,7 +17,11 @@ export interface RelayKline {
   isClosed: boolean;
 }
 
-const POLL_INTERVAL_MS = 3000;
+// Poll MEXC this often per subscribed symbol. Kept low so charts move
+// smoothly (near-1s) for users whose region blocks the direct Binance socket
+// and fall back to this relay. MEXC klines are a light endpoint and
+// subscriptions are de-duplicated per symbol, so the request rate stays small.
+const POLL_INTERVAL_MS = 1500;
 const TEARDOWN_DEBOUNCE_MS = 5000;
 
 // MEXC has no 1s klines — same downgrade the REST price-history endpoint
