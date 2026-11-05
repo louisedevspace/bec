@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { cryptoApi } from "@/services/crypto-api";
 import { useWebSocket } from "./use-websocket";
 import type { CryptoPrice } from "@/types/crypto";
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 // Binance WebSocket — all miniTickers in one stream
 const BINANCE_WS_PRIMARY = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
@@ -53,7 +54,7 @@ function connectShared() {
     old.onclose = null;
     old.onerror = null;
     if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
-      old.close();
+      safeCloseWebSocket(old);
     }
     shared.ws = null;
   }
@@ -122,7 +123,7 @@ function connectShared() {
 
     ws.onerror = () => {
       if (shared.ws !== ws) return;
-      ws.close(); // will trigger onclose above
+      safeCloseWebSocket(ws); // will trigger onclose above
     };
   } catch { /* ignore */ }
 }
@@ -158,7 +159,7 @@ function subscribeSingleton(listener: Listener) {
           old.onclose = null;
           old.onerror = null;
           if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
-            old.close();
+            safeCloseWebSocket(old);
           }
           shared.ws = null;
         }

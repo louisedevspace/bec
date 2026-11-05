@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { buildWsUrl } from "../lib/config";
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 interface WebSocketMessage {
   type: string;
@@ -103,7 +104,7 @@ export function useWebSocket(url: string) {
         ws.current.onmessage = null;
         ws.current.onclose = null;
         ws.current.onerror = null;
-        ws.current.close();
+        safeCloseWebSocket(ws.current);
         ws.current = null;
       }
     };

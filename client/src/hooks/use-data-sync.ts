@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { buildWsUrl } from '../lib/config';
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 // Synchronization action types
 export type SyncAction = 
@@ -342,7 +343,7 @@ export function useDataSync(config: UseDataSyncConfig = {}) {
       cleaned = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
-        ws.close();
+        safeCloseWebSocket(ws);
         ws = null;
       }
       window.removeEventListener('userDataChanged', onLocalSync);

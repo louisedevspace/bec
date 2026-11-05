@@ -8,6 +8,7 @@ import {
   CrosshairMode,
   type UTCTimestamp,
 } from "lightweight-charts";
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 const REST_PRIMARY =
   "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1s&limit=500";
@@ -101,7 +102,7 @@ function CandlestickChart() {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (destroyed) { ws.close(); return; }
+        if (destroyed) { safeCloseWebSocket(ws); return; }
         setConnected(true);
         useFallbackWs = false; // primary worked, reset
       };
@@ -126,7 +127,7 @@ function CandlestickChart() {
       ws.onerror = () => {
         if (destroyed) return;
         useFallbackWs = !useFallbackWs; // toggle to other endpoint
-        ws.close();
+        safeCloseWebSocket(ws);
       };
 
       ws.onclose = () => {
@@ -174,7 +175,7 @@ function CandlestickChart() {
       destroyed = true;
       resizeObserver.disconnect();
       if (wsRef.current) {
-        wsRef.current.close();
+        safeCloseWebSocket(wsRef.current);
         wsRef.current = null;
       }
       chart.remove();

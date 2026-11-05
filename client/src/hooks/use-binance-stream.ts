@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChartTimeframe } from '@/types/chart';
 import { useWebSocket } from './use-websocket';
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 export interface BinanceKlineUpdate {
   time: number;
@@ -33,7 +34,7 @@ function killSocket(ws: WebSocket | null) {
   ws.onclose = null;
   ws.onerror = null;
   if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-    ws.close();
+    safeCloseWebSocket(ws);
   }
 }
 
@@ -142,7 +143,7 @@ export function useBinanceStream(
 
         ws.onerror = () => {
           if (wsRef.current !== ws) return;
-          ws.close();
+          safeCloseWebSocket(ws);
         };
       } catch { /* ignore */ }
     }

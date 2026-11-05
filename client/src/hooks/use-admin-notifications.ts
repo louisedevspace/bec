@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
 
 export interface AdminNotification {
   id: number;
@@ -160,7 +161,7 @@ export function useAdminNotifications(pollInterval = 30000): AdminNotificationDa
     return () => {
       if (ws) {
         ws.removeEventListener("message", handleWsMessage);
-        ws.close();
+        safeCloseWebSocket(ws);
       }
     };
   }, [fetchNotifications]);
