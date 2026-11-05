@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { safeCloseWebSocket } from "@/lib/safe-close-websocket";
+import { acquireSharedSocket, addSocketMessageListener } from "@/lib/shared-socket";
 
 export interface AdminNotification {
   id: number;
@@ -138,31 +138,20 @@ export function useAdminNotifications(pollInterval = 30000): AdminNotificationDa
 
   // Listen for WebSocket events for instant updates
   useEffect(() => {
-    function handleWsMessage(event: MessageEvent) {
-      try {
-        const parsed = JSON.parse(event.data);
-        if (parsed?.data?.metadata?.adminNotification) {
-          // New admin notification received — refetch for accurate data
-          fetchNotifications();
-        }
-      } catch {}
-    }
-
-    // Find existing WebSocket connections
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-    let ws: WebSocket | null = null;
-    try {
-      ws = new WebSocket(wsUrl);
-      ws.addEventListener("message", handleWsMessage);
-    } catch {}
+    // Uses the tab's single shared /ws socket (lib/shared-socket.ts). This
+    // used to open its own socket with no reconnect; polling above still
+    // covers the case where the socket can't connect.
+    const release = acquireSharedSocket();
+    const removeListener = addSocketMessageListener((message) => {
+      if (message?.data?.metadata?.adminNotification) {
+        // New admin notification received — refetch for accurate data
+        fetchNotifications();
+      }
+    });
 
     return () => {
-      if (ws) {
-        ws.removeEventListener("message", handleWsMessage);
-        safeCloseWebSocket(ws);
-      }
+      removeListener();
+      release();
     };
   }, [fetchNotifications]);
 
