@@ -208,7 +208,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     }
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Admin access check failed' });
+    return res.status(503).json({ message: 'Admin access check failed, please retry' });
   }
 }
 
@@ -232,13 +232,17 @@ export async function hasSupportAccess(userId: string): Promise<boolean> {
         .eq('id', userId)
         .single();
 
-      if (error || !user) return null;
+      // PGRST116 = no row. Any other error is a lookup failure, not a denial:
+      // throw so the caller answers 503 instead of a false 403.
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!user) return null;
       return user;
     });
 
     return !!cachedUser && SUPPORT_STAFF_ROLES.includes(cachedUser.role);
   } catch (error) {
-    return false;
+    console.error('[auth] role lookup failed:', error);
+    throw error;
   }
 }
 
@@ -289,7 +293,7 @@ export async function requireSupportStaff(req: Request, res: Response, next: Nex
     }
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Support access check failed' });
+    return res.status(503).json({ message: 'Support access check failed, please retry' });
   }
 }
 
@@ -341,13 +345,17 @@ export async function hasAdminAccess(userId: string): Promise<boolean> {
         .eq('id', userId)
         .single();
 
-      if (error || !user) return null;
+      // PGRST116 = no row. Any other error is a lookup failure, not a denial:
+      // throw so the caller answers 503 instead of a false 403.
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!user) return null;
       return user;
     });
 
     return cachedUser?.role === 'admin';
   } catch (error) {
-    return false;
+    console.error('[auth] role lookup failed:', error);
+    throw error;
   }
 }
 
