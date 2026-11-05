@@ -13,6 +13,25 @@ const REDIS_PRICES_TTL = 30; // 30 seconds for Redis
 const priceHistoryCache = new Map<string, { data: any; time: number }>();
 const HISTORY_CACHE_DURATION = 60000; // 60 seconds
 const REDIS_HISTORY_TTL = 60; // 60 seconds for Redis
+// Keys come from the request (symbol/interval/limit) and each entry holds up
+// to 500 candles. Entries were never removed, so the map grew for the life of
+// the process. Drop expired entries and cap the size (oldest first — Map
+// iterates in insertion order).
+const HISTORY_CACHE_MAX_ENTRIES = 300;
+
+function setPriceHistoryCache(key: string, data: any, now: number) {
+  priceHistoryCache.delete(key); // re-insert so it counts as newest
+  priceHistoryCache.set(key, { data, time: now });
+  if (priceHistoryCache.size <= HISTORY_CACHE_MAX_ENTRIES) return;
+  for (const [k, v] of Array.from(priceHistoryCache.entries())) {
+    if (now - v.time >= HISTORY_CACHE_DURATION) priceHistoryCache.delete(k);
+  }
+  while (priceHistoryCache.size > HISTORY_CACHE_MAX_ENTRIES) {
+    const oldest = priceHistoryCache.keys().next().value;
+    if (oldest === undefined) break;
+    priceHistoryCache.delete(oldest);
+  }
+}
 
 async function getOrCreatePriceTickerSettings() {
   const { data, error } = await supabaseAdmin
@@ -230,6 +249,9 @@ export default function registerCryptoRoutes(app: Express) {
       if (!validIntervals.includes(interval)) {
         return res.status(400).json({ message: "Invalid interval. Use: " + validIntervals.join(", ") });
       }
+      if (!/^[A-Z0-9]{1,15}$/.test(symbol)) {
+        return res.status(400).json({ message: "Invalid symbol" });
+      }
 
       const cacheKey = `${symbol}_${interval}_${limit}`;
       const redisKey = `${REDIS_KEYS.PRICE_HISTORY}${symbol}:${interval}:${limit}`;
@@ -407,8 +429,8 @@ export default function registerCryptoRoutes(app: Express) {
         return res.status(404).json({ message: "No price history available for " + symbol });
       }
 
-      // Update in-memory cache
-      priceHistoryCache.set(cacheKey, { data: candles, time: now });
+      // Update in-memory cache (bounded)
+      setPriceHistoryCache(cacheKey, candles, now);
       
       // Try to store in Redis
       try {
