@@ -97,11 +97,37 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Hashed build chunks never change: cache them forever.
+  app.use(
+    "/assets",
+    express.static(path.join(distPath, "assets"), {
+      immutable: true,
+      maxAge: "1y",
+      fallthrough: true,
+    }),
+  );
+  // A missing chunk (stale client after a redeploy) must 404, not fall through
+  // to index.html — otherwise the browser gets HTML for a JS module request.
+  app.use("/assets", (_req, res) => {
+    res.status(404).set("Cache-Control", "no-store").type("text/plain").send("Not found");
+  });
+
+  app.use(
+    express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        // index.html and the service worker must always be revalidated so
+        // clients pick up new chunk hashes right after a deploy.
+        if (filePath.endsWith(".html") || filePath.endsWith("service-worker.js")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        }
+      },
+    }),
+  );
   app.use("/uploads", express.static(uploadsDir));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

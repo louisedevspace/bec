@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const APP_SHELL_FILES = ['/', '/index.html', '/offline.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
@@ -48,8 +48,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const respClone = response.clone();
-          caches.open(APP_SHELL_CACHE).then((cache) => cache.put('/index.html', respClone));
+          if (response.ok) {
+            const respClone = response.clone();
+            caches.open(APP_SHELL_CACHE).then((cache) => cache.put('/index.html', respClone));
+          }
           return response;
         })
         .catch(() => caches.match('/index.html').then((resp) => resp || caches.match('/offline.html')))
@@ -64,8 +66,13 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         return fetch(request)
           .then((response) => {
-            const respClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, respClone));
+            // Never cache error responses (403/404) or HTML fallbacks served
+            // for a missing chunk — that would poison the cache permanently.
+            const type = response.headers.get('content-type') || '';
+            if (response.ok && !type.includes('text/html')) {
+              const respClone = response.clone();
+              caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, respClone));
+            }
             return response;
           })
           .catch(() => cached);
@@ -80,7 +87,7 @@ self.addEventListener('fetch', (event) => {
       caches.open(RUNTIME_CACHE).then((cache) =>
         fetch(request)
           .then((response) => {
-            cache.put(request, response.clone());
+            if (response.ok) cache.put(request, response.clone());
             return response;
           })
           .catch(() => cache.match(request))
