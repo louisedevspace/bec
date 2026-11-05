@@ -284,7 +284,10 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
         borderUpColor: colors.up, borderDownColor: colors.down, wickUpColor: colors.up, wickDownColor: colors.down, priceLineVisible: false,
       });
     }
-  }, [chartType, colors]);
+    // isLoading: the chart is torn down while loading and rebuilt when data
+    // first arrives. Without this dep the new chart had no main series on a
+    // first (uncached) open, so setData was skipped and the chart stayed empty.
+  }, [chartType, colors, isLoading]);
 
   // Timeframe only changes a chart option, not the series/data — no rebuild needed.
   useEffect(() => {
@@ -333,7 +336,7 @@ export function PriceChart({ symbol, className }: PriceChartProps) {
       const visible = Math.min(80, total);
       chartRef.current.timeScale().setVisibleLogicalRange({ from: total - visible - 0.5, to: total + 4.5 });
     }
-  }, [processedData, updateLegend, colors]);
+  }, [processedData, updateLegend, colors, isLoading]);
 
   // Real-time kline handler
   const handleKline = useCallback((kline: BinanceKlineUpdate) => {
